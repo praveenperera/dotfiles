@@ -40,7 +40,7 @@
     ;; :lang/markdown
     ;; :lang/rust
     :lang/javascript
-
+    :lang/haml
     ;; -----------------------------------
     ;; Frameworks
     ;; Get more at github.com/dvcrn/proton/tree/master/src/proton/layers/frameworks
@@ -83,7 +83,7 @@
   :configuration
   [
     ;; appearance
-    ;["editor.fontFamily" "Hack"]
+    ; ["editor.fontFamily" "Hack"]
     ["editor.fontFamily" "Source Code Pro"]
     ["editor.fontSize" "13"]
 
