@@ -1,5 +1,4 @@
 {
-  m ter
   ;; This is your main proton configuration file
   ;; While using proton, all atom related configuration has to go inside here
   ;; Everything that is not set up through this file will get wiped on start
@@ -76,6 +75,7 @@
     ;; :about
     ;; :welcome
     :wrap-guide
+    :linter-haml
   ]
   ;; Proton takes over your atom configuration. All settings that are not listed here will get wiped
   ;; Configurations are denoted as 2 element vector consisting of k/v
