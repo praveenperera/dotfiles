@@ -64,6 +64,7 @@
     :autocomplete-ruby
     :autocomplete-elixir
     :native-color-picker
+    :emmet
   ]
 
   ;; Packages that you want to disable.
