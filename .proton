@@ -83,8 +83,8 @@
   :configuration
   [
     ;; appearance
-    ; ["editor.fontFamily" "Hack"]
-    ["editor.fontFamily" "Source Code Pro"]
+    ["editor.fontFamily" "Hack"]
+    ; ["editor.fontFamily" "Source Code Pro"]
     ["editor.fontSize" "13"]
 
     ;; the current default theme
