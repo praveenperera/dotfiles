@@ -34,6 +34,7 @@ values."
      elixir
      git
      osx
+     clojure-mode
      html
      org
      colors
