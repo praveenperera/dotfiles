@@ -36,10 +36,11 @@
     ;; :lang/julia
     ;; :lang/latex
     :lang/elixir
-    ;; :lang/markdown
+    :lang/markdown
     ;; :lang/rust
     :lang/javascript
     :lang/haml
+    :lang/sass
     ;; -----------------------------------
     ;; Frameworks
     ;; Get more at github.com/dvcrn/proton/tree/master/src/proton/layers/frameworks
@@ -58,13 +59,13 @@
   ;; Will get uninstalled so choose wisely!
   :additional-packages
   [
-    :erb-helper
     :atom-elixir
     :goto-definition
     :autocomplete-ruby
     :autocomplete-elixir
     :native-color-picker
     :emmet
+    :linter-erb
   ]
 
   ;; Packages that you want to disable.
@@ -88,6 +89,9 @@
     ; ["editor.fontFamily" "Source Code Pro"]
     ["editor.fontSize" "13"]
 
+    ["editor.autoIndentOnPaste" false]
+    ["editor.autoIndent" false]
+
     ;; the current default theme
     ;; ["core.themes" ["nucleus-dark-ui" "atom-dark-fusion-syntax"]]
     ;; here are some more popular theme ideas for you to pick from:
@@ -99,6 +103,8 @@
 
     ;; prefer classic vim mode over vim-mode-plus? Change this to :vim-mode
     ["proton.core.vim-provider" :vim-mode-plus]
+
+    ["spell-check.grammars" ["source.asciidoc" "source.gfm" "text.git-commit" "text.plain" "text.plain.null-grammar" "text.html.erb" "source.elixir" "text.haml"]]
   ]
 
   ;; Don't like a keybinding or want to add something yourself? Do it here
