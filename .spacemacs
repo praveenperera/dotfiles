@@ -267,13 +267,12 @@ explicitly specified that a variable should be set before a package is loaded,
 you should place you code here."
   (setq powerline-default-separator 'arrow)
   ;; (spacemacs/set-leader-keys "G" 'robe-jump)
+  (spacemacs/toggle-indent-guide-globally-on)
+  (setq indent-guide-recursive t)
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
-
-
-
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
