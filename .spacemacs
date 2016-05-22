@@ -124,7 +124,7 @@ values."
                                :size 13
                                :weight normal
                                :width normal
-                               :powerline-scale 1.2)
+                               :powerline-scale 1.1)
 
    ;; The leader key
    dotspacemacs-leader-key "SPC"
@@ -257,7 +257,6 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
   )
-
 (defun dotspacemacs/user-config ()
   "Configuration function for user code.
 This function is called at the very end of Spacemacs initialization after
@@ -266,11 +265,10 @@ This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place you code here."
   (setq powerline-default-separator 'arrow)
-  ;; (spacemacs/set-leader-keys "G" 'robe-jump)
-  (spacemacs/toggle-indent-guide-globally-on)
   (setq indent-guide-recursive t)
-  )
+  (spacemacs/toggle-indent-guide-globally-on)
 
+  )
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
 
