@@ -32,6 +32,9 @@ values."
      company-mode
      erlang
      elixir
+     ruby
+     ruby-on-rails
+     javascript
      git
      closure
      osx
@@ -53,9 +56,9 @@ values."
    ;; wrapped in a layer. If you need some configuration for these
    ;; packages, then consider creating a layer. You can also put the
    ;; configuration in `dotspacemacs/user-config'.
-   dotspacemacs-additional-packages'(robe ruby-tools)
+   dotspacemacs-additional-packages'()
    ;; A list of packages and/or extensions that will not be install and loaded.
-   dotspacemacs-excluded-packages '()
+   dotspacemacs-excluded-packages '(ruby-rubocop rubocop)
    ;; If non-nil spacemacs will delete any orphan packages, i.e. packages that
    ;; are declared in a layer which is not a member of
    ;; the list `dotspacemacs-configuration-layers'. (default t)
@@ -256,7 +259,18 @@ executes.
  This function is mostly useful for variables that need to be set
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
+
+  (defun my-web-mode-hook ()
+    "Hooks for Web mode."
+    (setq web-mode-markup-indent-offset 2)
+    )
+  (add-hook 'web-mode-hook  'my-web-mode-hook)
+  (add-hook 'emmet-mode-hook (lambda () (setq emmet-indent-after-insert nil)))
+  (add-hook 'emmet-mode-hook (lambda () (setq emmet-indentation 2))) ;; indent 2 spaces.
+
   )
+
+
 (defun dotspacemacs/user-config ()
   "Configuration function for user code.
 This function is called at the very end of Spacemacs initialization after
@@ -267,7 +281,7 @@ you should place you code here."
   (setq powerline-default-separator 'arrow)
   (setq indent-guide-recursive t)
   (spacemacs/toggle-indent-guide-globally-on)
-
+  (spaceline-compile)
   )
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
@@ -332,7 +346,6 @@ you should place you code here."
  ;; If there is more than one, they won't work right.
  '(company-tooltip-common ((t (:inherit company-tooltip :weight bold :underline nil))))
  '(company-tooltip-common-selection ((t (:inherit company-tooltip-selection :weight bold :underline nil))))
-
- ;; customizations for atom-one-dark theme
+ '(web-mode-block-delimiter-face ((t (:foreground "tomato1"))))
  '(web-mode-html-attr-name-face ((t (:foreground "Tan"))))
  '(web-mode-html-tag-face ((t (:foreground "IndianRed1")))))
