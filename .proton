@@ -66,6 +66,7 @@
     :native-color-picker
     :emmet
     :linter-erb
+    :langauge-babel
   ]
 
   ;; Packages that you want to disable.

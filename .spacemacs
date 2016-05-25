@@ -261,10 +261,34 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
+  (setq web-mode-content-types-alist
+        '(("jsx" . "\\.js[x]?\\'")))
+
+  (setq web-mode-markup-indent-offset 2
+        web-mode-css-indent-offset 2
+        web-mode-code-indent-offset 2)
+
+  (setq js-indent-level 2)
+
   (defun my-web-mode-hook ()
     "Hooks for Web mode."
     (setq web-mode-markup-indent-offset 2)
     )
+
+  (add-hook 'projectile-after-switch-project-hook 'mjs/setup-local-eslint)
+
+  (defun mjs/setup-local-eslint ()
+    "If ESLint found in node_modules directory - use that for flycheck.
+        Intended for use in PROJECTILE-AFTER-SWITCH-PROJECT-HOOK."
+    (interactive)
+    (let ((local-eslint (expand-file-name "./node_modules/.bin/eslint")))
+       (setq flycheck-javascript-eslint-executable
+            (and (file-exists-p local-eslint) local-eslint))))
+
+  (with-eval-after-load 'flycheck
+    (push 'web-mode (flycheck-checker-get 'javascript-eslint 'modes)))
+
+
   (add-hook 'web-mode-hook  'my-web-mode-hook)
   (add-hook 'emmet-mode-hook (lambda () (setq emmet-indent-after-insert nil)))
   (add-hook 'emmet-mode-hook (lambda () (setq emmet-indentation 2))) ;; indent 2 spaces.
@@ -283,6 +307,9 @@ you should place you code here."
   (setq indent-guide-recursive t)
   (spacemacs/toggle-indent-guide-globally-on)
   (spaceline-compile)
+
+
+  (add-to-list 'auto-mode-alist '("\\.jsx?$" . web-mode))
   )
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
