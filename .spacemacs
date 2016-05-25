@@ -35,6 +35,7 @@ values."
      git
      closure
      osx
+     javascript
      react
      html
      org
@@ -257,6 +258,22 @@ executes.
  This function is mostly useful for variables that need to be set
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
+
+  ;; use web-mode for .jsx files
+  (add-to-list 'auto-mode-alist '("\\.jsx?$" . web-mode))
+
+  ;; http://www.flycheck.org/manual/latest/index.html
+  (require 'flycheck)
+  ;; turn on flychecking globally
+  (add-hook 'after-init-hook #'global-flycheck-mode)
+  ;; disable json-jsonlist checking for json files
+  (setq-default flycheck-disabled-checkers (append flycheck-disabled-checkers '(json-jsonlist)))
+  ;; disable jshint since we prefer eslint checking
+  (setq-default flycheck-disabled-checkers (append flycheck-disabled-checkers '(javascript-jshint)))
+  ;; use eslint with web-mode for jsx files
+  (flycheck-add-mode 'javascript-eslint 'web-mode)
+
+
   )
 
 (defun dotspacemacs/user-config ()
@@ -270,8 +287,8 @@ you should place you code here."
   ;; (spacemacs/set-leader-keys "G" 'robe-jump)
   (spacemacs/toggle-indent-guide-globally-on)
   (setq indent-guide-recursive t)
+  (spaceline-compile)
   )
-
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
 
