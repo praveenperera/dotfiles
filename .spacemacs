@@ -59,7 +59,7 @@ values."
    ;; configuration in `dotspacemacs/user-config'.
    dotspacemacs-additional-packages'()
    ;; A list of packages and/or extensions that will not be install and loaded.
-   dotspacemacs-excluded-packages '(ruby-rubocop rubocop)
+   dotspacemacs-excluded-packages '()
    ;; If non-nil spacemacs will delete any orphan packages, i.e. packages that
    ;; are declared in a layer which is not a member of
    ;; the list `dotspacemacs-configuration-layers'. (default t)
@@ -261,6 +261,7 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
+  (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
   (setq web-mode-content-types-alist
         '(("jsx" . "\\.js[x]?\\'")))
 
@@ -285,14 +286,11 @@ before packages are loaded. If you are unsure, you should try in setting them in
        (setq flycheck-javascript-eslint-executable
             (and (file-exists-p local-eslint) local-eslint))))
 
-  (with-eval-after-load 'flycheck
-    (push 'web-mode (flycheck-checker-get 'javascript-eslint 'modes)))
-
-
   (add-hook 'web-mode-hook  'my-web-mode-hook)
   (add-hook 'emmet-mode-hook (lambda () (setq emmet-indent-after-insert nil)))
   (add-hook 'emmet-mode-hook (lambda () (setq emmet-indentation 2))) ;; indent 2 spaces.
 
+  (global-auto-revert-mode t)
   )
 
 
@@ -309,7 +307,7 @@ you should place you code here."
   (spaceline-compile)
 
 
-  (add-to-list 'auto-mode-alist '("\\.jsx?$" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.jsx?$" . react-mode))
   )
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
