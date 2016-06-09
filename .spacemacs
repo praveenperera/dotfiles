@@ -308,7 +308,7 @@ you should place you code here."
   (spaceline-compile)
 
   (with-eval-after-load 'company
-    (add-to-list 'company-backends 'company-elm)
+    (add-to-list 'company-backends 'company-elm))
 
 
   (add-to-list 'auto-mode-alist '("\\.jsx?$" . react-mode))
