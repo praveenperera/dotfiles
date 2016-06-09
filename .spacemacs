@@ -32,6 +32,7 @@ values."
      company-mode
      erlang
      elixir
+     elm
      ruby
      ruby-on-rails
      javascript
@@ -305,6 +306,9 @@ you should place you code here."
   (setq indent-guide-recursive t)
   (spacemacs/toggle-indent-guide-globally-on)
   (spaceline-compile)
+
+  (with-eval-after-load 'company
+    (add-to-list 'company-backends 'company-elm)
 
 
   (add-to-list 'auto-mode-alist '("\\.jsx?$" . react-mode))
