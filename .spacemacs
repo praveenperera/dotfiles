@@ -307,6 +307,13 @@ you should place you code here."
   (spacemacs/toggle-indent-guide-globally-on)
   (spaceline-compile)
 
+  (defun evil-paste-after-from-0 ()
+    (interactive)
+    (let ((evil-this-register ?0))
+      (call-interactively 'evil-paste-after)))
+
+  (define-key evil-visual-state-map "p" 'evil-paste-after-from-0)
+
   (with-eval-after-load 'company
     (add-to-list 'company-backends 'company-elm))
 
