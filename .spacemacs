@@ -305,6 +305,7 @@ you should place you code here."
   (setq powerline-default-separator 'arrow)
   (setq indent-guide-recursive t)
   (spacemacs/toggle-indent-guide-globally-on)
+  (column-highlight-mode 1)
   (spaceline-compile)
 
   (defun evil-paste-after-from-0 ()
