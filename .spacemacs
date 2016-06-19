@@ -58,7 +58,7 @@ values."
    ;; wrapped in a layer. If you need some configuration for these
    ;; packages, then consider creating a layer. You can also put the
    ;; configuration in `dotspacemacs/user-config'.
-   dotspacemacs-additional-packages'()
+   dotspacemacs-additional-packages'(col-highlight)
    ;; A list of packages and/or extensions that will not be install and loaded.
    dotspacemacs-excluded-packages '()
    ;; If non-nil spacemacs will delete any orphan packages, i.e. packages that
@@ -332,6 +332,7 @@ you should place you code here."
    [default bold shadow italic underline bold bold-italic bold])
  '(ansi-color-names-vector
    ["#3F3F3F" "#CC9393" "#7F9F7F" "#F0DFAF" "#8CD0D3" "#DC8CC3" "#93E0E3" "#DCDCCC"])
+ '(col-highlight-overlay-priority 100)
  '(compilation-message-face (quote default))
  '(fci-rule-color "#383838" t)
  '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
@@ -381,6 +382,7 @@ you should place you code here."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(col-highlight ((t (:background "#2F343D"))))
  '(company-tooltip-common ((t (:inherit company-tooltip :weight bold :underline nil))))
  '(company-tooltip-common-selection ((t (:inherit company-tooltip-selection :weight bold :underline nil))))
  '(web-mode-block-delimiter-face ((t (:foreground "tomato1"))))
