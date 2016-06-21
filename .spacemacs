@@ -303,7 +303,7 @@ This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place you code here."
   (setq powerline-default-separator 'arrow)
-  (setq indent-guide-recursive t)
+  ;; (setq indent-guide-recursive t)
   (spacemacs/toggle-indent-guide-globally-on)
   (column-highlight-mode 1)
   (spaceline-compile)
