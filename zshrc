@@ -1,7 +1,5 @@
 # Path to your oh-my-zsh configuration.
 ZSH=$HOME/.oh-my-zsh
-#alias vim='mvim'
-#alias tc='cd sites/studddy && termrc s && sleep 1 && exit'
 alias pp='cd && cd sites/praveenperera'
 alias cpubex='cd && cd code/public/Elixir'
 alias cpubr='cd && cd code/public/ruby'
