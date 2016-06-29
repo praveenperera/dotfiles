@@ -1,15 +1,3 @@
-set nocompatible
-filetype off
-set rtp+=~/.vim/bundle/Vundle.vim
-call vundle#begin()
-
-Plugin 'VundleVim/Vundle.vim'
-Plugin 'tabbar'
-
-call vundle#end()
-filetype plugin indent on
-
-
 ""
 "" Janus setup
 ""
@@ -41,7 +29,6 @@ if filereadable(expand("~/.vimrc.before"))
   source ~/.vimrc.before
 endif
 
-let NERDTreeShowHidden=1
 
 " Disable plugins prior to loading pathogen
 exe 'source ' . g:janus_vim_path . '/core/plugins.vim'
@@ -53,15 +40,4 @@ exe 'source ' . g:janus_vim_path . '/core/plugins.vim'
 " Load all groups, custom dir, and janus core
 call janus#load_pathogen()
 
-let mapleader=","
-
-set exrc
-
-call plug#begin('~/.vim/plugged')
-
-Plug 'elixir-lang/vim-elixir'
-
-call plug#end()
-
-" .vimrc.after is loaded after the plugins have loaded"
-
+" .vimrc.after is loaded after the plugins have loaded

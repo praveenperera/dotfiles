@@ -1,7 +1,6 @@
 color molokai
 set guioptions-=T
 
-color molokai
 set guifont=Monaco:h11.00
 set wildmenu
 
