@@ -290,7 +290,6 @@ before packages are loaded. If you are unsure, you should try in setting them in
   (add-hook 'web-mode-hook  'my-web-mode-hook)
   (add-hook 'emmet-mode-hook (lambda () (setq emmet-indent-after-insert nil)))
   (add-hook 'emmet-mode-hook (lambda () (setq emmet-indentation 2))) ;; indent 2 spaces.
-
   (global-auto-revert-mode t)
   )
 
@@ -335,6 +334,7 @@ you should place you code here."
    ["#3F3F3F" "#CC9393" "#7F9F7F" "#F0DFAF" "#8CD0D3" "#DC8CC3" "#93E0E3" "#DCDCCC"])
  '(col-highlight-overlay-priority 100)
  '(compilation-message-face (quote default))
+ '(elm-format-on-save t)
  '(fci-rule-color "#383838" t)
  '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
  '(highlight-tail-colors
