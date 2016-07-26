@@ -272,6 +272,10 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   (setq js-indent-level 2)
 
+  (setq-default dotspacemacs-configuration-layers
+                '((auto-completion :variables
+                                   auto-completion-enable-snippets-in-popup t)))
+
   (defun my-web-mode-hook ()
     "Hooks for Web mode."
     (setq web-mode-markup-indent-offset 2)
