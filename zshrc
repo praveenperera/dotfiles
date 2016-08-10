@@ -40,7 +40,7 @@ plugins=(git osx ruby rails bundler brew rake cap elixir)
 
 export PATH="$HOME/.rbenv/bin:$HOME/.rbenv/shims:$PATH"
 export PATH="/Applications/Postgres.app/Contents/Versions/9.4/bin:$PATH"
-export PATH=$PATH:"$HOME/Documents/Android/SDK/platform-tools"
+export PATH=$PATH:"$HOME/Library/Android/sdk/platform-tools"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 source $ZSH/oh-my-zsh.sh
 export EDITOR=vim

@@ -279,6 +279,8 @@ before packages are loaded. If you are unsure, you should try in setting them in
   (defun my-web-mode-hook ()
     "Hooks for Web mode."
     (setq web-mode-markup-indent-offset 2)
+    (setq web-mode-css-indent-offset 2)
+    (setq web-mode-code-indent-offset 2)
     )
 
   (add-hook 'projectile-after-switch-project-hook 'mjs/setup-local-eslint)
