@@ -301,7 +301,7 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
 
 (defun dotspacemacs/user-config ()
-  "Configuration function for user code.
+"Configuration function for user code.
 This function is called at the very end of Spacemacs initialization after
 layers configuration.
 This is the place where most of your configurations should be done. Unless it is
@@ -342,6 +342,7 @@ you should place you code here."
  '(compilation-message-face (quote default))
  '(elm-format-on-save t)
  '(fci-rule-color "#383838" t)
+ '(flycheck-rubocop-lint-only t)
  '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
  '(highlight-tail-colors
    (quote
