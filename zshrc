@@ -47,3 +47,4 @@ export EDITOR=vim
 
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+export PATH="/usr/local/sbin:$PATH"
