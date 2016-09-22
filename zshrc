@@ -5,12 +5,13 @@ alias cpubex='cd && cd code/public/Elixir'
 alias cpubr='cd && cd code/public/ruby'
 alias cpriv='cd && cd code/private'
 alias docs='cd && cd sites/doctors_of_srilanka'
-alias em=launch_emacs_client
 alias zreload="source ~/.zshrc"
 
+alias em=launch_emacs_client
 launch_emacs_client() {
   emacsclient $1 $2 -a=emacs $1 -q &
 }
+
 
 eval $(thefuck --alias)
 # Set name of the theme to load.
