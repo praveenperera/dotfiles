@@ -45,7 +45,7 @@ ZSH_THEME="excid3"
 plugins=(git osx ruby rails bundler brew rake cap elixir)
 
 export PATH="$HOME/.rbenv/bin:$HOME/.rbenv/shims:$PATH"
-export PATH="/Applications/Postgres.app/Contents/Versions/9.4/bin:$PATH"
+export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
 export PATH=$PATH:"$HOME/Library/Android/sdk/platform-tools"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 source $ZSH/oh-my-zsh.sh
@@ -54,3 +54,4 @@ export EDITOR=vim
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 export PATH="/usr/local/sbin:$PATH"
+export ALTERNATE_EDITOR=emacs EDITOR=emacsclient VISUAL=emacsclient
