@@ -49,7 +49,8 @@ export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
 export PATH=$PATH:"$HOME/Library/Android/sdk/platform-tools"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 source $ZSH/oh-my-zsh.sh
-export EDITOR=vim
+export EDITOR=emacsclient
+export ALTERNATE_EDITOR=emacs
 
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
