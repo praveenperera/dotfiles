@@ -325,6 +325,9 @@ you should place you code here."
   (with-eval-after-load 'company
     (add-to-list 'company-backends 'company-elm))
 
+  ;; Show 80-column marker
+  (define-globalized-minor-mode global-fci-mode fci-mode (lambda () (fci-mode 1)))
+  (global-fci-mode 1)
 
   (add-to-list 'auto-mode-alist '("\\.jsx?$" . react-mode))
   )
@@ -343,7 +346,7 @@ you should place you code here."
  '(col-highlight-overlay-priority 100)
  '(compilation-message-face (quote default))
  '(elm-format-on-save t)
- '(fci-rule-color "#383838" t)
+ '(fci-rule-color "#2F343D")
  '(flycheck-rubocop-lint-only t)
  '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
  '(highlight-tail-colors
