@@ -328,6 +328,7 @@ you should place you code here."
   ;; Show 80-column marker
   (define-globalized-minor-mode global-fci-mode fci-mode (lambda () (fci-mode 1)))
   (global-fci-mode 1)
+  (setq fci-rule-color "#2F343D")
 
   (add-to-list 'auto-mode-alist '("\\.jsx?$" . react-mode))
   )
