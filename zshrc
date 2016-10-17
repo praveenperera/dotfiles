@@ -56,3 +56,5 @@ export ALTERNATE_EDITOR=emacs
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 export PATH="/usr/local/sbin:$PATH"
 export ALTERNATE_EDITOR=emacs EDITOR=emacsclient VISUAL=emacsclient
+
+export PATH="$HOME/.yarn/bin:$PATH"
