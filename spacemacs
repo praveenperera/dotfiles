@@ -31,7 +31,6 @@ values."
      markdown
      syntax-checking
      auto-completion
-     company-mode
      erlang
      elixir
      elm
@@ -40,14 +39,11 @@ values."
      javascript
      react
      git
-     closure
      osx
      html
      org
      colors
-     editorconfig
      themes-megapack
-     perspectives
      (shell :variables
             shell-default-height 30
             shell-default-position 'bottom
