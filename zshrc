@@ -1,4 +1,4 @@
-# Path to your oh-my-zsh configuration.
+#Path to your oh-my-zsh configuration.
 ZSH=$HOME/.oh-my-zsh
 alias pp='cd && cd sites/praveenperera'
 alias cpubex='cd && cd code/public/Elixir'
@@ -58,6 +58,3 @@ export PATH="/usr/local/sbin:$PATH"
 export ALTERNATE_EDITOR=emacs EDITOR=emacsclient VISUAL=emacsclient
 
 export PATH="$HOME/.yarn/bin:$PATH"
-
-export NVM_DIR="$HOME/.nvm"
-. "/usr/local/opt/nvm/nvm.sh"
