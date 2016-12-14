@@ -7,6 +7,11 @@ alias cpriv='cd && cd code/private'
 alias docs='cd && cd sites/doctors_of_srilanka'
 alias zreload="source ~/.zshrc"
 
+alias emt=launch_emacs_terminal
+launch_emacs_terminal(){
+  emacs -nw $1
+}
+
 alias em=launch_emacs_client
 launch_emacs_client() {
   emacsclient $1 $2 -a=emacs $1 -q &
