@@ -12,11 +12,14 @@ launch_emacs_terminal(){
   emacs -nw $1
 }
 
+alias emtc=launch_emacs_client_terminal
+launch_emacs_client_terminal(){
+  emacsclient -nw $1 -a=emacs -nw $1
+}
 alias em=launch_emacs_client
 launch_emacs_client() {
-  emacsclient $1 $2 -a=emacs $1 -q &
+  emacsclient $1 $2 -a=emacs $1 $2
 }
-
 
 eval $(thefuck --alias)
 # Set name of the theme to load.
@@ -47,19 +50,18 @@ ZSH_THEME="excid3"
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
+source $ZSH/oh-my-zsh.sh
 plugins=(git osx ruby rails bundler brew rake cap elixir)
 
 export PATH="$HOME/.rbenv/bin:$HOME/.rbenv/shims:$PATH"
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
 export PATH=$PATH:"$HOME/Library/Android/sdk/platform-tools"
+export PATH="$HOME/.yarn/bin:$PATH"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
-source $ZSH/oh-my-zsh.sh
 export EDITOR=emacsclient
 export ALTERNATE_EDITOR=emacs
+export VISUAL=emacsclient
 
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 export PATH="/usr/local/sbin:$PATH"
-export ALTERNATE_EDITOR=emacs EDITOR=emacsclient VISUAL=emacsclient
-
-export PATH="$HOME/.yarn/bin:$PATH"

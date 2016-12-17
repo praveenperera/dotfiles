@@ -412,6 +412,7 @@ you should place you code here."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ (if (not window-system) '(default ((t (:background "nil")))))
  '(default ((t (:background nil))))
  '(col-highlight ((t (:background "#2F343D"))))
  '(company-tooltip-common ((t (:inherit company-tooltip :weight bold :underline nil))))
