@@ -114,7 +114,6 @@ values."
    dotspacemacs-themes '(atom-one-dark,
                          monokai,
                          zenbun,
-                         atom-one-dark
                          molokai
                          spacemacs-dark
                          spacemacs-light
@@ -294,6 +293,8 @@ before packages are loaded. If you are unsure, you should try in setting them in
     (setq web-mode-code-indent-offset 2)
     )
 
+
+
   (add-hook 'projectile-after-switch-project-hook 'mjs/setup-local-eslint)
 
   (defun mjs/setup-local-eslint ()
@@ -324,6 +325,17 @@ you should place you code here."
   (column-highlight-mode 1)
   (spaceline-compile)
 
+  ;; Customize background for terminal for atom one dark color
+  (if (not window-system)
+    (atom-one-dark-with-color-variables
+      (custom-theme-set-faces
+      'atom-one-dark
+      `(default ((t (:background "gray14"))))
+      `(linum ((t (:foreground "#262626" :background "#262626"))))
+      `(hl-line ((t (:background "gray13"))))
+      ))
+    )
+
   (defun evil-paste-after-from-0 ()
     (interactive)
     (let ((evil-this-register ?0))
@@ -337,7 +349,7 @@ you should place you code here."
   ;; Show 80-column marker
   (define-globalized-minor-mode global-fci-mode fci-mode (lambda () (fci-mode 1)))
   (global-fci-mode 1)
-  (setq fci-rule-color "#2F343D")
+  (setq fci-rule-color "gray13")
 
   (add-to-list 'auto-mode-alist '("\\.jsx?$" . react-mode))
   (add-to-list 'spacemacs-indent-sensitive-modes 'elixir-mode)
@@ -352,14 +364,16 @@ you should place you code here."
  ;; If there is more than one, they won't work right.
  '(ansi-color-faces-vector
    [default bold shadow italic underline bold bold-italic bold])
+ '(ansi-color-names-vector
+   ["#272822" "#F92672" "#A6E22E" "#E6DB74" "#66D9EF" "#FD5FF0" "#A1EFE4" "#F8F8F2"])
  '(col-highlight-overlay-priority 100)
  '(compilation-message-face (quote default))
  '(custom-safe-themes
    (quote
-    ("a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "6254372d3ffe543979f21c4a4179cd819b808e5dd0f1787e2a2a647f5759c1d1" "d8f76414f8f2dcb045a37eb155bfaa2e1d17b6573ed43fb1d18b936febc7bbc2" default)))
+    ("28ec8ccf6190f6a73812df9bc91df54ce1d6132f18b4c8fcc85d45298569eb53" "66132890ee1f884b4f8e901f0c61c5ed078809626a547dbefbb201f900d03fd8" "a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "6254372d3ffe543979f21c4a4179cd819b808e5dd0f1787e2a2a647f5759c1d1" "d8f76414f8f2dcb045a37eb155bfaa2e1d17b6573ed43fb1d18b936febc7bbc2" default)))
  '(elm-format-on-save t)
  '(evil-want-Y-yank-to-eol t)
- '(fci-rule-color "#2F343D" t)
+ '(fci-rule-color "gray13")
  '(flycheck-rubocop-lint-only t)
  '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
  '(highlight-tail-colors
@@ -412,9 +426,7 @@ you should place you code here."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- (if (not window-system) '(default ((t (:background "nil")))))
- '(default ((t (:background nil))))
- '(col-highlight ((t (:background "#2F343D"))))
+ '(col-highlight ((t (:background "gray13"))))
  '(company-tooltip-common ((t (:inherit company-tooltip :weight bold :underline nil))))
  '(company-tooltip-common-selection ((t (:inherit company-tooltip-selection :weight bold :underline nil))))
  '(web-mode-block-delimiter-face ((t (:foreground "tomato1"))))
