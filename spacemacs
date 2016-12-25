@@ -33,6 +33,7 @@ values."
      auto-completion
      erlang
      elixir
+     colors
      elm
      ruby
      ruby-on-rails
@@ -42,7 +43,6 @@ values."
      osx
      html
      org
-     colors
      themes-megapack
      (shell :variables
             shell-default-height 30
@@ -260,6 +260,33 @@ executes.
  This function is mostly useful for variables that need to be set
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
+
+  (if (not window-system)
+      (defvar atom-one-dark-colors-alist
+        '(("atom-one-dark-accent"   . "#528BFF")
+          ("atom-one-dark-fg"       . "#ABB2BF")
+          ("atom-one-dark-bg"       . "gray14")
+          ("atom-one-dark-bg-1"     . "gray13")
+          ("atom-one-dark-bg-hl"    . "gray13")
+          ("atom-one-dark-gutter"   . "#666D7A")
+          ("atom-one-dark-accent"   . "#AEB9F5")
+          ("atom-one-dark-mono-1"   . "#ABB2BF")
+          ("atom-one-dark-mono-2"   . "#828997")
+          ("atom-one-dark-mono-3"   . "#5C6370")
+          ("atom-one-dark-cyan"     . "#56B6C2")
+          ("atom-one-dark-blue"     . "#61AFEF")
+          ("atom-one-dark-purple"   . "#C678DD")
+          ("atom-one-dark-green"    . "#98C379")
+          ("atom-one-dark-red-1"    . "#E06C75")
+          ("atom-one-dark-red-2"    . "#BE5046")
+          ("atom-one-dark-orange-1" . "#D19A66")
+          ("atom-one-dark-orange-2" . "#E5C07B")
+          ("atom-one-dark-gray"     . "#3E4451")
+          ("atom-one-dark-silver"   . "#AAAAAA")
+          ("atom-one-dark-black"    . "#0F1011"))
+        "List of Atom One Dark colors.")
+    )
+
   (setq-default
    ;; js2-mode
    js2-basic-offset 2
@@ -293,8 +320,6 @@ before packages are loaded. If you are unsure, you should try in setting them in
     (setq web-mode-code-indent-offset 2)
     )
 
-
-
   (add-hook 'projectile-after-switch-project-hook 'mjs/setup-local-eslint)
 
   (defun mjs/setup-local-eslint ()
@@ -324,17 +349,6 @@ you should place you code here."
   (spacemacs/toggle-indent-guide-globally-on)
   (column-highlight-mode 1)
   (spaceline-compile)
-
-  ;; Customize background for terminal for atom one dark color
-  (if (not window-system)
-    (atom-one-dark-with-color-variables
-      (custom-theme-set-faces
-      'atom-one-dark
-      `(default ((t (:background "gray14"))))
-      `(linum ((t (:foreground "#262626" :background "#262626"))))
-      `(hl-line ((t (:background "gray13"))))
-      ))
-    )
 
   (defun evil-paste-after-from-0 ()
     (interactive)
