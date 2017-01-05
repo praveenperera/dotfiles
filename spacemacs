@@ -352,8 +352,9 @@ you should place you code here."
   (column-highlight-mode 1)
 
   ;; CUSTOM KEYBINDINGS
-  (spacemacs/set-leader-keys "]" 'column-highlight-mode)
   ;; not can use timing using key-chord-define
+  (spacemacs/set-leader-keys "]" 'column-highlight-mode)
+  (spacemacs/set-leader-keys "[" 'multi-term)
   (define-key evil-normal-state-map (kbd "']") 'column-highlight-mode)
 
   (defun evil-paste-after-from-0 ()
