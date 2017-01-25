@@ -21,6 +21,9 @@ launch_emacs_client() {
   emacsclient $1 $2 -a=emacs $1 $2
 }
 
+### Git Alias
+alias gcm="git commit -a -S -m $1"
+
 eval $(thefuck --alias)
 # Set name of the theme to load.
 # Look in ~/.oh-my-zsh/themes/
