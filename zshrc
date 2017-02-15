@@ -59,12 +59,15 @@ plugins=(git osx ruby rails bundler brew rake cap elixir)
 export LANG='en_US.UTF-8'
 export PATH="$HOME/.rbenv/bin:$HOME/.rbenv/shims:$PATH"
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
-export PATH=$PATH:"$HOME/Library/Android/sdk/platform-tools"
 export PATH="$HOME/.yarn/bin:$PATH"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH=${PATH}:${ANDROID_HOME}/tools
+export PATH=${PATH}:${ANDROID_HOME}/platform-tools
 export EDITOR=emacsclient
 export ALTERNATE_EDITOR=emacs
 export VISUAL=emacsclient
+export NVM_DIR="$HOME/.nvm"
+. "/usr/local/opt/nvm/nvm.sh"
 
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
