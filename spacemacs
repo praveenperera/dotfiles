@@ -30,6 +30,7 @@ values."
      ;; better-defaults
      emacs-lisp
      markdown
+     spacemacs-prettier
      syntax-checking
      auto-completion
      spacemacs-prettier
@@ -354,7 +355,7 @@ you should place you code here."
   (column-highlight-mode 1)
 
   ;; CUSTOM KEYBINDINGS
-  ;; not can use timing using key-chord-define
+  ;; note can use timing using key-chord-define
   (spacemacs/set-leader-keys "]" 'column-highlight-mode)
   (spacemacs/set-leader-keys "[" 'multi-term)
   (define-key evil-normal-state-map (kbd "']") 'column-highlight-mode)
