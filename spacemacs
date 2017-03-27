@@ -59,7 +59,7 @@ values."
    ;; wrapped in a layer. If you need some configuration for these
    ;; packages, then consider creating a layer. You can also put the
    ;; configuration in `dotspacemacs/user-config'.
-   dotspacemacs-additional-packages'(col-highlight csv-mode xah-css-mode)
+   dotspacemacs-additional-packages'(col-highlight csv-mode xah-css-mode rjsx-mode)
    ;; A list of packages and/or extensions that will not be install and loaded.
    dotspacemacs-excluded-packages '()
    ;; If non-nil spacemacs will delete any orphan packages, i.e. packages that
@@ -360,6 +360,10 @@ you should place you code here."
 
   (column-highlight-mode 1)
 
+  ;; Search using ripgrep (rg)
+  (custom-set-variables
+   '(helm-ag-base-command "rg --no-heading"))
+
   ;; CUSTOM KEYBINDINGS
   ;; note can use timing using key-chord-define
   (spacemacs/set-leader-keys "]" 'column-highlight-mode)
@@ -394,8 +398,6 @@ you should place you code here."
  ;; If there is more than one, they won't work right.
  '(ansi-color-faces-vector
    [default bold shadow italic underline bold bold-italic bold])
- '(ansi-color-names-vector
-   ["#272822" "#F92672" "#A6E22E" "#E6DB74" "#66D9EF" "#FD5FF0" "#A1EFE4" "#F8F8F2"])
  '(col-highlight-overlay-priority 100)
  '(compilation-message-face (quote default))
  '(custom-safe-themes
@@ -457,8 +459,5 @@ you should place you code here."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(col-highlight ((t (:background "#3e4451"))))
- '(company-tooltip-common ((t (:inherit company-tooltip :weight bold :underline nil))))
- '(company-tooltip-common-selection ((t (:inherit company-tooltip-selection :weight bold :underline nil))))
  '(web-mode-block-delimiter-face ((t (:foreground "tomato1"))))
- '(web-mode-html-attr-name-face ((t (:foreground "Tan"))))
- '(web-mode-html-tag-face ((t (:foreground "IndianRed1")))))
+ '(web-mode-html-attr-name-face ((t (:foreground "Tan")))))
