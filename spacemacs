@@ -358,8 +358,6 @@ you should place you code here."
   (spacemacs/toggle-indent-guide-globally-on)
   (spaceline-compile)
 
-  (column-highlight-mode 1)
-
   ;; Search using ripgrep (rg)
   (custom-set-variables
    '(helm-ag-base-command "rg --no-heading"))
@@ -398,7 +396,6 @@ you should place you code here."
  ;; If there is more than one, they won't work right.
  '(ansi-color-faces-vector
    [default bold shadow italic underline bold bold-italic bold])
- '(col-highlight-overlay-priority 100)
  '(compilation-message-face (quote default))
  '(custom-safe-themes
    (quote
@@ -459,6 +456,5 @@ you should place you code here."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(default ((t (:foreground "#ABB2BF" :background "#282C34"))))
- '(col-highlight ((t (:background "#3e4451"))))
  '(web-mode-block-delimiter-face ((t (:foreground "tomato1"))))
  '(web-mode-html-attr-name-face ((t (:foreground "Tan")))))
