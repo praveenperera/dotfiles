@@ -363,8 +363,8 @@ you should place you code here."
   (linum-relative-toggle)
 
   ;; ;; Search using ripgrep (rg)
-  ;; (custom-set-variables
-  ;;  '(helm-ag-base-command "rg --no-heading"))
+  (custom-set-variables
+   '(helm-ag-base-command "rg --no-heading"))
 
   ;; CUSTOM KEYBINDINGS
   ;; note can use timing using key-chord-define
