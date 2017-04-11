@@ -372,6 +372,7 @@ you should place you code here."
   ;; (spacemacs/set-leader-keys "]" 'column-highlight-mode)
   ;; (define-key evil-normal-state-map (kbd "']") 'column-highlight-mode)
 
+
   (defun evil-paste-after-from-0 ()
     (interactive)
     (let ((evil-this-register ?0))
@@ -404,7 +405,13 @@ you should place you code here."
  '(custom-safe-themes
    (quote
     ("28ec8ccf6190f6a73812df9bc91df54ce1d6132f18b4c8fcc85d45298569eb53" "66132890ee1f884b4f8e901f0c61c5ed078809626a547dbefbb201f900d03fd8" "a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "6254372d3ffe543979f21c4a4179cd819b808e5dd0f1787e2a2a647f5759c1d1" "d8f76414f8f2dcb045a37eb155bfaa2e1d17b6573ed43fb1d18b936febc7bbc2" default)))
+
+ ;; elm layer variables
+ '(elm-tags-on-save t)
  '(elm-format-on-save t)
+ '(elm-sort-imports-on-save t)
+ '(elm-format-on-save t)
+
  '(evil-want-Y-yank-to-eol t)
  '(flycheck-rubocop-lint-only t)
  '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
