@@ -303,7 +303,10 @@ before packages are loaded. If you are unsure, you should try in setting them in
   (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
   (setq web-mode-content-types-alist
         '(("jsx" . "\\.js[x]?\\'")))
+
+  ;; Use emmet mode in other modes (React and Haml)
   (add-hook 'react-mode-hook 'emmet-mode)
+  (add-hook 'haml-mode-hook 'emmet-mode)
 
   (setq web-mode-markup-indent-offset 2
         web-mode-css-indent-offset 2
