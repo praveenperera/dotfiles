@@ -290,6 +290,13 @@ before packages are loaded. If you are unsure, you should try in setting them in
         "List of Atom One Dark colors.")
     )
 
+
+  ;; prettier settings
+  (setq prettier-args '(
+                        "--trailing-comma" "all"
+                        ))
+
+
   (setq-default
    ;; js2-mods
    js2-basic-offset 2
@@ -374,7 +381,6 @@ you should place you code here."
   (spacemacs/set-leader-keys "[" 'multi-term)
   ;; (spacemacs/set-leader-keys "]" 'column-highlight-mode)
   ;; (define-key evil-normal-state-map (kbd "']") 'column-highlight-mode)
-
 
   (defun evil-paste-after-from-0 ()
     (interactive)
