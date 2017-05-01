@@ -12,6 +12,12 @@ launch_emacs_terminal(){
   emacs -nw $1
 }
 
+alias epi=elm-package-install
+elm-package-install(){
+  elm-package install -y $1
+}
+
+
 alias emtc=launch_emacs_client_terminal
 launch_emacs_client_terminal(){
   emacsclient -nw $1 -a=emacs -nw $1
@@ -23,6 +29,9 @@ launch_emacs_client() {
 
 ### Git Alias
 alias gcm="git commit -a -S -m $1"
+
+## ZSH Completions from Brew
+fpath=(/usr/local/share/zsh-completions $fpath)
 
 eval $(thefuck --alias)
 # Set name of the theme to load.
