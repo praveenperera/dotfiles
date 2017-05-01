@@ -24,7 +24,7 @@ launch_emacs_client_terminal(){
 }
 alias em=launch_emacs_client
 launch_emacs_client() {
-  emacsclient $1 $2 -a=emacs $1 $2
+  emacsclient $1 $2 -a=emacs $1 $2 &
 }
 
 ### Git Alias
