@@ -317,10 +317,6 @@ before packages are loaded. If you are unsure, you should try in setting them in
   ;;turn off elm indent mode
   (add-hook 'elm-mode-hook #'turn-off-elm-indent)
 
-  ;;elm format variable
-  (elm :variables
-       elm-format-command "elm-format-0.18")
-
   ;; Use emmet mode in other modes (React and Haml)
   (add-hook 'react-mode-hook 'emmet-mode)
   (add-hook 'haml-mode-hook 'emmet-mode)
@@ -390,6 +386,8 @@ you should place you code here."
   (setq highlight-indent-guides-method 'character)
   (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
 
+  ;;elm format variable
+  (setq elm-format-command "elm-format-0.18" ) 
 
   ;; ;; Search using ripgrep (rg)
   (custom-set-variables
