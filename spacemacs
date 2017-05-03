@@ -383,6 +383,7 @@ you should place you code here."
   
 
   ;; Indent highlight settings
+  (spacemacs/set-leader-keys "t h i" 'highlight-indent-guides-mode)
   (setq highlight-indent-guides-method 'character)
   (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
 
