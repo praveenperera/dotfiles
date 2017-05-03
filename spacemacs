@@ -145,7 +145,7 @@ values."
    ;; Major mode leader key accessible in `emacs state' and `insert state'.
    ;; (default "C-M-m)
    dotspacemacs-major-mode-emacs-leader-key "C-M-m"
-   ; ; These variables control whether separate commands are bound in the GUI to
+                                        ; ; These variables control whether separate commands are bound in the GUI to
    ;; the key pairs C-i, TAB and C-m, RET.
    ;; Setting it to a non-nil value, allows for separate commands under <C-i>
    ;; and TAB or <C-m> and RET.
@@ -341,7 +341,7 @@ before packages are loaded. If you are unsure, you should try in setting them in
                 '((auto-completion :variables
                                    auto-completion-enable-snippets-in-popup t)))
 
-  (defun my-web-mode-hook ()
+  (defun web-mode-customization-hook ()
     "Hooks for Web mode."
     (setq web-mode-markup-indent-offset 2)
     (setq web-mode-scss-indent-offset 2)
@@ -349,25 +349,29 @@ before packages are loaded. If you are unsure, you should try in setting them in
     (setq web-mode-code-indent-offset 2)
     )
 
-  (add-hook 'projectile-after-switch-project-hook 'mjs/setup-local-eslint)
+  (defun emmet-mode-customization-hook ()
+    "Hooks for Emmet mode."
+    (setq emmet-indentation 2 )
+    (setq emmet-indent-after-insert nil)
+    )
 
-  (defun mjs/setup-local-eslint ()
-    "If ESLint found in node_modules directory - use that for flycheck.
+ (add-hook 'web-mode-hook  'web-mode-customization-hook)
+ (add-hook 'emmet-mode-hook 'emmet-mode-customization-hook)
+ (add-hook 'projectile-after-switch-project-hook 'mjs/setup-local-eslint)
+
+ (defun setup-local-eslint  ()
+   "If ESLint found in node_modules directory - use that for flycheck.
         Intended for use in PROJECTILE-AFTER-SWITCH-PROJECT-HOOK."
-    (interactive)
-    (let ((local-eslint (expand-file-name "./node_modules/.bin/eslint")))
-       (setq flycheck-javascript-eslint-executable
-            (and (file-exists-p local-eslint) local-eslint))))
-
-  (add-hook 'web-mode-hook  'my-web-mode-hook)
-  (add-hook 'emmet-mode-hook (lambda () (setq emmet-indent-after-insert nil)))
-  (add-hook 'emmet-mode-hook (lambda () (setq emmet-indentation 2))) ;; indent 2 spaces.
-  (global-auto-revert-mode t)
-  )
+   (interactive)
+   (let ((local-eslint  (expand-file-name "./node_modules/.bin/eslint")))
+     (setq flycheck-javascript-eslint-executable
+           (and (file-exists-p local-eslint) local-eslint))))
+ (global-auto-revert-mode t)
+ )
 
 
 (defun dotspacemacs/user-config ()
-"Configuration function for user code.
+  "Configuration function for user code.
 This function is called at the very end of Spacemacs initialization after
 layers configuration.
 This is the place where most of your configurations should be done. Unless it is
