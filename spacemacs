@@ -385,10 +385,6 @@ you should place you code here."
   ;; Indent highlight settings
   (spacemacs/set-leader-keys "t h i" 'highlight-indent-guides-mode)
   (setq highlight-indent-guides-method 'character)
-  (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
-  (setq highlight-indent-guides-auto-odd-face-perc 15)
-  (setq highlight-indent-guides-auto-even-face-perc 15)
-  (setq highlight-indent-guides-auto-character-face-perc 10)
 
   ;;elm format variable
   (setq elm-format-command "elm-format-0.18" ) 
