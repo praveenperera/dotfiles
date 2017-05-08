@@ -17,7 +17,6 @@ elm-package-install(){
   elm-package install -y $1
 }
 
-
 alias emtc=launch_emacs_client_terminal
 launch_emacs_client_terminal(){
   emacsclient -nw $1 -a=emacs -nw $1

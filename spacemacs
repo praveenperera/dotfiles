@@ -289,8 +289,6 @@ before packages are loaded. If you are unsure, you should try in setting them in
           ("atom-one-dark-black"    . "#0F1011"))
         "List of Atom One Dark colors.")
     )
-
-
   ;; prettier settings
   (setq prettier-args '(
                         "--trailing-comma" "all"
@@ -355,6 +353,16 @@ before packages are loaded. If you are unsure, you should try in setting them in
  (add-hook 'emmet-mode-hook 'emmet-mode-customization-hook)
  (add-hook 'projectile-after-switch-project-hook 'mjs/setup-local-eslint)
 
+ ;; Hack fix for highlight indent guide
+ (defun my-unfontify-function (beg end)
+   (remove-list-of-text-properties beg end '(display)))
+
+ (defun my-register-unfontify ()
+   (setq font-lock-unfontify-region-function 'my-unfontify-function))
+
+ (add-hook 'web-mode-hook 'my-register-unfontify t)
+
+
  (defun setup-local-eslint  ()
    "If ESLint found in node_modules directory - use that for flycheck.
         Intended for use in PROJECTILE-AFTER-SWITCH-PROJECT-HOOK."
@@ -385,6 +393,7 @@ you should place you code here."
   ;; Indent highlight settings
   (spacemacs/set-leader-keys "t h i" 'highlight-indent-guides-mode)
   (setq highlight-indent-guides-method 'character)
+  (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
 
   ;;elm format variable
   (setq elm-format-command "elm-format-0.18" ) 
@@ -436,6 +445,7 @@ you should place you code here."
  '(elm-tags-on-save t)
  '(evil-want-Y-yank-to-eol t)
  '(flycheck-rubocop-lint-only t)
+ '(helm-ag-base-command "rg --no-heading")
  '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
  '(highlight-tail-colors
    (quote
