@@ -501,4 +501,5 @@ you should place you code here."
  ;; If there is more than one, they won't work right.
  '(default ((t (:foreground "#ABB2BF" :background "#282C34"))))
  '(web-mode-block-delimiter-face ((t (:foreground "tomato1"))))
- '(web-mode-html-attr-name-face ((t (:foreground "Tan")))))
+ '(web-mode-html-attr-name-face ((t (:foreground "Tan"))))
+ '(web-mode-html-tag-face ((t (:foreground "tomato3")))))
