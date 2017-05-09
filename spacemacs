@@ -388,7 +388,9 @@ you should place you code here."
   ;; Make linums relative by default
   (global-linum-mode)
   (linum-relative-toggle)
-  
+
+  ;; enable global multi cursor mode
+  (global-evil-mc-mode  1)
 
   ;; Indent highlight settings
   (spacemacs/set-leader-keys "t h i" 'highlight-indent-guides-mode)
