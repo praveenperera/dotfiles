@@ -49,7 +49,7 @@ values."
      themes-megapack
      (shell :variables
             shell-default-height 30
-            shell-default-position 'full
+            shell-default-position 'bottom
             shell-default-shell 'term
             shell-default-term-shell "/bin/zsh")
      spell-checking
