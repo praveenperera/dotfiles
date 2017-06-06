@@ -64,6 +64,10 @@ ZSH_THEME="excid3"
 source $ZSH/oh-my-zsh.sh
 plugins=(git osx ruby rails bundler brew rake cap elixir)
 
+
+#Setup go path
+export PATH=$PATH:$(go env GOPATH)/bin
+
 export LANG='en_US.UTF-8'
 export PATH="$HOME/.rbenv/bin:$HOME/.rbenv/shims:$PATH"
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
