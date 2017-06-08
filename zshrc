@@ -65,7 +65,7 @@ source $ZSH/oh-my-zsh.sh
 plugins=(git osx ruby rails bundler brew rake cap elixir)
 
 
-#Setup go path
+# Setup go path
 export PATH=$PATH:$(go env GOPATH)/bin
 
 export LANG='en_US.UTF-8'
@@ -84,3 +84,6 @@ export NVM_DIR="$HOME/.nvm"
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 export PATH="/usr/local/sbin:$PATH"
+
+## Add direnv 
+eval "$(direnv hook zsh)"
