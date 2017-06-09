@@ -291,9 +291,13 @@ before packages are loaded. If you are unsure, you should try in setting them in
         "List of Atom One Dark colors.")
     )
   ;; prettier settings
-  (setq prettier-args '(
+  (setq prettier-js-args '(
                         "--trailing-comma" "all"
                         ))
+
+  (add-hook 'js2-mode-hook 'prettier-js-mode)
+  (add-hook 'web-mode-hook 'prettier-js-mode)
+  (add-hook 'react-mode-hook 'prettier-js-mode)
 
   ;; disable creation of .# files
   (setq create-lockfiles nil)
