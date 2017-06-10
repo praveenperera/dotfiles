@@ -297,7 +297,6 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   ;; prettier hooks
   (add-hook 'js2-mode-hook 'prettier-js-mode)
-  (add-hook 'web-mode-hook 'prettier-js-mode)
   (add-hook 'react-mode-hook 'prettier-js-mode)
 
   ;; disable creation of .# files
