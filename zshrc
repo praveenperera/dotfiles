@@ -6,6 +6,7 @@ alias cpubr='cd && cd code/public/ruby'
 alias cpriv='cd && cd code/private'
 alias docs='cd && cd sites/doctors_of_srilanka'
 alias zreload="source ~/.zshrc"
+alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
 
 alias emt=launch_emacs_terminal
 launch_emacs_terminal(){
