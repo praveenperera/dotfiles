@@ -68,6 +68,8 @@ plugins=(git osx ruby rails bundler brew rake cap elixir)
 
 # Setup go path
 export PATH=$PATH:$(go env GOPATH)/bin
+# Setup path for imagemagick 6
+export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 
 export LANG='en_US.UTF-8'
 export PATH="$HOME/.rbenv/bin:$HOME/.rbenv/shims:$PATH"
