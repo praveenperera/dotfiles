@@ -8,23 +8,38 @@ alias docs='cd && cd sites/doctors_of_srilanka'
 alias zreload="source ~/.zshrc"
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
 
-alias emt=launch_emacs_terminal
-launch_emacs_terminal(){
-  emacs -nw $1
-}
-
 alias epi=elm-package-install
 elm-package-install(){
   elm-package install -y $1
 }
 
-alias emtc=launch_emacs_client_terminal
-launch_emacs_client_terminal(){
-  emacsclient -nw $1 -a=emacs -nw $1
-}
 alias em=launch_emacs_client
 launch_emacs_client() {
-  emacsclient $1 $2 -a=emacs $1 $2 &
+  # emacsclient options for reference
+  # -a "" starts emacs daemon and reattaches
+  # -c creates a new frame
+  # -n returns control back to the terminal
+  # -e eval the script
+  # -nw no window (launch in terminal)
+  visible_frames() {
+    emacsclient -a "" -e '(length (visible-frame-list))'
+  }
+
+  change_focus() {
+    emacsclient -n -e "(select-frame-set-input-focus (selected-frame))" > /dev/null
+  }
+
+  test "$(visible_frames)" -eq "1" && change_focus
+
+  if [ "$(visible_frames)" -lt  "2" ]; then # need to create a frame
+    # -c $@ with no args just opens the scratch buffer
+    emacsclient -n -c "$@" && change_focus
+    emacsclient -n -e "(apm-graphic-frame-init)" > /dev/null
+  else # there is already a visible frame besides the daemon, so
+    change_focus
+    # -n $@ errors if there are no args
+    test  "$#" -ne "0" && emacsclient -n "$@"
+  fi
 }
 
 ### Git Alias
