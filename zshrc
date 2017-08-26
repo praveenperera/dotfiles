@@ -8,6 +8,13 @@ alias docs='cd && cd sites/doctors_of_srilanka'
 alias zreload="source ~/.zshrc"
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
 
+alias alle2h=convert_all_eex_to_haml
+convert_all_eex_to_haml(){
+  for i in $( find ./lib -name *.eex -print ); do
+    e2h $i
+  done
+}
+
 alias e2h=eex2haml
 eex2haml(){
   REPLACE_WITH="haml"
