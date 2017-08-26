@@ -8,6 +8,14 @@ alias docs='cd && cd sites/doctors_of_srilanka'
 alias zreload="source ~/.zshrc"
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
 
+alias e2h=eex2haml
+eex2haml(){
+  REPLACE_WITH="haml"
+  OUTPUT="$(echo $1 | sed -e "s/eex/$REPLACE_WITH/g")"
+  html2haml $1 -e --ruby19-attributes $OUTPUT
+  rm $1
+}
+
 alias epi=elm-package-install
 elm-package-install(){
   elm-package install -y $1
