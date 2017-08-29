@@ -269,7 +269,7 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   ;; prettier settings
   (setq prettier-js-args '(
-                        "--trailing-comma" "all"
+                        "--trailing-comma" "es5"
                         ))
 
   ;; prettier hooks
