@@ -371,6 +371,9 @@ you should place you code here."
   (global-linum-mode)
   (linum-relative-toggle)
 
+  ;; Fix helm bug
+  (require 'helm-bookmark)
+
   ;; enable global multi cursor mode
   (global-evil-mc-mode  1)
 
