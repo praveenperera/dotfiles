@@ -392,8 +392,15 @@ you should place you code here."
   ;; CUSTOM KEYBINDINGS
   ;; note can use timing using key-chord-define
   (spacemacs/set-leader-keys "[" 'multi-term)
+  (spacemacs/set-leader-keys "je" 'alchemist-goto-definition-at-point)
   ;; (spacemacs/set-leader-keys "]" 'column-highlight-mode)
   ;; (define-key evil-normal-state-map (kbd "']") 'column-highlight-mode)
+
+
+  ;; CUSTOM KEYBINDING FOR MAJORMODE
+  ;; ELIXIR
+  (spacemacs/set-leader-keys-for-major-mode 'elixir-mode "gg" 'alchemist-goto-definition-at-point)
+
 
   (defun evil-paste-after-from-0 ()
     (interactive)
