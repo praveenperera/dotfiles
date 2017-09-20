@@ -33,6 +33,7 @@ zstyle ':prezto:load' pmodule \
   'history' \
   'directory' \
   'spectrum' \
+  'ruby' \
   'osx' \
   'utility' \
   'completion' \
@@ -58,6 +59,9 @@ zstyle ':prezto:module:autosuggestions:color' found ''
 
 # Set the key mapping style to 'emacs' or 'vi'.
 zstyle ':prezto:module:editor' key-bindings 'vi'
+
+# %v - ruby version.
+zstyle ':prezto:module:ruby:info:version' format 'version:%v'
 
 # Auto convert .... to ../..
 zstyle ':prezto:module:editor' dot-expansion 'yes'
@@ -131,7 +135,7 @@ zstyle ':prezto:module:prompt' show-return-val 'yes'
 #
 
 # Auto switch the Ruby version on directory change.
- zstyle ':prezto:module:ruby:chruby' auto-switch 'yes'
+ zstyle ':prezto:module:ruby:rbenv' auto-switch 'yes'
 
 #
 # Python

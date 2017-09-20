@@ -6,6 +6,12 @@ function prompt_char {
   fi
 }
 
+function local_ruby {
+  if cat .ruby-version > /dev/null 2>/dev/null; then
+     echo " using ${_prompt_praveen_colors[6]}$(cat .ruby-version)%f"
+  fi
+}
+
 function prompt_praveen_precmd {
   # Check for untracked files or updated submodules since vcs_info does not.
   if [[ -n $(git ls-files --other --exclude-standard 2> /dev/null) ]]; then
@@ -18,14 +24,10 @@ function prompt_praveen_precmd {
 
   vcs_info 'prompt'
 
-  if (( $+functions[python-info] )); then
-    python-info
-  fi
-
   # Define prompts.
   PROMPT="
-%(?.${_prompt_praveen_colors[3]}%n%f.%F{red}%n%f) at ${_prompt_praveen_colors[2]}%m%f in ${_prompt_praveen_colors[5]}%~%f "'${vcs_info_msg_0_}'"
-"'$python_info[virtualenv]'"$(prompt_char) "
+%(?.${_prompt_praveen_colors[3]}%n%f.%F{red}%n%f) at ${_prompt_praveen_colors[2]}%m%f$(local_ruby) %fin ${_prompt_praveen_colors[5]}%~%f "'${vcs_info_msg_0_}'"
+""$(prompt_char) "
   RPROMPT=''
 }
 
@@ -47,8 +49,9 @@ function prompt_praveen_setup {
       "%F{81}"  # Turquoise
       "%F{166}" # Orange
       "%F{135}" # Purple
-      "%F{161}" # Hotpink
+      "%F{160}" # Hotpink
       "%F{118}" # Limegreen
+      "%F{161}" # Dark Pink
     )
   else
     _prompt_praveen_colors=(
@@ -57,6 +60,7 @@ function prompt_praveen_setup {
       "%F{magenta}"
       "%F{red}"
       "%F{green}"
+      "%F{red}"
     )
   fi
 
@@ -81,8 +85,8 @@ function prompt_praveen_setup {
   zstyle ':vcs_info:*:prompt:*' formats "${branch_format}"
   zstyle ':vcs_info:*:prompt:*' nvcsformats   ""
 
-  # Set python-info parameters.
-  zstyle ':prezto:module:python:info:virtualenv' format '(%v)'
+  # Set ruby-info parameters.
+  zstyle ':prezto:module:ruby:info:versopm' format '(%v)'
 
 }
 
