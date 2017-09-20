@@ -58,7 +58,7 @@ zstyle ':prezto:module:autosuggestions:color' found ''
 #
 
 # Set the key mapping style to 'emacs' or 'vi'.
-zstyle ':prezto:module:editor' key-bindings 'vi'
+zstyle ':prezto:module:editor' key-bindings 'emacs'
 
 # %v - ruby version.
 zstyle ':prezto:module:ruby:info:version' format 'version:%v'
