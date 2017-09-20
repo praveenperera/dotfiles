@@ -94,6 +94,8 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 fi
 
+TERM=xterm-256color
+
 ## Add direnv 
 eval "$(direnv hook zsh)"
 source /usr/local/share/zsh-history-substring-search/zsh-history-substring-search.zsh
