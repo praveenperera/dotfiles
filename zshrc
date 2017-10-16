@@ -99,3 +99,8 @@ TERM=xterm-256color
 ## Add direnv 
 eval "$(direnv hook zsh)"
 source /usr/local/share/zsh-history-substring-search/zsh-history-substring-search.zsh
+export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
+
+# Add ASDF version manager
+. $HOME/.asdf/asdf.sh
+. $HOME/.asdf/completions/asdf.bash
