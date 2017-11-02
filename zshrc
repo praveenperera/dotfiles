@@ -8,7 +8,7 @@ alias zreload="source ~/.zshrc"
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
 
 ## elixir 1.6 mix format
-alias mix_format="ASDF_ELIXIR_VERSION=ref-master mix format"
+alias mix_format="~/.elixir/bin/elixir ~/.elixir/bin/mix format"
 
 alias alle2h=convert_all_eex_to_haml
 convert_all_eex_to_haml(){
@@ -107,3 +107,4 @@ export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 # Add ASDF version manager
 . $HOME/.asdf/asdf.sh
 . $HOME/.asdf/completions/asdf.bash
+. /Users/praveen/.opam/opam-init/init.zsh > /dev/null 2> /dev/null || true

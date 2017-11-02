@@ -466,8 +466,8 @@ you should place you code here."
  '(magit-commit-arguments (quote ("--gpg-sign=8A7A38239BD46ACF")))
  '(magit-diff-use-overlays nil)
  '(mixfmt-elixir
-   "/Users/praveen/.asdf/installs/elixir/ref-master/bin/elixir")
- '(mixfmt-mix "/Users/praveen/.asdf/installs/elixir/ref-master/bin/mix")
+   "/Users/praveen/.elixir/bin/elixir")
+ '(mixfmt-mix "/Users/praveen/.elixir/bin/mix")
  '(nrepl-message-colors
    (quote
     ("#CC9393" "#DFAF8F" "#F0DFAF" "#7F9F7F" "#BFEBBF" "#93E0E3" "#94BFF3" "#DC8CC3")))
