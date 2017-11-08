@@ -33,7 +33,6 @@ zstyle ':prezto:load' pmodule \
   'history' \
   'directory' \
   'spectrum' \
-  'ruby' \
   'osx' \
   'utility' \
   'completion' \
