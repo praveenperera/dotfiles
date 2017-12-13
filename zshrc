@@ -26,7 +26,7 @@ kill_port(){
   KILL_PID=`lsof -i:$1 -t`
 
   if [ $KILL_PID ]; then
-    NAME=`lsof -i:$1 | cut -d ' ' -f1 | xargs | awk '{print $2}'`
+    NAME=`lsof -i:$1 | awk '{print $1}' | xargs | awk '{print $2}'`
     kill -9 $KILL_PID
     echo "PID: $KILL_PID on PORT: $1 has been terminated ($NAME)"
   else
