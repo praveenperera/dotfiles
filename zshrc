@@ -6,7 +6,6 @@ alias cpriv='cd && cd code/private'
 alias docs='cd && cd sites/doctors_of_srilanka'
 alias zreload="source ~/.zshrc"
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
-
 ## elixir 1.6 mix format
 alias mix_format="~/.elixir/bin/elixir ~/.elixir/bin/mix format"
 
@@ -19,6 +18,20 @@ convert_all_eex_to_haml(){
 
 find_eex_files(){
   find ./lib -name *.eex -print
+}
+
+
+alias killp=kill_port
+kill_port(){
+  KILL_PID=`lsof -i:$1 -t`
+
+  if [ $KILL_PID ]; then
+    NAME=`lsof -i:$1 | cut -d ' ' -f1 | xargs | awk '{print $2}'`
+    kill -9 $KILL_PID
+    echo "PID: $KILL_PID on PORT: $1 has been terminated ($NAME)"
+  else
+    echo "No process running on PORT: $1"
+  fi
 }
 
 alias e2h=eex2haml
