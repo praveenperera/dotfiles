@@ -6,6 +6,8 @@ alias cpriv='cd && cd code/private'
 alias docs='cd && cd sites/doctors_of_srilanka'
 alias zreload="source ~/.zshrc"
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
+alias pu="pushd"
+alias po="popd"
 ## elixir 1.6 mix format
 alias mix_format="~/.elixir/bin/elixir ~/.elixir/bin/mix format"
 
