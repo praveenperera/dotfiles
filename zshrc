@@ -25,7 +25,7 @@ find_eex_files(){
 
 alias killp=kill_port
 kill_port(){
-  KILL_PID=`lsof -i:$1 -t`
+  KILL_PID=`lsof -i:$1 | awk '{print $2}' | xargs | awk '{print $2}'`
 
   if [ $KILL_PID ]; then
     NAME=`lsof -i:$1 | awk '{print $1}' | xargs | awk '{print $2}'`
