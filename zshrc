@@ -120,3 +120,4 @@ source /usr/local/share/zsh-history-substring-search/zsh-history-substring-searc
 export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 
 . /Users/praveen/.opam/opam-init/init.zsh > /dev/null 2> /dev/null || true
+export PATH="/usr/local/opt/mysql@5.5/bin:$PATH"
