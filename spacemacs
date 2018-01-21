@@ -215,7 +215,7 @@ values."
    dotspacemacs-loading-progress-bar t
    ;; If non nil the frame is fullscreen when Emacs starts up. (default nil)
    ;; (Emacs 24.4+ only)
-   dotspacemacs-fullscreen-at-startup t
+   dotspacemacs-fullscreen-at-startup nil
    ;; If non nil `spacemacs/toggle-fullscreen' will not use native fullscreen.
    ;; Use to disable fullscreen animations in OSX. (default nil)
    dotspacemacs-fullscreen-use-non-native nil
@@ -472,8 +472,6 @@ you should place you code here."
  '(hl-sexp-background-color "#1c1f26")
  '(magit-commit-arguments (quote ("--gpg-sign=8A7A38239BD46ACF")))
  '(magit-diff-use-overlays nil)
- '(mixfmt-elixir "/Users/praveen/.elixir/bin/elixir")
- '(mixfmt-mix "/Users/praveen/.elixir/bin/mix")
  '(nrepl-message-colors
    (quote
     ("#CC9393" "#DFAF8F" "#F0DFAF" "#7F9F7F" "#BFEBBF" "#93E0E3" "#94BFF3" "#DC8CC3")))
