@@ -469,6 +469,8 @@ you should place you code here."
      ("#A45E0A" . 70)
      ("#A41F99" . 85)
      ("#3E3D31" . 100))))
+ '(mixfmt-elixir "/usr/local/bin/elixir")
+ '(mixfmt-mix "/usr/local/bin/mix")
  '(hl-sexp-background-color "#1c1f26")
  '(magit-commit-arguments (quote ("--gpg-sign=8A7A38239BD46ACF")))
  '(magit-diff-use-overlays nil)
