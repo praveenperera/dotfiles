@@ -72,6 +72,7 @@ values."
                                      rjsx-mode
                                      (mix-format :location (recipe :fetcher github :repo "anildigital/mix-format.el"))
                                      prettier-js
+                                     string-inflection
                                      highlight-indent-guides)
    ;; A list of packages and/or extensions that will not be install and loaded.
    dotspacemacs-excluded-packages '()
@@ -426,6 +427,9 @@ you should place you code here."
       (call-interactively 'evil-paste-after)))
 
   (define-key evil-visual-state-map "p" 'evil-paste-after-from-0)
+
+  (define-key evil-normal-state-map "gS" 'string-inflection-lower-camelcase)
+  (define-key evil-normal-state-map "gs" 'string-inflection-underscore)
 
   (with-eval-after-load 'company
     (add-to-list 'company-backends 'company-elm))
