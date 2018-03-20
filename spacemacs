@@ -459,6 +459,8 @@ you should place you code here."
     ("28ec8ccf6190f6a73812df9bc91df54ce1d6132f18b4c8fcc85d45298569eb53" "66132890ee1f884b4f8e901f0c61c5ed078809626a547dbefbb201f900d03fd8" "a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "6254372d3ffe543979f21c4a4179cd819b808e5dd0f1787e2a2a647f5759c1d1" "d8f76414f8f2dcb045a37eb155bfaa2e1d17b6573ed43fb1d18b936febc7bbc2" default)))
  '(ediff-split-window-function (quote split-window-horizontally) t)
  '(ediff-window-setup-function (quote ediff-setup-windows-plain) t)
+ '(elixir-format-elixir-path "/usr/local/bin/elixir")
+ '(elixir-format-mix-path "/usr/local/bin/mix")
  '(elm-format-on-save t)
  '(elm-sort-imports-on-save t)
  '(elm-tags-on-save t)
