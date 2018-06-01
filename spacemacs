@@ -303,8 +303,9 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   ;; ELIXIR CUSTOMIZATIONS
   ;; elixir hook for elixir formatter
+  ;; Create a buffer-local hook to run elixir-format on save, only when we enable elixir-mode.
   (add-hook 'elixir-mode-hook
-            (lambda () (add-hook 'before-save-hook 'elixir-format-before-save)))
+            (lambda () (add-hook 'before-save-hook 'elixir-format nil t)))
 
   ;; disable creation of .# files
   (setq create-lockfiles nil)
