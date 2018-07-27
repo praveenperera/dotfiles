@@ -11,6 +11,24 @@ alias po="popd"
 alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias gbbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 
+certbot-aws(){
+    mkdir $HOME/.letsencrypt
+
+    docker run -it --rm --name certbot \
+    -v "$HOME/.letsencrypt:/etc/letsencrypt" \
+    -v "$HOME/.letsencrypt:/var/lib/letsencrypt" \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    certbot/dns-route53 certonly \
+    --dns-route53 \
+    --server https://acme-v02.api.letsencrypt.org/directory -d *.$1 -d $1; \
+
+    mkdir -p ~/code/certs/$1
+    cp -R ~/.letsencrypt/archive/$1/* ~/code/certs/$1 ;\
+    cd ~/code/certs/$1 ;\
+    openssl rsa -inform pem -in privkey*.pem -out privkeyrsa.key
+}
+
 alias alle2h=convert_all_eex_to_haml
 convert_all_eex_to_haml(){
   for i in $(find_eex_files); do
