@@ -10,6 +10,7 @@ alias pu="pushd"
 alias po="popd"
 alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias gbbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
+alias pwd2=pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//"
 
 certbot-aws(){
     mkdir $HOME/.letsencrypt
