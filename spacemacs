@@ -339,6 +339,16 @@ before packages are loaded. If you are unsure, you should try in setting them in
   (setq js-indent-level 2)
   (setq css-indent-offset 2)
 
+  ;; REASONML SETTINGS
+  ;; enable refmt on save
+  (add-hook 'reason-mode-hook (lambda ()
+                                (add-hook 'before-save-hook #'refmt-before-save)))
+
+
+  ;; enable emmet on reason mode
+  (add-hook 'reason-mode-hook 'emmet-mode)
+  ;; / REASONML SETTINGS
+
   (with-eval-after-load 'web-mode
     (add-to-list 'web-mode-indentation-params '("lineup-args" . nil))
     (add-to-list 'web-mode-indentation-params '("lineup-concats" . nil))
