@@ -74,7 +74,6 @@ values."
                                      xah-css-mode
                                      drag-stuff
                                      rjsx-mode
-                                     (elixir-format :location (recipe :fetcher github :repo "anildigital/mix-format.el"))
                                      prettier-js
                                      add-node-modules-path
                                      string-inflection
@@ -304,11 +303,32 @@ before packages are loaded. If you are unsure, you should try in setting them in
   (eval-after-load 'react-mode
     '(add-hook 'react-mode-hook #'add-node-modules-path))
 
-  ;; ELIXIR CUSTOMIZATIONS
-  ;; elixir hook for elixir formatter
+
+
+  ;; Elixir format
+
+  ;; Work around to make .formatter work with formatter dpes
+  ;; Runs mix format from mix project root
+  (defun set-default-directory-to-mix-project-root (original-fun &rest args)
+    (if-let* ((mix-project-root (and (projectile-project-p)
+                                     (projectile-locate-dominating-file buffer-file-name
+                                                                        ".formatter.exs"))))
+        (let ((default-directory mix-project-root))
+          (apply original-fun args))
+      (apply original-fun args)))
+
+  (advice-add 'elixir-format :around #'set-default-directory-to-mix-project-root)
+
   ;; Create a buffer-local hook to run elixir-format on save, only when we enable elixir-mode.
   (add-hook 'elixir-mode-hook
             (lambda () (add-hook 'before-save-hook 'elixir-format nil t)))
+
+  (add-hook 'elixir-format-hook (lambda ()
+                                  (if (projectile-project-p)
+                                      (setq elixir-format-arguments
+                                            (list "--dot-formatter"
+                                                  (concat (locate-dominating-file buffer-file-name ".formatter.exs") ".formatter.exs")))
+                                    (setq elixir-format-arguments nil))))
 
   ;; disable creation of .# files
   (setq create-lockfiles nil)
@@ -422,9 +442,6 @@ you should place you code here."
   (global-set-key (kbd "M-<up>")   #'drag-stuff-up)
   (global-set-key (kbd "M-<down>") #'drag-stuff-down)
 
-  ;; Require elixir-format on load
-  (require 'elixir-format)
-
   ;; enable global multi cursor mode
   (global-evil-mc-mode  1)
 
@@ -489,8 +506,6 @@ you should place you code here."
     ("28ec8ccf6190f6a73812df9bc91df54ce1d6132f18b4c8fcc85d45298569eb53" "66132890ee1f884b4f8e901f0c61c5ed078809626a547dbefbb201f900d03fd8" "a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "6254372d3ffe543979f21c4a4179cd819b808e5dd0f1787e2a2a647f5759c1d1" "d8f76414f8f2dcb045a37eb155bfaa2e1d17b6573ed43fb1d18b936febc7bbc2" default)))
  '(ediff-split-window-function (quote split-window-horizontally) t)
  '(ediff-window-setup-function (quote ediff-setup-windows-plain) t)
- '(elixir-format-elixir-path "/usr/local/bin/elixir")
- '(elixir-format-mix-path "/usr/local/bin/mix")
  '(elm-format-on-save t)
  '(elm-sort-imports-on-save t)
  '(elm-tags-on-save t)
