@@ -23,5 +23,7 @@
     "jsx": {
       "self_closing_tag": true
     }
-  }
+  },
+  "git.autofetch": true,
+  "sync.gist": "f491b8e3cd183139a48ea184628b82f1"
 }
