@@ -1,0 +1,27 @@
+// Place your settings in this file to overwrite the default settings
+{
+  "editor.formatOnSave": true,
+  "reason.codelens.enabled": true,
+  "git.enableCommitSigning": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "code-runner.executorMap": {
+    "racket": "raco test"
+  },
+  "workbench.colorTheme": "One Dark Pro",
+  "editor.rulers": [80],
+  "editor.minimap.enabled": true,
+  "emmet.triggerExpansionOnTab": true,
+  "emmet.includeLanguages": {
+    "javascript": "javascriptreact",
+    "reason": "javascriptreact"
+  },
+  "emmet.syntaxProfiles": {
+    "html": {
+      "attr_quotes": "double"
+    },
+    "jsx": {
+      "self_closing_tag": true
+    }
+  }
+}
