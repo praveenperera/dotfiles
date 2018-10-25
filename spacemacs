@@ -70,7 +70,7 @@ values."
                                       :location (recipe
                                                  :repo "reasonml-editor/reason-mode"
                                                  :fetcher github
-                                                 :files ("reason-mode.el" "refmt.el" "reason-indent.el" "reason-interaction.el"))) 
+                                                 :files ("reason-mode.el" "refmt.el" "reason-interaction.el"))) 
                                      xah-css-mode
                                      drag-stuff
                                      rjsx-mode
