@@ -126,6 +126,10 @@ export EDITOR=emacsclient
 export ALTERNATE_EDITOR=emacs
 export VISUAL=emacsclient
 
+#kubectl autocompletions
+if [ $commands[kubectl] ]; then
+  source <(kubectl completion zsh)
+fi
 
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
