@@ -1,16 +1,114 @@
 // Place your settings in this file to overwrite the default settings
 {
+  "vim.easymotion": true,
+  "vim.sneak": true,
+  "vim.autoindent": false,
+  "vim.leader": "<space>",
+  "vim.useSystemClipboard": true,
+  "vim.incsearch": true,
+  "vim.useCtrlKeys": true,
+  "vim.hlsearch": true,
+  "vim.insertModeKeyBindings": [
+    {
+      "before": ["j", "k"],
+      "after": ["<Esc>"]
+    }
+  ],
+  "vim.normalModeKeyBindingsNonRecursive": [
+    {
+      "before": ["<leader>", "/"],
+      "commands": [":nohl"]
+    },
+    {
+      "before": ["<leader>", "1"],
+      "commands": ["workbench.action.openEditorAtIndex1"]
+    },
+    {
+      "before": ["<leader>", "2"],
+      "commands": ["workbench.action.openEditorAtIndex2"]
+    },
+    {
+      "before": ["<leader>", "3"],
+      "commands": ["workbench.action.openEditorAtIndex3"]
+    },
+    {
+      "before": ["<leader>", "4"],
+      "commands": ["workbench.action.openEditorAtIndex4"]
+    },
+    {
+      "before": ["<leader>", "5"],
+      "commands": ["workbench.action.openEditorAtIndex5"]
+    },
+    {
+      "before": ["<leader>", "6"],
+      "commands": ["workbench.action.openEditorAtIndex6"]
+    },
+    {
+      "before": ["<leader>", "7"],
+      "commands": ["workbench.action.openEditorAtIndex7"]
+    },
+    {
+      "before": ["<leader>", "8"],
+      "commands": ["workbench.action.openEditorAtIndex8"]
+    },
+    {
+      "before": ["<leader>", "9"],
+      "commands": ["workbench.action.openEditorAtIndex9"]
+    },
+    {
+      "before": ["<leader>", "<tab>"],
+      "commands": ["workbench.action.openNextRecentlyUsedEditorInGroup"]
+    },
+    {
+      "before": ["<leader>", "l", "1"],
+      "commands": ["workbench.action.focusFirstEditorGroup"]
+    },
+    {
+      "before": ["<leader>", "l", "2"],
+      "commands": ["workbench.action.focusSecondEditorGroup"]
+    },
+    {
+      "before": ["<leader>", "p", "p"],
+      "commands": ["workbench.action.showCommands"]
+    },
+    {
+      "before": ["<leader>", "p", "f"],
+      "commands": ["workbench.action.quickOpen"]
+    },
+    {
+      "before": ["<leader>", "w"],
+      "commands": ["workbench.action.switchWindow"]
+    }
+  ],
+  "vim.visualModeKeyBindingsNonRecursive": [
+    {
+      "before": ["p"],
+      "after": ["p", "g", "v", "y"]
+    },
+    {
+      "before": [">"],
+      "commands": ["editor.action.indentLines"]
+    },
+    {
+      "before": ["<"],
+      "commands": ["editor.action.outdentLines"]
+    }
+  ],
+  "editor.fontSize": 12.5,
+  "editor.fontFamily": "Hack",
+  "editor.fontWeight": "bold",
   "editor.formatOnSave": true,
-  "reason.codelens.enabled": true,
-  "git.enableCommitSigning": true,
+  "editor.rulers": [80],
+  "editor.minimap.enabled": false,
+  "[elixir]": {
+    "editor.acceptSuggestionOnEnter": "on"
+  },
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
   "code-runner.executorMap": {
     "racket": "raco test"
   },
-  "workbench.colorTheme": "One Dark Pro",
-  "editor.rulers": [80],
-  "editor.minimap.enabled": true,
+  "workbench.colorTheme": "Atom One Dark",
   "emmet.triggerExpansionOnTab": true,
   "emmet.includeLanguages": {
     "javascript": "javascriptreact",
@@ -24,7 +122,26 @@
       "self_closing_tag": true
     }
   },
-  "gitProjectManager.baseProjectsFolders": ["$HOME/code/"],
+  "git.enableCommitSigning": true,
   "git.autofetch": true,
+  "gitProjectManager.baseProjectsFolders": ["$HOME/code/"],
+  "gitProjectManager.storeRepositoriesBetweenSessions": true,
+  "gitProjectManager.ignoredFolders": ["node_modules", "_build", "deps"],
+  "gitProjectManager.checkRemoteOrigin": false,
+  "reason_language_server.per_value_codelens": true,
+  "reason_language_server.show_debug_errors": true,
+  "window.zoomLevel": 0,
+  "advancedNewFile.exclude": {
+    "node_modules": true,
+    "_build": true,
+    "deps": true,
+    "priv": true,
+    "lib/bs": true
+  },
+  "advancedNewFile.showInformationMessages": true,
+  "advancedNewFile.convenienceOptions": ["last", "current", "root"],
+  "workbench.startupEditor": "newUntitledFile",
+  "elm.userProjectImportStrategy": "semiDynamicLookup",
+  "terminal.integrated.shellArgs.osx": [],
   "sync.gist": "f491b8e3cd183139a48ea184628b82f1"
 }
