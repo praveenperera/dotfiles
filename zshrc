@@ -126,11 +126,6 @@ export EDITOR=emacsclient
 export ALTERNATE_EDITOR=emacs
 export VISUAL=emacsclient
 
-#kubectl autocompletions
-if [ $commands[kubectl] ]; then
-  source <(kubectl completion zsh)
-fi
-
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 export PATH="/usr/local/sbin:$PATH"
@@ -149,3 +144,10 @@ export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 . /Users/praveen/.opam/opam-init/init.zsh > /dev/null 2> /dev/null || true
 export PATH="/usr/local/opt/mysql@5.5/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
+
+
+#kubectl autocompletions
+if [ $commands[kubectl] ]; then
+  source <(kubectl completion zsh)
+fi
+
