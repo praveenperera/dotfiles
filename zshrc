@@ -4,7 +4,7 @@ alias cpubex='cd && cd code/public/Elixir'
 alias cpubr='cd && cd code/public/ruby'
 alias cpriv='cd && cd code/private'
 alias docs='cd && cd sites/doctors_of_srilanka'
-alias zreload="source ~/.zshrc"
+alias zreload=exec zsh
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
 alias pu="pushd"
 alias po="popd"
@@ -121,13 +121,11 @@ export PATH="$HOME/.yarn/bin:$PATH"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 export PATH=${PATH}:${ANDROID_HOME}/tools
 export PATH=${PATH}:${ANDROID_HOME}/platform-tools
-export PATH="$HOME/.cargo/bin:$PATH"
 export ELIXIR_EDITOR=emacsclient
 export EDITOR=emacsclient
 export ALTERNATE_EDITOR=emacs
 export VISUAL=emacsclient
-export NVM_DIR="$HOME/.nvm"
-. "/usr/local/opt/nvm/nvm.sh"
+
 
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
@@ -146,4 +144,4 @@ export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 
 . /Users/praveen/.opam/opam-init/init.zsh > /dev/null 2> /dev/null || true
 export PATH="/usr/local/opt/mysql@5.5/bin:$PATH"
-export PATH="/usr/local/opt/mysql@5.5/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"

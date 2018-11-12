@@ -30,6 +30,7 @@ zstyle ':prezto:load' pmodule \
   'syntax-highlighting' \
   'history-substring-search' \
   'git' \
+  'node' \
   'history' \
   'directory' \
   'spectrum' \
@@ -57,10 +58,10 @@ zstyle ':prezto:module:autosuggestions:color' found ''
 #
 
 # Set the key mapping style to 'emacs' or 'vi'.
-zstyle ':prezto:module:editor' key-bindings 'emacs'
+zstyle ':prezto:module:editor' key-bindings 'vi'
 
 # %v - ruby version.
-zstyle ':prezto:module:ruby:info:version' format 'version:%v'
+#zstyle ':prezto:module:ruby:info:version' format 'version:%v'
 
 # Auto convert .... to ../..
 zstyle ':prezto:module:editor' dot-expansion 'yes'
