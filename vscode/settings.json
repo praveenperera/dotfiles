@@ -142,6 +142,17 @@
   "advancedNewFile.convenienceOptions": ["last", "current", "root"],
   "workbench.startupEditor": "newUntitledFile",
   "elm.userProjectImportStrategy": "semiDynamicLookup",
+  "editor.colorDecorators": true,
+  "bracket-pair-colorizer-2.showHorizontalScopeLine": false,
+  "bracket-pair-colorizer-2.colorMode": "Independent",
+  "bracket-pair-colorizer-2.colors": [
+    "#BBBBBB",
+    "#D55FDE",
+    "#E5C07B",
+    "#61AFEF",
+    "#98C379"
+  ],
   "terminal.integrated.shellArgs.osx": [],
-  "sync.gist": "f491b8e3cd183139a48ea184628b82f1"
+  "sync.gist": "f491b8e3cd183139a48ea184628b82f1",
+  "editor.matchBrackets": false
 }
