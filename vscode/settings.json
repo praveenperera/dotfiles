@@ -101,7 +101,7 @@
   "editor.rulers": [80],
   "editor.minimap.enabled": false,
   "[elixir]": {
-    "editor.acceptSuggestionOnEnter": "on"
+    "editor.acceptSuggestionOnEnter": "off"
   },
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,

@@ -8,9 +8,9 @@ alias zreload=exec zsh
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
 alias pu="pushd"
 alias po="popd"
+alias pwd2=$(pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//" )
 alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias gbbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
-alias pwd2=pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//"
 
 # converts ocaml code into reason
 alias mlre="pbpaste | refmt --parse ml --print re --interface false | pbcopy"
@@ -138,7 +138,6 @@ TERM=xterm-256color
 
 ## Add direnv 
 eval "$(direnv hook zsh)"
-source /usr/local/share/zsh-history-substring-search/zsh-history-substring-search.zsh
 export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 
 . /Users/praveen/.opam/opam-init/init.zsh > /dev/null 2> /dev/null || true
@@ -151,3 +150,5 @@ if [ $commands[kubectl] ]; then
   source <(kubectl completion zsh)
 fi
 
+#enable recursive i search
+bindkey "^R" history-incremental-pattern-search-backward
