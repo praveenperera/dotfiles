@@ -1,0 +1,14 @@
+#!/bin/bash
+mkdir -p $HOME/.letsencrypt
+
+docker pull certbot/dns-cloudflare:latest
+docker run --rm --interactive --tty \
+-v "$HOME/.letsencrypt:/etc/letsencrypt" \
+-v "$HOME/.letsencrypt:/var/lib/letsencrypt" \
+-v "$HOME/.secrets/cloudflare.ini:/etc/cloudflare.ini" \
+certbot/dns-cloudflare \
+certonly --dns-cloudflare --dns-cloudflare-credentials /etc/cloudflare.ini -m ppraveen25@gmail.com --agree-tos --no-eff-email --server https://acme-v02.api.letsencrypt.org/directory -d *.$1 -d $1; \
+
+mkdir -p ~/code/certs/$1
+cp -R ~/.letsencrypt/archive/$1/* ~/code/certs/$1 ;\
+cd ~/code/certs/$1 ;\

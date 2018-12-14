@@ -17,24 +17,6 @@ alias mlre="pbpaste | refmt --parse ml --print re --interface false | pbcopy"
 # converts reason code into ocaml
 alias reml="pbpaste | refmt --parse re --print ml --interface false | pbcopy"
 
-certbot-aws(){
-    mkdir $HOME/.letsencrypt
-
-    docker run -it --rm --name certbot \
-    -v "$HOME/.letsencrypt:/etc/letsencrypt" \
-    -v "$HOME/.letsencrypt:/var/lib/letsencrypt" \
-    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-    certbot/dns-route53 certonly \
-    --dns-route53 \
-    --server https://acme-v02.api.letsencrypt.org/directory -d *.$1 -d $1; \
-
-    mkdir -p ~/code/certs/$1
-    cp -R ~/.letsencrypt/archive/$1/* ~/code/certs/$1 ;\
-    cd ~/code/certs/$1 ;\
-    openssl rsa -inform pem -in privkey*.pem -out privkeyrsa.key
-}
-
 alias alle2h=convert_all_eex_to_haml
 convert_all_eex_to_haml(){
   for i in $(find_eex_files); do

@@ -1,0 +1,15 @@
+#!/bin/bash
+mkdir -p $HOME/.letsencrypt
+
+docker pull certbot/dns-route53
+
+docker run -it --rm --name certbot \
+    --env AWS_CONFIG_FILE=/etc/aws-config \
+    -v "$HOME/.secrets/aws.ini:/etc/aws-config" \
+    -v "$HOME/.letsencrypt:/etc/letsencrypt" \
+    -v "$HOME/.letsencrypt:/var/lib/letsencrypt" \
+ certbot/dns-route53 certonly --dns-route53 --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --no-eff-email --server https://acme-v02.api.letsencrypt.org/directory -d *.$1 -d $1; \
+
+mkdir -p ~/code/certs/$1
+cp -R ~/.letsencrypt/archive/$1/* ~/code/certs/$1 ;\
+cd ~/code/certs/$1 ;\
