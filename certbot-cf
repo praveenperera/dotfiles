@@ -1,7 +1,6 @@
 #!/bin/bash
 mkdir -p $HOME/.letsencrypt
 
-docker pull certbot/dns-cloudflare:latest
 docker run --rm --interactive --tty \
 -v "$HOME/.letsencrypt:/etc/letsencrypt" \
 -v "$HOME/.letsencrypt:/var/lib/letsencrypt" \
