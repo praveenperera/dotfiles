@@ -29,7 +29,6 @@ zstyle ':prezto:load' pmodule \
   'editor' \
   'syntax-highlighting' \
   'git' \
-  'node' \
   'history' \
   'directory' \
   'spectrum' \

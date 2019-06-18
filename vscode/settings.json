@@ -1,5 +1,13 @@
 // Place your settings in this file to overwrite the default settings
 {
+  "editor.fontSize": 12.5,
+  "editor.fontFamily": "Hack",
+  "editor.fontWeight": "bold",
+  "editor.formatOnSave": true,
+  "editor.rulers": [80],
+  "editor.lineNumbers": "relative",
+  "editor.minimap.enabled": false,
+
   "vim.easymotion": true,
   "vim.sneak": true,
   "vim.autoindent": false,
@@ -78,6 +86,22 @@
     {
       "before": ["<leader>", "w"],
       "commands": ["workbench.action.switchWindow"]
+    },
+    {
+      "before": ["<leader>", "s", "p"],
+      "commands": ["extension.ripgrep"]
+    },
+    {
+      "before": ["<leader>", "s", "s"],
+      "commands": ["workbench.action.gotoSymbol"]
+    },
+    {
+      "before": ["<leader>", "p", "s"],
+      "commands": ["workbench.action.showAllSymbols"]
+    },
+    {
+      "before": ["<leader>", "a"],
+      "commands": ["editor.action.triggerSuggest"]
     }
   ],
   "vim.visualModeKeyBindingsNonRecursive": [
@@ -94,15 +118,10 @@
       "commands": ["editor.action.outdentLines"]
     }
   ],
-  "editor.fontSize": 12.5,
-  "editor.fontFamily": "Hack",
-  "editor.fontWeight": "bold",
-  "editor.formatOnSave": true,
-  "editor.rulers": [80],
-  "editor.minimap.enabled": false,
   "[elixir]": {
     "editor.acceptSuggestionOnEnter": "off"
   },
+
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
   "code-runner.executorMap": {
@@ -111,10 +130,14 @@
   "workbench.colorTheme": "Atom One Dark",
   "emmet.triggerExpansionOnTab": true,
   "emmet.includeLanguages": {
+    "HTML (Eex)": "html",
+    "HTML (EEx)": "html",
+    "postcss": "css",
     "javascript": "javascriptreact",
     "reason": "javascriptreact"
   },
   "emmet.syntaxProfiles": {
+    "postcss": "css",
     "html": {
       "attr_quotes": "double"
     },
@@ -127,6 +150,7 @@
   "gitProjectManager.baseProjectsFolders": ["$HOME/code/"],
   "gitProjectManager.storeRepositoriesBetweenSessions": true,
   "gitProjectManager.ignoredFolders": ["node_modules", "_build", "deps"],
+  "gitProjectManager.maxDepthRecursion": 5,
   "gitProjectManager.checkRemoteOrigin": false,
   "reason_language_server.per_value_codelens": true,
   "reason_language_server.show_debug_errors": true,
@@ -154,5 +178,149 @@
   ],
   "terminal.integrated.shellArgs.osx": [],
   "sync.gist": "f491b8e3cd183139a48ea184628b82f1",
-  "editor.matchBrackets": false
+  "editor.matchBrackets": false,
+  "color-highlight.markerType": "dot-before",
+  "beautify.language": {
+    "html": {
+      "type": ["htm", "html"],
+      "filename": [".html.eex", "*.eex"]
+    },
+    "js": {},
+    "css": {}
+  },
+  "beautify.ignore": [
+    "**/*.js",
+    "**/*.json",
+    "**/*.jsx",
+    "**/*.css",
+    "**/*.scss",
+    "**/*.html"
+  ],
+  "beautify.config": {
+    "indent_size": 2,
+    "indent_inner_html": true,
+    "preserve_newlines": true,
+    "wrap_line_length": 100,
+    "wrap_attributes": "preserve-aligned",
+    "unformatted": ["script"],
+    "void_elements": [
+      "area",
+      "base",
+      "br",
+      "col",
+      "embed",
+      "hr",
+      "img",
+      "input",
+      "keygen",
+      "link",
+      "menuitem",
+      "meta",
+      "param",
+      "source",
+      "track",
+      "wbr",
+      "!doctype",
+      "?xml",
+      "?php",
+      "?=",
+      "basefont",
+      "isindex",
+      "%",
+      "%="
+    ],
+    "inline": [
+      "%=",
+      "%",
+      "a",
+      "abbr",
+      "area",
+      "audio",
+      "b",
+      "bdi",
+      "bdo",
+      "br",
+      "button",
+      "canvas",
+      "cite",
+      "code",
+      "data",
+      "datalist",
+      "del",
+      "dfn",
+      "em",
+      "embed",
+      "i",
+      "iframe",
+      "img",
+      "input",
+      "ins",
+      "kbd",
+      "keygen",
+      "label",
+      "map",
+      "mark",
+      "math",
+      "meter",
+      "noscript",
+      "object",
+      "output",
+      "progress",
+      "q",
+      "ruby",
+      "s",
+      "samp",
+      "select",
+      "small",
+      "span",
+      "strong",
+      "sub",
+      "sup",
+      "svg",
+      "template",
+      "textarea",
+      "time",
+      "u",
+      "var",
+      "video",
+      "wbr",
+      "text",
+      "acronym",
+      "address",
+      "big",
+      "dt",
+      "ins",
+      "strike",
+      "tt"
+    ]
+  },
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    {
+      "language": "typescript",
+      "autoFix": true
+    },
+    {
+      "language": "typescriptreact",
+      "autoFix": true
+    }
+  ],
+  "files.associations": {
+    "*.css": "postcss",
+    "Dockerfile-*": "dockerfile",
+    "zshrc": "shellscript"
+  },
+  "workbench.colorCustomizations": {},
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "explorer.confirmDelete": false,
+  "workbench.activityBar.visible": false
 }

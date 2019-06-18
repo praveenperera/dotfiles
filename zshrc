@@ -11,6 +11,9 @@ alias po="popd"
 alias pwd2=$(pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//" )
 alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias gbbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
+alias pip=pip3
+alias code=code -n
+alias rc=rsync -avzhe ssh --progress $1 $2
 
 # converts ocaml code into reason
 alias mlre="pbpaste | refmt --parse ml --print re --interface false | pbcopy"
@@ -83,6 +86,20 @@ launch_emacs_client() {
   fi
 }
 
+function changeMac() {
+  local mac=$(openssl rand -hex 6 | sed 's/\(..\)/\1:/g; s/.$//')
+  sudo ifconfig en0 ether $mac
+  sudo ifconfig en0 down
+  sudo ifconfig en0 up
+  echo "Your new physical address is $mac"
+}
+
+function kmerge() {
+  KUBECONFIG=~/.kube/config:$1 kubectl config view --flatten > ~/.kube/mergedkub && \
+   mv ~/.kube/config ~/.kube/config.bak &&\
+   mv ~/.kube/mergedkub ~/.kube/config
+}
+
 ### Git Alias
 alias gcm="git commit -a -S -m $1"
 
@@ -103,10 +120,11 @@ export PATH="$HOME/.yarn/bin:$PATH"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 export PATH=${PATH}:${ANDROID_HOME}/tools
 export PATH=${PATH}:${ANDROID_HOME}/platform-tools
-export ELIXIR_EDITOR=emacsclient
-export EDITOR=emacsclient
-export ALTERNATE_EDITOR=emacs
-export VISUAL=emacsclient
+export ELIXIR_EDITOR="code -w"
+export EDITOR="code -w"
+export ALTERNATE_EDITOR=vim
+export VISUAL="code -w"
+export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
 
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
@@ -134,3 +152,23 @@ fi
 
 #enable recursive i search
 bindkey "^R" history-incremental-pattern-search-backward
+
+. $HOME/.asdf/asdf.sh
+
+. $HOME/.asdf/completions/asdf.bash
+
+export ANT_HOME=/usr/local/opt/ant
+export MAVEN_HOME=/usr/local/opt/maven
+export GRADLE_HOME=/usr/local/opt/gradle
+export ANDROID_HOME=/usr/local/share/android-sdk
+export ANDROID_NDK_HOME=/usr/local/share/android-ndk
+export INTEL_HAXM_HOME=/usr/local/Caskroom/intel-haxm
+
+export PATH=$ANT_HOME/bin:$PATH
+export PATH=$MAVEN_HOME/bin:$PATH
+export PATH=$GRADLE_HOME/bin:$PATH
+export PATH=$ANDROID_HOME/tools:$PATH
+export PATH=$ANDROID_HOME/platform-tools:$PATH
+export PATH=$ANDROID_HOME/build-tools/23.0.1:$PATH
+
+source $HOME/.ghcup/env
