@@ -311,7 +311,7 @@
     }
   },
   "Window Type" : 0,
-  "Blur Radius" : 7.0947691941624385,
+  "Blur Radius" : 7.9159045843908649,
   "Cursor Boost" : 0,
   "Initial Text" : "",
   "Background Image Location" : "",
@@ -337,7 +337,7 @@
     "Alpha Component" : 1,
     "Green Component" : 0.99263292551040649
   },
-  "Name" : "Custom",
+  "Name" : "Praveen",
   "Cursor Text Color" : {
     "Red Component" : 0.99999600648880005,
     "Color Space" : "sRGB",
@@ -354,7 +354,7 @@
     "Alpha Component" : 1,
     "Green Component" : 0.78105825185775757
   },
-  "Transparency" : 0.038529108502538073,
+  "Transparency" : 0.1469245717005076,
   "Ansi 1 Color" : {
     "Red Component" : 0.93832021951675415,
     "Color Space" : "sRGB",
