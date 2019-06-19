@@ -1,0 +1,53 @@
+[commit]
+	gpgsign = true
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[push]
+	default = matching
+[core]
+	pager = diff-so-fancy | less --tabs=4 -RFX
+	editor = vim
+[alias]
+    co = checkout
+    ec = config --global -e
+    up = !git pull --rebase --prune $@ && git submodule update --init --recursive
+    bd = branch -D 
+    rm = branch -D 
+    mv = branch -m 
+    deploy = !git push && git push dokku master
+    cob = checkout -b
+    cms = !git add -A && git commit -S -m
+    cm = !git add -A && git commit -m
+    save = !git add -A && git commit -m 'SAVEPOINT'
+    wip = !git add -u && git commit -m "WIP"
+    undo = reset HEAD~1 --mixed
+    amend = commit -a --amend
+    wipe = !git add -A && git commit -qm 'WIPE SAVEPOINT' && git reset HEAD~1 --hard
+    bclean = "!f() { git branch --merged ${1-master} | grep -v " ${1-master}$" | xargs -r git branch -d; }; f"
+    bdone = "!f() { git checkout ${1-master} && git up && git bclean ${1-master}; }; f"
+    pstg = push origin master:staging
+    branch-name = "!git rev-parse --abbrev-ref HEAD"
+    publish = "!git push -u origin $(git branch-name)"
+    unpublish = "!git push origin :$(git branch-name)"
+    unstage = reset HEAD
+[color]
+	ui = true
+[color "diff-highlight"]
+	oldNormal = red bold
+	oldHighlight = red bold 52
+	newNormal = green bold
+	newHighlight = green bold 22
+[color "diff"]
+	meta = 227
+	frag = magenta bold
+	commit = 227 bold
+	old = red bold
+	new = green bold
+	whitespace = red reverse
+[diff-so-fancy]
+	markEmptyLines = false
+[gpg]
+	program = /usr/local/bin/gpg
