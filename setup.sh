@@ -1,9 +1,11 @@
 #!/bin/bash
 
-dir=~/code/dotfiles                    # dotfiles directory
-files="vimrc zsh_profile zshrc-e gvimrc.after zshrc zpreztorc zlogin zlogout zprofile zshenv gitconfig"    # list of files/folders to symlink in homedir
+# dotfiles directory
+dir=~/code/dotfiles                    
 
-##########
+# list of files/folders to symlink in homedir
+files="vimrc zsh_profile zshrc-e gvimrc.after zshrc zpreztorc zlogin zlogout zprofile zshenv gitconfig"    
+
 # change to the dotfiles directory
 echo "Changing to the $dir directory"
 cd $dir
