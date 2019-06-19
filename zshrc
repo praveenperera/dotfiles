@@ -170,5 +170,3 @@ export PATH=$GRADLE_HOME/bin:$PATH
 export PATH=$ANDROID_HOME/tools:$PATH
 export PATH=$ANDROID_HOME/platform-tools:$PATH
 export PATH=$ANDROID_HOME/build-tools/23.0.1:$PATH
-
-source $HOME/.ghcup/env
