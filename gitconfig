@@ -1,10 +1,10 @@
 [commit]
 	gpgsign = true
 [filter "lfs"]
-	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
 	required = true
+	clean = git-lfs clean -- %f
 [push]
 	default = matching
 [core]
@@ -51,3 +51,6 @@
 	markEmptyLines = false
 [gpg]
 	program = /usr/local/bin/gpg
+[user]
+	name = Praveen Perera
+	email = ppraveen25@gmail.com

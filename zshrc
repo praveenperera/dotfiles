@@ -12,8 +12,8 @@ alias pwd2=$(pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//" )
 alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias gbbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias pip=pip3
-alias code=code -n
 alias rc=rsync -avzhe ssh --progress $1 $2
+alias oni="/Applications/Onivim2.App/Contents/MacOS/Oni2"
 
 # converts ocaml code into reason
 alias mlre="pbpaste | refmt --parse ml --print re --interface false | pbcopy"
