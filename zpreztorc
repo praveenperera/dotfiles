@@ -33,7 +33,6 @@ zstyle ':prezto:load' pmodule \
   'directory' \
   'spectrum' \
   'osx' \
-  'utility' \
   'completion' \
   'history-substring-search' \
   'prompt'
