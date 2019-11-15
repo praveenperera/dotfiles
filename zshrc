@@ -4,7 +4,8 @@ alias cpubex='cd && cd code/public/Elixir'
 alias cpubr='cd && cd code/public/ruby'
 alias cpriv='cd && cd code/private'
 alias docs='cd && cd sites/doctors_of_srilanka'
-alias zreload=exec zsh
+alias zreload2=exec zsh
+alias zreload='source ~/.zshrc'
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
 alias pu="pushd"
 alias po="popd"
@@ -15,6 +16,17 @@ alias pip=pip3
 alias rc=rsync -avzhe ssh --progress $1 $2
 alias oni="/Applications/Onivim2.App/Contents/MacOS/Oni2"
 alias la="exa -lha"
+alias yrn="yarn_in_phoenix"
+
+yarn_in_phoenix() {
+  if [ ! -f package.json ] && [ -f mix.exs ]; then
+    echo "phoenix project detected"
+    yarn "$@" --cwd assets
+  else
+    yarn "$@"
+  fi
+}
+
 
 # converts ocaml code into reason
 alias mlre="pbpaste | refmt --parse ml --print re --interface false | pbcopy"
