@@ -189,4 +189,10 @@ export PATH=$ANDROID_HOME/build-tools/23.0.1:$PATH
 export ERL_AFLAGS="-kernel shell_history enabled"
 
 export GEM_HOME="$HOME/.gem"
+
+export PATH=$PATH:~/Library/Python/3.7/bin
+# added by travis gem
+[ -f /Users/praveen/.travis/travis.sh ] && source /Users/praveen/.travis/travis.sh
+export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
+
 eval "$(starship init zsh)"
