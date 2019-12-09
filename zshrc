@@ -13,6 +13,7 @@ alias pwd2=$(pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//" )
 alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias gbbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias pip=pip3
+alias python=python3
 alias rc=rsync -avzhe ssh --progress $1 $2
 alias oni="/Applications/Onivim2.App/Contents/MacOS/Oni2"
 alias la="exa -lha"
@@ -20,8 +21,8 @@ alias yrn="yarn_in_phoenix"
 
 yarn_in_phoenix() {
   if [ ! -f package.json ] && [ -f mix.exs ]; then
-    echo "phoenix project detected"
-    yarn "$@" --cwd assets
+    printf "phoenix project detected...\n\n"
+    yarn --cwd assets "$@"
   else
     yarn "$@"
   fi
@@ -188,3 +189,4 @@ export PATH=$ANDROID_HOME/build-tools/23.0.1:$PATH
 export ERL_AFLAGS="-kernel shell_history enabled"
 
 export GEM_HOME="$HOME/.gem"
+eval "$(starship init zsh)"
