@@ -1,0 +1,12 @@
+[directory]
+truncation_length = 5
+truncate_to_repo = false
+
+[memory_usage]
+disbaled = false
+
+# [username]
+# show_always = true
+
+# [hostname]
+# ssh_only = false
