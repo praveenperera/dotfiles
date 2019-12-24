@@ -122,8 +122,6 @@ fpath=(/usr/local/share/zsh-completions $fpath)
 
 eval $(thefuck --alias)
 
-# Setup go path
-export PATH=$PATH:$(go env GOPATH)/bin
 # Setup path for imagemagick 6
 export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 
@@ -166,10 +164,6 @@ fi
 
 #enable recursive i search
 bindkey "^R" history-incremental-pattern-search-backward
-
-. $HOME/.asdf/asdf.sh
-
-. $HOME/.asdf/completions/asdf.bash
 
 export ANT_HOME=/usr/local/opt/ant
 export MAVEN_HOME=/usr/local/opt/maven
