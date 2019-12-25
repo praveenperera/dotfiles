@@ -24,6 +24,3 @@ for file in $config_files; do
     echo "Creating symlink to $file in config directory."
     ln -s $dir/config/$file ~/.config/$file
 done
-
-echo "\nAdding zprezto custom theme"
-cp prompt_praveen_setup ~/.zprezto/modules/prompt/functions
