@@ -19,6 +19,11 @@ alias oni="/Applications/Onivim2.App/Contents/MacOS/Oni2"
 alias la="exa -lha"
 alias yrn="yarn_in_phoenix"
 
+eval "$(starship init zsh)"
+eval $(thefuck --alias)
+source $HOME/.zsh_plugins.sh
+
+
 yarn_in_phoenix() {
   if [ ! -f package.json ] && [ -f mix.exs ]; then
     printf "phoenix project detected...\n\n"
@@ -27,7 +32,6 @@ yarn_in_phoenix() {
     yarn "$@"
   fi
 }
-
 
 # converts ocaml code into reason
 alias mlre="pbpaste | refmt --parse ml --print re --interface false | pbcopy"
@@ -45,7 +49,6 @@ find_eex_files(){
   find ./lib -name *.eex -print
 }
 
-
 alias killp=kill_port
 kill_port(){
   KILL_PID=`lsof -i:$1 | awk '{print $2}' | xargs | awk '{print $2}'`
@@ -62,9 +65,6 @@ kill_port(){
 alias e2h=eex2haml
 eex2haml(){
   REPLACE_WITH="haml"
-  OUTPUT="$(echo $1 | sed -e "s/eex/$REPLACE_WITH/g")"
-  html2haml $1 -e --ruby19-attributes $OUTPUT
-  rm $1
 }
 
 alias epi=elm-package-install
@@ -117,10 +117,6 @@ function kmerge() {
 ### Git Alias
 alias gcm="git commit -a -S -m $1"
 
-## ZSH Completions from Brew
-fpath=(/usr/local/share/zsh-completions $fpath)
-
-eval $(thefuck --alias)
 
 # Setup path for imagemagick 6
 export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
@@ -138,13 +134,7 @@ export ALTERNATE_EDITOR=vim
 export VISUAL="code -w"
 export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
 
-#added by iterm2 v3
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 export PATH="/usr/local/sbin:$PATH"
-
-if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
-  source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
-fi
 
 TERM=xterm-256color
 
@@ -156,11 +146,6 @@ export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 export PATH="/usr/local/opt/mysql@5.5/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 
-
-#kubectl autocompletions
-if [ $commands[kubectl] ]; then
-  source <(kubectl completion zsh)
-fi
 
 #enable recursive i search
 bindkey "^R" history-incremental-pattern-search-backward
@@ -189,37 +174,15 @@ export PATH=$PATH:~/Library/Python/3.7/bin
 [ -f /Users/praveen/.travis/travis.sh ] && source /Users/praveen/.travis/travis.sh
 export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
 
-eval "$(starship init zsh)"
 
 # rbenv :(
 eval "$(rbenv init -)"
 
-### zoxide ###
-_zoxide_precmd() {
-    zoxide add
-}
+#added by iterm2 v3
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-[[ -n "${precmd_functions[(r)_zoxide_precmd]}" ]] || {
-    precmd_functions+=(_zoxide_precmd)
-}
-
-z() {
-    if [ $# -ne 0 ]; then
-        _Z_RESULT=$(zoxide query "$@")
-        case $_Z_RESULT in
-            "query: "*)
-                cd "${_Z_RESULT:7}"
-                ;;
-            *)
-                echo "${_Z_RESULT}"
-                ;;
-        esac
-    fi
-}
-
-alias zi="z -i"
-
-alias za="zoxide add"
-alias zq="zoxide query"
-alias zr="zoxide remove"
-### zoxide ###
+#kubectl autocompletions
+if [ $commands[kubectl] ]; then
+  autoload -U +X compinit && compinit
+  source <(kubectl completion zsh)
+fi
