@@ -4,12 +4,13 @@
 dir=~/code/dotfiles                    
 
 # list of files/folders to symlink in homedir
-files="vimrc zsh_profile zshrc-e gvimrc.after zshrc zpreztorc zlogin zlogout zprofile zshenv gitconfig spacemacs"    
+files="vimrc gvimrc.after zshrc gitconfig spacemacs"    
 
 config_files="starship.toml"
 
 # change to the dotfiles directory
 echo "Changing to the $dir directory"
+
 cd $dir
 echo "...done\n"
 

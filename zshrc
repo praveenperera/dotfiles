@@ -190,3 +190,36 @@ export PATH=$PATH:~/Library/Python/3.7/bin
 export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
 
 eval "$(starship init zsh)"
+
+# rbenv :(
+eval "$(rbenv init -)"
+
+### zoxide ###
+_zoxide_precmd() {
+    zoxide add
+}
+
+[[ -n "${precmd_functions[(r)_zoxide_precmd]}" ]] || {
+    precmd_functions+=(_zoxide_precmd)
+}
+
+z() {
+    if [ $# -ne 0 ]; then
+        _Z_RESULT=$(zoxide query "$@")
+        case $_Z_RESULT in
+            "query: "*)
+                cd "${_Z_RESULT:7}"
+                ;;
+            *)
+                echo "${_Z_RESULT}"
+                ;;
+        esac
+    fi
+}
+
+alias zi="z -i"
+
+alias za="zoxide add"
+alias zq="zoxide query"
+alias zr="zoxide remove"
+### zoxide ###
