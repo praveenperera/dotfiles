@@ -21,8 +21,6 @@ alias yrn="yarn_in_phoenix"
 
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
-source $HOME/.zsh_plugins.sh
-
 
 yarn_in_phoenix() {
   if [ ! -f package.json ] && [ -f mix.exs ]; then
@@ -147,9 +145,6 @@ export PATH="/usr/local/opt/mysql@5.5/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 
 
-#enable recursive i search
-bindkey "^R" history-incremental-pattern-search-backward
-
 export ANT_HOME=/usr/local/opt/ant
 export MAVEN_HOME=/usr/local/opt/maven
 export GRADLE_HOME=/usr/local/opt/gradle
@@ -174,7 +169,6 @@ export PATH=$PATH:~/Library/Python/3.7/bin
 [ -f /Users/praveen/.travis/travis.sh ] && source /Users/praveen/.travis/travis.sh
 export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
 
-
 # rbenv :(
 eval "$(rbenv init -)"
 
@@ -186,3 +180,12 @@ if [ $commands[kubectl] ]; then
   autoload -U +X compinit && compinit
   source <(kubectl completion zsh)
 fi
+
+source $HOME/.zsh_plugins.sh
+
+# zsh-history-substring-search
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
+
+#enable recursive i search
+bindkey "^R" history-incremental-pattern-search-backward
