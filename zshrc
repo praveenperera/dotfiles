@@ -18,6 +18,7 @@ alias rc=rsync -avzhe ssh --progress $1 $2
 alias oni="/Applications/Onivim2.App/Contents/MacOS/Oni2"
 alias la="exa -lha"
 alias yrn="yarn_in_phoenix"
+alias rex="evcxr"
 
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
@@ -189,3 +190,21 @@ bindkey '^[[B' history-substring-search-down
 
 #enable recursive i search
 bindkey "^R" history-incremental-pattern-search-backward
+setopt histreduceblanks
+setopt histignorespace
+setopt autocd
+setopt autopushd pushdminus pushdsilent pushdtohome pushdignoredups
+setopt extendedglob
+setopt EXTENDED_HISTORY
+setopt HIST_EXPIRE_DUPS_FIRST
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_IGNORE_SPACE
+setopt HIST_FIND_NO_DUPS
+setopt HIST_SAVE_NO_DUPS
+setopt HIST_BEEP
+
+# enable sccache for rust projects
+export RUSTC_WRAPPER=sccache 
+
+source <(navi widget zsh)
