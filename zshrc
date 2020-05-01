@@ -1,9 +1,3 @@
-#Path to your oh-my-zsh configuration.
-alias pp='cd && cd sites/praveenperera'
-alias cpubex='cd && cd code/public/Elixir'
-alias cpubr='cd && cd code/public/ruby'
-alias cpriv='cd && cd code/private'
-alias docs='cd && cd sites/doctors_of_srilanka'
 alias zreload2=exec zsh
 alias zreload='source ~/.zshrc'
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
@@ -22,6 +16,8 @@ alias rex="evcxr"
 
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
+eval "$(direnv hook zsh)"
+source <(navi widget zsh)
 
 yarn_in_phoenix() {
   if [ ! -f package.json ] && [ -f mix.exs ]; then
@@ -59,11 +55,6 @@ kill_port(){
   else
     echo "No process running on PORT: $1"
   fi
-}
-
-alias e2h=eex2haml
-eex2haml(){
-  REPLACE_WITH="haml"
 }
 
 alias epi=elm-package-install
@@ -116,7 +107,6 @@ function kmerge() {
 ### Git Alias
 alias gcm="git commit -a -S -m $1"
 
-
 # Setup path for imagemagick 6
 export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 
@@ -132,20 +122,10 @@ export EDITOR="code -w"
 export ALTERNATE_EDITOR=vim
 export VISUAL="code -w"
 export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
-
 export PATH="/usr/local/sbin:$PATH"
-
-TERM=xterm-256color
-
-## Add direnv 
-eval "$(direnv hook zsh)"
 export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
-
-. /Users/praveen/.opam/opam-init/init.zsh > /dev/null 2> /dev/null || true
 export PATH="/usr/local/opt/mysql@5.5/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
-
-
 export ANT_HOME=/usr/local/opt/ant
 export MAVEN_HOME=/usr/local/opt/maven
 export GRADLE_HOME=/usr/local/opt/gradle
@@ -170,11 +150,12 @@ export PATH=$PATH:~/Library/Python/3.7/bin
 [ -f /Users/praveen/.travis/travis.sh ] && source /Users/praveen/.travis/travis.sh
 export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
 
-# rbenv :(
-eval "$(rbenv init -)"
-
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+
+. $HOME/.opam/opam-init/init.zsh > /dev/null 2> /dev/null || true
+
+TERM=xterm-256color
 
 #kubectl autocompletions
 if [ $commands[kubectl] ]; then
@@ -206,5 +187,3 @@ setopt HIST_BEEP
 
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 
-
-source <(navi widget zsh)
