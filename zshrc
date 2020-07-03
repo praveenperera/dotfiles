@@ -187,3 +187,4 @@ setopt HIST_BEEP
 
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 
+export PATH="/usr/local/opt/node@10/bin:$PATH"
