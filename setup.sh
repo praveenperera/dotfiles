@@ -4,12 +4,14 @@
 antibody bundle < zsh_plugins.txt > zsh_plugins.sh
 rm $HOME/.zsh_plugins.sh
 
+# make folders
+mkdir -p ~/.config
 
 # dotfiles directory
 dir=~/code/dotfiles                    
 
 # list of files/folders to symlink in homedir
-files="vimrc gvimrc.after zshrc gitconfig spacemacs zsh_plugins.sh"    
+files="vimrc gvimrc.after zshrc gitconfig spacemacs zsh_plugins.sh"   
 
 config_files="starship.toml"
 

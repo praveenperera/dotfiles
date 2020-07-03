@@ -1,3 +1,4 @@
 #emacs files
 .#*
 zsh_plugins.sh
+.DS_Store
