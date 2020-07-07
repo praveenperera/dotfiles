@@ -14,6 +14,8 @@ alias la="exa -lha"
 alias yrn="yarn_in_phoenix"
 alias rex="evcxr"
 
+alias flush='dscacheutil -flushcache'
+
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
 eval "$(direnv hook zsh)"
@@ -169,8 +171,17 @@ source $HOME/.zsh_plugins.sh
 bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down
 
-#enable recursive i search
+# enable recursive i search
 bindkey "^R" history-incremental-pattern-search-backward
+
+# opt-left arrow and opt-right arrow move by word
+bindkey "[D" backward-word
+bindkey "[C" forward-word
+
+# shift-left arrow and shift-right arrow move by word
+bindkey ";2D" beginning-of-line
+bindkey ";2C" end-of-line
+
 setopt histreduceblanks
 setopt histignorespace
 setopt autocd
