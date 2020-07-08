@@ -201,7 +201,7 @@ export RUSTC_WRAPPER=sccache
 export PATH="/usr/local/opt/node@10/bin:$PATH"
 
 # The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/praveen/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/praveen/Downloads/google-cloud-sdk/path.zsh.inc'; fi
+if [ -f '/Users/praveen/code/bin/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/praveen/code/bin/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
-if [ -f '/Users/praveen/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/praveen/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
+if [ -f '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc'; fi
