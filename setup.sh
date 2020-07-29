@@ -11,7 +11,7 @@ mkdir -p ~/.config
 dir=~/code/dotfiles                    
 
 # list of files/folders to symlink in homedir
-files="vimrc gvimrc.after zshrc gitconfig spacemacs zsh_plugins.sh gitignore"   
+files="vimrc gvimrc.after zshrc gitconfig spacemacs zsh_plugins.sh gitignore direnvrc gitignore_global"   
 
 config_files="starship.toml"
 
