@@ -112,6 +112,9 @@ alias gcm="git commit -a -S -m $1"
 # Setup path for imagemagick 6
 export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 
+# elixir escripts
+export PATH=$PATH:$HOME/.mix/escripts
+
 export LANG='en_US.UTF-8'
 export PATH="$HOME/.rbenv/bin:$HOME/.rbenv/shims:$PATH"
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
