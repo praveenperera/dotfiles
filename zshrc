@@ -1,3 +1,4 @@
+alias t="tmux attach | tmux"
 alias zreload2=exec zsh
 alias zreload='source ~/.zshrc'
 alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
@@ -184,6 +185,10 @@ bindkey "[C" forward-word
 # shift-left arrow and shift-right arrow move by word
 bindkey ";2D" beginning-of-line
 bindkey ";2C" end-of-line
+
+# opt-left arrow and opt-right arrow move by word
+bindkey ";3C" forward-word
+bindkey ";3D" backward-word
 
 setopt histreduceblanks
 setopt histignorespace
