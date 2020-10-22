@@ -6,14 +6,15 @@ alias pu="pushd"
 alias po="popd"
 alias pwd2=$(pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//" )
 alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
-alias gbbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
+alias gb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias pip=pip3
 alias python=python3
 alias rc=rsync -avzhe ssh --progress $1 $2
 alias oni="/Applications/Onivim2.App/Contents/MacOS/Oni2"
-alias la="exa -lha"
+alias la="exa -lha --icons"
 alias yrn="yarn_in_phoenix"
 alias rex="evcxr"
+alias k="kubectl"
 
 alias flush='dscacheutil -flushcache'
 
