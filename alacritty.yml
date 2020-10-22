@@ -130,13 +130,16 @@ key_bindings:
   - { key: RBracket, mods: Command, chars: "\x02\x6F" } # select next pane
 
   # CMD F
-  - { key: F, mods: Command, chars: "\x02/" } # search (upwards) (see tmux.conf)
+  - { key: F, mods: Command, chars: "\x02\x5B\x3f" } # search (upwards) (see tmux.conf)
 
   # CMD ,
   - { key: Comma, mods: Command, chars: "\x02," } # rename window
 
   # CMD ,
   - { key: Comma, mods: Command, chars: "\x02k," } # rename window
+
+  # VIM Mode
+  - { key: Return, mods: Command, action: ToggleViMode }
 
 # Colors (converted from praveen.itermcolors)
 colors:
