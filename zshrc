@@ -118,7 +118,6 @@ export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 export PATH=$PATH:$HOME/.mix/escripts
 
 export LANG='en_US.UTF-8'
-export PATH="$HOME/.rbenv/bin:$HOME/.rbenv/shims:$PATH"
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
 export PATH="$HOME/.yarn/bin:$PATH"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
@@ -150,9 +149,11 @@ export PATH=$ANDROID_HOME/build-tools/23.0.1:$PATH
 # Enable history in iex through Erlang(OTP)
 export ERL_AFLAGS="-kernel shell_history enabled"
 
-export GEM_HOME="$HOME/.gem"
-
 export PATH=$PATH:~/Library/Python/3.7/bin
+
+# rvm
+export PATH=$PATH:~/.gem/bin
+
 # added by travis gem
 [ -f /Users/praveen/.travis/travis.sh ] && source /Users/praveen/.travis/travis.sh
 export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
@@ -214,3 +215,6 @@ if [ -f '/Users/praveen/code/bin/google-cloud-sdk/path.zsh.inc' ]; then . '/User
 
 # The next line enables shell command completion for gcloud.
 if [ -f '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc'; fi
+
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+export PATH="$PATH:$HOME/.rvm/bin"
