@@ -54,4 +54,6 @@
 	program = /usr/local/bin/gpg
 [user]
 	name = Praveen Perera
-	email = ppraveen25@gmail.com
+	email = praveen@avencera.com
+[rerere]
+	enabled = 1
