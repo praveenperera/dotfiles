@@ -94,6 +94,12 @@ launch_emacs_client() {
   fi
 }
 
+function chr() {
+  local cleaned="$(echo ${1}|xargs)"
+  local site="https://$cleaned"
+  open -a 'google chrome' ${site}
+}
+
 function changeMac() {
   local mac=$(openssl rand -hex 6 | sed 's/\(..\)/\1:/g; s/.$//')
   sudo ifconfig en0 ether $mac
