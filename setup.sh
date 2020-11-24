@@ -33,4 +33,8 @@ for file in $config_files; do
     ln -s $dir/config/$file ~/.config/$file
 done
 
+echo "Installing spacemacs"
+git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
+
+echo "Installing zsh plugins"
 antibody update
