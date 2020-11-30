@@ -68,15 +68,15 @@ window:
 # Font configuration
 font:
   normal:
-    family: FuraCode Nerd Font
+    family: FiraCode Nerd Font
     style: Regular
 
   bold:
-    family: FuraCode Nerd Font
+    family: FiraCode Nerd Font
     style: Bold
 
   italic:
-    family: FuraCode Nerd Font
+    family: FiraCode Nerd Font
     style: Italic
 
   # Bold italic font face
