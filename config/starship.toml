@@ -1,3 +1,57 @@
+# Which is equivalent to
+format = """
+$username\
+$hostname\
+$shlvl\
+$directory\
+$git_branch\
+$git_commit\
+$git_state\
+$git_status\
+$hg_branch\
+$docker_context\
+$package\
+$cmake\
+$dart\
+$dotnet\
+$elixir\
+$elm\
+$erlang\
+$golang\
+$helm\
+$java\
+$julia\
+$nim\
+$nodejs\
+$ocaml\
+$perl\
+$php\
+$purescript\
+$python\
+$ruby\
+$rust\
+$swift\
+$terraform\
+$zig\
+$nix_shell\
+$conda\
+$memory_usage\
+$aws\
+$gcloud\
+$openstack\
+$env_var\
+$crystal\
+$cmd_duration\
+$custom\
+$kubernetes\
+$line_break\
+$lua\
+$jobs\
+$battery\
+$time\
+$status\
+$character"""
+
 [directory]
 truncate_to_repo = false
 truncation_length = 5
@@ -5,11 +59,17 @@ truncation_length = 5
 [memory_usage]
 disabled = true
 
+[gcloud]
+disabled = true
+
+[kubernetes]
+disabled = false
+format = 'on [⛵ $context $namespace]($style) '
+[kubernetes.context_aliases]
+"do-nyc3-us-east" = "primcloud"
+
 # [username]
 # show_always = true
 
 # [hostname]
 # ssh_only = false
-
-[gcloud]
-disabled = true
