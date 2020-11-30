@@ -1,12 +1,15 @@
 [directory]
-truncation_length = 5
 truncate_to_repo = false
+truncation_length = 5
 
 [memory_usage]
-disbaled = false
+disabled = true
 
 # [username]
 # show_always = true
 
 # [hostname]
 # ssh_only = false
+
+[gcloud]
+disabled = true
