@@ -66,6 +66,8 @@ disabled = true
 disabled = false
 format = 'on [⛵ $context $namespace]($style) '
 [kubernetes.context_aliases]
+"do-nyc1-avencera-rancher-cluster" = "avencera"
+"do-nyc1-tunevu-production" = "tunevu"
 "do-nyc3-us-east" = "primcloud"
 
 # [username]
