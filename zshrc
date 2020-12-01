@@ -224,3 +224,5 @@ if [ -f '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc' ]; then . 
 
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
 export PATH="$PATH:$HOME/.rvm/bin"
+
+export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
