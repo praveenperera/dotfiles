@@ -126,9 +126,6 @@ export PATH=$PATH:$HOME/.mix/escripts
 export LANG='en_US.UTF-8'
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
 export PATH="$HOME/.yarn/bin:$PATH"
-export ANDROID_HOME="$HOME/Library/Android/sdk"
-export PATH=${PATH}:${ANDROID_HOME}/tools
-export PATH=${PATH}:${ANDROID_HOME}/platform-tools
 export ELIXIR_EDITOR="code -w"
 export EDITOR="code -w"
 export ALTERNATE_EDITOR=vim
@@ -141,16 +138,17 @@ export PATH="$HOME/.cargo/bin:$PATH"
 export ANT_HOME=/usr/local/opt/ant
 export MAVEN_HOME=/usr/local/opt/maven
 export GRADLE_HOME=/usr/local/opt/gradle
-export ANDROID_HOME=/usr/local/share/android-sdk
-export ANDROID_NDK_HOME=/usr/local/share/android-ndk
-export INTEL_HAXM_HOME=/usr/local/Caskroom/intel-haxm
+
+export ANDROID_HOME=$HOME/Library/Android/sdk
+export ANDROID_SDK_ROOT=$ANDROID_HOME
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH=$PATH:$ANDROID_HOME/tools
+export PATH=$PATH:$ANDROID_HOME/tools/bin
+export PATH=$PATH:$ANDROID_HOME/platform-tools
 
 export PATH=$ANT_HOME/bin:$PATH
 export PATH=$MAVEN_HOME/bin:$PATH
 export PATH=$GRADLE_HOME/bin:$PATH
-export PATH=$ANDROID_HOME/tools:$PATH
-export PATH=$ANDROID_HOME/platform-tools:$PATH
-export PATH=$ANDROID_HOME/build-tools/23.0.1:$PATH
 
 # Enable history in iex through Erlang(OTP)
 export ERL_AFLAGS="-kernel shell_history enabled"
