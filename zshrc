@@ -224,3 +224,8 @@ if [ -f '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc' ]; then . 
 export PATH="$PATH:$HOME/.rvm/bin"
 
 export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
+
+# mcfly
+if [[ -r "/usr/local/opt/mcfly/mcfly.zsh" ]]; then
+  source "/usr/local/opt/mcfly/mcfly.zsh"
+fi
