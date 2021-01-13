@@ -198,7 +198,6 @@ bindkey ";3D" backward-word
 
 setopt histreduceblanks
 setopt histignorespace
-setopt autocd
 setopt autopushd pushdminus pushdsilent pushdtohome pushdignoredups
 setopt extendedglob
 setopt EXTENDED_HISTORY
@@ -209,6 +208,7 @@ setopt HIST_IGNORE_SPACE
 setopt HIST_FIND_NO_DUPS
 setopt HIST_SAVE_NO_DUPS
 setopt HIST_BEEP
+setopt autocd
 
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 
