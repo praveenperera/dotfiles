@@ -1,16 +1,23 @@
 [commit]
-	gpgsign = true
+  gpgsign = true
 [filter "lfs"]
-	clean = git-lfs clean -- %f
-	smudge = git-lfs smudge -- %f
-	process = git-lfs filter-process
-	required = true
+  clean = git-lfs clean -- %f
+  smudge = git-lfs smudge -- %f
+  process = git-lfs filter-process
+  required = true
 [push]
-	default = matching
+  default = matching
 [core]
-  pager = delta --plus-color="#012800" --minus-color="#340001" --theme='Monokai Extended'
-	editor = vim
-	excludesfile = ~/.gitignore
+  pager = delta
+  editor = vim
+  excludesfile = ~/.gitignore
+[delta]
+  features = side-by-side line-numbers decorations
+  whitespace-error-style = 22 reverse
+[delta "decorations"]
+  commit-decoration-style = bold yellow box ul
+  file-style = bold yellow ul
+  file-decoration-style = none
 [alias]
   co = checkout
   ec = config --global -e
@@ -35,29 +42,29 @@
   unpublish = "!git push origin :$(git branch-name)"
   unstage = reset HEAD
 [color]
-	ui = true
+  ui = true
 [color "diff-highlight"]
-	oldNormal = red bold
-	oldHighlight = red bold 52
-	newNormal = green bold
-	newHighlight = green bold 22
+  oldNormal = red bold
+  oldHighlight = red bold 52
+  newNormal = green bold
+  newHighlight = green bold 22
 [color "diff"]
-	meta = 227
-	frag = magenta bold
-	commit = 227 bold
-	old = red bold
-	new = green bold
-	whitespace = red reverse
+  meta = 227
+  frag = magenta bold
+  commit = 227 bold
+  old = red bold
+  new = green bold
+  whitespace = red reverse
 [interactive]
   diffFilter = delta --color-only
 [gpg]
-	program = /usr/local/bin/gpg
+  program = /usr/local/bin/gpg
 [user]
-	name = Praveen Perera
-	email = praveen@avencera.com
+  name = Praveen Perera
+  email = praveen@avencera.com
 [rerere]
-	enabled = 1
+  enabled = 1
 [init]
-	defaultBranch = master
+  defaultBranch = master
 [format]
-	signoff = true
+  signoff = true

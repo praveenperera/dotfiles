@@ -198,7 +198,7 @@ bindkey ";3D" backward-word
 
 setopt histreduceblanks
 setopt histignorespace
-setopt autopushd pushdminus pushdsilent pushdtohome pushdignoredups
+setopt autocd autopushd pushdminus pushdsilent pushdtohome pushdignoredups
 setopt extendedglob
 setopt EXTENDED_HISTORY
 setopt HIST_EXPIRE_DUPS_FIRST
