@@ -117,6 +117,9 @@ function kmerge() {
 ### Git Alias
 alias gcm="git commit -a -S -m $1"
 
+# enable fuzzy searching in mcfly
+export MCFLY_FUZZY=true
+
 # Setup path for imagemagick 6
 export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
 
