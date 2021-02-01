@@ -211,7 +211,6 @@ setopt HIST_IGNORE_SPACE
 setopt HIST_FIND_NO_DUPS
 setopt HIST_SAVE_NO_DUPS
 setopt HIST_BEEP
-setopt autocd
 
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 
@@ -231,4 +230,5 @@ export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
 # mcfly
 if [[ -r "/usr/local/opt/mcfly/mcfly.zsh" ]]; then
   source "/usr/local/opt/mcfly/mcfly.zsh"
+  setopt autocd
 fi
