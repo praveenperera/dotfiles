@@ -23,6 +23,8 @@ eval $(thefuck --alias)
 eval "$(direnv hook zsh)"
 source <(navi widget zsh)
 
+local ARCH=$(uname -m)
+
 yarn_in_phoenix() {
   if [ ! -f package.json ] && [ -f mix.exs ]; then
     printf "phoenix project detected...\n\n"
@@ -228,7 +230,20 @@ export PATH="$PATH:$HOME/.rvm/bin"
 export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
 
 # mcfly
-if [[ -r "/usr/local/opt/mcfly/mcfly.zsh" ]]; then
-  source "/usr/local/opt/mcfly/mcfly.zsh"
-  setopt autocd
-fi
+case $ARCH in
+	x86_64)
+    if [[ -r "/usr/local/opt/mcfly/mcfly.zsh" ]]; then
+      source "/usr/local/opt/mcfly/mcfly.zsh"
+      setopt autocd
+    fi
+		;;
+	arm64)
+    if [[ -r "/opt/homebrew/opt/mcfly/mcfly.zsh" ]]; then
+      source "/opt/homebrew/opt/mcfly/mcfly.zsh"
+      setopt autocd
+    fi
+		;;
+	*)
+		echo "Unable to determine CPU arch"
+		;;
+esac
