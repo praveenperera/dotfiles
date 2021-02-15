@@ -120,6 +120,9 @@ function kmerge() {
 ### Git Alias
 alias gcm="git commit -a -S -m $1"
 
+# mcfly
+eval "$(mcfly init zsh)"
+
 # enable fuzzy searching in mcfly
 export MCFLY_FUZZY=true
 
