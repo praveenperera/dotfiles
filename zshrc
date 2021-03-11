@@ -182,6 +182,7 @@ fi
 
 source $HOME/.zsh_plugins.sh
 
+
 # zsh-history-substring-search
 bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down
@@ -200,6 +201,9 @@ bindkey ";2C" end-of-line
 # opt-left arrow and opt-right arrow move by word
 bindkey ";3C" forward-word
 bindkey ";3D" backward-word
+
+# mcfly
+eval "$(mcfly init zsh)"
 
 setopt histreduceblanks
 setopt histignorespace
@@ -228,6 +232,3 @@ if [ -f '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc' ]; then . 
 export PATH="$PATH:$HOME/.rvm/bin"
 
 export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
-
-# mcfly
-eval "$(mcfly init zsh)"
