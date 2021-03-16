@@ -236,6 +236,4 @@ if [ -f '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc' ]; then . 
 export PATH="$PATH:$HOME/.rvm/bin"
 
 export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
-
-# prevent home brew auto update
-export HOMEBREW_NO_AUTO_UPDATE=1
+export PATH="/opt/homebrew/opt/node@12/bin:$PATH"
