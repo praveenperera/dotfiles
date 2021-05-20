@@ -221,10 +221,6 @@ bell:
   animation: EaseOutExpo
   duration: 0
 
-mouse:
-  url:
-    launcher: open
-
 selection:
   semantic_escape_chars: ',│`|:"'' ()[]{}<>'
 
