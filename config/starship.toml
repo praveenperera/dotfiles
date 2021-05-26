@@ -65,10 +65,16 @@ disabled = true
 [kubernetes]
 disabled = false
 format = 'on [⛵ $context $namespace]($style) '
+
 [kubernetes.context_aliases]
 "do-nyc1-avencera-rancher-cluster" = "avencera"
 "do-nyc1-tunevu-production" = "tunevu"
 "do-nyc3-us-east" = "primcloud"
+
+[aws]
+format = 'on [$symbol($profile )(\($region\) )]($style)'
+style = "bold blue"
+symbol = "🅰 "
 
 # [username]
 # show_always = true
