@@ -3,3 +3,4 @@ zsh-users/zsh-completions
 ajeetdsouza/zoxide
 zsh-users/zsh-syntax-highlighting
 zsh-users/zsh-history-substring-search
+Aloxaf/fzf-tab
