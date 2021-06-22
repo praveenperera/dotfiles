@@ -21,7 +21,9 @@
 [delta]
   plus-style = "syntax #012800"
   minus-style = "syntax #340001"
+  features = side-by-side line-numbers decorations
   syntax-theme = Monokai Extended
+  side-by-side = true
   navigate = true
 [interactive]
   diffFilter = delta --color-only
