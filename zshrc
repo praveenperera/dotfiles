@@ -16,7 +16,7 @@ alias yrn="yarn_in_phoenix"
 alias rex="evcxr"
 alias k="kubectl"
 alias clippy-fix="rustup run nightly cargo clippy --fix -Z unstable-options"
-
+alias k="kubectl"
 alias flush='dscacheutil -flushcache'
 
 eval "$(starship init zsh)"
@@ -24,6 +24,7 @@ eval $(thefuck --alias)
 eval "$(direnv hook zsh)"
 source <(navi widget zsh)
 
+complete -F __start_kubectl k
 local ARCH=$(uname -m)
 
 yarn_in_phoenix() {
