@@ -236,3 +236,4 @@ export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
 
 # prevent home brew auto update
 export HOMEBREW_NO_AUTO_UPDATE=1
+export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
