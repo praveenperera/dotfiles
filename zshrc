@@ -17,7 +17,7 @@ alias rex="evcxr"
 alias k="kubectl"
 alias clippy-fix="rustup run nightly cargo clippy --fix -Z unstable-options"
 alias k="kubectl"
-alias flush='dscacheutil -flushcache'
+alias flush="dscacheutil -flushcache"
 
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
@@ -224,10 +224,10 @@ export RUSTC_WRAPPER=sccache
 export PATH="/usr/local/opt/node@10/bin:$PATH"
 
 # The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/praveen/code/bin/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/praveen/code/bin/google-cloud-sdk/path.zsh.inc'; fi
+if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
-if [ -f '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/praveen/code/bin/google-cloud-sdk/completion.zsh.inc'; fi
+if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'; fi
 
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
 export PATH="$PATH:$HOME/.rvm/bin"
