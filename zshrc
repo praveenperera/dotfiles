@@ -219,6 +219,11 @@ setopt HIST_FIND_NO_DUPS
 setopt HIST_SAVE_NO_DUPS
 setopt HIST_BEEP
 
+# start tmux automatically
+if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+    tmux attach -t default || tmux new -s default
+fi
+
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 
 export PATH="/usr/local/opt/node@10/bin:$PATH"
