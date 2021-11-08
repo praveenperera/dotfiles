@@ -168,6 +168,9 @@ export PATH=$PATH:~/.gem/bin
 [ -f /Users/praveen/.travis/travis.sh ] && source /Users/praveen/.travis/travis.sh
 export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
 
+# gstreamer
+export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/Current/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+
 #added by iterm2 v3
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
