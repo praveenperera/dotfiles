@@ -18,6 +18,7 @@ alias k="kubectl"
 alias clippy-fix="rustup run nightly cargo clippy --fix -Z unstable-options"
 alias k="kubectl"
 alias flush="dscacheutil -flushcache"
+alias td="tmux detach"
 
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
