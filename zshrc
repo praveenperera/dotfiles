@@ -223,9 +223,11 @@ setopt HIST_FIND_NO_DUPS
 setopt HIST_SAVE_NO_DUPS
 setopt HIST_BEEP
 
-# start tmux automatically
-if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-    tmux attach -t default || tmux new -s default
+# start tmux automatically, unless running in vscode
+if [[ -z "${VSCODE_GIT_ASKPASS_NODE}" ]] || [[ "${TERM_PROGRAM}" != "vscode" ]]; then
+  if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+      tmux attach -t default || tmux new -s default
+  fi
 fi
 
 # enable sccache for rust projects
