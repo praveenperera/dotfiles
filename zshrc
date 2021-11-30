@@ -223,13 +223,6 @@ setopt HIST_FIND_NO_DUPS
 setopt HIST_SAVE_NO_DUPS
 setopt HIST_BEEP
 
-# start tmux automatically, unless running in vscode
-if [[ -z "${VSCODE_GIT_ASKPASS_NODE}" ]] || [[ "${TERM_PROGRAM}" != "vscode" ]]; then
-  if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-      tmux attach -t default || tmux new -s default
-  fi
-fi
-
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 
 export PATH="/usr/local/opt/node@10/bin:$PATH"
@@ -248,3 +241,7 @@ export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
 # prevent home brew auto update
 export HOMEBREW_NO_AUTO_UPDATE=1
 export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
+
+# fnm
+export PATH=/Users/praveen/.fnm:$PATH
+eval "`fnm env`"
