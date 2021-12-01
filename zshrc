@@ -245,3 +245,6 @@ export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 # fnm
 export PATH=/Users/praveen/.fnm:$PATH
 eval "`fnm env`"
+
+# age
+export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
