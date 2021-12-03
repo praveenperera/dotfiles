@@ -19,6 +19,8 @@ alias clippy-fix="rustup run nightly cargo clippy --fix -Z unstable-options"
 alias k="kubectl"
 alias flush="dscacheutil -flushcache"
 alias td="tmux detach"
+alias agee="age -e -r $AGE -o $1.age $1"
+alias aged="age --decrypt -i ~/.config/sops/key.txt $1.age"
 
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
@@ -187,7 +189,6 @@ fi
 
 source $HOME/.zsh_plugins.sh
 
-
 # zsh-history-substring-search
 bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down
@@ -238,7 +239,6 @@ export PATH="$PATH:$HOME/.rvm/bin"
 
 export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
 
-# prevent home brew auto update
 export HOMEBREW_NO_AUTO_UPDATE=1
 export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 
