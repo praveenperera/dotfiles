@@ -67,7 +67,7 @@
 [interactive]
   diffFilter = delta --color-only
 [gpg]
-  program = /opt/homebrew/bin/gpg
+  program = gpg
 [user]
   name = Praveen Perera
   email = praveen@avencera.com
