@@ -19,8 +19,8 @@ alias clippy-fix="rustup run nightly cargo clippy --fix -Z unstable-options"
 alias k="kubectl"
 alias flush="dscacheutil -flushcache"
 alias td="tmux detach"
-alias agee="age -e -r $AGE -o $1.age $1"
-alias aged="age --decrypt -i ~/.config/sops/key.txt $1.age"
+alias agee=agee_func
+alias aged=aged_func
 
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
@@ -28,6 +28,14 @@ eval "$(direnv hook zsh)"
 source <(navi widget zsh)
 
 local ARCH=$(uname -m)
+
+agee_func() {
+  age -e -r $AGE -o "$1".age "$1"
+}
+
+aged_func() {
+  age --decrypt -i ~/.config/sops/key.txt "$1"
+}
 
 yarn_in_phoenix() {
   if [ ! -f package.json ] && [ -f mix.exs ]; then
