@@ -176,7 +176,7 @@ export PATH=$PATH:~/Library/Python/3.7/bin
 export PATH=$PATH:~/.gem/bin
 
 # added by travis gem
-[ -f /Users/praveen/.travis/travis.sh ] && source /Users/praveen/.travis/travis.sh
+[ -f $HOME/.travis/travis.sh ] && source $HOME/.travis/travis.sh
 export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
 
 # gstreamer
@@ -251,7 +251,7 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 
 # fnm
-export PATH=/Users/praveen/.fnm:$PATH
+export PATH=$HOME.fnm:$PATH
 eval "`fnm env`"
 
 # age
