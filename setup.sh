@@ -39,5 +39,8 @@ git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
 echo "Installing zsh plugins"
 antibody update
 
+echo "source zshrc file"
+source "$HOME"/.zshrc
+
 echo "Fix zsh folder permissions"
 compaudit | xargs chmod g-w

@@ -22,10 +22,13 @@ alias td="tmux detach"
 alias agee=agee_func
 alias aged=aged_func
 
+# linux
+export PATH="$PATH:$HOME/.local/bin"
+export PATH="$PATH:$HOME/.cargo/bin"
+
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
 eval "$(direnv hook zsh)"
-source <(navi widget zsh)
 
 local ARCH=$(uname -m)
 
@@ -255,9 +258,6 @@ export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 export PATH="$PATH:$HOME/.fnm/"
 eval "`fnm env`"
 
-# linux
-export PATH="$PATH:$HOME/.local/bin"
-export PATH="$PATH:$HOME/.cargo/bin"
 
 # age
 export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
