@@ -170,7 +170,8 @@ export PATH=$GRADLE_HOME/bin:$PATH
 # Enable history in iex through Erlang(OTP)
 export ERL_AFLAGS="-kernel shell_history enabled"
 
-export PATH=$PATH:~/Library/Python/3.7/bin
+# python3 bin path
+export PATH=$PATH:~/Library/Python/3.9/bin
 
 # rvm
 export PATH=$PATH:~/.gem/bin
@@ -251,8 +252,12 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 
 # fnm
-export PATH=$HOME.fnm:$PATH
+export PATH="$PATH:$HOME/.fnm/"
 eval "`fnm env`"
+
+# linux
+export PATH="$PATH:$HOME/.local/bin"
+export PATH="$PATH:$HOME/.cargo/bin"
 
 # age
 export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
