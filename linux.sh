@@ -4,7 +4,6 @@
 unset RUSTC_WRAPPER
 
 # install sscache
-
 cargo install sscache
 
 # re-enable sscache
@@ -15,7 +14,19 @@ cargo install exa ripgrep
 
 # deps from apt
 apt update
-apt install docker unzip python3-dev python3-pip python3-setuptools -y
+apt install unzip \
+    python3-dev \
+    python3-pip \
+    python3-setuptools \
+    tmux \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release -y
+
+
+# docker
+curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
 
 # antibody
 curl -sfL git.io/antibody | sh -s - -b /usr/local/bin
@@ -40,3 +51,10 @@ fi
 
 # fnm
 curl -fsSL https://fnm.vercel.app/install | bash
+
+# install kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+# gcloud cli
+curl https://sdk.cloud.google.com | bash

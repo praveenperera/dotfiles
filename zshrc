@@ -26,6 +26,30 @@ alias aged=aged_func
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$PATH:$HOME/.cargo/bin"
 
+
+# subl
+export PATH="/Applications/Sublime Text.app/Contents/SharedSupport/bin:$PATH"
+
+# git fzf shortcuts
+is_in_git_repo() {
+  git rev-parse HEAD > /dev/null 2>&1
+}
+
+gco() {
+  is_in_git_repo && gcop
+}
+
+gcop() {
+  local branch=$(git branch -vv --color=always | rg -v '/HEAD\s' |
+    fzf --height 40% --reverse --border --ansi --multi --tac | sed 's/^..//' | awk '{print $1}')
+
+  git checkout $branch
+  zle reset-prompt
+}
+
+zle -N gco
+bindkey "^F" gco
+
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
 eval "$(direnv hook zsh)"
@@ -176,9 +200,6 @@ export ERL_AFLAGS="-kernel shell_history enabled"
 # python3 bin path
 export PATH=$PATH:~/Library/Python/3.9/bin
 
-# rvm
-export PATH=$PATH:~/.gem/bin
-
 # added by travis gem
 [ -f $HOME/.travis/travis.sh ] && source $HOME/.travis/travis.sh
 export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
@@ -245,9 +266,6 @@ if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.i
 
 # The next line enables shell command completion for gcloud.
 if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'; fi
-
-# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-export PATH="$PATH:$HOME/.rvm/bin"
 
 export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
 

@@ -18,11 +18,11 @@ $elixir\
 $elm\
 $erlang\
 $golang\
+$pulumi\
 $helm\
 $java\
 $julia\
 $nim\
-$nodejs\
 $ocaml\
 $perl\
 $php\
@@ -36,6 +36,7 @@ $zig\
 $nix_shell\
 $conda\
 $memory_usage\
+$nodejs\
 $aws\
 $gcloud\
 $openstack\
@@ -55,12 +56,21 @@ $character"""
 [directory]
 truncate_to_repo = false
 truncation_length = 5
+truncation_symbol = "…/"
 
 [memory_usage]
 disabled = true
 
-[gcloud]
+[aws]
 disabled = true
+format = 'on [$symbol($profile )(\($region\) )]($style)'
+style = "bold blue"
+symbol = "🅰 "
+
+[gcloud]
+symbol = "🇬 "
+format = '$symbol[$project]($style) '
+style = "bold 3"
 
 [kubernetes]
 disabled = false
@@ -71,10 +81,16 @@ format = 'on [⛵ $context $namespace]($style) '
 "do-nyc1-tunevu-production" = "tunevu"
 "do-nyc3-us-east" = "primcloud"
 
-[aws]
-format = 'on [$symbol($profile )(\($region\) )]($style)'
-style = "bold blue"
-symbol = "🅰 "
+[nodejs]
+disabled = true
+
+[ruby]
+disabled = true
+
+[pulumi]
+format = "[$symbol$stack]($style) "
+style = "bold 4"	
+
 
 # [username]
 # show_always = true
