@@ -34,6 +34,7 @@
   bd = branch -D 
   rm = branch -D 
   rn = branch -m
+  rclean = !gclean
   deploy = !git push && git push dokku master
   cob = checkout -b
   cms = !git add -A && git commit -S -m

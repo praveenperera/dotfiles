@@ -41,10 +41,21 @@ gco() {
 
 gcop() {
   local branch=$(git branch -vv --color=always | rg -v '/HEAD\s' |
-    fzf --height 40% --reverse --border --ansi --multi --tac | sed 's/^..//' | awk '{print $1}')
+    fzf --height 60% --reverse --border --ansi --multi --tac | sed 's/^..//' | awk '{print $1}')
 
   git checkout $branch
   zle reset-prompt
+}
+
+gbd() {
+  local branch=$(git branch -vv --color=always | rg -v '/HEAD\s' |
+    fzf --height 60% --reverse --border --ansi --multi --tac | sed 's/^..//' | awk '{print $1}')
+
+  git bd $branch
+}
+
+gclean() {
+  git fetch -p && for branch in $(git for-each-ref --format '%(refname) %(upstream:track)' refs/heads | awk '$2 == "[gone]" {sub("refs/heads/", "", $1); print $1}'); do git branch -D $branch; done
 }
 
 zle -N gco
