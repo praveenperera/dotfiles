@@ -6,15 +6,19 @@ unset RUSTC_WRAPPER
 # install sscache
 cargo install sscache
 
-# re-enable sscache
+# exports
 export RUSTC_WRAPPER=sccache 
 
 # deps from cargo
 cargo install exa ripgrep
 
+# install cargo plugins
+cargo install cargo-watch
+
 # deps from apt
 apt update
 apt install unzip \
+    zsh \
     python3-dev \
     python3-pip \
     python3-setuptools \
@@ -23,7 +27,6 @@ apt install unzip \
     curl \
     gnupg \
     lsb-release -y
-
 
 # docker
 curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
@@ -58,3 +61,6 @@ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 # gcloud cli
 curl https://sdk.cloud.google.com | bash
+
+# change shell to ZSH
+chsh -s /bin/zsh

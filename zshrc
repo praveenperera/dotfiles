@@ -113,11 +113,6 @@ kill_port(){
   fi
 }
 
-alias epi=elm-package-install
-elm-package-install(){
-  elm-package install -y $1
-}
-
 alias em=launch_emacs_client
 launch_emacs_client() {
   # emacsclient options for reference
@@ -268,6 +263,21 @@ setopt HIST_FIND_NO_DUPS
 setopt HIST_SAVE_NO_DUPS
 setopt HIST_BEEP
 
+## autocomplete settings
+# disable sort when completing `git checkout`
+zstyle ':completion:*:git-checkout:*' sort false
+# set descriptions format to enable group support
+zstyle ':completion:*:descriptions' format '[%d]'
+# set list-colors to enable filename colorizing
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+# preview directory's content with exa when completing cd
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always $realpath'
+# switch group using `,` and `.`
+zstyle ':fzf-tab:*' switch-group ',' '.'
+# fallback to filename autocomplete when others fail
+zstyle ':completion:*' completer _complete _ignored _files
+## / autocomplete settings
+
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 
 export PATH="/usr/local/opt/node@10/bin:$PATH"
@@ -286,7 +296,6 @@ export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 # fnm
 export PATH="$PATH:$HOME/.fnm/"
 eval "`fnm env`"
-
 
 # age
 export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
