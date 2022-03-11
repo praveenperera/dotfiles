@@ -26,7 +26,6 @@ alias aged=aged_func
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$PATH:$HOME/.cargo/bin"
 
-
 # subl
 export PATH="/Applications/Sublime Text.app/Contents/SharedSupport/bin:$PATH"
 
@@ -175,15 +174,10 @@ export PATH=$PATH:$HOME/.mix/escripts
 
 export LANG='en_US.UTF-8'
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
-export PATH="$HOME/.yarn/bin:$PATH"
-export ELIXIR_EDITOR="code -w"
 export EDITOR="code -w"
 export ALTERNATE_EDITOR=vim
 export VISUAL="code -w"
-export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
 export PATH="/usr/local/sbin:$PATH"
-export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
-export PATH="/usr/local/opt/mysql@5.5/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export ANT_HOME=/usr/local/opt/ant
 export MAVEN_HOME=/usr/local/opt/maven
@@ -205,10 +199,6 @@ export ERL_AFLAGS="-kernel shell_history enabled"
 
 # python3 bin path
 export PATH=$PATH:~/Library/Python/3.9/bin
-
-# added by travis gem
-[ -f $HOME/.travis/travis.sh ] && source $HOME/.travis/travis.sh
-export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"
 
 # gstreamer
 export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/Current/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
@@ -280,7 +270,6 @@ zstyle ':completion:*' completer _complete _ignored _files
 
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 
-export PATH="/usr/local/opt/node@10/bin:$PATH"
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'; fi
