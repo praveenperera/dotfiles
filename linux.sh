@@ -39,7 +39,8 @@ cargo install exa ripgrep git-delta cargo-watch fd-find bat skim bottom
 cargo install cargo-watch cargo-sweep
 
 # docker
-which docker || curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
+which docker || curl -fsSL https://get.docker.com -o get-docker.sh \
+&& sh get-docker.sh && rm get-docker.sh
 
 # antibody
 sudo curl -sfL git.io/antibody | sh -s - -b $HOME/.local/bin

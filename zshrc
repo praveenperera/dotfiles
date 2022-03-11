@@ -12,7 +12,6 @@ alias python=python3
 alias rc=rsync -avzhe ssh --progress $1 $2
 alias oni="/Applications/Onivim2.App/Contents/MacOS/Oni2"
 alias la="exa -lha --icons"
-alias yrn="yarn_in_phoenix"
 alias rex="evcxr"
 alias k="kubectl"
 alias clippy-fix="rustup run nightly cargo clippy --fix -Z unstable-options"
@@ -74,31 +73,6 @@ aged_func() {
   age --decrypt -i ~/.config/sops/key.txt "$1"
 }
 
-yarn_in_phoenix() {
-  if [ ! -f package.json ] && [ -f mix.exs ]; then
-    printf "phoenix project detected...\n\n"
-    yarn --cwd assets "$@"
-  else
-    yarn "$@"
-  fi
-}
-
-# converts ocaml code into reason
-alias mlre="pbpaste | refmt --parse ml --print re --interface false | pbcopy"
-# converts reason code into ocaml
-alias reml="pbpaste | refmt --parse re --print ml --interface false | pbcopy"
-
-alias alle2h=convert_all_eex_to_haml
-convert_all_eex_to_haml(){
-  for i in $(find_eex_files); do
-    e2h $i
-  done
-}
-
-find_eex_files(){
-  find ./lib -name *.eex -print
-}
-
 alias killp=kill_port
 kill_port(){
   KILL_PID=`lsof -i:$1 | awk '{print $2}' | xargs | awk '{print $2}'`
@@ -154,15 +128,6 @@ function changeMac() {
   echo "Your new physical address is $mac"
 }
 
-function kmerge() {
-  KUBECONFIG=~/.kube/config:$1 kubectl config view --flatten > ~/.kube/mergedkub && \
-   mv ~/.kube/config ~/.kube/config.bak &&\
-   mv ~/.kube/mergedkub ~/.kube/config
-}
-
-### Git Alias
-alias gcm="git commit -a -S -m $1"
-
 # enable fuzzy searching in mcfly
 export MCFLY_FUZZY=true
 
@@ -202,11 +167,6 @@ export PATH=$PATH:~/Library/Python/3.9/bin
 
 # gstreamer
 export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/Current/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
-
-#added by iterm2 v3
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
-
-. $HOME/.opam/opam-init/init.zsh > /dev/null 2> /dev/null || true
 
 TERM=xterm-256color
 
@@ -268,23 +228,21 @@ zstyle ':fzf-tab:*' switch-group ',' '.'
 zstyle ':completion:*' completer _complete _ignored _files
 ## / autocomplete settings
 
-# enable sccache for rust projects
-export RUSTC_WRAPPER=sccache 
-
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
 if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'; fi
 
+# enable sccache for rust projects
+export RUSTC_WRAPPER=sccache 
 export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
-
 export HOMEBREW_NO_AUTO_UPDATE=1
 export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 
 # fnm
 export PATH="$PATH:$HOME/.fnm/"
-eval "`fnm env`"
+eval "$(fnm env)"
 
 # age
 export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
