@@ -9,17 +9,13 @@ alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) 
 alias gb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias pip=pip3
 alias python=python3
-alias rc=rsync -avzhe ssh --progress $1 $2
-alias oni="/Applications/Onivim2.App/Contents/MacOS/Oni2"
+alias rc=rsync -avzher ssh --progress $1 $2
 alias la="exa -lha --icons"
 alias rex="evcxr"
 alias k="kubectl"
 alias clippy-fix="rustup run nightly cargo clippy --fix -Z unstable-options"
-alias k="kubectl"
 alias flush="dscacheutil -flushcache"
 alias td="tmux detach"
-alias agee=agee_func
-alias aged=aged_func
 
 export SHELL=$(which zsh)
 
@@ -81,14 +77,6 @@ eval "$(direnv hook zsh)"
 
 local ARCH=$(uname -m)
 
-agee_func() {
-  age -e -r $AGE -o "$1".age "$1"
-}
-
-aged_func() {
-  age --decrypt -i ~/.config/sops/key.txt "$1"
-}
-
 alias killp=kill_port
 kill_port(){
   KILL_PID=`lsof -i:$1 | awk '{print $2}' | xargs | awk '{print $2}'`
@@ -99,34 +87,6 @@ kill_port(){
     echo "PID: $KILL_PID on PORT: $1 has been terminated ($NAME)"
   else
     echo "No process running on PORT: $1"
-  fi
-}
-
-alias em=launch_emacs_client
-launch_emacs_client() {
-  # emacsclient options for reference
-  # -a "" starts emacs daemon and reattaches
-  # -c creates a new frame
-  # -n returns control back to the terminal
-  # -e eval the script
-  # -nw no window (launch in terminal)
-  visible_frames() {
-    emacsclient -a "" -e '(length (visible-frame-list))'
-  }
-
-  change_focus() {
-    emacsclient -n -e "(select-frame-set-input-focus (selected-frame))" > /dev/null
-  }
-
-  test "$(visible_frames)" -eq "1" && change_focus
-
-  if [ "$(visible_frames)" -lt  "2" ]; then # need to create a frame
-    # -c $@ with no args just opens the scratch buffer
-    emacsclient -n -c "$@" && change_focus
-  else # there is already a visible frame besides the daemon, so
-    change_focus
-    # -n $@ errors if there are no args
-    test  "$#" -ne "0" && emacsclient -n "$@"
   fi
 }
 
@@ -147,44 +107,11 @@ function changeMac() {
 # enable fuzzy searching in mcfly
 export MCFLY_FUZZY=true
 
-# Setup path for imagemagick 6
-export PATH="/usr/local/opt/imagemagick@6/bin:$PATH"
-
-# elixir escripts
-export PATH=$PATH:$HOME/.mix/escripts
-
-export LANG='en_US.UTF-8'
-export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
 export EDITOR="code -w"
 export ALTERNATE_EDITOR=vim
 export VISUAL="code -w"
 export PATH="/usr/local/sbin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
-export ANT_HOME=/usr/local/opt/ant
-export MAVEN_HOME=/usr/local/opt/maven
-export GRADLE_HOME=/usr/local/opt/gradle
-
-export ANDROID_HOME=$HOME/Library/Android/sdk
-export ANDROID_SDK_ROOT=$ANDROID_HOME
-export PATH=$PATH:$ANDROID_HOME/emulator
-export PATH=$PATH:$ANDROID_HOME/tools
-export PATH=$PATH:$ANDROID_HOME/tools/bin
-export PATH=$PATH:$ANDROID_HOME/platform-tools
-
-export PATH=$ANT_HOME/bin:$PATH
-export PATH=$MAVEN_HOME/bin:$PATH
-export PATH=$GRADLE_HOME/bin:$PATH
-
-# Enable history in iex through Erlang(OTP)
-export ERL_AFLAGS="-kernel shell_history enabled"
-
-# python3 bin path
-export PATH=$PATH:~/Library/Python/3.9/bin
-
-# gstreamer
-export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/Current/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
-
-TERM=xterm-256color
 
 #kubectl autocompletions
 if [ $commands[kubectl] ]; then
@@ -244,25 +171,13 @@ zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always $realpath'
 # switch group using `,` and `.`
 zstyle ':fzf-tab:*' switch-group ',' '.'
-# fallback to filename autocomplete when others fail
-zstyle ':completion:*' completer _complete _ignored _files
 ## / autocomplete settings
-
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'; fi
-
-# The next line enables shell command completion for gcloud.
-if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'; fi
 
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 
 export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
 export HOMEBREW_NO_AUTO_UPDATE=1
-export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 
 # fnm
 export PATH="$PATH:$HOME/.fnm/"
 eval "$(fnm env)"
-
-# age
-export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
