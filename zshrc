@@ -28,9 +28,6 @@ export HISTSIZE=2000
 export SAVEHIST=2000
 [[ -n $HISTFILE ]] || export HISTFILE=~/.zsh_history
 
-# subl
-export PATH="/Applications/Sublime Text.app/Contents/SharedSupport/bin:$PATH"
-
 # git fzf shortcuts
 is_in_git_repo() {
   git rev-parse HEAD > /dev/null 2>&1
