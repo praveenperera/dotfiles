@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # generate zsh plugins
 antibody bundle < zsh_plugins.txt > zsh_plugins.sh
@@ -39,5 +39,5 @@ git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
 echo "Installing zsh plugins"
 antibody update
 
-echo "source zshrc file"
-source "$HOME"/.zshrc
+# setup shell to ZSH
+[ $SHELL = "/bin/bash" ] && sudo chsh -s "$(which zsh)" "$(whoami)"

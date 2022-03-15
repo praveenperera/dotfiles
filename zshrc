@@ -21,6 +21,8 @@ alias td="tmux detach"
 alias agee=agee_func
 alias aged=aged_func
 
+export SHELL=$(which zsh)
+
 # linux
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$PATH:$HOME/.cargo/bin"
