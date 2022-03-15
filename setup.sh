@@ -1,5 +1,8 @@
 #!/bin/sh
 
+export PATH="$PATH:$HOME/.local/bin"
+export PATH="$PATH:$HOME/.cargo/bin"
+
 # generate zsh plugins
 [ -f $HOME/.zsh_plugins.sh ] && rm $HOME/.zsh_plugins.sh
 antibody bundle < zsh_plugins.txt > zsh_plugins.sh
@@ -11,7 +14,7 @@ mkdir -p ~/.config
 dir=~/code/dotfiles                    
 
 # list of files/folders to symlink in homedir
-files="vimrc gvimrc.after zshrc gitconfig spacemacs zsh_plugins.sh gitignore direnvrc gitignore alacritty.yml tmux.conf"   
+files="zshrc gitconfig spacemacs zsh_plugins.sh gitignore direnvrc gitignore alacritty.yml tmux.conf"   
 
 config_files="starship.toml"
 
@@ -50,8 +53,11 @@ fi
 echo "Installing zsh plugins"
 antibody update
 
-# setup shell to ZSH
-[ $SHELL = "/bin/bash" ] && sudo chsh -s "$(which zsh)" "$(whoami)"
+if [ ! -d  ~/.vim/janus ]
+then
+echo "Installing janus"
+curl -L https://bit.ly/janus-bootstrap | bash
+fi
 
 # restart zsh
 exec zsh

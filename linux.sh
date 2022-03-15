@@ -20,6 +20,7 @@ sudo apt-get install unzip \
     python3-pip \
     python3-setuptools \
     fzf \
+    libssl-dev \
     xsel \
     tmux \
     ca-certificates \
@@ -49,7 +50,7 @@ sudo curl -sfL git.io/antibody | sh -s - -b $HOME/.local/bin
 sudo sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- --force
 
 # thefuck
-which thefuck || sudo pip3 install thefuck --user
+which thefuck || pip3 install thefuck --user
 
 # direnv
 sudo curl -sfL https://direnv.net/install.sh | bash
@@ -73,9 +74,6 @@ sudo install -o "$(whoami)" -g "$(whoami)" -m 0755 kubectl /usr/local/bin/kubect
 
 # gcloud cli
 which gcloud || sudo curl https://sdk.cloud.google.com | bash -s -- --disable-prompts
-
-# change shell to ZSH
-sudo chsh -s /bin/zsh
 
 # cleanup
 sudo apt-get autoremove -y
