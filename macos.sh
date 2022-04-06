@@ -13,12 +13,15 @@ which sccache || cargo install sccache
 export RUSTC_WRAPPER=sccache 
 
 # deps from brew
-brew install starship thefuck direnv mcfly fnm exa ripgrep git-delta \
-             fd bat skim bottom antibody zoxide kubectl gpg fzf shellcheck elixir
+brew install \
+    starship thefuck direnv mcfly fnm exa ripgrep git-delta \
+    fd bat skim bottom antibody zoxide kubectl gpg fzf shellcheck elixir \
+    topgrade pnpm
 
 # cask deps from brew
-brew install alacritty google-cloud-sdk visual-studio-code bettertouchtool \
-             github signal sublime-text rectangle --cask
+brew install \
+    alacritty google-cloud-sdk visual-studio-code bettertouchtool \
+    github signal sublime-text rectangle --cask
 
 # install fonts from brew
 brew tap homebrew/cask-fonts
