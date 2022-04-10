@@ -15,7 +15,7 @@ export RUSTC_WRAPPER=sccache
 # deps from brew
 brew install \
     starship thefuck direnv mcfly fnm exa ripgrep git-delta \
-    fd bat skim bottom antibody zoxide kubectl gpg fzf shellcheck elixir \
+    fd bat sk bottom antibody zoxide kubectl gpg fzf shellcheck elixir \
     topgrade pnpm
 
 # cask deps from brew
