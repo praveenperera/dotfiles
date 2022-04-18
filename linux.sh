@@ -34,10 +34,10 @@ which sccache || cargo install sccache
 export RUSTC_WRAPPER=sccache 
 
 # deps from cargo
-cargo install exa ripgrep git-delta cargo-watch fd-find bat skim bottom
+cargo install exa ripgrep git-delta cargo-watch fd-find bat skim bottom topgrade
 
 # install cargo plugins
-cargo install cargo-watch cargo-sweep
+cargo install cargo-watch cargo-sweep cargo-edit
 
 # docker
 which docker || curl -fsSL https://get.docker.com -o get-docker.sh \
