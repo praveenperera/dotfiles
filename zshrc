@@ -40,13 +40,22 @@ is_in_git_repo() {
   git rev-parse HEAD > /dev/null 2>&1
 }
 
+gm(){
+  if git show-ref -q --heads master; then
+    git co master
+  else
+    git co maingit 
+  fi
+}
+
 gco() {
   is_in_git_repo && gcop
 }
 
 gcop() {
-  local branch=$(git branch -vv --color=always | rg -v '/HEAD\s' |
-    fzf --height 60% --reverse --border --ansi --multi --tac | sed 's/^..//' | awk '{print $1}')
+  local branch=$(git branch -a -vv --color=always | rg -v '/HEAD\s' |
+    fzf --height 60% --reverse --border --ansi --multi --tac | sed 's/^..//' | awk '{print $1}' |
+    sed 's#^remotes/[^/]*/##')
 
   git checkout $branch
   zle reset-prompt
