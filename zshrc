@@ -44,7 +44,7 @@ gm(){
   if git show-ref -q --heads master; then
     git co master
   else
-    git co maingit 
+    git co main
   fi
 }
 
