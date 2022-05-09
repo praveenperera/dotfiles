@@ -53,10 +53,11 @@ fi
 echo "Installing zsh plugins"
 antibody update
 
-if [ ! -d  ~/.vim/janus ]
+if [ ! -d  ~/.vim/.SpaceVim.d ]
 then
-echo "Installing janus"
-curl -L https://bit.ly/janus-bootstrap | bash
+echo "Installing spacevim"
+rm -rf ~/.vim/
+curl -sLf https://spacevim.org/install.sh | bash
 fi
 
 # restart zsh
