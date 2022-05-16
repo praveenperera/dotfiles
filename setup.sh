@@ -57,6 +57,7 @@ if [ ! -d  ~/.vim/.SpaceVim.d ]
 then
 echo "Installing spacevim"
 rm -rf ~/.vim/
+rm -rf ~/.cache/SpaceVim/
 curl -sLf https://spacevim.org/install.sh | bash
 fi
 
