@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# exit on error
+set -e
+
 # unset before installing sscache
 unset RUSTC_WRAPPER
 
@@ -15,7 +18,6 @@ sudo apt-get update
 sudo apt-get install unzip \
     zsh \
     gcc \
-    crcmod \
     python3-dev \
     python3-pip \
     python3-setuptools \
@@ -25,7 +27,8 @@ sudo apt-get install unzip \
     tmux \
     ca-certificates \
     curl \
-    lsb-release --no-cache-dir  -y
+    pkg-config \
+    -y
 
 # install sccache
 which sccache || cargo install sccache
@@ -37,14 +40,14 @@ export RUSTC_WRAPPER=sccache
 cargo install exa ripgrep git-delta cargo-watch fd-find bat skim bottom topgrade
 
 # install cargo plugins
-cargo install cargo-watch cargo-sweep cargo-edit
+cargo install cargo-watch cargo-sweep cargo-edit cargo-update
 
 # docker
-which docker || curl -fsSL https://get.docker.com -o get-docker.sh \
-&& sh get-docker.sh && rm get-docker.sh
+which docker || (curl -fsSL https://get.docker.com -o get-docker.sh \
+&& sh get-docker.sh && rm get-docker.sh)
 
-# antibody
-sudo curl -sfL git.io/antibody | sh -s - -b $HOME/.local/bin
+#antidote
+[ -e ~/.antidote ] || git clone https://github.com/mattmc3/antidote.git ~/.antidote
 
 # starship
 sudo sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- --force
@@ -60,7 +63,7 @@ mv $(which direnv) $HOME/.local/bin
 sudo curl -sS https://webinstall.dev/zoxide | bash
 
 # mcfly
-sudo curl -LSfs https://raw.githubusercontent.com/cantino/mcfly/master/ci/install.sh | sh -s -- --git cantino/mcfly --to $HOME/.local/bin
+sudo curl -LSfs https://raw.githubusercontent.com/cantino/mcfly/master/ci/install.sh | sh -s -- --git cantino/mcfly --to $HOME/.local/bin --force
 if [ ! -f $HOME/.zsh_history ]; then
     touch $HOME/.zsh_history
 fi
