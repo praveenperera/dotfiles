@@ -5,7 +5,7 @@ export PATH="$PATH:$HOME/.cargo/bin"
 
 # generate zsh plugins
 [ -f $HOME/.zsh_plugins.sh ] && rm $HOME/.zsh_plugins.sh
-antibody bundle < zsh_plugins.txt > zsh_plugins.sh
+antidote bundle < zsh_plugins.txt > zsh_plugins.sh
 
 # make folders
 mkdir -p ~/.config
@@ -51,7 +51,7 @@ else
 fi
 
 echo "Installing zsh plugins"
-antibody update
+antidote update
 
 if [ ! -d  ~/.vim/.SpaceVim.d ]
 then
