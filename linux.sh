@@ -25,7 +25,8 @@ sudo apt-get install unzip \
     tmux \
     ca-certificates \
     curl \
-    lsb-release --no-cache-dir  -y
+    pkg-config \
+    -y
 
 # install sccache
 which sccache || cargo install sccache
