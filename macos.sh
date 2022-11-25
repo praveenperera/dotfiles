@@ -15,7 +15,7 @@ export RUSTC_WRAPPER=sccache
 # deps from brew
 brew install \
     starship thefuck direnv mcfly fnm exa ripgrep git-delta \
-    fd bat sk bottom zoxide kubectl gpg fzf shellcheck elixir \
+    fd bat sk bottom antibody zoxide kubectl gpg fzf shellcheck elixir \
     topgrade pnpm
 
 # cask deps from brew
@@ -29,9 +29,3 @@ brew install font-fira-code-nerd-font --cask
 
 # install cargo plugins
 cargo install cargo-watch cargo-sweep cargo-edit topgrade cargo-udeps
-
-# install antidote
-[ -e ~/.antidote ] || git clone https://github.com/mattmc3/antidote.git ~/.antidote
-
-# source antidote
-. ~/.antidote/antidote.zsh
