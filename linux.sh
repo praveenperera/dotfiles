@@ -78,6 +78,10 @@ sudo install -o "$(whoami)" -g "$(whoami)" -m 0755 kubectl /usr/local/bin/kubect
 # gcloud cli
 which gcloud || sudo curl https://sdk.cloud.google.com | bash -s -- --disable-prompts
 
+# aws cli
+which aws || curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+unzip awscliv2.zip && sudo ./aws/install
+
 # cleanup
 sudo apt-get autoremove -y
 
