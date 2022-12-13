@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$PATH:$HOME/.cargo/bin"
 
@@ -40,15 +42,6 @@ for file in $config_files; do
     ln -s $dir/config/$file ~/.config/$file
 done
 
-if [ ! -d ~/.emacs.d ]
-then
-    echo "Installing spacemacs"
-    git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
-else
-    cd ~/.emacs.d 
-    git pull
-    cd -
-fi
 
 echo "Installing zsh plugins"
 antibody update
