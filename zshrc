@@ -177,12 +177,5 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 
 # fnm
 export PATH="$PATH:$HOME/.fnm/"
-eval "$(fnm env)"
-<<<<<<< HEAD
-=======
-
-
-# fnm
 export PATH="/home/praveen/.local/share/fnm:$PATH"
-eval "`fnm env`"
->>>>>>> 681507d (Install AWS cli)
+eval "$(fnm env)"

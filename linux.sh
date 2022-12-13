@@ -86,7 +86,7 @@ which gcloud || sudo curl https://sdk.cloud.google.com | bash -s -- --disable-pr
 
 # aws cli
 which aws || curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-unzip awscliv2.zip && sudo ./aws/install
+unzip awscliv2.zip && sudo ./aws/install && rm -rf awscliv2.zip aws
 
 # cleanup
 sudo apt-get autoremove -y
