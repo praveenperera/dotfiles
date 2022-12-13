@@ -27,12 +27,18 @@ sudo apt-get install unzip \
     tmux \
     ca-certificates \
     curl \
+    emacs \
+    unzip \
     pkg-config \
     -y
 
 # install sccache
 which sccache || cargo install sccache
 
+# spacemacs
+[ -d $HOME/.emacs.d ] || git clone https://github.com/syl20bnr/spacemacs $HOME/.emacs.d
+
+>>>>>>> 681507d (Install AWS cli)
 # exports
 export RUSTC_WRAPPER=sccache 
 
