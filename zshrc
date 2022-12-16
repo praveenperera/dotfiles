@@ -9,7 +9,7 @@ alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) 
 alias gb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias pip=pip3
 alias python=python3
-alias rc=rsync -avzhe ssh --progress $1 $2
+alias rc=rsync -avzhe ssh --progress $1 $2 --exclude='/.git' --filter=':- .gitignore' --delete-after
 alias oni="/Applications/Onivim2.App/Contents/MacOS/Oni2"
 alias la="exa -lha --icons"
 alias rex="evcxr"
@@ -21,6 +21,7 @@ alias td="tmux detach"
 alias agee=agee_func
 alias aged=aged_func
 
+export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
 
 # linux
@@ -34,6 +35,25 @@ export SAVEHIST=2000
 
 # subl
 export PATH="/Applications/Sublime Text.app/Contents/SharedSupport/bin:$PATH"
+
+syncup() {
+  echo "syncing $1 to $2:$3"
+  rsync -avzhe ssh $1 "$2:$3" --exclude='/.git' --filter=':- .gitignore' --delete-after
+
+  fswatch --batch-marker=EOF --exclude="/.git" -xn . | while read file event; do
+    if [ $file = "EOF" ]; then
+      list=()
+    else
+      list+=($file)
+    fi
+
+    for file in "${list[@]}"; do
+      remote_file="${file/Users/home}"
+      echo "syncing $file to $remote_file"
+      rsync -avzhe ssh $file "$2:$remote_file" --exclude='/.git' --filter=':- .gitignore' 
+    done
+  done
+}
 
 # git fzf shortcuts
 is_in_git_repo() {
