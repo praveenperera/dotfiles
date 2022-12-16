@@ -20,6 +20,8 @@ alias flush="dscacheutil -flushcache"
 alias td="tmux detach"
 alias agee=agee_func
 alias aged=aged_func
+alias kcg="k config current-context"
+alias kcs="k config use-context"
 
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
