@@ -179,3 +179,7 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 export PATH="$PATH:$HOME/.fnm/"
 export PATH="/home/praveen/.local/share/fnm:$PATH"
 eval "$(fnm env)"
+
+
+# antidote
+source ${ZDOTDIR:-~}/.antidote/antidote.zsh
