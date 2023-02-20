@@ -89,11 +89,17 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 sudo install -o "$(whoami)" -g "$(whoami)" -m 0755 kubectl /usr/local/bin/kubectl
 
 # gcloud cli
-which gcloud || sudo curl https://sdk.cloud.google.com | bash -s -- --disable-prompts
+if [ ! -x "$(command -v gcloud)" ]; then
+sudo curl https://sdk.cloud.google.com | bash -s -- --disable-prompts
+fi
 
 # aws cli
-which aws || curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-unzip awscliv2.zip && sudo ./aws/install && rm -rf awscliv2.zip aws
+if [ ! -x "$(command -v awscli)" ]; then
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    unzip awscliv2.zip 
+    sudo ./aws/install 
+    rm -rf awscliv2.zip aws
+fi
 
 # cleanup
 sudo apt-get autoremove -y
