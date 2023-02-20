@@ -7,6 +7,8 @@ set -e
 unset RUSTC_WRAPPER
 
 # Install Rust
+export CARGO_HOME=$HOME/.cargo
+export RUSTUP_HOME=$HOME/.rustup
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo sh -s -- -y
 . $HOME/.cargo/env
 
