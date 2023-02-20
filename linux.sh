@@ -7,12 +7,16 @@ set -e
 unset RUSTC_WRAPPER
 
 # Install Rust
-export CARGO_HOME=$HOME/.cargo
-export RUSTUP_HOME=$HOME/.rustup
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
-sh rustup-init.sh -y --no-modify-path --default-toolchain stable
-rm rustup-init.sh
-. $HOME/.cargo/env
+if [ ! -x "$(command -v cargo)" ]; then
+    echo "Installing Rust..."
+    export CARGO_HOME=$HOME/.cargo
+    export RUSTUP_HOME=$HOME/.rustup
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+    sh rustup-init.sh -y --no-modify-path --default-toolchain stable
+    rm rustup-init.sh
+    . $HOME/.cargo/env
+fi
+
 
 # add clippy
 rustup component add clippy
