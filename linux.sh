@@ -9,7 +9,9 @@ unset RUSTC_WRAPPER
 # Install Rust
 export CARGO_HOME=$HOME/.cargo
 export RUSTUP_HOME=$HOME/.rustup
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo sh -s -- -y
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+sh rustup-init.sh -y --no-modify-path --default-toolchain stable
+rm rustup-init.sh
 . $HOME/.cargo/env
 
 # add clippy
