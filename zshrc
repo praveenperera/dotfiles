@@ -177,7 +177,7 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 
 # fnm
 export PATH="$PATH:$HOME/.fnm/"
-export PATH="/home/praveen/.local/share/fnm:$PATH"
+export PATH="$HOME/.local/share/fnm:$PATH"
 eval "$(fnm env)"
 
 
