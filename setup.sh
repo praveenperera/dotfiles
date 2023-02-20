@@ -1,7 +1,8 @@
-#!/bin/sh
+#!/bin/zsh
 
-export PATH="$PATH:$HOME/.local/bin"
-export PATH="$PATH:$HOME/.cargo/bin"
+set -e
+
+source ${ZDOTDIR:-~}/.antidote/antidote.zsh
 
 # generate zsh plugins
 [ -f $HOME/.zsh_plugins.sh ] && rm $HOME/.zsh_plugins.sh
@@ -11,10 +12,10 @@ antidote bundle < zsh_plugins.txt > zsh_plugins.sh
 mkdir -p ~/.config
 
 # dotfiles directory
-dir=~/code/dotfiles                    
+dir=~/code/dotfiles
 
 # list of files/folders to symlink in homedir
-files="zshrc gitconfig spacemacs zsh_plugins.sh gitignore direnvrc gitignore alacritty.yml tmux.conf"   
+files=(zshrc gitconfig spacemacs zsh_plugins.sh gitignore direnvrc gitignore alacritty.yml tmux.conf)
 
 config_files="starship.toml"
 
@@ -26,6 +27,7 @@ echo "...done\n"
 
 echo "Creating all symlinks \n"
 for file in $files; do
+    echo "file: $file"
     [ -f ~/.$file ] && rm ~/.$file
 
     echo "Creating symlink to $file in home directory."
@@ -45,7 +47,7 @@ then
     echo "Installing spacemacs"
     git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
 else
-    cd ~/.emacs.d 
+    cd ~/.emacs.d
     git pull
     cd -
 fi
