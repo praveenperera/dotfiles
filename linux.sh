@@ -44,13 +44,34 @@ sudo apt-get install unzip \
 which sccache || cargo install sccache
 
 # install nix
-sh -c "$(curl -fsSL https://nixos.org/nix/install)" -- --no-daemon
+curl -L https://nixos.org/nix/install | sh
 
 # install nix pkgs
-nix-env -iA nixpkgs.fzf
+nix-env -iA \
+    nixpkgs.fzf \
+    nixpkgs.bat \
+    nixpkgs.exa \
+    nixpkgs.ripgrep \
+    nixpkgs.delta \
+    nixpkgs.cargo-watch \
+    nixpkgs.bat \
+    nixpkgs.skim \
+    nixpkgs.fd \
+    nixpkgs.bottom \
+    nixpkgs.cargo-sweep \
+    nixpkgs.cargo-watch \
+    nixpkgs.cargo-update \
+    nixpkgs.topgrade \
+    nixpkgs.docker \
+    nixpkgs.direnv \
+    nixpkgs.zoxide \
+    nixpkgs.fnm \
+    nixpkgs.mcfly \
+    nixpkgs.kubectl \
+    nixpkgs.awscli \
+    nixpkgs.antibody \
+    nixpkgs.starship 
 
-# install fzf
-[ -d $HOME/.fzf ] || git clone --depth 1 https://github.com/junegunn/fzf.git $HOME/.fzf && $HOME/.fzf/install --all
 
 # spacemacs
 [ -d $HOME/.emacs.d ] || git clone https://github.com/syl20bnr/spacemacs $HOME/.emacs.d
@@ -58,56 +79,15 @@ nix-env -iA nixpkgs.fzf
 # exports
 export RUSTC_WRAPPER=sccache 
 
-# deps from cargo
-cargo install exa ripgrep git-delta cargo-watch fd-find bat skim bottom topgrade
-
-# install cargo plugins
-cargo install cargo-watch cargo-sweep cargo-edit cargo-update
-
-# docker
-which docker || (curl -fsSL https://get.docker.com -o get-docker.sh \
-&& sh get-docker.sh && rm get-docker.sh)
-
-#antidote
+# antidote
 [ -e ~/.antidote ] || git clone https://github.com/mattmc3/antidote.git ~/.antidote
-
-# starship
-sudo sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- --force
 
 # thefuck
 which thefuck || pip3 install thefuck --user
 
-# direnv
-sudo curl -sfL https://direnv.net/install.sh | bash
-mv $(which direnv) $HOME/.local/bin
-
-# zoxide
-sudo curl -sS https://webinstall.dev/zoxide | bash
-
-# mcfly
-sudo curl -LSfs https://raw.githubusercontent.com/cantino/mcfly/master/ci/install.sh | sh -s -- --git cantino/mcfly --to $HOME/.local/bin --force
-if [ ! -f $HOME/.zsh_history ]; then
-    touch $HOME/.zsh_history
-fi
-
-# fnm
-sudo curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell
-
-# install kubectl
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo install -o "$(whoami)" -g "$(whoami)" -m 0755 kubectl /usr/local/bin/kubectl
-
 # gcloud cli
 if [ ! -x "$(command -v gcloud)" ]; then
 sudo curl https://sdk.cloud.google.com | bash -s -- --disable-prompts
-fi
-
-# aws cli
-if [ ! -x "$(command -v awscli)" ]; then
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    unzip awscliv2.zip 
-    sudo ./aws/install 
-    rm -rf awscliv2.zip aws
 fi
 
 # cleanup

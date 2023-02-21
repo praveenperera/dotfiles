@@ -17,6 +17,8 @@ alias clippy-fix="rustup run nightly cargo clippy --fix -Z unstable-options"
 alias flush="dscacheutil -flushcache"
 alias td="tmux detach"
 
+[ -f $HOME/.nix-profile/etc/profile.d/nix.sh ] && source $HOME/.nix-profile/etc/profile.d/nix.sh
+
 export SHELL=$(which zsh)
 
 # linux
@@ -179,7 +181,6 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 export PATH="$PATH:$HOME/.fnm/"
 export PATH="$HOME/.local/share/fnm:$PATH"
 eval "$(fnm env)"
-
 
 # antidote
 source ${ZDOTDIR:-~}/.antidote/antidote.zsh
