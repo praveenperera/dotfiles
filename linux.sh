@@ -29,12 +29,12 @@ sudo apt-get install unzip \
     python3-dev \
     python3-pip \
     python3-setuptools \
-    fzf \
     libssl-dev \
     xsel \
     tmux \
     ca-certificates \
     curl \
+    golang \
     emacs \
     unzip \
     pkg-config \
@@ -42,6 +42,9 @@ sudo apt-get install unzip \
 
 # install sccache
 which sccache || cargo install sccache
+
+# install fzf
+[ -d $HOME/.fzf ] || git clone --depth 1 https://github.com/junegunn/fzf.git $HOME/.fzf && $HOME/.fzf/install --all
 
 # spacemacs
 [ -d $HOME/.emacs.d ] || git clone https://github.com/syl20bnr/spacemacs $HOME/.emacs.d
