@@ -17,7 +17,6 @@ if [ ! -x "$(command -v cargo)" ]; then
     . $HOME/.cargo/env
 fi
 
-
 # add clippy
 rustup component add clippy
 
@@ -39,9 +38,6 @@ sudo apt-get install unzip \
     unzip \
     pkg-config \
     -y
-
-# install sccache
-which sccache || cargo install sccache
 
 # install nix
 curl -L https://nixos.org/nix/install | sh
@@ -71,6 +67,7 @@ nix-env -iA \
     nixpkgs.awscli \
     nixpkgs.antibody \
     nixpkgs.starship 
+    nixpkgs.sccache
 
 
 # spacemacs
