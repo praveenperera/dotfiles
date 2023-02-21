@@ -43,6 +43,12 @@ sudo apt-get install unzip \
 # install sccache
 which sccache || cargo install sccache
 
+# install nix
+sh -c "$(curl -fsSL https://nixos.org/nix/install)" -- --no-daemon
+
+# install nix pkgs
+nix-env -iA nixpkgs.fzf
+
 # install fzf
 [ -d $HOME/.fzf ] || git clone --depth 1 https://github.com/junegunn/fzf.git $HOME/.fzf && $HOME/.fzf/install --all
 
