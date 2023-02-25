@@ -4,7 +4,7 @@
 unset RUSTC_WRAPPER
 
 # Install Rust
-cargo || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo sh -s -- -y
+which cargo || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo sh -s -- -y
 
 # install sccache
 which sccache || cargo install sccache
