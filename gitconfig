@@ -34,6 +34,8 @@
   bd = branch -D 
   rm = branch -D 
   rn = branch -m
+  cb = branch --show-current
+  cch = rev-parse HEAD
   rclean = !gclean
   deploy = !git push && git push dokku master
   cob = checkout -b
