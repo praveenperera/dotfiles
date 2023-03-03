@@ -32,6 +32,7 @@
   ec = config --global -e
   up = !git pull --rebase --prune $@ && git submodule update --init --recursive
   cb = branch --show-current
+  cch = rev-parse HEAD
   bd = branch -D 
   rm = branch -D 
   rn = branch -m
