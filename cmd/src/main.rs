@@ -1,8 +1,10 @@
+mod cmd;
+
 use eyre::{eyre, Result};
 use std::path::PathBuf;
 use xshell::Shell;
 
-const TOOLS: &[(&str, fn(&Shell) -> Result<()>)] = &[];
+const TOOLS: &[(&str, fn(&Shell) -> Result<()>)] = &[("cmd", cmd::run)];
 
 fn main() -> Result<()> {
     color_eyre::install()?;
