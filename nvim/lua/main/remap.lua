@@ -39,6 +39,9 @@ vim.keymap.set("n", "<leader>mr", "<cmd>CellularAutomaton make_it_rain<CR>");
 
 vim.keymap.set("n", "<leader>gs", ":Neogit <CR>")
 
--- vim.keymap.set("n", "<leader><leader>", function()
---     vim.cmd("so")
--- end)
+vim.keymap.set("n", "<leader>1", "1<C-w>w", { noremap = true })
+vim.keymap.set("n", "<leader>2", "2<C-w>w", { noremap = true })
+vim.keymap.set("n", "<leader>3", "3<C-w>w", { noremap = true })
+vim.keymap.set("n", "<leader>4", "4<C-w>w", { noremap = true })
+vim.keymap.set("n", "<leader>5", "5<C-w>w", { noremap = true })
+vim.keymap.set("n", "<leader>6", "6<C-w>w", { noremap = true })
