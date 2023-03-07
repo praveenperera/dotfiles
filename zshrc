@@ -1,7 +1,7 @@
 alias t="tmux attach | tmux"
 alias zreload2=exec zsh
 alias zreload='source ~/.zshrc'
-alias ip="ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'"
+alias ip='ifconfig | sed -En "s/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p"'
 alias pu="pushd"
 alias po="popd"
 alias pwd2=$(pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//" )
@@ -291,3 +291,8 @@ eval "$(fnm env)"
 
 # age
 export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
+
+# pnpm
+export PNPM_HOME="$HOME/pnpm"
+export PATH="$PNPM_HOME:$PATH"
+# pnpm end
