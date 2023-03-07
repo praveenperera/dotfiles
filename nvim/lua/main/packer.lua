@@ -53,6 +53,20 @@ return require('packer').startup(function(use)
     use({ 'TimUntersberger/neogit', requires = 'nvim-lua/plenary.nvim' })
     use("nvim-treesitter/nvim-treesitter-context");
 
+    -- Visualize lsp progress
+    use({
+        "j-hui/fidget.nvim",
+        config = function()
+            require("fidget").setup()
+        end
+    })
+
+    -- Autocompletion framework
+    use("hrsh7th/nvim-cmp")
+
+    use("nvim-lua/popup.nvim")
+    use("nvim-lua/plenary.nvim")
+
     use {
         'VonHeikemen/lsp-zero.nvim',
         branch = 'v1.x',
@@ -82,4 +96,12 @@ return require('packer').startup(function(use)
     use("laytan/cloak.nvim")
 
     use("mg979/vim-visual-multi", { branch = 'master' })
+
+    use {
+        'nvim-lualine/lualine.nvim',
+        requires = { 'kyazdani42/nvim-web-devicons', opt = true }
+    }
+
+    use 'navarasu/onedark.nvim'
+
 end)
