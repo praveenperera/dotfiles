@@ -212,7 +212,6 @@ local config = {
         ["mason-nvim-dap"] = {},
         ["neo-tree"] = NeotreeConfig,
         heirline = HeirlineConfig,
-        ['TimUntersberger/neogit'] = NeogitConfig,
     },
     -- LuaSnip Options
     luasnip = {
