@@ -191,7 +191,7 @@ local config = {
             },
             { "github/copilot.vim" },
             { 'justinmk/vim-sneak' },
-            { 'terryma/vim-multiple-cursors' },
+            { 'mg979/vim-visual-multi' },
         },
         ["null-ls"] =
             function(config)              -- overrides `require("null-ls").setup(config)`
