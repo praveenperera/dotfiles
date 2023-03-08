@@ -1,21 +1,22 @@
 require("user.config.heirline")
-require("user.config.neogit_setup")
+require("user.config.neotree")
+require("user.config.neogit")
 
 local function configurePolish()
-    NeogitConfig()
+    require("neogit").setup(NeogitConfig())
 end
 
 local config = {
     updater = {
-        remote = "origin",             -- remote to use
-        channel = "stable",            -- "stable" or "nightly"
-        version = "latest",            -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
-        commit = nil,                  -- commit hash (NIGHTLY ONLY)
-        pin_plugins = nil,             -- nil, true, false (nil will pin plugins on stable only)
-        skip_prompts = false,          -- skip prompts about breaking changes
-        show_changelog = true,         -- show the changelog after performing an update
-        auto_reload = false,           -- automatically reload and sync packer after a successful update
-        auto_quit = false,             -- automatically quit the current session after a successful update
+        remote = "origin",     -- remote to use
+        channel = "stable",    -- "stable" or "nightly"
+        version = "latest",    -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
+        commit = nil,          -- commit hash (NIGHTLY ONLY)
+        pin_plugins = nil,     -- nil, true, false (nil will pin plugins on stable only)
+        skip_prompts = false,  -- skip prompts about breaking changes
+        show_changelog = true, -- show the changelog after performing an update
+        auto_reload = false,   -- automatically reload and sync packer after a successful update
+        auto_quit = false,     -- automatically quit the current session after a successful update
     },
     -- Set colorscheme to use
     colorscheme = "default_theme",
@@ -32,27 +33,29 @@ local config = {
     options = {
         opt = {
             -- set to true or false etc.
-            relativenumber = true,             -- sets vim.opt.relativenumber
-            number = true,                     -- sets vim.opt.number
-            spell = true,                      -- sets vim.opt.spell
-            signcolumn = "auto",               -- sets vim.opt.signcolumn to auto
-            wrap = false,                      -- sets vim.opt.wrap
+            relativenumber = true, -- sets vim.opt.relativenumber
+            number = true,         -- sets vim.opt.number
+            spell = true,          -- sets vim.opt.spell
+            signcolumn = "auto",   -- sets vim.opt.signcolumn to auto
+            wrap = false,          -- sets vim.opt.wrap
             tabstop = 4,
             softtabstop = 4,
             shiftwidth = 4,
             expandtab = true,
             smartindent = true,
+            -- hardmode ( no mouse )
+            mouse = nil,
         },
         g = {
-            mapleader = " ",                               -- sets vim.g.mapleader
-            autoformat_enabled = true,                     -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
-            smp_enabled = true,                            -- enable completion at start
-            autopairs_enabled = true,                      -- enable autopairs at start
-            diagnostics_enabled = true,                    -- enable diagnostics at start
-            status_diagnostics_enabled = true,             -- enable diagnostics in statusline
-            icons_enabled = true,                          -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
-            ui_notifications_enabled = true,               -- disable notifications when toggling UI elements
-            heirline_bufferline = false,                   -- enable new heirline based bufferline (requires :PackerSync after changing)
+            mapleader = " ",                   -- sets vim.g.mapleader
+            autoformat_enabled = true,         -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
+            smp_enabled = true,                -- enable completion at start
+            autopairs_enabled = true,          -- enable autopairs at start
+            diagnostics_enabled = true,        -- enable diagnostics at start
+            status_diagnostics_enabled = true, -- enable diagnostics in statusline
+            icons_enabled = true,              -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
+            ui_notifications_enabled = true,   -- disable notifications when toggling UI elements
+            heirline_bufferline = false,       -- enable new heirline based bufferline (requires :PackerSync after changing)
         },
     },
     header = {
@@ -75,7 +78,7 @@ local config = {
             fg = "#abb2bf",
             bg = "#1e222a",
         },
-        highlights = function(hl)         -- or a function that returns a new table of colors to set
+        highlights = function(hl) -- or a function that returns a new table of colors to set
             local C = require "default_theme.colors"
 
             hl.Normal = { fg = C.fg, bg = C.bg }
@@ -125,18 +128,18 @@ local config = {
         formatting = {
             -- control auto formatting on save
             format_on_save = {
-                enabled = true,                     -- enable or disable format on save globally
-                allow_filetypes = {                 -- enable format on save for specified filetypes only
+                enabled = true,     -- enable or disable format on save globally
+                allow_filetypes = { -- enable format on save for specified filetypes only
                     -- "go",
                 },
-                ignore_filetypes = {                 -- disable format on save for specified filetypes
+                ignore_filetypes = { -- disable format on save for specified filetypes
                     -- "python",
                 },
             },
-            disabled = {             -- disable formatting capabilities for the listed language servers
+            disabled = { -- disable formatting capabilities for the listed language servers
                 -- "sumneko_lua",
             },
-            timeout_ms = 1000,             -- default format timeout
+            timeout_ms = 1000, -- default format timeout
             -- filter = function(client) -- fully override the default formatting function
             --   return true
             -- end
@@ -178,6 +181,11 @@ local config = {
             -- system register yank
             ["<leader>Y"] = { [["+Y]], desc = "Yank to system register" },
             ["<leader>y"] = { [["+y]], desc = "Yank to system register" },
+            -- hardmode (no arrows)
+            ["<Up>"] = { "<nop>" },
+            ["<Down>"] = { "<nop>" },
+            ["<Left>"] = { "<nop>" },
+            ["<Right>"] = { "<nop>" },
         },
         t = {
         },
@@ -194,15 +202,17 @@ local config = {
             { 'mg979/vim-visual-multi' },
         },
         ["null-ls"] =
-            function(config)              -- overrides `require("null-ls").setup(config)`
+            function(config)  -- overrides `require("null-ls").setup(config)`
                 config.sources = {}
-                return config             -- return final config table
+                return config -- return final config table
             end,
         treesitter = {},
         ["mason-lspconfig"] = {},
         ["mason-null-ls"] = {},
         ["mason-nvim-dap"] = {},
-        heirline = HeirlineConfig
+        ["neo-tree"] = NeotreeConfig,
+        heirline = HeirlineConfig,
+        ['TimUntersberger/neogit'] = NeogitConfig,
     },
     -- LuaSnip Options
     luasnip = {
