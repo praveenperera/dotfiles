@@ -159,7 +159,7 @@ local config = {
             ["<leader>bc"] = { "<cmd>BufferLinePickClose<cr>", desc = "Pick to close" },
             ["<leader>bj"] = { "<cmd>BufferLinePick<cr>", desc = "Pick to jump" },
             ["<leader>bt"] = { "<cmd>BufferLineSortByTabs<cr>", desc = "Sort by tabs" },
-            ["<leader>bd"] = { "<cmd>bd<CR>", desc = "Close current buffer" },
+            ["<leader>bw"] = { "<cmd>bw<CR>", desc = "Close current buffer" },
             -- quick save
             ["<C-s>"] = { "<cmd>w!<cr>", desc = "Save File" },
             -- window navigation
