@@ -155,11 +155,16 @@ local config = {
     -- Mapping data with "desc" stored directly by vim.keymap.set().
     mappings = {
         n = {
+            -- tab
             ["<leader>bb"] = { "<cmd>tabnew<cr>", desc = "New tab" },
             ["<leader>bc"] = { "<cmd>BufferLinePickClose<cr>", desc = "Pick to close" },
             ["<leader>bj"] = { "<cmd>BufferLinePick<cr>", desc = "Pick to jump" },
             ["<leader>bt"] = { "<cmd>BufferLineSortByTabs<cr>", desc = "Sort by tabs" },
-            ["<leader>bw"] = { "<cmd>bw<CR>", desc = "Close current buffer" },
+            ["<leader>bw"] = { "<cmd>tabclose<CR>", desc = "Close current tab" },
+            ["<leader>bW"] = { "<cmd>close<CR>", desc = "Close current split window" },
+            -- window
+            ["<leader>sv"] = { "<cmd>vsp<cr>", desc = "Split vertically" },
+            ["<leader>sh"] = { "<cmd>hsp<cr>", desc = "Split horizontally" },
             -- quick save
             ["<C-s>"] = { "<cmd>w!<cr>", desc = "Save File" },
             -- window navigation
@@ -200,6 +205,7 @@ local config = {
             { "github/copilot.vim" },
             { 'justinmk/vim-sneak' },
             { 'mg979/vim-visual-multi' },
+            { "tpope/vim-surround" },
         },
         ["null-ls"] =
             function(config)  -- overrides `require("null-ls").setup(config)`

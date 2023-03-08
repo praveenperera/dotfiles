@@ -4,6 +4,12 @@ function NeotreeConfig(config)
       visible = true,
       hide_dotfiles = false,
       hide_gitignored = true,
+      hide_by_pattern = {
+        ".git",
+      },
+      never_show = {
+        ".DS_Store",
+      },
     }
   }
 
