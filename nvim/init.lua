@@ -1,4 +1,9 @@
 require("user.config.heirline")
+require("user.config.neogit_setup")
+
+local function configurePolish()
+        NeogitConfig()
+end
 
 local config = {
         updater = {
@@ -29,7 +34,7 @@ local config = {
                         -- set to true or false etc.
                         relativenumber = true, -- sets vim.opt.relativenumber
                         number = true,         -- sets vim.opt.number
-                        spell = false,         -- sets vim.opt.spell
+                        spell = true,          -- sets vim.opt.spell
                         signcolumn = "auto",   -- sets vim.opt.signcolumn to auto
                         wrap = false,          -- sets vim.opt.wrap
                         tabstop = 4,
@@ -186,11 +191,11 @@ local config = {
                         { "github/copilot.vim" },
                         { 'justinmk/vim-sneak' },
                 },
-                ["null-ls"] = 
-                function(config) -- overrides `require("null-ls").setup(config)`
-                        config.sources = { }
-                        return config -- return final config table
-                end,
+                ["null-ls"] =
+                    function(config)      -- overrides `require("null-ls").setup(config)`
+                            config.sources = {}
+                            return config -- return final config table
+                    end,
                 treesitter = {},
                 ["mason-lspconfig"] = {},
                 ["mason-null-ls"] = {},
@@ -199,7 +204,7 @@ local config = {
         },
         -- LuaSnip Options
         luasnip = {
-                filetype_extend = { },
+                filetype_extend = {},
                 vscode = {
                         paths = {},
                 },
@@ -227,10 +232,7 @@ local config = {
         -- This function is run last and is a good place to configuring
         -- augroups/autocommands and custom filetypes also this just pure lua so
         -- anything that doesn't fit in the normal config locations above can go here
-        polish = function()
-                local neogit = require('neogit')
-                neogit.setup {}
-        end,
+        polish = configurePolish
 }
 
 return config
