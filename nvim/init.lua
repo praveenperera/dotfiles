@@ -1,4 +1,4 @@
-require("user.plugin_config.heirline")
+require("user.config.heirline")
 
 local config = {
         updater = {
@@ -11,11 +11,6 @@ local config = {
                 show_changelog = true, -- show the changelog after performing an update
                 auto_reload = false,   -- automatically reload and sync packer after a successful update
                 auto_quit = false,     -- automatically quit the current session after a successful update
-                -- remotes = { -- easily add new remotes to track
-                --   ["remote_name"] = "https://remote_url.come/repo.git", -- full remote url
-                --   ["remote2"] = "github_user/repo", -- GitHub user/repo shortcut,
-                --   ["remote3"] = "github_user", -- GitHub user assume AstroNvim fork
-                -- },
         },
         -- Set colorscheme to use
         colorscheme = "default_theme",
@@ -55,17 +50,6 @@ local config = {
                         heirline_bufferline = false,       -- enable new heirline based bufferline (requires :PackerSync after changing)
                 },
         },
-        -- If you need more control, you can use the function()...end notation
-        -- options = function(local_vim)
-        --   local_vim.opt.relativenumber = true
-        --   local_vim.g.mapleader = " "
-        --   local_vim.opt.whichwrap = vim.opt.whichwrap - { 'b', 's' } -- removing option from list
-        --   local_vim.opt.shortmess = vim.opt.shortmess + { I = true } -- add to option list
-        --
-        --   return local_vim
-        -- end,
-
-        -- Set dashboard header
         header = {
                 " █████  ███████ ████████ ██████   ██████",
                 "██   ██ ██         ██    ██   ██ ██    ██",
@@ -155,44 +139,14 @@ local config = {
                 -- easily add or disable built in mappings added during LSP attaching
                 mappings = {
                         n = {
-                                -- ["<leader>lf"] = false -- disable formatting keymap
                         },
                 },
-                -- add to the global LSP on_attach function
-                -- on_attach = function(client, bufnr)
-                -- end,
-
-                -- override the mason server-registration function
-                -- server_registration = function(server, opts)
-                --   require("lspconfig")[server].setup(opts)
-                -- end,
-
-                -- Add overrides for LSP server settings, the keys are the name of the server
                 ["server-settings"] = {
-                        -- example for addings schemas to yamlls
-                        -- yamlls = { -- override table for require("lspconfig").yamlls.setup({...})
-                        --   settings = {
-                        --     yaml = {
-                        --       schemas = {
-                        --         ["http://json.schemastore.org/github-workflow"] = ".github/workflows/*.{yml,yaml}",
-                        --         ["http://json.schemastore.org/github-action"] = ".github/action.{yml,yaml}",
-                        --         ["http://json.schemastore.org/ansible-stable-2.9"] = "roles/tasks/*.{yml,yaml}",
-                        --       },
-                        --     },
-                        --   },
-                        -- },
                 },
         },
         -- Mapping data with "desc" stored directly by vim.keymap.set().
-        --
-        -- Please use this mappings table to set keyboard mapping since this is the
-        -- lower level configuration and more robust one. (which-key will
-        -- automatically pick-up stored data by this setting.)
         mappings = {
-                -- first key is the mode
                 n = {
-                        -- second key is the lefthand side of the map
-                        -- mappings seen under group name "Buffer"
                         ["<leader>bb"] = { "<cmd>tabnew<cr>", desc = "New tab" },
                         ["<leader>bc"] = { "<cmd>BufferLinePickClose<cr>", desc = "Pick to close" },
                         ["<leader>bj"] = { "<cmd>BufferLinePick<cr>", desc = "Pick to jump" },
@@ -220,8 +174,6 @@ local config = {
                         ["<leader>y"] = { [["+y]], desc = "Yank to system register" },
                 },
                 t = {
-                        -- setting a mapping to false will disable it
-                        -- ["<esc>"] = false,
                 },
         },
         -- Configure plugins
@@ -231,21 +183,12 @@ local config = {
                                 'TimUntersberger/neogit',
                                 requires = 'nvim-lua/plenary.nvim',
                         },
+                        { "github/copilot.vim" },
                         { 'justinmk/vim-sneak' },
                 },
-                -- All other entries override the require("<key>").setup({...}) call for default plugins
-                ["null-ls"] = function(config) -- overrides `require("null-ls").setup(config)`
-                        -- config variable is the default configuration table for the setup function call
-                        -- local null_ls = require "null-ls"
-
-                        -- Check supported formatters and linters
-                        -- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/formatting
-                        -- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/diagnostics
-                        config.sources = {
-                                -- Set a formatter
-                                -- null_ls.builtins.formatting.stylua,
-                                -- null_ls.builtins.formatting.prettier,
-                        }
+                ["null-ls"] = 
+                function(config) -- overrides `require("null-ls").setup(config)`
+                        config.sources = { }
                         return config -- return final config table
                 end,
                 treesitter = {},
@@ -256,22 +199,12 @@ local config = {
         },
         -- LuaSnip Options
         luasnip = {
-                -- Extend filetypes
-                filetype_extend = {
-                        -- javascript = { "javascriptreact" },
-                },
-                -- Configure luasnip loaders (vscode, lua, and/or snipmate)
+                filetype_extend = { },
                 vscode = {
-                        -- Add paths for including more VS Code style snippets in luasnip
                         paths = {},
                 },
         },
         -- CMP Source Priorities
-        -- modify here the priorities of default cmp sources
-        -- higher value == higher priority
-        -- The value can also be set to a boolean for disabling default sources:
-        -- false == disabled
-        -- true == 1000
         cmp = {
                 source_priority = {
                         nvim_lsp = 1000,
@@ -282,13 +215,9 @@ local config = {
         },
         -- Modify which-key registration (Use this with mappings table in the above.)
         ["which-key"] = {
-                -- Add bindings which show up as group name
                 register = {
-                        -- first key is the mode, n == normal mode
                         n = {
-                                -- second key is the prefix, <leader> prefixes
                                 ["<leader>"] = {
-                                        -- third key is the key to bring up next level and its displayed
                                         -- group name in which-key top level menu
                                         ["b"] = { name = "Buffer" },
                                 },
@@ -299,18 +228,8 @@ local config = {
         -- augroups/autocommands and custom filetypes also this just pure lua so
         -- anything that doesn't fit in the normal config locations above can go here
         polish = function()
-                -- Set up custom filetypes
-                -- vim.filetype.add {
-                --   extension = {
-                --     foo = "fooscript",
-                --   },
-                --   filename = {
-                --     ["Foofile"] = "fooscript",
-                --   },
-                --   pattern = {
-                --     ["~/%.config/foo/.*"] = "fooscript",
-                --   },
-                -- }
+                local neogit = require('neogit')
+                neogit.setup {}
         end,
 }
 
