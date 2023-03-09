@@ -180,6 +180,8 @@ local config = {
             ["J"] = { "mzJ`z" },
             ["n"] = { "nzzzv" },
             ["N"] = { "Nzzzv" },
+            ---
+            ["<leader>d"] = { [["_d]], desc = "Delete without register" },
             -- system yank
             ["<leader>Y"] = { [["+Y]], desc = "Yank to system register" },
             ["<leader>y"] = { [["+y]], desc = "Yank to system register" },
@@ -189,12 +191,16 @@ local config = {
             ["<Left>"] = { "<nop>" },
             ["<Right>"] = { "<nop>" },
         },
+        x = {
+            ["<leader>p"] = { [["_dP]], desc = "Paste without register" },
+        },
         t = {
         },
         v = {
-            -- move lines up and down like option arrows 
-            ["K"] = { ":m '<-2<CR>gv=gv" },
-            ["J"] = { ":m '>+1<CR>gv=gv" },
+            ["<leader>d"] = { [["_d]], desc = "Delete without register" },
+            -- move lines up and down like option arrows
+            ["K"] = { ":m '<-2<CR>gv=gv", desc = "Move selection up" },
+            ["J"] = { ":m '>+1<CR>gv=gv", desc = "Move selection down" },
         },
     },
     -- Configure plugins
