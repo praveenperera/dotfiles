@@ -116,15 +116,13 @@ local config = {
     },
     -- Diagnostics configuration (for vim.diagnostics.config({...})) when diagnostics are on
     diagnostics = {
-        virtual_text = true,
+        virtual_text = false,
         underline = true,
     },
     -- Extend LSP configuration
     lsp = {
         -- enable servers that you already have installed without mason
-        servers = {
-            -- "pyright"
-        },
+        servers = {},
         formatting = {
             -- control auto formatting on save
             format_on_save = {
@@ -146,11 +144,9 @@ local config = {
         },
         -- easily add or disable built in mappings added during LSP attaching
         mappings = {
-            n = {
-            },
+            n = {},
         },
-        ["server-settings"] = {
-        },
+        ["server-settings"] = {},
     },
     -- Mapping data with "desc" stored directly by vim.keymap.set().
     mappings = {
@@ -160,7 +156,7 @@ local config = {
             ["<leader>bc"] = { "<cmd>BufferLinePickClose<cr>", desc = "Pick to close" },
             ["<leader>bj"] = { "<cmd>BufferLinePick<cr>", desc = "Pick to jump" },
             ["<leader>bt"] = { "<cmd>BufferLineSortByTabs<cr>", desc = "Sort by tabs" },
-            ["<leader>bw"] = { "<cmd>tabclose<CR>", desc = "Close current tab" },
+            ["<leader>bw"] = { "<cmd>bw<CR>", desc = "Close current tab" },
             ["<leader>bW"] = { "<cmd>close<CR>", desc = "Close current split window" },
             -- window
             ["<leader>sv"] = { "<cmd>vsp<cr>", desc = "Split vertically" },
@@ -180,10 +176,11 @@ local config = {
             ["<C-d>"] = { "<C-d>zz", desc = "Half page up" },
             ["<C-u>"] = { "<C-u>zz", desc = "Half page down" },
             -- random
+            ["U"] = { "<cmd>redo<cr>" },
             ["J"] = { "mzJ`z" },
             ["n"] = { "nzzzv" },
             ["N"] = { "Nzzzv" },
-            -- system register yank
+            -- system yank
             ["<leader>Y"] = { [["+Y]], desc = "Yank to system register" },
             ["<leader>y"] = { [["+y]], desc = "Yank to system register" },
             -- hardmode (no arrows)
@@ -194,18 +191,50 @@ local config = {
         },
         t = {
         },
+        v = {
+            -- move lines up and down like option arrows 
+            ["K"] = { ":m '<-2<CR>gv=gv" },
+            ["J"] = { ":m '>+1<CR>gv=gv" },
+        },
     },
     -- Configure plugins
     plugins = {
         init = {
-            {
-                'TimUntersberger/neogit',
-                requires = 'nvim-lua/plenary.nvim',
-            },
+            { 'TimUntersberger/neogit', requires = 'nvim-lua/plenary.nvim', },
             { "github/copilot.vim" },
             { 'justinmk/vim-sneak' },
             { 'mg979/vim-visual-multi' },
             { "tpope/vim-surround" },
+            {
+                'xbase-lab/xbase',
+                run = 'make install',
+                requires = {
+                    "nvim-lua/plenary.nvim",
+                    "nvim-telescope/telescope.nvim",
+                    "neovim/nvim-lspconfig"
+                },
+                config = function()
+                    require 'xbase'.setup()
+                end
+            },
+            {
+                "simrat39/rust-tools.nvim",
+                after = "mason-lspconfig.nvim", -- make sure to load after mason-lspconfig
+                config = function()
+                    require("rust-tools").setup {
+                        server = astronvim.lsp.server_settings "rust_analyzer", -- get the server settings and built in capabilities/on_attach
+                    }
+                end,
+            },
+            {
+                'saecki/crates.nvim',
+                tag = 'v0.3.0',
+                requires = { 'nvim-lua/plenary.nvim' },
+                config = function()
+                    require('crates').setup()
+                end
+            },
+            { "towolf/vim-helm" },
         },
         ["null-ls"] =
             function(config)  -- overrides `require("null-ls").setup(config)`
@@ -213,7 +242,9 @@ local config = {
                 return config -- return final config table
             end,
         treesitter = {},
-        ["mason-lspconfig"] = {},
+        ["mason-lspconfig"] = {
+            ensure_installed = { "rust_analyzer" }, -- install rust_analyzer
+        },
         ["mason-null-ls"] = {},
         ["mason-nvim-dap"] = {},
         ["neo-tree"] = NeotreeConfig,
