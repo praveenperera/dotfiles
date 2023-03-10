@@ -1,22 +1,23 @@
-require("user.config.heirline")
-require("user.config.neotree")
-require("user.config.neogit")
+require "user.config.heirline"
+require "user.config.neotree"
+require "user.config.neogit"
 
-local function configurePolish()
-    require("neogit").setup(NeogitConfig())
-end
+local function configurePolish() require("neogit").setup(NeogitConfig()) end
+local harpoon_mark = require "harpoon.mark"
+local harpoon_ui = require "harpoon.ui"
+local telescope = require "user.config.telescope"
 
 local config = {
     updater = {
-        remote = "origin",     -- remote to use
-        channel = "stable",    -- "stable" or "nightly"
-        version = "latest",    -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
-        commit = nil,          -- commit hash (NIGHTLY ONLY)
-        pin_plugins = nil,     -- nil, true, false (nil will pin plugins on stable only)
-        skip_prompts = false,  -- skip prompts about breaking changes
+        remote = "origin", -- remote to use
+        channel = "stable", -- "stable" or "nightly"
+        version = "latest", -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
+        commit = nil, -- commit hash (NIGHTLY ONLY)
+        pin_plugins = nil, -- nil, true, false (nil will pin plugins on stable only)
+        skip_prompts = false, -- skip prompts about breaking changes
         show_changelog = true, -- show the changelog after performing an update
-        auto_reload = false,   -- automatically reload and sync packer after a successful update
-        auto_quit = false,     -- automatically quit the current session after a successful update
+        auto_reload = false, -- automatically reload and sync packer after a successful update
+        auto_quit = false, -- automatically quit the current session after a successful update
     },
     -- Set colorscheme to use
     colorscheme = "default_theme",
@@ -34,10 +35,10 @@ local config = {
         opt = {
             -- set to true or false etc.
             relativenumber = true, -- sets vim.opt.relativenumber
-            number = true,         -- sets vim.opt.number
-            spell = true,          -- sets vim.opt.spell
-            signcolumn = "auto",   -- sets vim.opt.signcolumn to auto
-            wrap = false,          -- sets vim.opt.wrap
+            number = true, -- sets vim.opt.number
+            spell = true, -- sets vim.opt.spell
+            signcolumn = "auto", -- sets vim.opt.signcolumn to auto
+            wrap = false, -- sets vim.opt.wrap
             tabstop = 4,
             softtabstop = 4,
             shiftwidth = 4,
@@ -47,15 +48,15 @@ local config = {
             mouse = nil,
         },
         g = {
-            mapleader = " ",                   -- sets vim.g.mapleader
-            autoformat_enabled = true,         -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
-            smp_enabled = true,                -- enable completion at start
-            autopairs_enabled = true,          -- enable autopairs at start
-            diagnostics_enabled = true,        -- enable diagnostics at start
+            mapleader = " ", -- sets vim.g.mapleader
+            autoformat_enabled = true, -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
+            smp_enabled = true, -- enable completion at start
+            autopairs_enabled = true, -- enable autopairs at start
+            diagnostics_enabled = true, -- enable diagnostics at start
             status_diagnostics_enabled = true, -- enable diagnostics in statusline
-            icons_enabled = true,              -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
-            ui_notifications_enabled = true,   -- disable notifications when toggling UI elements
-            heirline_bufferline = false,       -- enable new heirline based bufferline (requires :PackerSync after changing)
+            icons_enabled = true, -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
+            ui_notifications_enabled = true, -- disable notifications when toggling UI elements
+            heirline_bufferline = false, -- enable new heirline based bufferline (requires :PackerSync after changing)
         },
     },
     header = {
@@ -116,7 +117,7 @@ local config = {
     },
     -- Diagnostics configuration (for vim.diagnostics.config({...})) when diagnostics are on
     diagnostics = {
-        virtual_text = false,
+        virtual_text = true,
         underline = true,
     },
     -- Extend LSP configuration
@@ -126,7 +127,7 @@ local config = {
         formatting = {
             -- control auto formatting on save
             format_on_save = {
-                enabled = true,     -- enable or disable format on save globally
+                enabled = true, -- enable or disable format on save globally
                 allow_filetypes = { -- enable format on save for specified filetypes only
                     -- "go",
                 },
@@ -153,11 +154,23 @@ local config = {
         n = {
             -- tab
             ["<leader>bb"] = { "<cmd>tabnew<cr>", desc = "New tab" },
-            ["<leader>bc"] = { "<cmd>BufferLinePickClose<cr>", desc = "Pick to close" },
-            ["<leader>bj"] = { "<cmd>BufferLinePick<cr>", desc = "Pick to jump" },
-            ["<leader>bt"] = { "<cmd>BufferLineSortByTabs<cr>", desc = "Sort by tabs" },
+            ["<leader>bc"] = {
+                "<cmd>BufferLinePickClose<cr>",
+                desc = "Pick to close",
+            },
+            ["<leader>bj"] = {
+                "<cmd>BufferLinePick<cr>",
+                desc = "Pick to jump",
+            },
+            ["<leader>bt"] = {
+                "<cmd>BufferLineSortByTabs<cr>",
+                desc = "Sort by tabs",
+            },
             ["<leader>bw"] = { "<cmd>bw<CR>", desc = "Close current tab" },
-            ["<leader>bW"] = { "<cmd>close<CR>", desc = "Close current split window" },
+            ["<leader>bW"] = {
+                "<cmd>close<CR>",
+                desc = "Close current split window",
+            },
             -- window
             ["<leader>sv"] = { "<cmd>vsp<cr>", desc = "Split vertically" },
             ["<leader>sh"] = { "<cmd>hsp<cr>", desc = "Split horizontally" },
@@ -185,6 +198,33 @@ local config = {
             -- system yank
             ["<leader>Y"] = { [["+Y]], desc = "Yank to system register" },
             ["<leader>y"] = { [["+y]], desc = "Yank to system register" },
+            -- harpoon
+            ["<leader>ha"] = {
+                harpoon_mark.add_file,
+                desc = "Harpoon add file",
+            },
+            ["<C-e>"] = {
+                harpoon_ui.toggle_quick_menu,
+                desc = "Harpoon quick menu",
+            },
+            ["<leader>h1"] = {
+                function() harpoon_ui.nav_file(1) end,
+                desc = "Select 1",
+            },
+            ["<leader>h2"] = {
+                function() harpoon_ui.nav_file(2) end,
+                desc = "Select 2",
+            },
+            ["<leader>h3"] = {
+                function() harpoon_ui.nav_file(3) end,
+                desc = "Select 3",
+            },
+            ["<leader>h4"] = {
+                function() harpoon_ui.nav_file(4) end,
+                desc = "Select 4",
+            },
+            -- find
+            ["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
             -- hardmode (no arrows)
             ["<Up>"] = { "<nop>" },
             ["<Down>"] = { "<nop>" },
@@ -194,8 +234,7 @@ local config = {
         x = {
             ["<leader>p"] = { [["_dP]], desc = "Paste without register" },
         },
-        t = {
-        },
+        t = {},
         v = {
             ["<leader>d"] = { [["_d]], desc = "Delete without register" },
             -- move lines up and down like option arrows
@@ -206,22 +245,20 @@ local config = {
     -- Configure plugins
     plugins = {
         init = {
-            { 'TimUntersberger/neogit', requires = 'nvim-lua/plenary.nvim', },
+            { "TimUntersberger/neogit", requires = "nvim-lua/plenary.nvim" },
             { "github/copilot.vim" },
-            { 'justinmk/vim-sneak' },
-            { 'mg979/vim-visual-multi' },
+            { "justinmk/vim-sneak" },
+            { "mg979/vim-visual-multi" },
             { "tpope/vim-surround" },
             {
-                'xbase-lab/xbase',
-                run = 'make install',
+                "xbase-lab/xbase",
+                run = "make install",
                 requires = {
                     "nvim-lua/plenary.nvim",
                     "nvim-telescope/telescope.nvim",
-                    "neovim/nvim-lspconfig"
+                    "neovim/nvim-lspconfig",
                 },
-                config = function()
-                    require 'xbase'.setup()
-                end
+                config = function() require("xbase").setup() end,
             },
             {
                 "simrat39/rust-tools.nvim",
@@ -233,20 +270,18 @@ local config = {
                 end,
             },
             {
-                'saecki/crates.nvim',
-                tag = 'v0.3.0',
-                requires = { 'nvim-lua/plenary.nvim' },
-                config = function()
-                    require('crates').setup()
-                end
+                "saecki/crates.nvim",
+                tag = "v0.3.0",
+                requires = { "nvim-lua/plenary.nvim" },
+                config = function() require("crates").setup() end,
             },
+            { "ThePrimeagen/harpoon" },
             { "towolf/vim-helm" },
         },
-        ["null-ls"] =
-            function(config)  -- overrides `require("null-ls").setup(config)`
-                config.sources = {}
-                return config -- return final config table
-            end,
+        ["null-ls"] = function(config) -- overrides `require("null-ls").setup(config)`
+            config.sources = {}
+            return config -- return final config table
+        end,
         treesitter = {},
         ["mason-lspconfig"] = {
             ensure_installed = { "rust_analyzer" }, -- install rust_analyzer
@@ -279,6 +314,7 @@ local config = {
                 ["<leader>"] = {
                     -- group name in which-key top level menu
                     ["b"] = { name = "Buffer" },
+                    ["h"] = { name = "Harpoon" },
                 },
             },
         },
@@ -286,7 +322,7 @@ local config = {
     -- This function is run last and is a good place to configuring
     -- augroups/autocommands and custom filetypes also this just pure lua so
     -- anything that doesn't fit in the normal config locations above can go here
-    polish = configurePolish
+    polish = configurePolish,
 }
 
 return config
