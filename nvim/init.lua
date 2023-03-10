@@ -1,23 +1,27 @@
-require "user.config.heirline"
-require "user.config.neotree"
-require "user.config.neogit"
+require("user.config.heirline")
+require("user.config.neotree")
+require("user.config.neogit")
 
-local function configurePolish() require("neogit").setup(NeogitConfig()) end
-local harpoon_mark = require "harpoon.mark"
-local harpoon_ui = require "harpoon.ui"
-local telescope = require "user.config.telescope"
+local function configurePolish()
+    require("neogit").setup(NeogitConfig())
+end
+
+
+local harpoon_mark = require("harpoon.mark")
+local harpoon_ui = require("harpoon.ui")
+local telescope = require("user.config.telescope")
 
 local config = {
     updater = {
-        remote = "origin", -- remote to use
-        channel = "stable", -- "stable" or "nightly"
-        version = "latest", -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
-        commit = nil, -- commit hash (NIGHTLY ONLY)
-        pin_plugins = nil, -- nil, true, false (nil will pin plugins on stable only)
-        skip_prompts = false, -- skip prompts about breaking changes
+        remote = "origin",     -- remote to use
+        channel = "stable",    -- "stable" or "nightly"
+        version = "latest",    -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
+        commit = nil,          -- commit hash (NIGHTLY ONLY)
+        pin_plugins = nil,     -- nil, true, false (nil will pin plugins on stable only)
+        skip_prompts = false,  -- skip prompts about breaking changes
         show_changelog = true, -- show the changelog after performing an update
-        auto_reload = false, -- automatically reload and sync packer after a successful update
-        auto_quit = false, -- automatically quit the current session after a successful update
+        auto_reload = false,   -- automatically reload and sync packer after a successful update
+        auto_quit = false,     -- automatically quit the current session after a successful update
     },
     -- Set colorscheme to use
     colorscheme = "default_theme",
@@ -35,10 +39,10 @@ local config = {
         opt = {
             -- set to true or false etc.
             relativenumber = true, -- sets vim.opt.relativenumber
-            number = true, -- sets vim.opt.number
-            spell = true, -- sets vim.opt.spell
-            signcolumn = "auto", -- sets vim.opt.signcolumn to auto
-            wrap = false, -- sets vim.opt.wrap
+            number = true,         -- sets vim.opt.number
+            spell = true,          -- sets vim.opt.spell
+            signcolumn = "auto",   -- sets vim.opt.signcolumn to auto
+            wrap = false,          -- sets vim.opt.wrap
             tabstop = 4,
             softtabstop = 4,
             shiftwidth = 4,
@@ -48,15 +52,15 @@ local config = {
             mouse = nil,
         },
         g = {
-            mapleader = " ", -- sets vim.g.mapleader
-            autoformat_enabled = true, -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
-            smp_enabled = true, -- enable completion at start
-            autopairs_enabled = true, -- enable autopairs at start
-            diagnostics_enabled = true, -- enable diagnostics at start
+            mapleader = " ",                   -- sets vim.g.mapleader
+            autoformat_enabled = true,         -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
+            smp_enabled = true,                -- enable completion at start
+            autopairs_enabled = true,          -- enable autopairs at start
+            diagnostics_enabled = true,        -- enable diagnostics at start
             status_diagnostics_enabled = true, -- enable diagnostics in statusline
-            icons_enabled = true, -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
-            ui_notifications_enabled = true, -- disable notifications when toggling UI elements
-            heirline_bufferline = false, -- enable new heirline based bufferline (requires :PackerSync after changing)
+            icons_enabled = true,              -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
+            ui_notifications_enabled = true,   -- disable notifications when toggling UI elements
+            heirline_bufferline = false,       -- enable new heirline based bufferline (requires :PackerSync after changing)
         },
     },
     header = {
@@ -80,7 +84,7 @@ local config = {
             bg = "#1e222a",
         },
         highlights = function(hl) -- or a function that returns a new table of colors to set
-            local C = require "default_theme.colors"
+            local C = require("default_theme.colors")
 
             hl.Normal = { fg = C.fg, bg = C.bg }
 
@@ -127,7 +131,7 @@ local config = {
         formatting = {
             -- control auto formatting on save
             format_on_save = {
-                enabled = true, -- enable or disable format on save globally
+                enabled = true,     -- enable or disable format on save globally
                 allow_filetypes = { -- enable format on save for specified filetypes only
                     -- "go",
                 },
@@ -208,19 +212,27 @@ local config = {
                 desc = "Harpoon quick menu",
             },
             ["<leader>h1"] = {
-                function() harpoon_ui.nav_file(1) end,
+                function()
+                    harpoon_ui.nav_file(1)
+                end,
                 desc = "Select 1",
             },
             ["<leader>h2"] = {
-                function() harpoon_ui.nav_file(2) end,
+                function()
+                    harpoon_ui.nav_file(2)
+                end,
                 desc = "Select 2",
             },
             ["<leader>h3"] = {
-                function() harpoon_ui.nav_file(3) end,
+                function()
+                    harpoon_ui.nav_file(3)
+                end,
                 desc = "Select 3",
             },
             ["<leader>h4"] = {
-                function() harpoon_ui.nav_file(4) end,
+                function()
+                    harpoon_ui.nav_file(4)
+                end,
                 desc = "Select 4",
             },
             -- find
@@ -258,29 +270,33 @@ local config = {
                     "nvim-telescope/telescope.nvim",
                     "neovim/nvim-lspconfig",
                 },
-                config = function() require("xbase").setup() end,
+                config = function()
+                    require("xbase").setup()
+                end,
             },
             {
                 "simrat39/rust-tools.nvim",
                 after = "mason-lspconfig.nvim", -- make sure to load after mason-lspconfig
                 config = function()
-                    require("rust-tools").setup {
-                        server = astronvim.lsp.server_settings "rust_analyzer", -- get the server settings and built in capabilities/on_attach
-                    }
+                    require("rust-tools").setup({
+                        server = astronvim.lsp.server_settings("rust_analyzer"), -- get the server settings and built in capabilities/on_attach
+                    })
                 end,
             },
             {
                 "saecki/crates.nvim",
                 tag = "v0.3.0",
                 requires = { "nvim-lua/plenary.nvim" },
-                config = function() require("crates").setup() end,
+                config = function()
+                    require("crates").setup()
+                end,
             },
             { "ThePrimeagen/harpoon" },
             { "towolf/vim-helm" },
         },
         ["null-ls"] = function(config) -- overrides `require("null-ls").setup(config)`
             config.sources = {}
-            return config -- return final config table
+            return config              -- return final config table
         end,
         treesitter = {},
         ["mason-lspconfig"] = {
