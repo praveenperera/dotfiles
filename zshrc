@@ -25,7 +25,6 @@ alias di="aws ec2 describe-instances --profile=infraops | jq '.Reservations | ma
 alias stopall="aws ec2 describe-instances --profile=infraops | jq '.Reservations | map(.Instances) | map(.[0]) | map (.InstanceId)' | jq -r '.[]' | xargs -L1 -I'{}' aws ec2 stop-instances --instance-ids='{}' --profile=infraops"
 alias gcch="git rev-parse HEAD"
 
-export CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
 
@@ -103,6 +102,10 @@ gclean() {
 
 zle -N gco
 bindkey "^F" gco
+
+eval "$(starship init zsh)"
+eval $(thefuck --alias)
+eval "$(direnv hook zsh)"
 
 eval "$(starship init zsh)"
 eval $(thefuck --alias)
@@ -233,10 +236,6 @@ bindkey "^R" history-incremental-pattern-search-backward
 # opt-left arrow and opt-right arrow move by word
 bindkey "[D" backward-word
 bindkey "[C" forward-word
-
-# shift-left arrow and shift-right arrow move by word
-bindkey ";2D" beginning-of-line
-bindkey ";2C" end-of-line
 
 # opt-left arrow and opt-right arrow move by word
 bindkey ";3C" forward-word

@@ -1,47 +1,31 @@
-require("user.config.heirline")
-require("user.config.neotree")
-require("user.config.neogit")
-
-local function configurePolish()
-    require("neogit").setup(NeogitConfig())
-end
-
-local harpoon_mark = require("harpoon.mark")
-local harpoon_ui = require("harpoon.ui")
+local neotree_config = require("user.config.neotree").config
+local neogit_config = require("user.config.neogit").config
+local heirline_config = require("user.config.heirline").config
 local telescope = require("user.config.telescope")
 
 local config = {
     updater = {
-        remote = "origin", -- remote to use
-        channel = "stable", -- "stable" or "nightly"
-        version = "latest", -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
-        commit = nil, -- commit hash (NIGHTLY ONLY)
-        pin_plugins = nil, -- nil, true, false (nil will pin plugins on stable only)
-        skip_prompts = false, -- skip prompts about breaking changes
+        remote = "origin",     -- remote to use
+        channel = "stable",    -- "stable" or "nightly"
+        version = "latest",    -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
+        commit = nil,          -- commit hash (NIGHTLY ONLY)
+        pin_plugins = nil,     -- nil, true, false (nil will pin plugins on stable only)
+        skip_prompts = false,  -- skip prompts about breaking changes
         show_changelog = true, -- show the changelog after performing an update
-        auto_reload = false, -- automatically reload and sync packer after a successful update
-        auto_quit = false, -- automatically quit the current session after a successful update
+        auto_reload = false,   -- automatically reload and sync packer after a successful update
+        auto_quit = false,     -- automatically quit the current session after a successful update
     },
-    -- Set colorscheme to use
-    colorscheme = "default_theme",
-    -- Add highlight groups in any theme
-    highlights = {
-        -- init = { -- this table overrides highlights in all themes
-        --   Normal = { bg = "#000000" },
-        -- }
-        -- duskfox = { -- a table of overrides/changes to the duskfox theme
-        --   Normal = { bg = "#000000" },
-        -- },
-    },
+    colorscheme = "astrodark",
+    highlights = {},
     -- set vim options here (vim.<first_key>.<second_key> = value)
     options = {
         opt = {
             -- set to true or false etc.
             relativenumber = true, -- sets vim.opt.relativenumber
-            number = true, -- sets vim.opt.number
-            spell = true, -- sets vim.opt.spell
-            signcolumn = "auto", -- sets vim.opt.signcolumn to auto
-            wrap = false, -- sets vim.opt.wrap
+            number = true,         -- sets vim.opt.number
+            spell = true,          -- sets vim.opt.spell
+            signcolumn = "auto",   -- sets vim.opt.signcolumn to auto
+            wrap = false,          -- sets vim.opt.wrap
             tabstop = 4,
             softtabstop = 4,
             shiftwidth = 4,
@@ -51,71 +35,15 @@ local config = {
             mouse = nil,
         },
         g = {
-            mapleader = " ", -- sets vim.g.mapleader
-            autoformat_enabled = true, -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
-            smp_enabled = true, -- enable completion at start
-            autopairs_enabled = true, -- enable autopairs at start
-            diagnostics_enabled = true, -- enable diagnostics at start
+            mapleader = " ",                   -- sets vim.g.mapleader
+            autoformat_enabled = true,         -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
+            smp_enabled = true,                -- enable completion at start
+            autopairs_enabled = true,          -- enable autopairs at start
+            diagnostics_enabled = true,        -- enable diagnostics at start
             status_diagnostics_enabled = true, -- enable diagnostics in statusline
-            icons_enabled = true, -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
-            ui_notifications_enabled = true, -- disable notifications when toggling UI elements
-            heirline_bufferline = false, -- enable new heirline based bufferline (requires :PackerSync after changing)
-        },
-    },
-    header = {
-        " █████  ███████ ████████ ██████   ██████",
-        "██   ██ ██         ██    ██   ██ ██    ██",
-        "███████ ███████    ██    ██████  ██    ██",
-        "██   ██      ██    ██    ██   ██ ██    ██",
-        "██   ██ ███████    ██    ██   ██  ██████",
-        " ",
-        "    ███    ██ ██    ██ ██ ███    ███",
-        "    ████   ██ ██    ██ ██ ████  ████",
-        "    ██ ██  ██ ██    ██ ██ ██ ████ ██",
-        "    ██  ██ ██  ██  ██  ██ ██  ██  ██",
-        "    ██   ████   ████   ██ ██      ██",
-    },
-    -- Default theme configuration
-    default_theme = {
-        -- Modify the color palette for the default theme
-        colors = {
-            fg = "#abb2bf",
-            bg = "#1e222a",
-        },
-        highlights = function(hl) -- or a function that returns a new table of colors to set
-            local C = require("default_theme.colors")
-
-            hl.Normal = { fg = C.fg, bg = C.bg }
-
-            -- New approach instead of diagnostic_style
-            hl.DiagnosticError.italic = true
-            hl.DiagnosticHint.italic = true
-            hl.DiagnosticInfo.italic = true
-            hl.DiagnosticWarn.italic = true
-
-            return hl
-        end,
-        -- enable or disable highlighting for extra plugins
-        plugins = {
-            aerial = true,
-            beacon = false,
-            bufferline = true,
-            cmp = true,
-            dashboard = true,
-            highlighturl = true,
-            hop = false,
-            indent_blankline = true,
-            lightspeed = false,
-            ["neo-tree"] = true,
-            notify = true,
-            ["nvim-tree"] = false,
-            ["nvim-web-devicons"] = true,
-            rainbow = true,
-            symbols_outline = false,
-            telescope = true,
-            treesitter = true,
-            vimwiki = false,
-            ["which-key"] = true,
+            icons_enabled = true,              -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
+            ui_notifications_enabled = true,   -- disable notifications when toggling UI elements
+            heirline_bufferline = false,       -- enable new heirline based bufferline (requires :PackerSync after changing)
         },
     },
     -- Diagnostics configuration (for vim.diagnostics.config({...})) when diagnostics are on
@@ -125,32 +53,22 @@ local config = {
     },
     -- Extend LSP configuration
     lsp = {
-        -- enable servers that you already have installed without mason
         servers = {},
+        skip_setup = { "rust_analyzer" },
         formatting = {
-            -- control auto formatting on save
             format_on_save = {
-                enabled = true, -- enable or disable format on save globally
-                allow_filetypes = { -- enable format on save for specified filetypes only
-                    -- "go",
-                },
-                ignore_filetypes = { -- disable format on save for specified filetypes
-                    -- "python",
-                },
+                enabled = true,
+                allow_filetypes = {},
+                ignore_filetypes = {},
             },
-            disabled = { -- disable formatting capabilities for the listed language servers
-                -- "sumneko_lua",
+            disabled = {           -- disable formatting capabilities for the listed language servers },
+                timeout_ms = 1000, -- default format timeout
             },
-            timeout_ms = 1000, -- default format timeout
-            -- filter = function(client) -- fully override the default formatting function
-            --   return true
-            -- end
-        },
-        -- easily add or disable built in mappings added during LSP attaching
-        mappings = {
-            n = {},
-        },
-        ["server-settings"] = {},
+            mappings = {
+                n = {},
+            },
+            ["server-settings"] = {},
+        }
     },
     -- Mapping data with "desc" stored directly by vim.keymap.set().
     mappings = {
@@ -201,39 +119,6 @@ local config = {
             -- system yank
             ["<leader>Y"] = { [["+Y]], desc = "Yank to system register" },
             ["<leader>y"] = { [["+y]], desc = "Yank to system register" },
-            -- harpoon
-            ["<leader>ha"] = {
-                harpoon_mark.add_file,
-                desc = "Harpoon add file",
-            },
-            ["<C-e>"] = {
-                harpoon_ui.toggle_quick_menu,
-                desc = "Harpoon quick menu",
-            },
-            ["<leader>h1"] = {
-                function()
-                    harpoon_ui.nav_file(1)
-                end,
-                desc = "Select 1",
-            },
-            ["<leader>h2"] = {
-                function()
-                    harpoon_ui.nav_file(2)
-                end,
-                desc = "Select 2",
-            },
-            ["<leader>h3"] = {
-                function()
-                    harpoon_ui.nav_file(3)
-                end,
-                desc = "Select 3",
-            },
-            ["<leader>h4"] = {
-                function()
-                    harpoon_ui.nav_file(4)
-                end,
-                desc = "Select 4",
-            },
             -- find
             ["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
             -- hardmode (no arrows)
@@ -255,56 +140,67 @@ local config = {
     },
     -- Configure plugins
     plugins = {
-        init = {
-            { "TimUntersberger/neogit", requires = "nvim-lua/plenary.nvim" },
-            { "github/copilot.vim" },
-            { "justinmk/vim-sneak" },
-            { "mg979/vim-visual-multi" },
-            { "tpope/vim-surround" },
-            {
-                "xbase-lab/xbase",
-                run = "make install",
-                requires = {
-                    "nvim-lua/plenary.nvim",
-                    "nvim-telescope/telescope.nvim",
-                    "neovim/nvim-lspconfig",
-                },
-                config = function()
-                    require("xbase").setup()
-                end,
-            },
-            {
-                "simrat39/rust-tools.nvim",
-                after = "mason-lspconfig.nvim", -- make sure to load after mason-lspconfig
-                config = function()
-                    require("rust-tools").setup({
-                        server = astronvim.lsp.server_settings("rust_analyzer"), -- get the server settings and built in capabilities/on_attach
-                    })
-                end,
-            },
-            {
-                "saecki/crates.nvim",
-                tag = "v0.3.0",
-                requires = { "nvim-lua/plenary.nvim" },
-                config = function()
-                    require("crates").setup()
-                end,
-            },
-            { "ThePrimeagen/harpoon" },
-            { "towolf/vim-helm" },
+        { "AstroNvim/astrotheme" },
+        { "rebelot/heirline.nvim", opts = heirline_config },
+        { "nvim-lua/plenary.nvim", lazy = false },
+        {
+            "TimUntersberger/neogit",
+            dependencies = { "nvim-lua/plenary.nvim" },
+            config = function()
+                require("neogit").setup(neogit_config())
+            end
         },
-        ["null-ls"] = function(config) -- overrides `require("null-ls").setup(config)`
-            config.sources = {}
-            return config -- return final config table
-        end,
-        treesitter = {},
-        ["mason-lspconfig"] = {
-            ensure_installed = { "rust_analyzer" }, -- install rust_analyzer
+        { "github/copilot.vim" },
+        { "justinmk/vim-sneak" },
+        { "mg979/vim-visual-multi" },
+        { "tpope/vim-surround" },
+        {
+            "xbase-lab/xbase",
+            run = "make install",
+            dependencies = {
+                "nvim-lua/plenary.nvim",
+                "nvim-telescope/telescope.nvim",
+                "neovim/nvim-lspconfig",
+            },
+            config = function()
+                require("xbase").setup()
+            end,
         },
-        ["mason-null-ls"] = {},
-        ["mason-nvim-dap"] = {},
-        ["neo-tree"] = NeotreeConfig,
-        heirline = HeirlineConfig,
+        {
+            "nvim-neo-tree/neo-tree.nvim",
+            verision = "v2.x",
+            dependencies = {
+                "nvim-lua/plenary.nvim",
+                "nvim-tree/nvim-web-devicons",
+                "MunifTanjim/nui.nvim",
+            },
+            config = neotree_config
+        },
+        {
+            "simrat39/rust-tools.nvim",
+            event = "User AstroLspSetup",
+            opts = function()
+                return {
+                    server = require("astronvim.utils.lsp").config("rust_analyzer")
+                }
+            end
+        },
+        {
+            "williamboman/mason-lspconfig.nvim",
+            opts = {
+                ensure_installed = { "rust_analyzer" },
+            },
+        },
+        {
+            "saecki/crates.nvim",
+            version = "v0.3.0",
+            dependencies = { "nvim-lua/plenary.nvim" },
+            config = function()
+                require("crates").setup()
+            end,
+        },
+        { "ThePrimeagen/vim-be-good" },
+        { "towolf/vim-helm" },
     },
     -- LuaSnip Options
     luasnip = {
@@ -322,22 +218,9 @@ local config = {
             path = 250,
         },
     },
-    -- Modify which-key registration (Use this with mappings table in the above.)
-    ["which-key"] = {
-        register = {
-            n = {
-                ["<leader>"] = {
-                    -- group name in which-key top level menu
-                    ["b"] = { name = "Buffer" },
-                    ["h"] = { name = "Harpoon" },
-                },
-            },
-        },
-    },
-    -- This function is run last and is a good place to configuring
-    -- augroups/autocommands and custom filetypes also this just pure lua so
-    -- anything that doesn't fit in the normal config locations above can go here
-    polish = configurePolish,
+    -- Run after everything is loaded
+    polish = function()
+    end,
 }
 
 return config

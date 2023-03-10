@@ -1,7 +1,12 @@
-function NeogitConfig()
-    local config = {
+local default = {}
+
+local function config()
+    local conf = {
         disable_commit_confirmation = true,
         disable_context_highlighting = false,
     }
-    return config
+    return conf
 end
+
+default.config = config
+return default

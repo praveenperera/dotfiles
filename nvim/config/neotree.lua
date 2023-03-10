@@ -1,5 +1,7 @@
-function NeotreeConfig(config)
-    config.filesystem = {
+local default = {}
+
+local function config(conf)
+    conf.filesystem = {
         filtered_items = {
             visible = true,
             hide_dotfiles = false,
@@ -13,5 +15,9 @@ function NeotreeConfig(config)
         },
     }
 
-    return config
+    return conf
 end
+
+default.config = config
+
+return default
