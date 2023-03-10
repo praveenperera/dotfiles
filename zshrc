@@ -1,7 +1,6 @@
 alias t="tmux attach | tmux"
 alias zreload2=exec zsh
 alias zreload='source ~/.zshrc'
-alias ip='ifconfig | sed -En "s/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p"'
 alias pu="pushd"
 alias po="popd"
 alias pwd2=$(pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//" )
@@ -26,6 +25,7 @@ alias di="aws ec2 describe-instances --profile=infraops | jq '.Reservations | ma
 alias stopall="aws ec2 describe-instances --profile=infraops | jq '.Reservations | map(.Instances) | map(.[0]) | map (.InstanceId)' | jq -r '.[]' | xargs -L1 -I'{}' aws ec2 stop-instances --instance-ids='{}' --profile=infraops"
 alias gcch="git rev-parse HEAD"
 
+export CARGO_REGISTRIES_CRATES_IO_PROTOCOL="sparse"
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
 
@@ -40,6 +40,10 @@ export SAVEHIST=2000
 
 # subl
 export PATH="/Applications/Sublime Text.app/Contents/SharedSupport/bin:$PATH"
+
+ip() {
+  ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'
+}
 
 syncup() {
   echo "syncing $1 to $2:$3"
@@ -291,8 +295,3 @@ eval "$(fnm env)"
 
 # age
 export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
-
-# pnpm
-export PNPM_HOME="$HOME/pnpm"
-export PATH="$PNPM_HOME:$PATH"
-# pnpm end
