@@ -5,27 +5,27 @@ local telescope = require("user.config.telescope")
 
 local config = {
     updater = {
-        remote = "origin",     -- remote to use
-        channel = "stable",    -- "stable" or "nightly"
-        version = "latest",    -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
-        commit = nil,          -- commit hash (NIGHTLY ONLY)
-        pin_plugins = nil,     -- nil, true, false (nil will pin plugins on stable only)
-        skip_prompts = false,  -- skip prompts about breaking changes
+        remote = "origin", -- remote to use
+        channel = "stable", -- "stable" or "nightly"
+        version = "latest", -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
+        commit = nil, -- commit hash (NIGHTLY ONLY)
+        pin_plugins = nil, -- nil, true, false (nil will pin plugins on stable only)
+        skip_prompts = false, -- skip prompts about breaking changes
         show_changelog = true, -- show the changelog after performing an update
-        auto_reload = false,   -- automatically reload and sync packer after a successful update
-        auto_quit = false,     -- automatically quit the current session after a successful update
+        auto_reload = false, -- automatically reload and sync packer after a successful update
+        auto_quit = false, -- automatically quit the current session after a successful update
     },
-    colorscheme = "astrodark",
+    colorscheme = "astrotheme",
     highlights = {},
     -- set vim options here (vim.<first_key>.<second_key> = value)
     options = {
         opt = {
             -- set to true or false etc.
             relativenumber = true, -- sets vim.opt.relativenumber
-            number = true,         -- sets vim.opt.number
-            spell = true,          -- sets vim.opt.spell
-            signcolumn = "auto",   -- sets vim.opt.signcolumn to auto
-            wrap = false,          -- sets vim.opt.wrap
+            number = true, -- sets vim.opt.number
+            spell = true, -- sets vim.opt.spell
+            signcolumn = "auto", -- sets vim.opt.signcolumn to auto
+            wrap = false, -- sets vim.opt.wrap
             tabstop = 4,
             softtabstop = 4,
             shiftwidth = 4,
@@ -35,15 +35,15 @@ local config = {
             mouse = nil,
         },
         g = {
-            mapleader = " ",                   -- sets vim.g.mapleader
-            autoformat_enabled = true,         -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
-            smp_enabled = true,                -- enable completion at start
-            autopairs_enabled = true,          -- enable autopairs at start
-            diagnostics_enabled = true,        -- enable diagnostics at start
+            mapleader = " ", -- sets vim.g.mapleader
+            autoformat_enabled = true, -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
+            smp_enabled = true, -- enable completion at start
+            autopairs_enabled = true, -- enable autopairs at start
+            diagnostics_enabled = true, -- enable diagnostics at start
             status_diagnostics_enabled = true, -- enable diagnostics in statusline
-            icons_enabled = true,              -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
-            ui_notifications_enabled = true,   -- disable notifications when toggling UI elements
-            heirline_bufferline = false,       -- enable new heirline based bufferline (requires :PackerSync after changing)
+            icons_enabled = true, -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
+            ui_notifications_enabled = true, -- disable notifications when toggling UI elements
+            heirline_bufferline = false, -- enable new heirline based bufferline (requires :PackerSync after changing)
         },
     },
     -- Diagnostics configuration (for vim.diagnostics.config({...})) when diagnostics are on
@@ -61,14 +61,14 @@ local config = {
                 allow_filetypes = {},
                 ignore_filetypes = {},
             },
-            disabled = {           -- disable formatting capabilities for the listed language servers },
+            disabled = { -- disable formatting capabilities for the listed language servers },
                 timeout_ms = 1000, -- default format timeout
             },
             mappings = {
                 n = {},
             },
             ["server-settings"] = {},
-        }
+        },
     },
     -- Mapping data with "desc" stored directly by vim.keymap.set().
     mappings = {
@@ -146,9 +146,8 @@ local config = {
         {
             "TimUntersberger/neogit",
             dependencies = { "nvim-lua/plenary.nvim" },
-            config = function()
-                require("neogit").setup(neogit.config())
-            end
+            opts = neogit.config,
+            event = "BufEnter"
         },
         { "github/copilot.vim" },
         { "justinmk/vim-sneak" },
@@ -174,16 +173,18 @@ local config = {
                 "nvim-tree/nvim-web-devicons",
                 "MunifTanjim/nui.nvim",
             },
-            config = neotree.config
+            opts = neotree.config,
         },
         {
             "simrat39/rust-tools.nvim",
             event = "User AstroLspSetup",
             opts = function()
                 return {
-                    server = require("astronvim.utils.lsp").config("rust_analyzer")
+                    server = require("astronvim.utils.lsp").config(
+                        "rust_analyzer"
+                    ),
                 }
-            end
+            end,
         },
         {
             "williamboman/mason-lspconfig.nvim",
@@ -219,8 +220,7 @@ local config = {
         },
     },
     -- Run after everything is loaded
-    polish = function()
-    end,
+    polish = function() end,
 }
 
 return config

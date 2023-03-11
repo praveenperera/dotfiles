@@ -1,7 +1,8 @@
 local default = {}
 
-local function config(conf)
-    conf.filesystem = {
+local function config(_, _)
+    local opts = {}
+    opts.filesystem = {
         filtered_items = {
             visible = true,
             hide_dotfiles = false,
@@ -15,9 +16,8 @@ local function config(conf)
         },
     }
 
-    return conf
+    return opts
 end
 
 default.config = config
-
 return default
