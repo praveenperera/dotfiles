@@ -150,13 +150,14 @@ local config = {
             opts = neogit.config,
             cmd = "Neogit"
         },
-        { "github/copilot.vim" },
-        { "justinmk/vim-sneak" },
-        { "mg979/vim-visual-multi" },
-        { "tpope/vim-surround" },
+        { "github/copilot.vim",     event = "User AstroLspSetup" },
+        { "justinmk/vim-sneak",     event = "BufRead" },
+        { "tpope/vim-surround",     event = "BufRead" },
+        { "mg979/vim-visual-multi", event = "BufRead" },
         {
             "xbase-lab/xbase",
             run = "make install",
+            event = "User AstroLspSetup",
             dependencies = {
                 "nvim-lua/plenary.nvim",
                 "nvim-telescope/telescope.nvim",
@@ -192,9 +193,11 @@ local config = {
             "saecki/crates.nvim",
             version = "v0.3.0",
             dependencies = { "nvim-lua/plenary.nvim" },
+            event = "BufRead Cargo.toml",
+            opts = {}
         },
-        { "ThePrimeagen/vim-be-good" },
-        { "towolf/vim-helm" },
+        { "ThePrimeagen/vim-be-good", cmd = "VimBeGood" },
+        { "towolf/vim-helm",          event = "BufRead *.(yaml|tpl)" },
         { "folke/neodev.nvim" }
     },
     -- LuaSnip Options
