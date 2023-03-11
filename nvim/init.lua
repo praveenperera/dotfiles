@@ -1,6 +1,6 @@
-local neotree_config = require("user.config.neotree").config
-local neogit_config = require("user.config.neogit").config
-local heirline_config = require("user.config.heirline").config
+local neotree = require("user.config.neotree")
+local neogit = require("user.config.neogit")
+local heirline = require("user.config.heirline")
 local telescope = require("user.config.telescope")
 
 local config = {
@@ -141,13 +141,13 @@ local config = {
     -- Configure plugins
     plugins = {
         { "AstroNvim/astrotheme" },
-        { "rebelot/heirline.nvim", opts = heirline_config },
+        { "rebelot/heirline.nvim", opts = heirline.config },
         { "nvim-lua/plenary.nvim", lazy = false },
         {
             "TimUntersberger/neogit",
             dependencies = { "nvim-lua/plenary.nvim" },
             config = function()
-                require("neogit").setup(neogit_config())
+                require("neogit").setup(neogit.config())
             end
         },
         { "github/copilot.vim" },
@@ -174,7 +174,7 @@ local config = {
                 "nvim-tree/nvim-web-devicons",
                 "MunifTanjim/nui.nvim",
             },
-            config = neotree_config
+            config = neotree.config
         },
         {
             "simrat39/rust-tools.nvim",
