@@ -147,7 +147,7 @@ local config = {
             "TimUntersberger/neogit",
             dependencies = { "nvim-lua/plenary.nvim" },
             opts = neogit.config,
-            event = "BufEnter"
+            cmd = "Neogit"
         },
         { "github/copilot.vim" },
         { "justinmk/vim-sneak" },

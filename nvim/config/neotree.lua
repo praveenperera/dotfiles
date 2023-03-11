@@ -1,6 +1,6 @@
 local default = {}
 
-local function config(_, _)
+local function config()
     local opts = {}
     opts.filesystem = {
         filtered_items = {
