@@ -17,8 +17,7 @@ dir=~/code/dotfiles
 
 # list of files/folders to symlink in homedir
 files="zshrc gitconfig spacemacs zsh_plugins.sh gitignore direnvrc gitignore alacritty.yml tmux.conf"   
-
-config_files="starship.toml"
+config_files="starship.toml zellij"
 
 # change to the dotfiles directory
 echo "Changing to the $dir directory"
@@ -34,24 +33,23 @@ for file in $files; do
     ln -s $dir/$file ~/.$file
 done
 
-echo "Creating Config Files \n"
-for file in $config_files; do
-    [ -f ~/.config/$file ] && rm ~/.config/$file
+echo "Creating Config Files and Dirs \n"
+for file_or_dir in $config_file_or_dirs; do
+    [ -f ~/.config/$file_or_dir ] && rm ~/.config/$file_or_dir
 
-    echo "Creating symlink to $file in config directory."
-    ln -s $dir/config/$file ~/.config/$file
+    echo "Creating symlink to $file_or_dir in config directory."
+    ln -s $dir/config/$file_or_dir ~/.config/$file_or_dir
 done
-
 
 echo "Installing zsh plugins"
 antibody update
 
-if [ ! -d  ~/.vim/.SpaceVim.d ]
-then
-echo "Installing spacevim"
-rm -rf ~/.vim/
-rm -rf ~/.cache/SpaceVim/
-curl -sLf https://spacevim.org/install.sh | bash
+if [ ! -d ~/.config/nvim ]; then
+    echo "Installing neovim"
+    rm -rf ~/.vim/
+    git clone --depth 1 https://github.com/AstroNvim/AstroNvim ~/.config/nvim
+    ln -s $dir/nvim ~/.config/nvim/user 
+    nvim  --headless -c 'autocmd User LazyDone quitall'
 fi
 
 # restart zsh

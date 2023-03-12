@@ -2,6 +2,7 @@ local neotree = require("user.config.neotree")
 local neogit = require("user.config.neogit")
 local heirline = require("user.config.heirline")
 local telescope = require("user.config.telescope")
+local treesitter = require("user.config.treesitter")
 local mason_lspconfig = require("user.config.mason_lspconfig")
 
 local config = {
@@ -196,8 +197,9 @@ local config = {
             event = "BufRead Cargo.toml",
             opts = {}
         },
-        { "ThePrimeagen/vim-be-good", cmd = "VimBeGood" },
-        { "towolf/vim-helm",          event = "BufRead *.(yaml|tpl)" },
+        { "nvim-treesitter/nvim-treesitter", opts = treesitter.config },
+        { "ThePrimeagen/vim-be-good",        cmd = "VimBeGood" },
+        { "towolf/vim-helm",                 event = "BufRead *.(yaml|tpl)" },
         { "folke/neodev.nvim" }
     },
     -- LuaSnip Options

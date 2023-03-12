@@ -1,3 +1,0 @@
-#!/bin/bash
-
-ln -s $(pwd) ~/.config/nvim/lua/user
