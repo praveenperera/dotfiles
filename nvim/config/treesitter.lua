@@ -8,8 +8,9 @@ default.config = function(_, _)
         ensure_installed = {
             "lua",
             "vim",
-            "kdl"
-        }
+            "kdl",
+
+        },
     }
 end
 

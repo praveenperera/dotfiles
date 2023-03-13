@@ -107,6 +107,10 @@ key_bindings:
   - { key: Key8, mods: Command, chars: "\x02\x39" }
   - { key: Key9, mods: Command, chars: "\x02\x40" }
 
+  # jump word
+  - { key: Right, mods: Alt, chars: "\x1BF" }
+  - { key: Left, mods: Alt, chars: "\x1BB" }
+
   # command
   - { key: Semicolon, mods: Command, chars: "\x02\x3a" }
   - { key: Slash, mods: Command, chars: "\x02" }
