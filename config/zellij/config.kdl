@@ -114,6 +114,7 @@ keybinds clear-defaults=true {
         bind "d" { Detach; }
     }
     tmux {
+        bind "Ctrl n" { SwitchToMode "Resize"; }
         bind "[" { SwitchToMode "Scroll"; }
         bind "Ctrl b" { Write 2; SwitchToMode "Normal"; }
         bind "\"" { NewPane "Down"; SwitchToMode "Normal"; }
@@ -182,7 +183,10 @@ plugins {
     compact-bar { path "compact-bar"; }
 }
 
-simplified_ui true
+default_layout "compact"
+theme "nord"
+
+simplified_ui false
 pane_frames false
 
 themes {

@@ -17,7 +17,7 @@ dir=~/code/dotfiles
 
 # list of files/folders to symlink in homedir
 files="zshrc gitconfig spacemacs zsh_plugins.sh gitignore direnvrc gitignore alacritty.yml tmux.conf"   
-config_files="starship.toml zellij"
+config_file_or_dirs="starship.toml zellij"
 
 # change to the dotfiles directory
 echo "Changing to the $dir directory"
@@ -29,7 +29,7 @@ echo "Creating all symlinks \n"
 for file in $files; do
     [ -f ~/.$file ] && rm ~/.$file
 
-    echo "Creating symlink to $file in home directory."
+    echo "Creating symlink from to .$file in home directory."
     ln -s $dir/$file ~/.$file
 done
 
@@ -37,7 +37,7 @@ echo "Creating Config Files and Dirs \n"
 for file_or_dir in $config_file_or_dirs; do
     [ -f ~/.config/$file_or_dir ] && rm ~/.config/$file_or_dir
 
-    echo "Creating symlink to $file_or_dir in config directory."
+    echo "Creating symlink to $file_or_dir to .config/$file_or_dir directory."
     ln -s $dir/config/$file_or_dir ~/.config/$file_or_dir
 done
 

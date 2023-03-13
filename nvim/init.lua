@@ -95,8 +95,7 @@ local config = {
                 desc = "Close current split window",
             },
             -- window
-            ["<leader>sv"] = { "<cmd>vsp<cr>", desc = "Split vertically" },
-            ["<leader>sh"] = { "<cmd>hsp<cr>", desc = "Split horizontally" },
+            ["<leader>s"] = { name = "Sessions" },
             -- quick save
             ["<C-s>"] = { "<cmd>w!<cr>", desc = "Save File" },
             -- window navigation
@@ -199,7 +198,7 @@ local config = {
         },
         { "nvim-treesitter/nvim-treesitter", opts = treesitter.config },
         { "ThePrimeagen/vim-be-good",        cmd = "VimBeGood" },
-        { "towolf/vim-helm",                 event = "BufRead *.(yaml|tpl)" },
+        { "towolf/vim-helm",                 event = "BufRead *.yaml" },
         { "folke/neodev.nvim" }
     },
     -- LuaSnip Options
