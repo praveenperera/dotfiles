@@ -28,4 +28,4 @@ brew tap homebrew/cask-fonts
 brew install font-fira-code-nerd-font --cask
 
 # install cargo plugins
-cargo install cargo-watch cargo-sweep cargo-edit topgrade cargo-udeps
+cargo install cargo-watch cargo-sweep cargo-edit topgrade cargo-udeps zellij-runner
