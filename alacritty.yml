@@ -95,6 +95,16 @@ key_bindings:
 
   - { key: D, mods: Command, chars: "\x02\x25" }
   - { key: D, mods: Command|Shift, chars: "\x02\x22" }
+  
+    # ALT
+  - { key: J,        mods: Alt,     chars: "\x1bj" }
+  - { key: K,        mods: Alt,     chars: "\x1bk" }
+  - { key: H,        mods: Alt,     chars: "\x1bh" }
+  - { key: L,        mods: Alt,     chars: "\x1bl" }
+  - { key: RBracket,        mods: Alt,     chars: "\x1b]" }
+  - { key: LBracket,        mods: Alt,     chars: "\x1b[" }
+  - { key: Right,    mods: Alt,     chars: "\x1BF" }
+  - { key: Left,     mods: Alt,     chars: "\x1BB" }
 
   # switch tabs
   - { key: Key1, mods: Command, chars: "\x02\x30" }
@@ -107,9 +117,6 @@ key_bindings:
   - { key: Key8, mods: Command, chars: "\x02\x39" }
   - { key: Key9, mods: Command, chars: "\x02\x40" }
 
-  # jump word
-  - { key: Right, mods: Alt, chars: "\x1BF" }
-  - { key: Left, mods: Alt, chars: "\x1BB" }
 
   # command
   - { key: Semicolon, mods: Command, chars: "\x02\x3a" }
