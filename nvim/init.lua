@@ -89,6 +89,19 @@ local config = {
 	-- Mapping data with "desc" stored directly by vim.keymap.set().
 	mappings = {
 		n = {
+			-- spectre
+			["<leader>s"] = { name = "Find and Replace" },
+			["<leader>sr"] = { [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], desc = "Replace" },
+			["<leader>so"] = { '<cmd>lua require("spectre").open()<CR>', desc = "Open spectre" },
+			["<leader>sw"] = {
+				'<cmd>lua require("spectre").open_visual({select_word=true})<CR>',
+				desc = "Search current word"
+			},
+			["<leader>sf"] = {
+				'<cmd>lua require("spectre").open_file_search({select_word=true})<CR>',
+				desc =
+				"Search on current file"
+			},
 			-- tab
 			["<leader>bb"] = { "<cmd>tabnew<cr>", desc = "New tab" },
 			["<leader>bc"] = {
@@ -109,8 +122,6 @@ local config = {
 				desc = "Close current split window",
 			},
 			-- save and replace
-			["<leader>s"] = { name = "Save and Replace" },
-			["<leader>sr"] = { [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], desc = "Replace" },
 			-- quick save
 			["<C-s>"] = { "<cmd>w!<cr>", desc = "Save File" },
 			-- window navigation
@@ -145,9 +156,15 @@ local config = {
 		},
 		x = {
 			["<leader>p"] = { [["_dP]], desc = "Paste from system" },
+
 		},
 		t = {},
 		v = {
+			["<leader>s"] = { name = "Find and Replace" },
+			["<leader>sw"] = {
+				'<cmd>lua require("spectre").open_visual({select_word=true})<CR>',
+				desc = "Search current word"
+			},
 			["<leader>d"] = { [["_d]], desc = "Delete without register" },
 			-- move lines up and down like option arrows
 			["K"] = { ":m '<-2<CR>gv=gv", desc = "Move selection up" },
@@ -156,6 +173,7 @@ local config = {
 	},
 	-- Configure plugins
 	plugins = {
+		{ 'windwp/nvim-spectre',        event = "BufRead" },
 		{ "kazhala/close-buffers.nvim", cmd = { "BDelete", "BWipeout" } },
 		{ "kamykn/spelunker.vim",       event = "BufRead" },
 		{ "AstroNvim/astrotheme" },
