@@ -6,7 +6,6 @@ local function config()
             "rust_analyzer",
             "lua_ls",
             "tsserver",
-            "yamlls",
             "tflint",
             "tailwindcss"
         }

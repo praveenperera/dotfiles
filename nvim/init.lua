@@ -23,17 +23,30 @@ local config = {
 	options = {
 		opt = {
 			-- set to true or false etc.
-			relativenumber = true, -- sets vim.opt.relativenumber
-			number = true, -- sets vim.opt.number
-			spell = false, -- sets vim.opt.spell
+			relativenumber = true,
+			number = true,
+			spell = false,
 			spelloptions = "camel",
-			signcolumn = "auto", -- sets vim.opt.signcolumn to auto
-			wrap = false, -- sets vim.opt.wrap
+			signcolumn = "auto",
+			-- swap
+			swapfile = false,
+			backup = false,
+			undodir = os.getenv("HOME") .. "/.vim/undodir",
+			undofile = true,
+			--
+			wrap = false,
+			-- colorcolumn = "80",
+			termguicolors = true,
+			expandtab = true,
+			scrolloff = 5,
+			-- indent
 			tabstop = 4,
+			smartindent = true,
 			softtabstop = 4,
 			shiftwidth = 4,
-			expandtab = true,
-			smartindent = true,
+			-- highlight
+			hlsearch = false,
+			incsearch = true,
 			-- hardmode ( no mouse )
 			mouse = nil,
 		},
@@ -143,9 +156,10 @@ local config = {
 	},
 	-- Configure plugins
 	plugins = {
-		{ 'kamykn/spelunker.vim',  event = "BufRead" },
+		{ "kazhala/close-buffers.nvim", cmd = { "BDelete", "BWipeout" } },
+		{ "kamykn/spelunker.vim",       event = "BufRead" },
 		{ "AstroNvim/astrotheme" },
-		{ "rebelot/heirline.nvim", opts = heirline.config },
+		{ "rebelot/heirline.nvim",      opts = heirline.config },
 		{ "nvim-lua/plenary.nvim" },
 		{
 			"TimUntersberger/neogit",
@@ -154,7 +168,14 @@ local config = {
 			cmd = "Neogit"
 		},
 		{ "github/copilot.vim",     event = "User AstroLspSetup" },
-		{ "justinmk/vim-sneak",     event = "BufRead" },
+		{
+			"ggandor/leap.nvim",
+			event = "BufRead",
+			dependencies = { "tpope/vim-repeat" },
+			config = function()
+				require('leap').add_default_mappings()
+			end
+		},
 		{ "tpope/vim-surround",     event = "BufRead" },
 		{ "mg979/vim-visual-multi", event = "BufRead" },
 		{
@@ -169,7 +190,7 @@ local config = {
 		},
 		{
 			"nvim-neo-tree/neo-tree.nvim",
-			verision = "v2.x",
+			version = "v2.x",
 			dependencies = {
 				"nvim-lua/plenary.nvim",
 				"nvim-tree/nvim-web-devicons",
@@ -202,7 +223,7 @@ local config = {
 		},
 		{ "nvim-treesitter/nvim-treesitter",   opts = treesitter.config },
 		{ "ThePrimeagen/vim-be-good",          cmd = "VimBeGood" },
-		{ "towolf/vim-helm",                   event = "BufRead *.yaml" },
+		{ "towolf/vim-helm",                   event = { "BufRead *.yaml", "BufRead *.tpl" } },
 		{ "folke/neodev.nvim" }
 	},
 	-- LuaSnip Options

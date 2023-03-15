@@ -95,28 +95,38 @@ key_bindings:
 
   - { key: D, mods: Command, chars: "\x02\x25" }
   - { key: D, mods: Command|Shift, chars: "\x02\x22" }
-  
+
     # ALT
-  - { key: J,        mods: Alt,     chars: "\x1bj" }
-  - { key: K,        mods: Alt,     chars: "\x1bk" }
-  - { key: H,        mods: Alt,     chars: "\x1bh" }
-  - { key: L,        mods: Alt,     chars: "\x1bl" }
-  - { key: RBracket,        mods: Alt,     chars: "\x1b]" }
-  - { key: LBracket,        mods: Alt,     chars: "\x1b[" }
-  - { key: Right,    mods: Alt,     chars: "\x1BF" }
-  - { key: Left,     mods: Alt,     chars: "\x1BB" }
+  - { key: J, mods: Alt, chars: "\x1bj" }
+  - { key: K, mods: Alt, chars: "\x1bk" }
+  - { key: H, mods: Alt, chars: "\x1bh" }
+  - { key: L, mods: Alt, chars: "\x1bl" }
+  - { key: RBracket, mods: Alt, chars: "\x1b]" }
+  - { key: LBracket, mods: Alt, chars: "\x1b[" }
+  - { key: Right, mods: Alt, chars: "\x1BF" }
+  - { key: Left, mods: Alt, chars: "\x1BB" }
 
-  # switch tabs
-  - { key: Key1, mods: Command, chars: "\x02\x30" }
-  - { key: Key2, mods: Command, chars: "\x02\x31" }
-  - { key: Key3, mods: Command, chars: "\x02\x32" }
-  - { key: Key4, mods: Command, chars: "\x02\x33" }
-  - { key: Key5, mods: Command, chars: "\x02\x34" }
-  - { key: Key6, mods: Command, chars: "\x02\x35" }
-  - { key: Key7, mods: Command, chars: "\x02\x36" }
-  - { key: Key8, mods: Command, chars: "\x02\x39" }
-  - { key: Key9, mods: Command, chars: "\x02\x40" }
+  # switch tabs with zellij using tmux mode
+  - { key: Key1, mods: Command, chars: "\x021" }
+  - { key: Key2, mods: Command, chars: "\x022" }
+  - { key: Key3, mods: Command, chars: "\x023" }
+  - { key: Key4, mods: Command, chars: "\x024" }
+  - { key: Key5, mods: Command, chars: "\x025" }
+  - { key: Key6, mods: Command, chars: "\x026" }
+  - { key: Key7, mods: Command, chars: "\x027" }
+  - { key: Key8, mods: Command, chars: "\x028" }
+  - { key: Key9, mods: Command, chars: "\x029" }
 
+  # switch tabs tmux mode
+  # - { key: Key1, mods: Command, chars: "\x02\x30" }
+  # - { key: Key2, mods: Command, chars: "\x02\x31" }
+  # - { key: Key3, mods: Command, chars: "\x02\x32" }
+  # - { key: Key4, mods: Command, chars: "\x02\x33" }
+  # - { key: Key5, mods: Command, chars: "\x02\x34" }
+  # - { key: Key6, mods: Command, chars: "\x02\x35" }
+  # - { key: Key7, mods: Command, chars: "\x02\x36" }
+  # - { key: Key8, mods: Command, chars: "\x02\x39" }
+  # - { key: Key9, mods: Command, chars: "\x02\x40" }
 
   # command
   - { key: Semicolon, mods: Command, chars: "\x02\x3a" }
