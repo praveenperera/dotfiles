@@ -148,6 +148,9 @@ local config = {
 			["<leader>y"] = { [["+y]], desc = "Yank to system" },
 			-- find
 			["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
+			-- resize
+			["<C-Home>"] = { "<C-w>+", desc = "Resize up" },
+			["<C-End>"] = { "<C-w>-", desc = "Resize down" },
 			-- hardmode (no arrows)
 			["<Up>"] = { "<nop>" },
 			["<Down>"] = { "<nop>" },
