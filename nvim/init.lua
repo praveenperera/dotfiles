@@ -219,7 +219,7 @@ local config = {
 			},
 			opts = neotree.config,
 		},
-		{ "jose-elias-alvarez/typescript.nvim" },
+		{ "jose-elias-alvarez/typescript.nvim", event = "BufRead *.ts" },
 		{
 			"simrat39/rust-tools.nvim",
 			event = "User AstroLspSetup",
@@ -242,9 +242,9 @@ local config = {
 			event = "BufRead Cargo.toml",
 			opts = {}
 		},
-		{ "nvim-treesitter/nvim-treesitter",   opts = treesitter.config },
-		{ "ThePrimeagen/vim-be-good",          cmd = "VimBeGood" },
-		{ "towolf/vim-helm",                   event = { "BufRead *.yaml", "BufRead *.tpl" } },
+		{ "nvim-treesitter/nvim-treesitter",    opts = treesitter.config },
+		{ "ThePrimeagen/vim-be-good",           cmd = "VimBeGood" },
+		{ "towolf/vim-helm",                    event = { "BufRead *.yaml", "BufRead *.tpl" } },
 		{ "folke/neodev.nvim" }
 	},
 	-- LuaSnip Options
