@@ -26,6 +26,7 @@ alias stopall="aws ec2 describe-instances --profile=infraops | jq '.Reservations
 alias gcch="git rev-parse HEAD"
 alias zz=zellij
 alias x=zellij-runner
+alias lg="lazygit"
 
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
