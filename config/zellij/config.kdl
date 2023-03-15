@@ -4,6 +4,8 @@ keybinds {
     normal {
         unbind "Ctrl n"
         unbind "Ctrl h"
+        unbind "Ctrl q"
+
         bind "Ctrl f" { SwitchToMode "Resize"; }
         // uncomment this and adjust key if using copy_on_select=false
         // bind "Alt c" { Copy; }
