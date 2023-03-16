@@ -103,24 +103,11 @@ local config = {
 				"Search on current file"
 			},
 			-- tab
-			["<leader>bb"] = { "<cmd>tabnew<cr>", desc = "New tab" },
-			["<leader>bc"] = {
-				"<cmd>BufferLinePickClose<cr>",
-				desc = "Pick to close",
-			},
-			["<leader>bj"] = {
-				"<cmd>BufferLinePick<cr>",
-				desc = "Pick to jump",
-			},
-			["<leader>bt"] = {
-				"<cmd>BufferLineSortByTabs<cr>",
-				desc = "Sort by tabs",
-			},
-			["<leader>bw"] = { "<cmd>bw<CR>", desc = "Close current tab" },
-			["<leader>bW"] = {
-				"<cmd>close<CR>",
-				desc = "Close current split window",
-			},
+			-- ["<leader>bw"] = { "<cmd>bw<CR>", desc = "Close current tab" },
+			-- ["<leader>bW"] = {
+			-- 	"<cmd>close<CR>",
+			-- 	desc = "Close current split window",
+			-- },
 			-- save and replace
 			-- quick save
 			["<C-s>"] = { "<cmd>w!<cr>", desc = "Save File" },
