@@ -96,7 +96,7 @@ gbd() {
   local branch=$(git branch -vv --color=always | rg -v '/HEAD\s' |
     fzf --height 60% --reverse --border --ansi --multi --tac | sed 's/^..//' | awk '{print $1}')
 
-  git bd $branch
+  echo $branch | xargs git bd
 }
 
 gclean() {
