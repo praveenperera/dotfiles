@@ -163,7 +163,8 @@ local config = {
 	},
 	-- Configure plugins
 	plugins = {
-		{ 'windwp/nvim-spectre',        event = "BufRead" },
+		{ "windwp/nvim-spectre",        event = "BufRead" },
+		{ "sindrets/diffview.nvim",     dependencies = "nvim-lua/plenary.nvim", cmd = { "DiffviewOpen", "DiffviewRefresh" } },
 		{ "kazhala/close-buffers.nvim", cmd = { "BDelete", "BWipeout" } },
 		{ "kamykn/spelunker.vim",       event = "BufRead" },
 		{ "AstroNvim/astrotheme" },
