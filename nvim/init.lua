@@ -3,6 +3,7 @@ local neogit = require("user.config.neogit")
 local heirline = require("user.config.heirline")
 local telescope = require("user.config.telescope")
 local treesitter = require("user.config.treesitter")
+local rust_tools = require("user.config.treesitter")
 local mason_lspconfig = require("user.config.mason_lspconfig")
 
 local config = {
@@ -69,9 +70,12 @@ local config = {
 	},
 	-- Extend LSP configuration
 	lsp = {
-		servers = {},
-		skip_setup = { "rust_analyzer" },
-		formatting = {
+		servers        = {},
+		skip_setup     = {},
+		setup_handlers = {
+			rust_analyzer = function(_, opts) require("rust-tools").setup { server = opts } end
+		},
+		formatting     = {
 			format_on_save = {
 				enabled = true,
 				allow_filetypes = {},
@@ -219,13 +223,7 @@ local config = {
 		{
 			"simrat39/rust-tools.nvim",
 			event = "User AstroLspSetup",
-			opts = function()
-				return {
-					server = require("astronvim.utils.lsp").config(
-						"rust_analyzer"
-					),
-				}
-			end,
+			opts = rust_tools.config
 		},
 		{
 			"williamboman/mason-lspconfig.nvim",
