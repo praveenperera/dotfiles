@@ -139,7 +139,7 @@ local config = {
 			-- find
 			["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
 			["<leader>fs"] = { function() require("telescope").extensions.aerial.aerial() end },
-			["<leader>fS"] = { function() require("telescope.builtin").lsp_workspace_symbols() end },
+			["<leader>fS"] = { function() require("telescope.builtin").lsp_dynamic_workspace_symbols() end },
 			-- hardmode (no arrows)
 			["<Up>"] = { "<nop>" },
 			["<Down>"] = { "<nop>" },
