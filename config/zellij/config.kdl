@@ -6,7 +6,7 @@ keybinds {
         unbind "Ctrl h"
         unbind "Ctrl q"
 
-        bind "Ctrl f" { SwitchToMode "Resize"; }
+        bind "Ctrl y" { SwitchToMode "Resize"; }
         // uncomment this and adjust key if using copy_on_select=false
         // bind "Alt c" { Copy; }
     }

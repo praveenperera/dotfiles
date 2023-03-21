@@ -133,11 +133,13 @@ local config = {
 			-- system yank
 			["<leader>Y"] = { [["+Y]], desc = "Yank to system" },
 			["<leader>y"] = { [["+y]], desc = "Yank to system" },
-			-- find
-			["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
 			-- resize
 			["<C-Home>"] = { "<C-w>+", desc = "Resize up" },
 			["<C-End>"] = { "<C-w>-", desc = "Resize down" },
+			-- find
+			["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
+			["<leader>fs"] = { function() require("telescope").extensions.aerial.aerial() end },
+			["<leader>fS"] = { function() require("telescope.builtin").lsp_workspace_symbols() end },
 			-- hardmode (no arrows)
 			["<Up>"] = { "<nop>" },
 			["<Down>"] = { "<nop>" },
