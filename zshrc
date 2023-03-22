@@ -22,7 +22,7 @@ alias aged=aged_func
 alias kcg="k config current-context"
 alias kcs="k config use-context"
 alias di="aws ec2 describe-instances --profile=infraops | jq '.Reservations | map(.Instances) | map(.[0]) | map({instance_id: .InstanceId, type: .InstanceType, ip: .PublicIpAddress, state: .State})'"
-alias stopall="aws ec2 describe-instances --profile=infraops | jq '.Reservations | map(.Instances) | map(.[0]) | map (.InstanceId)' | jq -r '.[]' | xargs -L1 -I'{}' aws ec2 stop-instances --instance-ids='{}' --profile=infraops"
+alias stopall="aws ec2 describe-instances --profile=infraops | jq '.Reservations | map(.Instances) | map(.[0]) | map (.InstanceId)' | jq -r '.[]' | xargs -L1 -I'{}' aws ec2 stop-instances --instance-ids='{}' --profile=infraops | jq"
 alias gcch="git rev-parse HEAD"
 alias zz=zellij
 alias x=zellij-runner
