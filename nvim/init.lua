@@ -3,7 +3,8 @@ local neogit = require("user.config.neogit")
 local heirline = require("user.config.heirline")
 local telescope = require("user.config.telescope")
 local treesitter = require("user.config.treesitter")
-local rust_tools = require("user.config.treesitter")
+local rust_tools = require("user.config.rust_tools")
+local copilot = require("user.config.copilot")
 local mason_lspconfig = require("user.config.mason_lspconfig")
 
 local config = {
@@ -169,7 +170,8 @@ local config = {
 	},
 	-- Configure plugins
 	plugins = {
-		{ "windwp/nvim-spectre",        event = "BufRead" },
+		{ "windwp/nvim-spectre",   event = "BufRead" },
+		{ 'wakatime/vim-wakatime', event = "BufRead" },
 		{
 			"sindrets/diffview.nvim",
 			dependencies = "nvim-lua/plenary.nvim",
@@ -187,7 +189,20 @@ local config = {
 			opts = neogit.config,
 			cmd = "Neogit"
 		},
-		{ "github/copilot.vim",     event = "User AstroLspSetup" },
+		{
+			"zbirenbaum/copilot.lua",
+			cmd = "Copilot",
+			event = "InsertEnter",
+			opts = copilot.config
+		},
+		{
+			"zbirenbaum/copilot-cmp",
+			dependencies = { "zbirenbaum/copilot.lua" },
+			event = "InsertEnter",
+			config = function()
+				require("copilot_cmp").setup()
+			end
+		},
 		{
 			"ggandor/leap.nvim",
 			event = "BufRead",
