@@ -254,7 +254,12 @@ local config = {
 		{ "nvim-treesitter/nvim-treesitter",    opts = treesitter.config },
 		{ "ThePrimeagen/vim-be-good",           cmd = "VimBeGood" },
 		{ "towolf/vim-helm",                    event = { "BufRead *.yaml", "BufRead *.tpl" } },
-		{ "folke/neodev.nvim" }
+		{ "folke/neodev.nvim" },
+		{
+			'rust-sailfish/sailfish',
+			rtp = 'syntax/vim',
+			event = "BufRead *.stpl"
+		},
 	},
 	-- LuaSnip Options
 	luasnip = {

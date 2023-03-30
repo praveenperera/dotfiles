@@ -2,11 +2,11 @@ use std::path::PathBuf;
 
 use crate::bootstrap;
 use eyre::{eyre, Result};
-use xshell::{cmd, Shell};
+use xshell::Shell;
 
 const TOOLS: &[(&str, fn(&Shell) -> Result<()>)] = &[("bootstrap", bootstrap::run)];
 
-pub fn run(sh: &Shell) -> Result<()> {
+pub fn run(_sh: &Shell) -> Result<()> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     let program: PathBuf = args.first().cloned().unwrap_or_default().into();
 
