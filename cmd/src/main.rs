@@ -1,4 +1,5 @@
-mod cmd;
+pub mod bootstrap;
+pub mod cmd;
 
 use eyre::{eyre, Result};
 use std::path::PathBuf;
