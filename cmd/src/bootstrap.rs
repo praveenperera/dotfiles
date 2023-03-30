@@ -1,8 +1,21 @@
 use eyre::Result;
-use xshell::{cmd, Shell};
+use sailfish::TemplateOnce;
+use xshell::Shell;
+
+use crate::os::Os;
+
+#[derive(TemplateOnce)]
+#[template(path = "zshrc.stpl")]
+struct Zshrc {
+    os: Os,
+}
 
 pub fn run(sh: &Shell) -> Result<()> {
-    println!("bootstrap");
-    println!("{}", std::env::consts::OS);
+    let path = crate::dotfiles_dir().join("zshrc");
+    let zshrc = Zshrc { os: Os::current() };
+
+    log::info!("writing zshrc to {}", path.display());
+    sh.write_file(&path, zshrc.render_once()?)?;
+
     Ok(())
 }
