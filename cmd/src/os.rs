@@ -2,7 +2,6 @@
 pub enum Os {
     Linux,
     MacOS,
-    Windows,
 }
 
 impl Os {
@@ -16,7 +15,6 @@ impl From<&str> for Os {
         match s {
             "linux" => Os::Linux,
             "macos" => Os::MacOS,
-            "windows" => Os::Windows,
             _ => panic!("unknown os: {}", s),
         }
     }

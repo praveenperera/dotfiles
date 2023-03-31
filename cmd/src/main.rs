@@ -14,16 +14,12 @@ pub fn dotfiles_dir() -> PathBuf {
     PathBuf::new().join(home).join("code/dotfiles")
 }
 
-fn logging_setup() {
-    if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info")
-    }
-    env_logger::init();
+pub fn command_exists(sh: &Shell, command: &str) -> bool {
+    xshell::cmd!(sh, "command -v {command}").read().is_ok()
 }
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    logging_setup();
 
     let program: PathBuf = std::env::args_os().next().unwrap_or_default().into();
     let program = program

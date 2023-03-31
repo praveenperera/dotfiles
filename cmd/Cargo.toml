@@ -14,9 +14,8 @@ eyre = "0.6.8"
 xflags = "0.3.1"
 xshell = "0.2.3"
 
-# logging
-log = "0.4.17"
-env_logger = "0.10.0"
+# terminal colors
+colored = "2.0.0"
 
 # templating 
 sailfish = "0.6.0"
