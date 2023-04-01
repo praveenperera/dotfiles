@@ -15,20 +15,66 @@ struct Zshrc {
 #[template(path = "osx_defaults.zsh.stpl")]
 struct OsxDefaults {}
 
+const BREW_TOOLS: &[&str] = &[
+    "bat",
+    "coreutils",
+    "diff-so-fancy",
+    "fd",
+    "fzf",
+    "git",
+    "git-delta",
+    "gnupg",
+    "htop",
+    "jq",
+    "neovim",
+    "ripgrep",
+    "starship",
+    "sk",
+    "tmux",
+    "bottom",
+    "htop",
+    "antibody",
+    "zoxide",
+    "kubectl",
+    "gpg",
+    "tree",
+    "shellcheck",
+    "elixir",
+    "topgrade",
+    "pnpm",
+    "antibody",
+    "zsh",
+];
+
+const BREW_CASKS: &[&str] = &[
+    "alacritty",
+    "google-cloud-sdk",
+    "visual-studio-code",
+    "bettertouchtool",
+    "github",
+    "signal",
+    "sublime-text",
+    "rectangle",
+    "font-fira-code-nerd-font",
+];
+
+const CARGO_PLUGINS: &[&str] = &[
+    "cargo-watch",
+    "cargo-sweep",
+    "cargo-edit",
+    "cargo-udeps",
+    "zellij-runner",
+];
+
 pub fn run(sh: &Shell) -> Result<()> {
     let path = crate::dotfiles_dir().join("zshrc");
     let zshrc = Zshrc { os: Os::current() };
-
-    if Os::current() == Os::MacOS {}
 
     println!("writing zshrc to {}", path.display().to_string().green());
     sh.write_file(&path, zshrc.render_once()?)?;
 
     match Os::current() {
-        Os::Linux => {
-            cmd!(sh, "sudo apt-get install -y zsh").run()?;
-            cmd!(sh, "sudo apt-get install -y fzf").run()?;
-        }
+        Os::Linux => {}
         Os::MacOS => {
             let osx_defaults = OsxDefaults {}.render_once()?;
             create_and_run_file(sh, &osx_defaults, "osx_defaults.zsh")?;
@@ -47,6 +93,18 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
         cmd!(sh, "/bin/bash -c '$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'")
         .run()?;
     }
+
+    cmd!(sh, "brew update").run()?;
+    cmd!(sh, "brew tap homebrew/cask-fonts").run()?;
+
+    println!("{}", "installing brew tools".green());
+    cmd!(sh, "brew install").args(BREW_TOOLS).run()?;
+
+    println!("{}", "installing brew casks".green());
+    cmd!(sh, "brew install --cask").args(BREW_CASKS).run()?;
+
+    println!("{}", "installing cargo plugins".green());
+    cmd!(sh, "cargo install").args(CARGO_PLUGINS).run()?;
 
     Ok(())
 }
