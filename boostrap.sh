@@ -3,7 +3,7 @@
 # exit on error
 set -e
 
-# unset before installing sccache
+# unset RUSTC_WRAPPER if sccache is not installed
 if [ ! -x "$(command -v sccache)" ]; then
     unset RUSTC_WRAPPER
 fi

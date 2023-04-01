@@ -116,6 +116,8 @@ pub fn run(sh: &Shell) -> Result<()> {
         }
     }
 
+    // TODO: convert setup.sh file
+
     Ok(())
 }
 
