@@ -15,7 +15,7 @@ struct Zshrc {
 #[template(path = "osx_defaults.zsh.stpl")]
 struct OsxDefaults {}
 
-const BREW_TOOLS: &[&str] = &[
+const TOOLS: &[&str] = &[
     "bat",
     "coreutils",
     "diff-so-fancy",
@@ -28,11 +28,14 @@ const BREW_TOOLS: &[&str] = &[
     "jq",
     "neovim",
     "ripgrep",
+    "sccache",
     "starship",
     "sk",
     "tmux",
     "bottom",
     "htop",
+    "exa",
+    "pkg-config",
     "antibody",
     "zoxide",
     "kubectl",
@@ -58,6 +61,18 @@ const BREW_CASKS: &[&str] = &[
     "font-fira-code-nerd-font",
 ];
 
+const LINUX_TOOLS: &[&str] = &[
+    "libssl-dev",
+    "xsel",
+    "ca-certificates",
+    "curl",
+    "unzip",
+    "gcc",
+    "python3-dev",
+    "python3-pip",
+    "python3-setuptools",
+];
+
 const CARGO_PLUGINS: &[&str] = &[
     "cargo-watch",
     "cargo-sweep",
@@ -73,8 +88,26 @@ pub fn run(sh: &Shell) -> Result<()> {
     println!("writing zshrc to {}", path.display().to_string().green());
     sh.write_file(&path, zshrc.render_once()?)?;
 
+    cmd!(sh, "chsh -s $(which zsh)").run()?;
+    cmd!(sh, "rustup component add rustfmt clippy").run()?;
+
     match Os::current() {
-        Os::Linux => {}
+        Os::Linux => {
+            cmd!(sh, "sudo apt-get update").run()?;
+            println!("{}", "installing linux tools".green());
+            cmd!(sh, "sudo apt-get install").args(LINUX_TOOLS).run()?;
+
+            let nix_tools = TOOLS
+                .iter()
+                .filter(|tool| !LINUX_TOOLS.contains(tool))
+                .map(|tool| format!("nixpkgs.{tool}"))
+                .collect::<Vec<_>>();
+            println!("{}", "installing tools using nix".green());
+            cmd!(sh, "nix-env -iA").args(nix_tools).run()?;
+
+            println!("{}", "installing cargo plugins".green());
+            cmd!(sh, "cargo install").args(CARGO_PLUGINS).run()?;
+        }
         Os::MacOS => {
             let osx_defaults = OsxDefaults {}.render_once()?;
             create_and_run_file(sh, &osx_defaults, "osx_defaults.zsh")?;
@@ -98,13 +131,17 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
     cmd!(sh, "brew tap homebrew/cask-fonts").run()?;
 
     println!("{}", "installing brew tools".green());
-    cmd!(sh, "brew install").args(BREW_TOOLS).run()?;
+    cmd!(sh, "brew install").args(TOOLS).run()?;
 
     println!("{}", "installing brew casks".green());
     cmd!(sh, "brew install --cask").args(BREW_CASKS).run()?;
 
     println!("{}", "installing cargo plugins".green());
+    std::env::set_var("RUSTC_WRAPPER", "sccache");
     cmd!(sh, "cargo install").args(CARGO_PLUGINS).run()?;
+
+    cmd!(sh, "brew cleanup").run()?;
+    cmd!(sh, "brew autoremove").run()?;
 
     Ok(())
 }
