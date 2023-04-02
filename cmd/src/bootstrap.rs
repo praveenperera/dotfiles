@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use eyre::Result;
 use sailfish::TemplateOnce;
 use xshell::{cmd, Shell};
@@ -81,6 +83,17 @@ const CARGO_PLUGINS: &[&str] = &[
     "zellij-runner",
 ];
 
+const DOTFILES: &[&str] = &[
+    "zshrc",
+    "gitconfig",
+    "zsh_plugins.sh",
+    "gitignore",
+    "direnvrc",
+    "alacritty.yml",
+];
+
+const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij"];
+
 pub fn run(sh: &Shell) -> Result<()> {
     let path = crate::dotfiles_dir().join("zshrc");
     let zshrc = Zshrc { os: Os::current() };
@@ -116,7 +129,70 @@ pub fn run(sh: &Shell) -> Result<()> {
         }
     }
 
-    // TODO: convert setup.sh file
+    // setup dotfiles and config dirs
+    setup_config_and_dotfiles(sh)?;
+
+    // restart zsh
+    cmd!(sh, "exec zsh").run()?;
+
+    Ok(())
+}
+
+fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
+    let home: PathBuf = std::env::var("HOME").expect("HOME env var not set").into();
+    let zsh_plugins = home.join(".zsh_plugins.txt");
+
+    // setup zsh plugins
+    sh.remove_path(&zsh_plugins)?;
+    println!("{}", "setting up zsh_plugins.sh file...".green());
+
+    let zsh_plugins_txt = crate::dotfiles_dir().join("zsh_plugins.txt");
+    let zsh_plugins_sh = crate::dotfiles_dir().join("zsh_plugins.sh");
+
+    cmd!(sh, "antibody bundle < {zsh_plugins_txt} > {zsh_plugins_sh}").run()?;
+
+    let mut path_and_target = vec![];
+
+    for filename in DOTFILES {
+        let path = crate::dotfiles_dir().join(filename);
+        let target = home.join(format!(".{filename}"));
+
+        path_and_target.push((path, target));
+    }
+
+    for filename in CONFIG_FILE_OR_DIR {
+        let path = crate::dotfiles_dir().join("config").join(filename);
+        let target = home.join(format!(".config/{filename}"));
+
+        path_and_target.push((path, target));
+    }
+
+    for (path, target) in path_and_target.iter() {
+        sh.remove_path(&target)?;
+        cmd!(sh, "ln -s {path} {target}").run()?;
+    }
+
+    install_neovim(sh, home)?;
+
+    Ok(())
+}
+
+fn install_neovim(sh: &Shell, home: PathBuf) -> Result<()> {
+    let target = home.join(".config/nvim");
+    let path = crate::dotfiles_dir().join("nvim");
+
+    if !sh.path_exists(&target) {
+        println!("{}", "neovim config dir not found".red());
+        println!("{}", "setting up neovim".green());
+
+        cmd!(
+            sh,
+            "git clone --depth 1 https://github.com/AstroNvim/AstroNvim {target}"
+        )
+        .run()?;
+
+        cmd!(sh, "ln -s {path} {target}/user").run()?;
+    };
 
     Ok(())
 }

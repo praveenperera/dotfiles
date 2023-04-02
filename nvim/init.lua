@@ -51,7 +51,7 @@ local config = {
 			incsearch = true,
 			-- hardmode ( no mouse )
 			mouse = nil,
-			-- disable autochange directory
+			-- disable autochange
 			autochdir = false
 		},
 		g = {
@@ -179,7 +179,8 @@ local config = {
 	},
 	-- Configure plugins
 	plugins = {
-		{ "windwp/nvim-spectre",   event = "BufRead" },
+		{ "AstroNvim/astrocommunity" },
+		{ "windwp/nvim-spectre",     event = "BufRead" },
 		{
 			"folke/todo-comments.nvim",
 			dependencies = "nvim-lua/plenary.nvim",
@@ -187,7 +188,7 @@ local config = {
 			event = "BufRead",
 			cmd = { "TodoQuickFix", "TodoLocList", "TodoTrouble", "TodoTelescope" }
 		},
-		{ 'wakatime/vim-wakatime', event = "BufRead" },
+		{ 'wakatime/vim-wakatime',      event = "BufRead" },
 		{
 			"sindrets/diffview.nvim",
 			dependencies = "nvim-lua/plenary.nvim",

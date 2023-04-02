@@ -10,8 +10,8 @@ M.config = function(_, _)
                 accept = "<C-l>",
                 accept_word = false,
                 accept_line = false,
-                next = "<C-.>",
-                prev = "<C-,>",
+                next = "<C-s>",
+                prev = "<C-a>",
                 dismiss = "<C-]>",
             },
         }
