@@ -143,8 +143,14 @@ local config = {
 			["<C-End>"] = { "<C-w>-", desc = "Resize down" },
 			-- find
 			["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
-			["<leader>fs"] = { function() require("telescope").extensions.aerial.aerial() end },
-			["<leader>fS"] = { function() require("telescope.builtin").lsp_dynamic_workspace_symbols() end },
+			["<leader>fs"] = {
+				function() require("telescope").extensions.aerial.aerial() end,
+				desc = "Search document symbols"
+			},
+			["<leader>fS"] = {
+				function() require("telescope.builtin").lsp_dynamic_workspace_symbols() end,
+				desc = "Search project symbols"
+			},
 			-- hardmode (no arrows)
 			["<Up>"] = { "<nop>" },
 			["<Down>"] = { "<nop>" },
@@ -171,6 +177,13 @@ local config = {
 	-- Configure plugins
 	plugins = {
 		{ "windwp/nvim-spectre",   event = "BufRead" },
+		{
+			"folke/todo-comments.nvim",
+			dependencies = "nvim-lua/plenary.nvim",
+			opts = {},
+			event = "BufRead",
+			cmd = { "TodoQuickFix", "TodoLocList", "TodoTrouble", "TodoTelescope" }
+		},
 		{ 'wakatime/vim-wakatime', event = "BufRead" },
 		{
 			"sindrets/diffview.nvim",
@@ -194,14 +207,6 @@ local config = {
 			cmd = "Copilot",
 			event = "InsertEnter",
 			opts = copilot.config
-		},
-		{
-			"zbirenbaum/copilot-cmp",
-			dependencies = { "zbirenbaum/copilot.lua" },
-			event = "InsertEnter",
-			config = function()
-				require("copilot_cmp").setup()
-			end
 		},
 		{
 			"ggandor/leap.nvim",
