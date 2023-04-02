@@ -51,6 +51,8 @@ local config = {
 			incsearch = true,
 			-- hardmode ( no mouse )
 			mouse = nil,
+			-- disable autochange directory
+			autochdir = false
 		},
 		g = {
 			mapleader = " ",          -- sets vim.g.mapleader
@@ -142,6 +144,7 @@ local config = {
 			["<C-Home>"] = { "<C-w>+", desc = "Resize up" },
 			["<C-End>"] = { "<C-w>-", desc = "Resize down" },
 			-- find
+			["<leader>ft"] = { "<cmd>TodoTelescope<CR>", desc = "Find TODOs" },
 			["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
 			["<leader>fs"] = {
 				function() require("telescope").extensions.aerial.aerial() end,
