@@ -51,6 +51,8 @@ local config = {
 			incsearch = true,
 			-- hardmode ( no mouse )
 			mouse = nil,
+			-- disable autochange
+			autochdir = false
 		},
 		g = {
 			mapleader = " ",          -- sets vim.g.mapleader
@@ -142,9 +144,16 @@ local config = {
 			["<C-Home>"] = { "<C-w>+", desc = "Resize up" },
 			["<C-End>"] = { "<C-w>-", desc = "Resize down" },
 			-- find
+			["<leader>ft"] = { "<cmd>TodoTelescope<CR>", desc = "Find TODOs" },
 			["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
-			["<leader>fs"] = { function() require("telescope").extensions.aerial.aerial() end },
-			["<leader>fS"] = { function() require("telescope.builtin").lsp_dynamic_workspace_symbols() end },
+			["<leader>fs"] = {
+				function() require("telescope").extensions.aerial.aerial() end,
+				desc = "Search document symbols"
+			},
+			["<leader>fS"] = {
+				function() require("telescope.builtin").lsp_dynamic_workspace_symbols() end,
+				desc = "Search project symbols"
+			},
 			-- hardmode (no arrows)
 			["<Up>"] = { "<nop>" },
 			["<Down>"] = { "<nop>" },
@@ -170,8 +179,16 @@ local config = {
 	},
 	-- Configure plugins
 	plugins = {
-		{ "windwp/nvim-spectre",   event = "BufRead" },
-		{ 'wakatime/vim-wakatime', event = "BufRead" },
+		{ "AstroNvim/astrocommunity" },
+		{ "windwp/nvim-spectre",     event = "BufRead" },
+		{
+			"folke/todo-comments.nvim",
+			dependencies = "nvim-lua/plenary.nvim",
+			opts = {},
+			event = "BufRead",
+			cmd = { "TodoQuickFix", "TodoLocList", "TodoTrouble", "TodoTelescope" }
+		},
+		{ 'wakatime/vim-wakatime',      event = "BufRead" },
 		{
 			"sindrets/diffview.nvim",
 			dependencies = "nvim-lua/plenary.nvim",
@@ -194,14 +211,6 @@ local config = {
 			cmd = "Copilot",
 			event = "InsertEnter",
 			opts = copilot.config
-		},
-		{
-			"zbirenbaum/copilot-cmp",
-			dependencies = { "zbirenbaum/copilot.lua" },
-			event = "InsertEnter",
-			config = function()
-				require("copilot_cmp").setup()
-			end
 		},
 		{
 			"ggandor/leap.nvim",
@@ -254,7 +263,12 @@ local config = {
 		{ "nvim-treesitter/nvim-treesitter",    opts = treesitter.config },
 		{ "ThePrimeagen/vim-be-good",           cmd = "VimBeGood" },
 		{ "towolf/vim-helm",                    event = { "BufRead *.yaml", "BufRead *.tpl" } },
-		{ "folke/neodev.nvim" }
+		{ "folke/neodev.nvim" },
+		{
+			'rust-sailfish/sailfish',
+			rtp = 'syntax/vim',
+			event = "BufRead *.stpl"
+		},
 	},
 	-- LuaSnip Options
 	luasnip = {

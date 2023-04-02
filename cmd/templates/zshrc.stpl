@@ -48,8 +48,10 @@ export HISTSIZE=2000
 export SAVEHIST=2000
 [[ -n $HISTFILE ]] || export HISTFILE=~/.zsh_history
 
+<% if os == Os::MacOS { %>
 # subl
 export PATH="/Applications/Sublime Text.app/Contents/SharedSupport/bin:$PATH"
+<% } %>
 
 ip() {
   ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'
@@ -146,8 +148,10 @@ export MCFLY_FUZZY=true
 # elixir escripts
 export PATH=$PATH:$HOME/.mix/escripts
 
-export LANG='en_US.UTF-8'
+<% if os == Os::MacOS { %>
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
+<% } %>
+export LANG='en_US.UTF-8'
 export EDITOR="nvim"
 export ALTERNATE_EDITOR="code -w"
 export VISUAL="code -w"
@@ -158,7 +162,9 @@ export ANT_HOME=/usr/local/opt/ant
 export MAVEN_HOME=/usr/local/opt/maven
 export GRADLE_HOME=/usr/local/opt/gradle
 
+<% if os == Os::MacOS { %>
 export ANDROID_HOME=$HOME/Library/Android/sdk
+<% } %>
 export ANDROID_SDK_ROOT=$ANDROID_HOME
 export PATH=$PATH:$ANDROID_HOME/emulator
 export PATH=$PATH:$ANDROID_HOME/tools
@@ -173,8 +179,11 @@ export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 # Enable history in iex through Erlang(OTP)
 export ERL_AFLAGS="-kernel shell_history enabled"
 
+
+<% if os == Os::MacOS { %>
 # gstreamer
 export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/Current/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+<% } %>
 
 TERM=xterm-256color
 
@@ -237,11 +246,14 @@ zstyle ':fzf-tab:*' switch-group ',' '.'
 zstyle ':completion:*' completer _complete _ignored _files
 ## / autocomplete settings
 
+
+<% if os == Os::MacOS { %>
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
 if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'; fi
+<% } %>
 
 # enable sccache for rust projects
 export RUSTC_WRAPPER=sccache 

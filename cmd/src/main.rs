@@ -1,11 +1,22 @@
 pub mod bootstrap;
 pub mod cmd;
+pub mod os;
 
 use eyre::{eyre, Result};
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 use xshell::Shell;
 
 const TOOLS: &[(&str, fn(&Shell) -> Result<()>)] = &[("cmd", cmd::run)];
+
+pub fn dotfiles_dir() -> PathBuf {
+    let home = env::var("HOME").expect("HOME env var must be set");
+
+    PathBuf::new().join(home).join("code/dotfiles")
+}
+
+pub fn command_exists(sh: &Shell, command: &str) -> bool {
+    xshell::cmd!(sh, "command -v {command}").read().is_ok()
+}
 
 fn main() -> Result<()> {
     color_eyre::install()?;
