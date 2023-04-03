@@ -102,7 +102,7 @@ pub fn run(sh: &Shell) -> Result<()> {
     println!("writing zshrc to {}", path.display().to_string().green());
     sh.write_file(&path, zshrc.render_once()?)?;
 
-    cmd!(sh, "chsh -s $(which zsh)").run()?;
+    // install rust components
     cmd!(sh, "rustup component add rustfmt clippy").run()?;
 
     match Os::current() {

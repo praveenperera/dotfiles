@@ -25,6 +25,7 @@ if [ ! -x "$(command -v nix-env)" ]; then
 fi
 
 cd cmd
-./release
+sudo ./release
 
 cmd bootstrap
+sudo chsh -s $(which zsh)
