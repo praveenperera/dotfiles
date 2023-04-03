@@ -21,6 +21,7 @@ const TOOLS: &[&str] = &[
     "bat",
     "coreutils",
     "diff-so-fancy",
+    "difftastic",
     "fd",
     "fzf",
     "git",
