@@ -47,7 +47,6 @@ const TOOLS: &[&str] = &[
     "shellcheck",
     "elixir",
     "topgrade",
-    "pnpm",
     "antibody",
     "zsh",
 ];
