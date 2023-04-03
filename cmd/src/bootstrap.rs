@@ -102,7 +102,7 @@ pub fn run(sh: &Shell) -> Result<()> {
     sh.write_file(&path, zshrc.render_once()?)?;
 
     // install rust components
-    cmd!(sh, "rustup component add rustfmt clippy").run()?;
+    cmd!(sh, "rustup component add rustfmt clippy rust-analyzer").run()?;
 
     match Os::current() {
         Os::Linux => {
