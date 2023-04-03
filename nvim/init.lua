@@ -21,7 +21,6 @@ local config = {
 	},
 	colorscheme = "astrotheme",
 	highlights = {},
-	-- set vim options here (vim.<first_key>.<second_key> = value)
 	options = {
 		opt = {
 			-- set to true or false etc.
@@ -109,13 +108,18 @@ local config = {
 				desc =
 				"Search on current file"
 			},
-			-- tab
-			-- ["<leader>bw"] = { "<cmd>bw<CR>", desc = "Close current tab" },
-			-- ["<leader>bW"] = {
-			-- 	"<cmd>close<CR>",
-			-- 	desc = "Close current split window",
-			-- },
-			-- save and replace
+			-- Harpoon
+			["<leader>h"] = { name = "Harpoon" },
+			["<leader>ha"] = { function() require("harpoon.mark").add_file() end, desc = "Add file" },
+			["<leader>he"] = { function() require("harpoon.ui").toggle_quick_menu() end, desc = "Toggle quick menu" },
+			["<leader>h1"] = { function() require("harpoon.ui").nav_file(1) end, desc = "Go to file 1" },
+			["<leader>h2"] = { function() require("harpoon.ui").nav_file(2) end, desc = "Go to file 2" },
+			["<leader>h3"] = { function() require("harpoon.ui").nav_file(3) end, desc = "Go to file 3" },
+			["<leader>h4"] = { function() require("harpoon.ui").nav_file(4) end, desc = "Go to file 4" },
+			["h1"] = { function() require("harpoon.ui").nav_file(1) end, desc = "Go to file 1" },
+			["h2"] = { function() require("harpoon.ui").nav_file(2) end, desc = "Go to file 2" },
+			["h3"] = { function() require("harpoon.ui").nav_file(3) end, desc = "Go to file 3" },
+			["h4"] = { function() require("harpoon.ui").nav_file(4) end, desc = "Go to file 4" },
 			-- quick save
 			["<C-s>"] = { "<cmd>w!<cr>", desc = "Save File" },
 			-- window navigation
@@ -123,8 +127,6 @@ local config = {
 			["<leader>2"] = { "2<C-w>w", desc = "Go to window 2" },
 			["<leader>3"] = { "3<C-w>w", desc = "Go to window 3" },
 			["<leader>4"] = { "4<C-w>w", desc = "Go to window 4" },
-			["<leader>5"] = { "5<C-w>w", desc = "Go to window 5" },
-			["<leader>6"] = { "6<C-w>w", desc = "Go to window 6" },
 			-- git
 			["<leader>gs"] = { "<cmd>Neogit <CR>", desc = "Git status" },
 			-- move
@@ -180,6 +182,11 @@ local config = {
 	-- Configure plugins
 	plugins = {
 		{ "AstroNvim/astrocommunity" },
+		{
+			'ThePrimeagen/harpoon',
+			opts = {},
+			event = "User AstroFile",
+		},
 		{ "windwp/nvim-spectre",     event = "BufRead" },
 		{
 			"folke/todo-comments.nvim",
