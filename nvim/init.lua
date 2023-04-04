@@ -158,7 +158,7 @@ local config = {
 				desc = "Search project symbols"
 			},
 			-- undo
-			["<leader>u"] = { vim.cmd.UndotreeToggle, desc = "Undo tree" },
+			["<leader>U"] = { vim.cmd.UndotreeToggle, desc = "Undo tree" },
 			-- hardmode (no arrows)
 			["<Up>"] = { "<nop>" },
 			["<Down>"] = { "<nop>" },
