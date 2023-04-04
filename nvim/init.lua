@@ -156,6 +156,8 @@ local config = {
 				function() require("telescope.builtin").lsp_dynamic_workspace_symbols() end,
 				desc = "Search project symbols"
 			},
+			-- undo
+			["<leader>U"] = { vim.cmd.UndotreeToggle, desc = "Undo tree" },
 			-- hardmode (no arrows)
 			["<Up>"] = { "<nop>" },
 			["<Down>"] = { "<nop>" },
@@ -187,6 +189,7 @@ local config = {
 			opts = {},
 			event = "User AstroFile",
 		},
+		{ "mbbill/undotree",         event = "User AstroFile" },
 		{ "windwp/nvim-spectre",     event = "BufRead" },
 		{
 			"folke/todo-comments.nvim",
