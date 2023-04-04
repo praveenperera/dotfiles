@@ -116,10 +116,10 @@ local config = {
 			["<leader>h2"] = { function() require("harpoon.ui").nav_file(2) end, desc = "Go to file 2" },
 			["<leader>h3"] = { function() require("harpoon.ui").nav_file(3) end, desc = "Go to file 3" },
 			["<leader>h4"] = { function() require("harpoon.ui").nav_file(4) end, desc = "Go to file 4" },
-			["h1"] = { function() require("harpoon.ui").nav_file(1) end, desc = "Go to file 1" },
-			["h2"] = { function() require("harpoon.ui").nav_file(2) end, desc = "Go to file 2" },
-			["h3"] = { function() require("harpoon.ui").nav_file(3) end, desc = "Go to file 3" },
-			["h4"] = { function() require("harpoon.ui").nav_file(4) end, desc = "Go to file 4" },
+			["g1"] = { function() require("harpoon.ui").nav_file(1) end, desc = "Go to file 1" },
+			["g2"] = { function() require("harpoon.ui").nav_file(2) end, desc = "Go to file 2" },
+			["g3"] = { function() require("harpoon.ui").nav_file(3) end, desc = "Go to file 3" },
+			["g4"] = { function() require("harpoon.ui").nav_file(4) end, desc = "Go to file 4" },
 			-- quick save
 			["<C-s>"] = { "<cmd>w!<cr>", desc = "Save File" },
 			-- window navigation
