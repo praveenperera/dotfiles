@@ -316,7 +316,6 @@ local config = {
 	-- Run after everything is loaded
 	polish = function()
 		vim.cmd [[highlight SpelunkerSpellBad cterm=underline ctermfg=NONE gui=underline guifg=NONE]]
-		vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle)
 	end,
 }
 
