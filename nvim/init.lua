@@ -6,7 +6,6 @@ local treesitter = require("user.config.treesitter")
 local rust_tools = require("user.config.rust_tools")
 local copilot = require("user.config.copilot")
 local mason_lspconfig = require("user.config.mason_lspconfig")
-local ui = require("astronvim.utils.ui")
 
 local config = {
 	updater = {
@@ -157,24 +156,8 @@ local config = {
 				function() require("telescope.builtin").lsp_dynamic_workspace_symbols() end,
 				desc = "Search project symbols"
 			},
-			-- UI
-			["<leader>U"] = { name = "UI" },
-			["<leader>Ud"] = { ui.toggle_diagnostics, desc = "Toggle diagnostics" },
-			["<leader>Ug"] = { ui.toggle_signcolumn, desc = "Toggle signcolumn" },
-			["<leader>Ui"] = { ui.set_indent, desc = "Change indent setting" },
-			["<leader>Ul"] = { ui.toggle_statusline, desc = "Toggle statusline" },
-			["<leader>UL"] = { ui.toggle_codelens, desc = "Toggle CodeLens refresh" },
-			["<leader>Un"] = { ui.change_number, desc = "Change line numbering" },
-			["<leader>UN"] = { ui.toggle_ui_notifications, desc = "Toggle UI notifications" },
-			["<leader>Up"] = { ui.toggle_paste, desc = "Toggle paste mode" },
-			["<leader>Us"] = { ui.toggle_spell, desc = "Toggle spellcheck" },
-			["<leader>US"] = { ui.toggle_conceal, desc = "Toggle conceal" },
-			["<leader>Ut"] = { ui.toggle_tabline, desc = "Toggle tabline" },
-			["<leader>Uu"] = { ui.toggle_url_match, desc = "Toggle URL highlight" },
-			["<leader>Uw"] = { ui.toggle_wrap, desc = "Toggle wrap" },
-			["<leader>Uy"] = { ui.toggle_syntax, desc = "Toggle syntax highlight" },
 			-- undo
-			["<leader>u"] = { vim.cmd.UndotreeToggle, desc = "Undo tree" },
+			["<leader>U"] = { vim.cmd.UndotreeToggle, desc = "Undo tree" },
 			-- hardmode (no arrows)
 			["<Up>"] = { "<nop>" },
 			["<Down>"] = { "<nop>" },
@@ -316,7 +299,6 @@ local config = {
 	-- Run after everything is loaded
 	polish = function()
 		vim.cmd [[highlight SpelunkerSpellBad cterm=underline ctermfg=NONE gui=underline guifg=NONE]]
-		vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle)
 	end,
 }
 
