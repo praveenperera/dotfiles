@@ -7,6 +7,7 @@ local rust_tools = require("user.config.rust_tools")
 local copilot = require("user.config.copilot")
 local mason_lspconfig = require("user.config.mason_lspconfig")
 local ui = require("astronvim.utils.ui")
+local toggleterm = require("user.config.toggleterm")
 
 local config = {
 	updater = {
@@ -138,9 +139,15 @@ local config = {
 			["J"] = { "mzJ`z" },
 			["n"] = { "nzzzv" },
 			["N"] = { "Nzzzv" },
-			---
-			["<leader>d"] = { [["_d]], desc = "Delete without register" },
+			-- toggleterm
+			["<leader>th"] = { "<cmd>ToggleTerm direction=horizontal<cr>", desc = "Toggle horizontal terminal" },
+			["<leader>tv"] = { "<cmd>ToggleTerm direction=vertical<cr>", desc = "Toggle vertical terminal" },
+			["<leader>t1"] = { "<cmd>ToggleTerm 1<cr>", desc = "ToggleTerm 1st Window" },
+			["<leader>t2"] = { "<cmd>ToggleTerm 2<cr>", desc = "ToggleTerm 2nd Window" },
+			["<leader>t3"] = { "<cmd>ToggleTerm 3<cr>", desc = "ToggleTerm 3rd Window" },
+			["<leader>t4"] = { "<cmd>ToggleTerm 4<cr>", desc = "ToggleTerm 4th Window" },
 			-- system yank
+			["<leader>d"] = { [["_d]], desc = "Delete without register" },
 			["<leader>Y"] = { [["+Y]], desc = "Yank to system" },
 			["<leader>y"] = { [["+y]], desc = "Yank to system" },
 			-- resize
@@ -148,7 +155,7 @@ local config = {
 			["<C-End>"] = { "<C-w>-", desc = "Resize down" },
 			-- find
 			["<leader>fi"] = {
-				"<cmd> Telescope current_buffer_fuzzy_find case_mode=ignore_case<CR>",
+				"<cmd>Telescope current_buffer_fuzzy_find case_mode=ignore_case<CR>",
 				desc = "Find in Buffer"
 			},
 			["<leader>ft"] = { "<cmd>TodoTelescope<CR>", desc = "Find TODOs" },
@@ -248,6 +255,15 @@ local config = {
 				"nvim-telescope/telescope.nvim",
 				"neovim/nvim-lspconfig",
 			},
+		},
+		{
+			'akinsho/toggleterm.nvim',
+			version = "*",
+			opts = toggleterm.config,
+			cmd = {
+				"ToggleTerm",
+				"ToggleTermToggleAll"
+			}
 		},
 		{
 			"nvim-neo-tree/neo-tree.nvim",
