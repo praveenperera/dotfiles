@@ -171,9 +171,10 @@ local config = {
 		},
 		x = {
 			["<leader>p"] = { [["_dP]], desc = "Paste from system" },
-
 		},
-		t = {},
+		t = {
+			["<esc><esc>"] = { [[<C-\><C-n>]], desc = "Normal mode" },
+		},
 		v = {
 			["<leader>s"] = { name = "Find and Replace" },
 			["<leader>sw"] = {
