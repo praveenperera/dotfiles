@@ -39,6 +39,7 @@ alias flush="dscacheutil -flushcache"
 alias agee=agee_func
 alias aged=aged_func
 alias lg="lazygit"
+alias vim="nvim"
 
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
