@@ -147,6 +147,10 @@ local config = {
 			["<C-Home>"] = { "<C-w>+", desc = "Resize up" },
 			["<C-End>"] = { "<C-w>-", desc = "Resize down" },
 			-- find
+			["<leader>fi"] = {
+				"<cmd> Telescope current_buffer_fuzzy_find case_mode=ignore_case<CR>",
+				desc = "Find in Buffer"
+			},
 			["<leader>ft"] = { "<cmd>TodoTelescope<CR>", desc = "Find TODOs" },
 			["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
 			["<leader>fs"] = {
