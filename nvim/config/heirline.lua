@@ -1,4 +1,4 @@
-local default = {}
+local M = {}
 
 local function config(_, opts)
     local status = require("astronvim.utils.status")
@@ -8,7 +8,10 @@ local function config(_, opts)
             mode_text = { padding = { left = 1, right = 1 } },
         }), -- add the mode text
         status.component.git_branch(),
-        status.component.file_info(),
+        status.component.file_info({
+            unique_path = {},
+        }),
+        status.component.cmd_info(),
         status.component.git_diff(),
         status.component.diagnostics(),
         status.component.fill(),
@@ -24,6 +27,6 @@ local function config(_, opts)
     return opts
 end
 
-default.config = config
+M.config = config
 
-return default
+return M
