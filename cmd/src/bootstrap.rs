@@ -60,7 +60,7 @@ const BREW_CASKS: &[&str] = &[
     "signal",
     "sublime-text",
     "rectangle",
-    "font-fira-code-nerd-font",
+    "font-jetbrains-mono-nerd-font",
 ];
 
 const LINUX_TOOLS: &[&str] = &[
