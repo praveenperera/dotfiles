@@ -29,3 +29,5 @@ sudo ./release
 
 cmd bootstrap
 sudo chsh -s $(which zsh)
+
+exec zsh

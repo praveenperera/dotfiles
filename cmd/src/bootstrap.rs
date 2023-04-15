@@ -132,9 +132,6 @@ pub fn run(sh: &Shell) -> Result<()> {
     // setup dotfiles and config dirs
     setup_config_and_dotfiles(sh)?;
 
-    // restart zsh
-    cmd!(sh, "exec zsh").run()?;
-
     Ok(())
 }
 
@@ -149,7 +146,9 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     let zsh_plugins_txt = crate::dotfiles_dir().join("zsh_plugins.txt");
     let zsh_plugins_sh = crate::dotfiles_dir().join("zsh_plugins.sh");
 
-    cmd!(sh, "antibody bundle < {zsh_plugins_txt} > {zsh_plugins_sh}").run()?;
+    let input_content = sh.read_file(zsh_plugins_txt)?;
+    let output_content = cmd!(sh, "antibody bundle").stdin(input_content).read()?;
+    sh.write_file(zsh_plugins_sh, &output_content)?;
 
     let mut path_and_target = vec![];
 
