@@ -42,8 +42,6 @@ window:
   #     - buttonless: Title bar, transparent background, but no title bar buttons
   decorations: buttonless
 
-  draw_bold_text_with_bright_colors: true
-
   # Startup Mode (changes require restart)
   # Values for `startup_mode`:
   #   - Windowed
@@ -101,6 +99,7 @@ key_bindings:
   - { key: K, mods: Alt, chars: "\x1bk" }
   - { key: H, mods: Alt, chars: "\x1bh" }
   - { key: L, mods: Alt, chars: "\x1bl" }
+
   - { key: RBracket, mods: Alt, chars: "\x1b]" }
   - { key: LBracket, mods: Alt, chars: "\x1b[" }
   - { key: Right, mods: Alt, chars: "\x1BF" }
@@ -117,38 +116,19 @@ key_bindings:
   - { key: Key8, mods: Command, chars: "\x028" }
   - { key: Key9, mods: Command, chars: "\x029" }
 
-  # switch tabs tmux mode
-  # - { key: Key1, mods: Command, chars: "\x02\x30" }
-  # - { key: Key2, mods: Command, chars: "\x02\x31" }
-  # - { key: Key3, mods: Command, chars: "\x02\x32" }
-  # - { key: Key4, mods: Command, chars: "\x02\x33" }
-  # - { key: Key5, mods: Command, chars: "\x02\x34" }
-  # - { key: Key6, mods: Command, chars: "\x02\x35" }
-  # - { key: Key7, mods: Command, chars: "\x02\x36" }
-  # - { key: Key8, mods: Command, chars: "\x02\x39" }
-  # - { key: Key9, mods: Command, chars: "\x02\x40" }
-
-  # command
-  - { key: Semicolon, mods: Command, chars: "\x02\x3a" }
-  - { key: Slash, mods: Command, chars: "\x02" }
-
     # shortcuts for tmux. the leader key is control-b (0x02)
   - { key: T, mods: Command, chars: "\x02c" } # new tab
-  - { key: W, mods: Command|Shift, chars: "\x02&" } # close tab (kill)
   - { key: W, mods: Command, chars: "\x02x" } # close pane (kill)
 
   # CMD arrows navigate panes
-  - { key: Up, mods: Command, chars: "\x02\x1B\x5B\x41" } # select right pane
-  - { key: Down, mods: Command, chars: "\x02\x1B\x5B\x42" } # select right pane
+  - { key: Up, mods: Command, chars: "\x02\x1B\x5B\x41" } # select above pane
+  - { key: Down, mods: Command, chars: "\x02\x1B\x5B\x42" } # select below pane
   - { key: Left, mods: Command, chars: "\x02\x1B\x5B\x44" } # select  left pane
   - { key: Right, mods: Command, chars: "\x02\x1B\x5B\x43" } # select right pane
 
   # CMD+Shift [
   - { key: RBracket, mods: Command|Shift, chars: "\x02n" } # select next tab
   - { key: LBracket, mods: Command|Shift, chars: "\x02p" } # select previous tab
-
-  # CMD [
-  - { key: RBracket, mods: Command, chars: "\x02\x6F" } # select next pane
 
   # Search
   - { key: F, mods: Control|Shift, action: SearchForward }
@@ -160,54 +140,6 @@ key_bindings:
 
   # CMD ,
   - { key: Comma, mods: Command, chars: "\x02," } # rename window
-
-  # VIM Mode
-  - { key: Return, mods: Command, action: ToggleViMode }
-  - { key: Space, mods: Shift|Control, mode: Vi, action: ScrollToBottom }
-  - { key: Escape, mode: Vi, action: ClearSelection }
-  - { key: I, mode: Vi, action: ScrollToBottom }
-  - { key: I, mode: Vi, action: ToggleViMode }
-  - { key: Y, mods: Control, mode: Vi, action: ScrollLineUp }
-  - { key: E, mods: Control, mode: Vi, action: ScrollLineDown }
-  - { key: G, mode: Vi, action: ScrollToTop }
-  - { key: G, mods: Shift, mode: Vi, action: ScrollToBottom }
-  - { key: B, mods: Control, mode: Vi, action: ScrollPageUp }
-  - { key: F, mods: Control, mode: Vi, action: ScrollPageDown }
-  - { key: U, mods: Control, mode: Vi, action: ScrollHalfPageUp }
-  - { key: D, mods: Control, mode: Vi, action: ScrollHalfPageDown }
-  - { key: Y, mode: Vi, action: Copy }
-  - { key: Y, mode: Vi, action: ClearSelection }
-  - { key: Copy, mode: Vi, action: ClearSelection }
-  - { key: V, mode: Vi, action: ToggleNormalSelection }
-  - { key: V, mods: Shift, mode: Vi, action: ToggleLineSelection }
-  - { key: V, mods: Control, mode: Vi, action: ToggleBlockSelection }
-  - { key: V, mods: Alt, mode: Vi, action: ToggleSemanticSelection }
-  - { key: Return, mode: Vi, action: Open }
-  - { key: K, mode: Vi, action: Up }
-  - { key: J, mode: Vi, action: Down }
-  - { key: H, mode: Vi, action: Left }
-  - { key: L, mode: Vi, action: Right }
-  - { key: Up, mode: Vi, action: Up }
-  - { key: Down, mode: Vi, action: Down }
-  - { key: Left, mode: Vi, action: Left }
-  - { key: Right, mode: Vi, action: Right }
-  - { key: Key0, mode: Vi, action: First }
-  - { key: Key4, mods: Shift, mode: Vi, action: Last }
-  - { key: Key6, mods: Shift, mode: Vi, action: FirstOccupied }
-  - { key: H, mods: Shift, mode: Vi, action: High }
-  - { key: M, mods: Shift, mode: Vi, action: Middle }
-  - { key: L, mods: Shift, mode: Vi, action: Low }
-  - { key: B, mode: Vi, action: SemanticLeft }
-  - { key: W, mode: Vi, action: SemanticRight }
-  - { key: E, mode: Vi, action: SemanticRightEnd }
-  - { key: B, mods: Shift, mode: Vi, action: WordLeft }
-  - { key: W, mods: Shift, mode: Vi, action: WordRight }
-  - { key: E, mods: Shift, mode: Vi, action: WordRightEnd }
-  - { key: Key5, mods: Shift, mode: Vi, action: Bracket }
-  - { key: Slash, mode: Vi, action: SearchForward }
-  - { key: Slash, mods: Shift, mode: Vi, action: SearchBackward }
-  - { key: N, mode: Vi, action: SearchNext }
-  - { key: N, mods: Shift, mode: Vi, action: SearchPrevious }
 
 # Colors (converted from praveen.itermcolors)
 colors:
