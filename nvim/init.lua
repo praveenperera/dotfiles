@@ -6,7 +6,6 @@ local treesitter = require("user.config.treesitter")
 local rust_tools = require("user.config.rust_tools")
 local copilot = require("user.config.copilot")
 local mason_lspconfig = require("user.config.mason_lspconfig")
-local ui = require("astronvim.utils.ui")
 local toggleterm = require("user.config.toggleterm")
 
 local config = {
@@ -77,7 +76,9 @@ local config = {
 		servers        = {},
 		skip_setup     = {},
 		setup_handlers = {
-			rust_analyzer = function(_, opts) require("rust-tools").setup { server = opts } end
+			rust_analyzer = function(client, opts)
+				require("rust-tools").setup(rust_tools.config(client, { server = opts }))
+			end
 		},
 		formatting     = {
 			format_on_save = {
@@ -279,11 +280,7 @@ local config = {
 			opts = neotree.config,
 		},
 		{ "jose-elias-alvarez/typescript.nvim", event = "BufRead *.ts" },
-		{
-			"simrat39/rust-tools.nvim",
-			event = "User AstroLspSetup",
-			opts = rust_tools.config
-		},
+		{ "simrat39/rust-tools.nvim" },
 		{
 			"williamboman/mason-lspconfig.nvim",
 			opts = mason_lspconfig.config
@@ -295,9 +292,9 @@ local config = {
 			event = "BufRead Cargo.toml",
 			opts = {}
 		},
-		{ "nvim-treesitter/nvim-treesitter",    opts = treesitter.config },
-		{ "ThePrimeagen/vim-be-good",           cmd = "VimBeGood" },
-		{ "towolf/vim-helm",                    event = { "BufRead *.yaml", "BufRead *.tpl" } },
+		{ "nvim-treesitter/nvim-treesitter", opts = treesitter.config },
+		{ "ThePrimeagen/vim-be-good",        cmd = "VimBeGood" },
+		{ "towolf/vim-helm",                 event = { "BufRead *.yaml", "BufRead *.tpl" } },
 		{ "folke/neodev.nvim" },
 		{
 			'rust-sailfish/sailfish',
