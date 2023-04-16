@@ -3,7 +3,7 @@ local M = {}
 M.config = function(_, opts)
     opts.tools = {
         inlay_hints = {
-            auto = false,
+            auto = true,
             only_current_line = true
         }
     }
