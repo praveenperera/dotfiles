@@ -65,36 +65,24 @@ window:
 
 # Font configuration
 font:
-  # normal:
-  #   family: JetBrainsMono Nerd Font
-  #   style: Regular
-  #
-  # bold:
-  #   family: JetBrainsMono Nerd Font
-  #   style: Bold
-  #
-  # italic:
-  #   family: JetBrainsMono Nerd Font
-  #   style: Italic
-  
   normal:
-    family: OperatorMono Nerd Font
-    style: Book
+    family: JetBrainsMono Nerd Font
+    style: Regular
 
   bold:
-    family: OperatorMono Nerd Font
+    family: JetBrainsMono Nerd Font
     style: Bold
 
   italic:
-    family: OperatorMono Nerd Font
+    family: JetBrainsMono Nerd Font
     style: Italic
-  #
+  
   # Bold italic font face
   #bold_italic:
   # Font family
 
   # Point size
-  size: 12
+  size: 11
 
 # Setup some amazing custom key bindings here - Best thing is you can setup key bindings
 # using Mac's 'command' to control your tmux.
