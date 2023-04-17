@@ -82,7 +82,7 @@ font:
   # Font family
 
   # Point size
-  size: 11
+  size: 11.5
 
 # Setup some amazing custom key bindings here - Best thing is you can setup key bindings
 # using Mac's 'command' to control your tmux.
