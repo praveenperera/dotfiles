@@ -228,6 +228,7 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
 fn map_brew_tool_names_to_nix(tool_name: &str) -> &str {
     match tool_name {
         "git-delta" => "delta",
+        "sk" => "skim",
         other => other,
     }
 }
