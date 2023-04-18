@@ -64,8 +64,8 @@ const BREW_CASKS: &[&str] = &[
 ];
 
 const LINUX_TOOLS: &[&str] = &[
-    "pkg-config",
     "libssl-dev",
+    "pkg-config",
     "xsel",
     "ca-certificates",
     "curl",
