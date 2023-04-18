@@ -187,7 +187,7 @@ export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/Current
 <% } %>
 
 <% if os == Os::Linux { %>
-export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig
+export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 <% } %>
 
 TERM=xterm-256color
