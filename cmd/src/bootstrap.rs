@@ -229,6 +229,7 @@ fn map_brew_tool_names_to_nix(tool_name: &str) -> &str {
     match tool_name {
         "git-delta" => "delta",
         "sk" => "skim",
+        "gpg" => "gnupg",
         other => other,
     }
 }
