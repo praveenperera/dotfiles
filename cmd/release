@@ -2,6 +2,6 @@
 
 cargo build --release
 
-[[ -f /usr/local/bin/cmd ]] || rm -rf /usr/local/bin/cmd
+[ -f /usr/local/bin/cmd ] || rm -rf /usr/local/bin/cmd
 
 sudo cp target/release/cmd /usr/local/bin/cmd
