@@ -197,6 +197,9 @@ fi
 # zsh plugins
 source $HOME/.zsh_plugins.sh
 
+# nix env
+source $HOME/.nix-profile/etc/profile.d/nix.sh
+
 # zsh-history-substring-search
 bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down
