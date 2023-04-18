@@ -6,7 +6,8 @@ use eyre::{eyre, Result};
 use std::{env, path::PathBuf};
 use xshell::Shell;
 
-const TOOLS: &[(&str, fn(&Shell) -> Result<()>)] = &[("cmd", cmd::run)];
+pub type Tool = (&'static str, fn(&Shell) -> Result<()>);
+const TOOLS: &[Tool] = &[("cmd", cmd::run)];
 
 pub fn dotfiles_dir() -> PathBuf {
     let home = env::var("HOME").expect("HOME env var must be set");

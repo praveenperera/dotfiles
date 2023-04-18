@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-use crate::bootstrap;
+use crate::{bootstrap, Tool};
 use eyre::{eyre, Result};
 use xshell::Shell;
 
-const TOOLS: &[(&str, fn(&Shell) -> Result<()>)] = &[("bootstrap", bootstrap::run)];
+const TOOLS: &[Tool] = &[("bootstrap", bootstrap::run)];
 
 pub fn run(_sh: &Shell) -> Result<()> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
