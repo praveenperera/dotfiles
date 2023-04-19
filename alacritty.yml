@@ -139,7 +139,7 @@ key_bindings:
   - { key: L, mods: Command, chars: "\x02k" } # mapped to CNTRL-K
 
   # CMD ,
-  - { key: Comma, mods: Command, chars: "\x02," } # rename window
+  - { key: Comma, mods: Command, chars: "\x14r" } # rename window
 
 # Colors (converted from praveen.itermcolors)
 colors:
