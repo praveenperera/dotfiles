@@ -87,6 +87,7 @@ const CARGO_PLUGINS: &[&str] = &[
 const DOTFILES: &[&str] = &[
     "zshrc",
     "gitconfig",
+    "wezterm.lua",
     "zsh_plugins.sh",
     "gitignore",
     "direnvrc",
