@@ -186,6 +186,14 @@ export ERL_AFLAGS="-kernel shell_history enabled"
 export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/Current/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 <% } %>
 
+<% if os == Os::Linux { %>
+# pkg config
+export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+
+# nix env
+source $HOME/.nix-profile/etc/profile.d/nix.sh
+<% } %>
+
 TERM=xterm-256color
 
 # kubectl autocompletions

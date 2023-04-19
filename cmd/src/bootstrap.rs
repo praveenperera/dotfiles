@@ -65,6 +65,7 @@ const BREW_CASKS: &[&str] = &[
 
 const LINUX_TOOLS: &[&str] = &[
     "libssl-dev",
+    "pkg-config",
     "xsel",
     "ca-certificates",
     "curl",
@@ -113,8 +114,10 @@ pub fn run(sh: &Shell) -> Result<()> {
             let nix_tools = TOOLS
                 .iter()
                 .filter(|tool| !LINUX_TOOLS.contains(tool))
+                .map(|tool| map_brew_tool_names_to_nix(tool))
                 .map(|tool| format!("nixpkgs.{tool}"))
                 .collect::<Vec<_>>();
+
             println!("{}", "installing tools using nix".green());
             cmd!(sh, "nix-env -iA").args(nix_tools).run()?;
 
@@ -167,7 +170,7 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     }
 
     for (path, target) in path_and_target.iter() {
-        sh.remove_path(&target)?;
+        sh.remove_path(target)?;
         cmd!(sh, "ln -s {path} {target}").run()?;
     }
 
@@ -221,6 +224,15 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
     cmd!(sh, "brew autoremove").run()?;
 
     Ok(())
+}
+
+fn map_brew_tool_names_to_nix(tool_name: &str) -> &str {
+    match tool_name {
+        "git-delta" => "delta",
+        "sk" => "skim",
+        "gpg" => "gnupg",
+        other => other,
+    }
 }
 
 fn create_and_run_file(sh: &Shell, contents: &str, file: &str) -> Result<()> {
