@@ -51,7 +51,7 @@ export SAVEHIST=2000
 
 function tmuxSessionSwitch() {
   session=$(tmux list-windows -a | fzf | sed 's/: .*//g')
-  tmux switch-client -t "$session"
+  tmux attach -t "$session"
 }
 
 <% if os == Os::MacOS { %>

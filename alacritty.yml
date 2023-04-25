@@ -140,6 +140,7 @@ key_bindings:
 
   # CMD ,
   - { key: Comma, mods: Command, chars: "\x02," } # rename window
+  - { key: Period, mods: Command, chars: "\x02$" } # rename session
 
 # Colors (converted from praveen.itermcolors)
 colors:
