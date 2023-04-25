@@ -98,12 +98,6 @@ const DOTFILES: &[&str] = &[
 const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm"];
 
 pub fn run(sh: &Shell) -> Result<()> {
-    let path = crate::dotfiles_dir().join("zshrc");
-    let zshrc = Zshrc { os: Os::current() };
-
-    println!("writing zshrc to {}", path.display().to_string().green());
-    sh.write_file(&path, zshrc.render_once()?)?;
-
     // install rust components
     cmd!(sh, "rustup component add rustfmt clippy rust-analyzer").run()?;
 
@@ -127,11 +121,26 @@ pub fn run(sh: &Shell) -> Result<()> {
             cmd!(sh, "cargo install").args(CARGO_PLUGINS).run()?;
         }
         Os::MacOS => {
-            let osx_defaults = OsxDefaults {}.render_once()?;
-            create_and_run_file(sh, &osx_defaults, "osx_defaults.zsh")?;
-
             install_brew_and_tools(sh)?;
         }
+    }
+
+    // run config
+    config(sh)?;
+
+    Ok(())
+}
+
+pub fn config(sh: &Shell) -> Result<()> {
+    let path = crate::dotfiles_dir().join("zshrc");
+    let zshrc = Zshrc { os: Os::current() };
+
+    println!("writing zshrc to {}", path.display().to_string().green());
+    sh.write_file(&path, zshrc.render_once()?)?;
+
+    if let Os::MacOS = Os::current() {
+        let osx_defaults = OsxDefaults {}.render_once()?;
+        create_and_run_file(sh, &osx_defaults, "osx_defaults.zsh")?;
     }
 
     // setup dotfiles and config dirs
