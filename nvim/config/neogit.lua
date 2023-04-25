@@ -1,11 +1,15 @@
-local default = {}
+local M = {}
 
-local function config()
+local function config(_, _)
     return {
         disable_commit_confirmation = true,
         disable_context_highlighting = false,
+        auto_refresh = true,
+        integrations = {
+            diffview = true,
+        },
     }
 end
 
-default.config = config
-return default
+M.config = config
+return M
