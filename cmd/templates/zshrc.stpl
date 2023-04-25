@@ -18,7 +18,7 @@ alias gcch="git rev-parse HEAD"
 
 # zellij
 alias zz=zellij
-alias x=zellij-runner
+alias x=tmuxSessionSwitch
 
 # kubernetes
 alias kcg="k config current-context"
@@ -48,6 +48,11 @@ export SHELL=$(which zsh)
 export HISTSIZE=2000
 export SAVEHIST=2000
 [[ -n $HISTFILE ]] || export HISTFILE=~/.zsh_history
+
+function tmuxSessionSwitch() {
+  session=$(tmux list-windows -a | fzf | sed 's/: .*//g')
+  tmux switch-client -t "$session"
+}
 
 <% if os == Os::MacOS { %>
 # subl
@@ -179,7 +184,6 @@ export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 
 # Enable history in iex through Erlang(OTP)
 export ERL_AFLAGS="-kernel shell_history enabled"
-
 
 <% if os == Os::MacOS { %>
 # gstreamer
