@@ -1,0 +1,11 @@
+
+#!/bin/sh
+
+set -e
+
+cd cmd
+sudo ./release
+
+cmd config
+
+exec zsh
