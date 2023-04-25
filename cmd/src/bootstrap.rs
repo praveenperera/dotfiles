@@ -82,6 +82,7 @@ const CARGO_PLUGINS: &[&str] = &[
     "cargo-edit",
     "cargo-udeps",
     "zellij-runner",
+    "twm",
 ];
 
 const DOTFILES: &[&str] = &[
@@ -94,7 +95,7 @@ const DOTFILES: &[&str] = &[
     "alacritty.yml",
 ];
 
-const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij"];
+const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm"];
 
 pub fn run(sh: &Shell) -> Result<()> {
     let path = crate::dotfiles_dir().join("zshrc");
