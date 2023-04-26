@@ -1,16 +1,16 @@
-local default = {}
+local M = {}
 
-local function config()
-    return {
-        ensure_installed = {
-            "rust_analyzer",
-            "lua_ls",
-            "tsserver",
-            "tflint",
-            "tailwindcss",
-        },
+local function config(_, opts)
+    opts.ensure_installed = {
+        "rust_analyzer",
+        "lua_ls",
+        "tsserver",
+        "tflint",
+        "tailwindcss",
     }
+
+    return opts
 end
 
-default.config = config
-return default
+M.config = config
+return M
