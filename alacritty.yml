@@ -102,8 +102,6 @@ key_bindings:
 
   - { key: RBracket, mods: Alt, chars: "\x1b]" }
   - { key: LBracket, mods: Alt, chars: "\x1b[" }
-  - { key: Right, mods: Alt, chars: "\x1BF" }
-  - { key: Left, mods: Alt, chars: "\x1BB" }
 
   # switch tabs with zellij using tmux mode
   - { key: Key1, mods: Command, chars: "\x021" }

@@ -220,9 +220,9 @@ bindkey "^R" history-incremental-pattern-search-backward
 bindkey "[D" backward-word
 bindkey "[C" forward-word
 
-# opt-left arrow and opt-right arrow move by word
-bindkey ";3C" forward-word
-bindkey ";3D" backward-word
+# option + left/right arrow to move by word
+bindkey '^[[1;3C' forward-word
+bindkey '^[[1;3D' backward-word
 
 # mcfly
 eval "$(mcfly init zsh)"
