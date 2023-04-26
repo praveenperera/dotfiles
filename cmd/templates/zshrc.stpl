@@ -198,7 +198,7 @@ export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig${PKG_CONFIG_PATH:+:$
 source $HOME/.nix-profile/etc/profile.d/nix.sh
 <% } %>
 
-TERM=screen-256color
+export TERM=screen-256color
 
 # kubectl autocompletions
 if [ $commands[kubectl] ]; then

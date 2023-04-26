@@ -7,8 +7,8 @@ local function config()
             "lua_ls",
             "tsserver",
             "tflint",
-            "tailwindcss"
-        }
+            "tailwindcss",
+        },
     }
 end
 

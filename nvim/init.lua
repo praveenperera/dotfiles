@@ -76,6 +76,10 @@ local config = {
         servers = {},
         skip_setup = {},
         setup_handlers = {
+            tsserver = function(_, opts)
+                require("typescript").setup({ server = opts })
+            end,
+
             rust_analyzer = function(client, opts)
                 require("rust-tools").setup(
                     rust_tools.config(client, { server = opts })
@@ -385,7 +389,10 @@ local config = {
             },
             opts = neotree.config,
         },
-        { "jose-elias-alvarez/typescript.nvim", event = "BufRead *.ts" },
+        {
+            "jose-elias-alvarez/typescript.nvim",
+            event = "BufRead *.ts",
+        },
         { "simrat39/rust-tools.nvim" },
         {
             "williamboman/mason-lspconfig.nvim",
