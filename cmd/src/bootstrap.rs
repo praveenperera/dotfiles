@@ -185,17 +185,31 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
         cmd!(sh, "ln -s {path} {target}").run()?;
     }
 
-    install_neovim(sh, home)?;
+    install_tpm(sh, &home)?;
+    install_neovim(sh, &home)?;
 
     Ok(())
 }
 
-fn install_neovim(sh: &Shell, home: PathBuf) -> Result<()> {
+fn install_tpm(sh: &Shell, home: &PathBuf) -> Result<()> {
+    let target = home.join(".tmux/plugins/tpm");
+
+    if !sh.path_exists(&target) {
+        println!("{}", "tmux package manager not foud".blue());
+        println!("{}", "install tmux package manager (TPM)".green());
+
+        cmd!(sh, "git clone https://github.com/tmux-plugins/tpm {target}").run()?;
+    };
+
+    Ok(())
+}
+
+fn install_neovim(sh: &Shell, home: &PathBuf) -> Result<()> {
     let target = home.join(".config/nvim");
     let path = crate::dotfiles_dir().join("nvim");
 
     if !sh.path_exists(&target) {
-        println!("{}", "neovim config dir not found".red());
+        println!("{}", "neovim config dir not found".blue());
         println!("{}", "setting up neovim".green());
 
         cmd!(
@@ -212,7 +226,7 @@ fn install_neovim(sh: &Shell, home: PathBuf) -> Result<()> {
 
 fn install_brew_and_tools(sh: &Shell) -> Result<()> {
     if !command_exists(sh, "brew") {
-        println!("{} {}", "brew not found".red(), "installing...".green());
+        println!("{} {}", "brew not found".blue(), "installing...".green());
 
         cmd!(sh, "/bin/bash -c '$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'")
         .run()?;
