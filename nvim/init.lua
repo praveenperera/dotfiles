@@ -389,10 +389,7 @@ local config = {
             },
             opts = neotree.config,
         },
-        {
-            "jose-elias-alvarez/typescript.nvim",
-            event = "BufRead *.ts",
-        },
+        { "jose-elias-alvarez/typescript.nvim" },
         { "simrat39/rust-tools.nvim" },
         {
             "williamboman/mason-lspconfig.nvim",
