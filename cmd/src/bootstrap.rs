@@ -35,6 +35,7 @@ const TOOLS: &[&str] = &[
     "starship",
     "sk",
     "tmux",
+    "fnm",
     "bottom",
     "htop",
     "exa",
