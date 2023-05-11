@@ -108,7 +108,10 @@ pub fn run(sh: &Shell) -> Result<()> {
         Os::Linux => {
             cmd!(sh, "sudo apt-get update").run()?;
             println!("{}", "installing linux tools".green());
-            cmd!(sh, "sudo apt-get install").args(LINUX_TOOLS).run()?;
+            cmd!(sh, "sudo apt-get install")
+                .args(LINUX_TOOLS)
+                .arg("-y")
+                .run()?;
 
             let nix_tools = TOOLS
                 .iter()
