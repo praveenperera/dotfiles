@@ -3,6 +3,11 @@
 # exit on error
 set -e
 
+# Install nix
+if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]; then
+    curl -L https://nixos.org/nix/install | sh
+fi
+
 # unset RUSTC_WRAPPER if sccache is not installed
 if [ ! -x "$(command -v sccache)" ]; then
     unset RUSTC_WRAPPER
@@ -17,11 +22,6 @@ if [ ! -x "$(command -v cargo)" ]; then
     sh rustup-init.sh -y --no-modify-path --default-toolchain stable
     rm rustup-init.sh
     . $HOME/.cargo/env
-fi
-
-# Install nix
-if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]; then
-    curl -L https://nixos.org/nix/install | sh
 fi
 
 cd cmd

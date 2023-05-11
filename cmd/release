@@ -1,5 +1,6 @@
 #!/bin/sh
 
+. $HOME/.cargo/env
 cargo build --release
 
 [ -f /usr/local/bin/cmd ] || rm -rf /usr/local/bin/cmd
