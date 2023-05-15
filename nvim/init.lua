@@ -357,6 +357,7 @@ local config = {
                 require("leap").add_default_mappings()
             end,
         },
+        { "tpope/vim-abolish",      event = "BufRead" },
         { "tpope/vim-surround",     event = "BufRead" },
         { "mg979/vim-visual-multi", event = "BufRead" },
         {
@@ -430,6 +431,20 @@ local config = {
                 "SudoWrite",
                 "SudoEdit",
             },
+        },
+        {
+            "ray-x/go.nvim",
+            dependencies = {
+                "ray-x/guihua.lua",
+                "neovim/nvim-lspconfig",
+                "nvim-treesitter/nvim-treesitter",
+            },
+            config = function()
+                require("go").setup()
+            end,
+            event = { "CmdlineEnter" },
+            ft = { "go", "gomod" },
+            build = ':lua require("go.install").update_all_sync()', -- if you need to install/update all binaries
         },
     },
     -- LuaSnip Options
