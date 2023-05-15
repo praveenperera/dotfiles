@@ -38,7 +38,6 @@
   co = checkout
   ec = config --global -e
   up = !git pull --rebase --prune $@ && git submodule update --init --recursive
-  cb = !git branch --show-current | tr -d '\n'
   cch = !git rev-parse HEAD | tr -d '\n'
   bd = branch -D 
   rm = branch -D 
