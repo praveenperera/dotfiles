@@ -43,6 +43,7 @@
   rm = branch -D 
   rn = branch -m
   deploy = !git push && git push dokku master
+  cb = !git branch --show-current | tr -d '\n'
   cob = checkout -b
   cms = !git add -A && git commit -S -m
   cm = !git add -A && git commit -m
