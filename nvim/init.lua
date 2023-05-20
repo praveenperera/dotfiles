@@ -276,6 +276,8 @@ local config = {
                 end,
                 desc = "Search project symbols",
             },
+            --
+            ["<leader>-"] = { function() require("oil").open() end, desc = "Open parent directory" },
             -- undo
             ["<leader>U"] = { vim.cmd.UndotreeToggle, desc = "Undo tree" },
             -- hardmode (no arrows)
@@ -305,13 +307,14 @@ local config = {
     -- Configure plugins
     plugins = {
         { "AstroNvim/astrocommunity" },
+        { "stevearc/oil.nvim",       opts = { delete_to_trash = true } },
         {
             "ThePrimeagen/harpoon",
             opts = {},
             event = "User AstroFile",
         },
-        { "mbbill/undotree",         event = "User AstroFile" },
-        { "windwp/nvim-spectre",     event = "BufRead" },
+        { "mbbill/undotree",     event = "User AstroFile" },
+        { "windwp/nvim-spectre", event = "BufRead" },
         {
             "folke/todo-comments.nvim",
             dependencies = "nvim-lua/plenary.nvim",
