@@ -80,12 +80,13 @@ const LINUX_TOOLS: &[&str] = &[
     "python3-setuptools",
 ];
 
-const CARGO_PLUGINS: &[&str] = &[
+const CARGO_PKGS: &[&str] = &[
     "cargo-watch",
     "cargo-sweep",
     "cargo-edit",
     "cargo-udeps",
     "zellij-runner",
+    "bacon",
     "twm",
 ];
 
@@ -125,7 +126,7 @@ pub fn run(sh: &Shell) -> Result<()> {
             cmd!(sh, "nix-env -iA").args(nix_tools).run()?;
 
             println!("{}", "installing cargo plugins".green());
-            cmd!(sh, "cargo install").args(CARGO_PLUGINS).run()?;
+            cmd!(sh, "cargo install").args(CARGO_PKGS).run()?;
         }
         Os::MacOS => {
             install_brew_and_tools(sh)?;
@@ -250,7 +251,7 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
 
     println!("{}", "installing cargo plugins".green());
     std::env::set_var("RUSTC_WRAPPER", "sccache");
-    cmd!(sh, "cargo install").args(CARGO_PLUGINS).run()?;
+    cmd!(sh, "cargo install").args(CARGO_PKGS).run()?;
 
     cmd!(sh, "brew cleanup").run()?;
     cmd!(sh, "brew autoremove").run()?;
