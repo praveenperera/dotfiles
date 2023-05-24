@@ -226,7 +226,7 @@ fn install_neovim(sh: &Shell, home: &PathBuf) -> Result<()> {
         )
         .run()?;
 
-        cmd!(sh, "ln -s {path} {target}/user").run()?;
+        cmd!(sh, "ln -s {path} {target}/lua/user").run()?;
     };
 
     Ok(())
