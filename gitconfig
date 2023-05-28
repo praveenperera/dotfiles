@@ -42,6 +42,7 @@
   bd = branch -D 
   rm = branch -D 
   rn = branch -m
+  upstream = !git branch --set-upstream-to=origin/$(git cb)
   deploy = !git push && git push dokku master
   cb = !git branch --show-current | tr -d '\n'
   cob = checkout -b
