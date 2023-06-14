@@ -473,7 +473,10 @@ local config = {
         },
     },
     -- Run after everything is loaded
-    polish = function() end,
+    polish = function()
+        -- Set filetype for terraform files
+        vim.cmd("au BufRead,BufNewFile *.tfvars set filetype=terraform")
+    end,
 }
 
 return config
