@@ -193,6 +193,10 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
         cmd!(sh, "ln -s {path} {target}").run()?;
     }
 
+    // setup up paths
+    cmd!(sh, "source {home}/.cargo/env").run()?;
+    cmd!(sh, "source {home}.nix-profile/etc/profile.d/nix.sh").run()?;
+
     install_tpm(sh, &home)?;
     install_neovim(sh, &home)?;
 
