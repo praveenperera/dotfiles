@@ -251,7 +251,12 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
 
     println!("{}", "installing cargo plugins".green());
     std::env::set_var("RUSTC_WRAPPER", "sccache");
-    cmd!(sh, "cargo install").args(CARGO_PKGS).run()?;
+
+    // install cargo-binstall
+    cmd!(sh, "cargo install cargo-binstall").run()?;
+
+    // install cargo packages  using cargo-bininstall
+    cmd!(sh, "cargo binstall").args(CARGO_PKGS).run()?;
 
     cmd!(sh, "brew cleanup").run()?;
     cmd!(sh, "brew autoremove").run()?;

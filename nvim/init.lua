@@ -11,15 +11,15 @@ local toggleterm = require("user.config.toggleterm")
 
 local config = {
     updater = {
-        remote = "origin", -- remote to use
-        channel = "stable", -- "stable" or "nightly"
-        version = "latest", -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
-        commit = nil, -- commit hash (NIGHTLY ONLY)
-        pin_plugins = nil, -- nil, true, false (nil will pin plugins on stable only)
-        skip_prompts = false, -- skip prompts about breaking changes
+        remote = "origin",     -- remote to use
+        channel = "stable",    -- "stable" or "nightly"
+        version = "latest",    -- "latest", tag name, or regex search like "v1.*" to only do updates before v2 (STABLE ONLY)
+        commit = nil,          -- commit hash (NIGHTLY ONLY)
+        pin_plugins = nil,     -- nil, true, false (nil will pin plugins on stable only)
+        skip_prompts = false,  -- skip prompts about breaking changes
         show_changelog = true, -- show the changelog after performing an update
-        auto_reload = false, -- automatically reload and sync packer after a successful update
-        auto_quit = false, -- automatically quit the current session after a successful update
+        auto_reload = false,   -- automatically reload and sync packer after a successful update
+        auto_quit = false,     -- automatically quit the current session after a successful update
     },
     colorscheme = "astrotheme",
     options = {
@@ -55,15 +55,15 @@ local config = {
             autochdir = false,
         },
         g = {
-            mapleader = " ", -- sets vim.g.mapleader
-            autoformat_enabled = true, -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
-            smp_enabled = true, -- enable completion at start
-            autopairs_enabled = true, -- enable autopairs at start
-            diagnostics_enabled = true, -- enable diagnostics at start
+            mapleader = " ",                   -- sets vim.g.mapleader
+            autoformat_enabled = true,         -- enable or disable auto formatting at start (lsp.formatting.format_on_save must be enabled)
+            smp_enabled = true,                -- enable completion at start
+            autopairs_enabled = true,          -- enable autopairs at start
+            diagnostics_enabled = true,        -- enable diagnostics at start
             status_diagnostics_enabled = true, -- enable diagnostics in statusline
-            icons_enabled = true, -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
-            ui_notifications_enabled = true, -- disable notifications when toggling UI elements
-            heirline_bufferline = false, -- enable new heirline based bufferline (requires :PackerSync after changing)
+            icons_enabled = true,              -- disable icons in the UI (disable if no nerd font is available, requires :PackerSync after changing)
+            ui_notifications_enabled = true,   -- disable notifications when toggling UI elements
+            heirline_bufferline = false,       -- enable new heirline based bufferline (requires :PackerSync after changing)
         },
     },
     -- Diagnostics configuration (for vim.diagnostics.config({...})) when diagnostics are on
@@ -92,7 +92,7 @@ local config = {
                 allow_filetypes = {},
                 ignore_filetypes = {},
             },
-            disabled = { -- disable formatting capabilities for the listed language servers },
+            disabled = {           -- disable formatting capabilities for the listed language servers },
                 timeout_ms = 1000, -- default format timeout
             },
             mappings = {
@@ -313,13 +313,13 @@ local config = {
     plugins = {
         { "christoomey/vim-tmux-navigator", event = "User AstroFile" },
         { "AstroNvim/astrocommunity" },
-        { "stevearc/oil.nvim", opts = { delete_to_trash = true } },
+        { "stevearc/oil.nvim",              opts = { delete_to_trash = true } },
         {
             "ThePrimeagen/harpoon",
             opts = {},
             event = "User AstroFile",
         },
-        { "mbbill/undotree", event = "User AstroFile" },
+        { "mbbill/undotree",     event = "User AstroFile" },
         { "windwp/nvim-spectre", event = "BufRead" },
         {
             "folke/todo-comments.nvim",
@@ -333,14 +333,14 @@ local config = {
                 "TodoTelescope",
             },
         },
-        { "wakatime/vim-wakatime", event = "BufRead" },
+        { "wakatime/vim-wakatime",      event = "BufRead" },
         {
             "sindrets/diffview.nvim",
             dependencies = "nvim-lua/plenary.nvim",
             cmd = { "DiffviewOpen", "DiffviewRefresh" },
         },
         { "kazhala/close-buffers.nvim", cmd = { "BDelete", "BWipeout" } },
-        { "kamykn/spelunker.vim", event = "BufRead" },
+        { "kamykn/spelunker.vim",       event = "BufRead" },
         {
             "AstroNvim/astrotheme",
             opts = theme.config,
@@ -366,8 +366,8 @@ local config = {
                 require("leap").add_default_mappings()
             end,
         },
-        { "tpope/vim-abolish", event = "BufRead" },
-        { "tpope/vim-surround", event = "BufRead" },
+        { "tpope/vim-abolish",      event = "BufRead" },
+        { "tpope/vim-surround",     event = "BufRead" },
         { "mg979/vim-visual-multi", event = "BufRead" },
         {
             "xbase-lab/xbase",
@@ -413,7 +413,7 @@ local config = {
             opts = {},
         },
         { "nvim-treesitter/nvim-treesitter", opts = treesitter.config },
-        { "ThePrimeagen/vim-be-good", cmd = "VimBeGood" },
+        { "ThePrimeagen/vim-be-good",        cmd = "VimBeGood" },
         {
             "towolf/vim-helm",
             event = { "BufRead *.yaml", "BufRead *.tpl" },
