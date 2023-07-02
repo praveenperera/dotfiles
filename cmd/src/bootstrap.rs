@@ -181,6 +181,11 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
         path_and_target.push((path, target));
     }
 
+    let config_dir = home.join(".config");
+    if !sh.path_exists(&config_dir) {
+        sh.create_dir(&config_dir)?;
+    }
+
     for filename in CONFIG_FILE_OR_DIR {
         let path = crate::dotfiles_dir().join("config").join(filename);
         let target = home.join(format!(".config/{filename}"));
@@ -196,11 +201,6 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     // setup up paths
     cmd!(sh, "source {home}/.cargo/env").run()?;
     cmd!(sh, "source {home}.nix-profile/etc/profile.d/nix.sh").run()?;
-
-    let config_dir = home.join(".config");
-    if !sh.path_exists(&config_dir) {
-        sh.create_dir(&config_dir)?;
-    }
 
     install_tpm(sh, &home)?;
     install_neovim(sh, &home)?;
