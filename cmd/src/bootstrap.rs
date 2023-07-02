@@ -98,6 +98,7 @@ const DOTFILES: &[&str] = &[
     "gitignore",
     "direnvrc",
     "alacritty.yml",
+    "tmux.conf",
 ];
 
 const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm"];
