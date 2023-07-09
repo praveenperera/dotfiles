@@ -114,6 +114,9 @@ key_bindings:
   - { key: Key8, mods: Command, chars: "\x028" }
   - { key: Key9, mods: Command, chars: "\x029" }
 
+  # toggle vim mode
+  -  {mods: Command, key: Return, chars: "\x02[" }
+
     # shortcuts for tmux. the leader key is control-b (0x02)
   - { key: T, mods: Command, chars: "\x02c" } # new tab
   - { key: W, mods: Command, chars: "\x02x" } # close pane (kill)
