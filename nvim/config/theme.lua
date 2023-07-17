@@ -9,6 +9,9 @@ local function config(_, _)
                     fg = "#292929",
                     bg = "#f77977",
                 },
+                ["NeogitDiffAddHighlight"] = {
+                    fg = "#292929",
+                },
                 ["NeogitDiffDelete"] = { fg = "#292929", bg = "#f77977" },
                 ["SpelunkerSpellBad"] = { fg = "NONE", bg = "NONE" },
             },
