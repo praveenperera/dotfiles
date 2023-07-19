@@ -5,15 +5,12 @@ local function config(_, _)
         palette = "astrodark",
         highlights = {
             global = {
-                ["NeogitDiffDeleteHighlight"] = {
-                    fg = "#292929",
-                    bg = "#f77977",
-                },
-                ["NeogitDiffAddHighlight"] = {
-                    fg = "#292929",
-                },
-                ["NeogitDiffDelete"] = { fg = "#292929", bg = "#f77977" },
-                ["SpelunkerSpellBad"] = { fg = "NONE", bg = "NONE" },
+                modify_hl_groups = function(hl, _c)
+                    hl.NeogitDiffDeleteHighlight = { fg = "#292929", bg = "#f77977" }
+                    hl.NeogitDiffAddHighlight = { fg = "#292929" }
+                    hl.NeogitDiffDelete = { fg = "#292929", bg = "#f77977" }
+                    hl.SpelunkerSpellBad = { fg = "NONE", bg = "NONE" }
+                end,
             },
         },
     }
