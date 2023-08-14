@@ -412,6 +412,9 @@ local config = {
             event = "BufRead Cargo.toml",
             opts = {},
         },
+        -- { "HiPhish/jinja.vim",               event = { "BufRead *.j2", "BufRead *.jinja" } },
+        { "lepture/vim-jinja",               event = { "BufRead *.j2", "BufRead *.jinja", "BufRead *.html" } },
+        { "nvim-telescope/telescope.nvim",   opts = telescope.config },
         { "nvim-treesitter/nvim-treesitter", opts = treesitter.config },
         { "ThePrimeagen/vim-be-good",        cmd = "VimBeGood" },
         {
@@ -419,11 +422,6 @@ local config = {
             event = { "BufRead *.yaml", "BufRead *.tpl" },
         },
         { "folke/neodev.nvim" },
-        {
-            "rust-sailfish/sailfish",
-            rtp = "syntax/vim",
-            event = "BufRead *.stpl",
-        },
         {
             "tpope/vim-eunuch",
             cmd = {
@@ -476,6 +474,9 @@ local config = {
     polish = function()
         -- Set filetype for terraform files
         vim.cmd("au BufRead,BufNewFile *.tfvars set filetype=terraform")
+
+        -- Set filetype for jinja
+        vim.cmd("au BufNewFile,BufRead *.j2,*.jinja set ft=jinja")
     end,
 }
 
