@@ -412,7 +412,16 @@ local config = {
             end,
         },
         { "tpope/vim-abolish",      event = "BufRead" },
-        { "tpope/vim-surround",     event = "BufRead" },
+        {
+            "kylechui/nvim-surround",
+            version = "*", -- Use for stability; omit to use `main` branch for the latest features
+            event = "VeryLazy",
+            config = function()
+                require("nvim-surround").setup({
+                    -- Configuration here, or leave empty to use defaults
+                })
+            end
+        },
         { "mg979/vim-visual-multi", event = "BufRead" },
         {
             "xbase-lab/xbase",
@@ -456,6 +465,11 @@ local config = {
             dependencies = { "nvim-lua/plenary.nvim" },
             event = "BufRead Cargo.toml",
             opts = {},
+        },
+        {
+            "rust-sailfish/sailfish",
+            event = { "BufRead *.stpl" },
+            rtp = "syntax/vim"
         },
         -- { "HiPhish/jinja.vim",               event = { "BufRead *.j2", "BufRead *.jinja" } },
         { "lepture/vim-jinja",               event = { "BufRead *.j2", "BufRead *.jinja", "BufRead *.html" } },
