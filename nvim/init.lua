@@ -344,10 +344,8 @@ local config = {
         { "kevinhwang91/nvim-bqf",                   event = "VeryLazy",               opts = {} },
         { "nvim-treesitter/nvim-treesitter-context", event = "User AstroFile",         opts = treesitter_context.config, },
         { "christoomey/vim-tmux-navigator",          event = "User AstroFile" },
-        { "AstroNvim/astrocommunity" },
         { "stevearc/oil.nvim",                       opts = { delete_to_trash = true } },
-        { "ThePrimeagen/harpoon",                    opts = {},                        event = "User AstroFile", },
-        { "mbbill/undotree",                         event = "User AstroFile" },
+        { "ThePrimeagen/harpoon",                    event = "User AstroFile",         opts = {}, },
         {
             "folke/todo-comments.nvim",
             dependencies = "nvim-lua/plenary.nvim",
@@ -358,13 +356,9 @@ local config = {
                 "TodoTelescope",
             },
         },
-        { "wakatime/vim-wakatime",      event = "BufRead" },
-        { "sindrets/diffview.nvim", dependencies = "nvim-lua/plenary.nvim", cmd = { "DiffviewOpen", "DiffviewRefresh" },
-        },
-        { "kazhala/close-buffers.nvim", cmd = { "BDelete", "BWipeout" } },
-        { "kamykn/spelunker.vim",       event = "BufRead" },
-        { "AstroNvim/astrotheme", opts = theme.config,
-        },
+        { "wakatime/vim-wakatime", event = "BufRead" },
+        { "kamykn/spelunker.vim",  event = "BufRead" },
+        { "AstroNvim/astrotheme",  opts = theme.config, },
         { "rebelot/heirline.nvim", opts = heirline.config },
         { "nvim-lua/plenary.nvim" },
         {
@@ -399,17 +393,6 @@ local config = {
         },
         { "mg979/vim-visual-multi", event = "BufRead" },
         {
-            "xbase-lab/xbase",
-            run = "make install",
-            event = "BufRead *.swift",
-            opts = {},
-            dependencies = {
-                "nvim-lua/plenary.nvim",
-                "nvim-telescope/telescope.nvim",
-                "neovim/nvim-lspconfig",
-            },
-        },
-        {
             "akinsho/toggleterm.nvim",
             version = "*",
             opts = toggleterm.config,
@@ -430,10 +413,7 @@ local config = {
         },
         { "jose-elias-alvarez/typescript.nvim" },
         { "simrat39/rust-tools.nvim" },
-        {
-            "williamboman/mason-lspconfig.nvim",
-            opts = mason_lspconfig.config,
-        },
+        { "williamboman/mason-lspconfig.nvim", opts = mason_lspconfig.config },
         {
             "saecki/crates.nvim",
             version = "v0.3.0",
@@ -446,15 +426,11 @@ local config = {
             event = { "BufRead *.stpl" },
             rtp = "syntax/vim"
         },
-        -- { "HiPhish/jinja.vim",               event = { "BufRead *.j2", "BufRead *.jinja" } },
         { "lepture/vim-jinja",               event = { "BufRead *.j2", "BufRead *.jinja", "BufRead *.html" } },
         { "nvim-telescope/telescope.nvim",   opts = telescope.config },
         { "nvim-treesitter/nvim-treesitter", opts = treesitter.config },
         { "ThePrimeagen/vim-be-good",        cmd = "VimBeGood" },
-        {
-            "towolf/vim-helm",
-            event = { "BufRead *.yaml", "BufRead *.tpl" },
-        },
+        { "towolf/vim-helm",                 event = { "BufRead *.yaml", "BufRead *.tpl" } },
         { "folke/neodev.nvim" },
         {
             "tpope/vim-eunuch",
@@ -480,9 +456,7 @@ local config = {
                 "neovim/nvim-lspconfig",
                 "nvim-treesitter/nvim-treesitter",
             },
-            config = function()
-                require("go").setup()
-            end,
+            opts = {},
             event = { "CmdlineEnter" },
             ft = { "go", "gomod" },
             build = ':lua require("go.install").update_all_sync()', -- if you need to install/update all binaries
