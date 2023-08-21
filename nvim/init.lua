@@ -73,6 +73,51 @@ local config = {
     },
     -- Extend LSP configuration
     lsp = {
+        config = {
+            tailwindcss = function()
+                return {
+                    filetypes = { "html", "css", "scss", "javascript", "javascriptreact", "typescript",
+                        "typescriptreact", "vue", "jinja" },
+
+                    init_options = {
+                        userLanguages = {
+                            html = "html",
+                            css = "css",
+                            scss = "scss",
+                            javascript = "javascript",
+                            javascriptreact = "javascript",
+                            typescript = "typescript",
+                            typescriptreact = "typescript",
+                            vue = "vue",
+                            jinja = "html"
+                        },
+                    },
+                }
+            end,
+            emmet_language_server = function()
+                return {
+                    filetypes = { "css", "eruby", "html", "javascript", "javascriptreact", "less", "sass", "scss",
+                        "svelte", "pug", "typescriptreact", "vue", "jinja" },
+
+                    init_options = {
+                        --- @type table<string, any> https://docs.emmet.io/customization/preferences/
+                        preferences = {},
+                        --- @type "always" | "never" defaults to `"always"`
+                        showexpandedabbreviation = "always",
+                        --- @type boolean defaults to `true`
+                        showabbreviationsuggestions = true,
+                        --- @type boolean defaults to `false`
+                        showsuggestionsassnippets = false,
+                        --- @type table<string, any> https://docs.emmet.io/customization/syntax-profiles/
+                        syntaxprofiles = {},
+                        --- @type table<string, string> https://docs.emmet.io/customization/snippets/#variables
+                        variables = {},
+                        --- @type string[]
+                        excludelanguages = {},
+                    },
+                }
+            end,
+        },
         servers = {},
         skip_setup = {},
         setup_handlers = {
