@@ -356,6 +356,7 @@ local config = {
     },
     -- Configure plugins
     plugins = {
+        { "kevinhwang91/nvim-bqf" },
         { "christoomey/vim-tmux-navigator", event = "User AstroFile" },
         { "AstroNvim/astrocommunity" },
         { "stevearc/oil.nvim",              opts = { delete_to_trash = true } },
