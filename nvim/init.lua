@@ -150,24 +150,6 @@ local config = {
     -- Mapping data with "desc" stored directly by vim.keymap.set().
     mappings = {
         n = {
-            -- spectre
-            ["<leader>s"] = { name = "Find and Replace" },
-            ["<leader>sr"] = {
-                [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]],
-                desc = "Replace",
-            },
-            ["<leader>so"] = {
-                '<cmd>lua require("spectre").open()<CR>',
-                desc = "Open spectre",
-            },
-            ["<leader>sw"] = {
-                '<cmd>lua require("spectre").open_visual({select_word=true})<CR>',
-                desc = "Search current word",
-            },
-            ["<leader>sf"] = {
-                '<cmd>lua require("spectre").open_file_search({select_word=true})<CR>',
-                desc = "Search on current file",
-            },
             -- Harpoon
             ["<leader>h"] = { name = "Harpoon" },
             ["<leader>ha"] = {
@@ -351,11 +333,6 @@ local config = {
             ["<esc><esc>"] = { [[<C-\><C-n>]], desc = "Normal mode" },
         },
         v = {
-            ["<leader>s"] = { name = "Find and Replace" },
-            ["<leader>sw"] = {
-                '<cmd>lua require("spectre").open_visual({select_word=true})<CR>',
-                desc = "Search current word",
-            },
             ["<leader>d"] = { [["_d]], desc = "Delete without register" },
             -- move lines up and down like option arrows
             ["K"] = { ":m '<-2<CR>gv=gv", desc = "Move selection up" },
@@ -371,7 +348,6 @@ local config = {
         { "stevearc/oil.nvim",                       opts = { delete_to_trash = true } },
         { "ThePrimeagen/harpoon",                    opts = {},                        event = "User AstroFile", },
         { "mbbill/undotree",                         event = "User AstroFile" },
-        { "windwp/nvim-spectre",                     event = "BufRead" },
         {
             "folke/todo-comments.nvim",
             dependencies = "nvim-lua/plenary.nvim",
