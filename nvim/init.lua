@@ -8,6 +8,7 @@ local copilot = require("user.config.copilot")
 local theme = require("user.config.theme")
 local mason_lspconfig = require("user.config.mason_lspconfig")
 local toggleterm = require("user.config.toggleterm")
+local treesitter_context = require("user.config.treesitter_context")
 
 local config = {
     updater = {
@@ -363,40 +364,30 @@ local config = {
     },
     -- Configure plugins
     plugins = {
-        { "kevinhwang91/nvim-bqf" },
-        { "christoomey/vim-tmux-navigator", event = "User AstroFile" },
+        { "kevinhwang91/nvim-bqf",                   event = "VeryLazy",               opts = {} },
+        { "nvim-treesitter/nvim-treesitter-context", event = "User AstroFile",         opts = treesitter_context.config, },
+        { "christoomey/vim-tmux-navigator",          event = "User AstroFile" },
         { "AstroNvim/astrocommunity" },
-        { "stevearc/oil.nvim",              opts = { delete_to_trash = true } },
-        {
-            "ThePrimeagen/harpoon",
-            opts = {},
-            event = "User AstroFile",
-        },
-        { "mbbill/undotree",     event = "User AstroFile" },
-        { "windwp/nvim-spectre", event = "BufRead" },
+        { "stevearc/oil.nvim",                       opts = { delete_to_trash = true } },
+        { "ThePrimeagen/harpoon",                    opts = {},                        event = "User AstroFile", },
+        { "mbbill/undotree",                         event = "User AstroFile" },
+        { "windwp/nvim-spectre",                     event = "BufRead" },
         {
             "folke/todo-comments.nvim",
             dependencies = "nvim-lua/plenary.nvim",
             opts = {},
             event = "BufRead",
-            cmd = {
-                "TodoQuickFix",
-                "TodoLocList",
+            cmd = { "TodoQuickFix", "TodoLocList",
                 "TodoTrouble",
                 "TodoTelescope",
             },
         },
         { "wakatime/vim-wakatime",      event = "BufRead" },
-        {
-            "sindrets/diffview.nvim",
-            dependencies = "nvim-lua/plenary.nvim",
-            cmd = { "DiffviewOpen", "DiffviewRefresh" },
+        { "sindrets/diffview.nvim", dependencies = "nvim-lua/plenary.nvim", cmd = { "DiffviewOpen", "DiffviewRefresh" },
         },
         { "kazhala/close-buffers.nvim", cmd = { "BDelete", "BWipeout" } },
         { "kamykn/spelunker.vim",       event = "BufRead" },
-        {
-            "AstroNvim/astrotheme",
-            opts = theme.config,
+        { "AstroNvim/astrotheme", opts = theme.config,
         },
         { "rebelot/heirline.nvim", opts = heirline.config },
         { "nvim-lua/plenary.nvim" },
