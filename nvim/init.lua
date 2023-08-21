@@ -253,6 +253,13 @@ local config = {
                 end,
                 desc = "Go to file 6",
             },
+            -- Save All
+            ["<leader>W"] = {
+                function()
+                    vim.cmd("wa")
+                end,
+                desc = "Save all",
+            },
             -- quick save
             ["<C-s>"] = { "<cmd>w!<cr>", desc = "Save File" },
             -- window navigation
