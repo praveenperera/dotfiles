@@ -8,7 +8,7 @@ local copilot = require("user.config.copilot")
 local theme = require("user.config.theme")
 local mason_lspconfig = require("user.config.mason_lspconfig")
 local toggleterm = require("user.config.toggleterm")
-local treesitter_context = require("user.config.treesitter_context")
+-- local treesitter_context = require("user.config.treesitter_context")
 
 local config = {
     updater = {
@@ -341,11 +341,11 @@ local config = {
     },
     -- Configure plugins
     plugins = {
-        { "kevinhwang91/nvim-bqf",                   event = "VeryLazy",               opts = {} },
-        { "nvim-treesitter/nvim-treesitter-context", event = "User AstroFile",         opts = treesitter_context.config, },
-        { "christoomey/vim-tmux-navigator",          event = "User AstroFile" },
-        { "stevearc/oil.nvim",                       opts = { delete_to_trash = true } },
-        { "ThePrimeagen/harpoon",                    event = "User AstroFile",         opts = {}, },
+        { "kevinhwang91/nvim-bqf",          event = "VeryLazy",               opts = {} },
+        -- { "nvim-treesitter/nvim-treesitter-context", event = "User AstroFile",         opts = treesitter_context.config, },
+        { "christoomey/vim-tmux-navigator", event = "User AstroFile" },
+        { "stevearc/oil.nvim",              opts = { delete_to_trash = true } },
+        { "ThePrimeagen/harpoon",           event = "User AstroFile",         opts = {}, },
         {
             "folke/todo-comments.nvim",
             dependencies = "nvim-lua/plenary.nvim",
