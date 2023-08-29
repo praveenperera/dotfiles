@@ -7,6 +7,9 @@ local function config(_, opts)
         "tsserver",
         "tflint",
         "tailwindcss",
+        "pyre",
+        "pyright",
+        "gopls",
     }
 
     return opts
