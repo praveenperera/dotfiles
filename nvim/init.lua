@@ -5,9 +5,11 @@ local telescope = require("user.config.telescope")
 local treesitter = require("user.config.treesitter")
 local rust_tools = require("user.config.rust_tools")
 local copilot = require("user.config.copilot")
+local cmp = require("user.config.cmp")
 local theme = require("user.config.theme")
 local mason_lspconfig = require("user.config.mason_lspconfig")
 local toggleterm = require("user.config.toggleterm")
+
 -- local treesitter_context = require("user.config.treesitter_context")
 
 local config = {
@@ -98,7 +100,7 @@ local config = {
             emmet_language_server = function()
                 return {
                     filetypes = { "css", "eruby", "html", "javascript", "javascriptreact", "less", "sass", "scss",
-                        "svelte", "pug", "typescriptreact", "vue", "jinja" },
+                        "svelte", "pug", "typescriptreact", "vue", "jinja", "heex", "elixir" },
 
                     init_options = {
                         --- @type table<string, any> https://docs.emmet.io/customization/preferences/
@@ -342,6 +344,11 @@ local config = {
     -- Configure plugins
     plugins = {
         {
+            "hrsh7th/nvim-cmp",
+            dependencies = { "hrsh7th/cmp-emoji" },
+            opts = cmp.config,
+        },
+        {
             "ray-x/go.nvim",
             dependencies = { -- optional packages
                 "ray-x/guihua.lua",
@@ -362,11 +369,6 @@ local config = {
             build = function()
                 vim.cmd [[silent! GoInstallDeps]]
             end,
-            keys = {
-                { "<leader>lt",  desc = "Go Add Tags" },
-                { "<leader>ltj", "<cmd> GoTagAdd json <CR>", desc = "Add json struct tags" },
-                { "<leader>lty", "<cmd> GoTagAdd yaml <CR>", desc = "Add yaml struct tags" }
-            }
         },
         { "Vigemus/iron.nvim",              cmd = "IronRepl", },
         { "kevinhwang91/nvim-bqf",          event = "VeryLazy",               opts = {} },
@@ -446,7 +448,12 @@ local config = {
             version = "v0.3.0",
             dependencies = { "nvim-lua/plenary.nvim" },
             event = "BufRead Cargo.toml",
-            opts = {},
+            opts = {
+                null_ls = {
+                    enabled = true,
+                    name = "crates.nvim",
+                },
+            },
         },
         {
             "rust-sailfish/sailfish",
@@ -494,15 +501,6 @@ local config = {
         filetype_extend = {},
         vscode = {
             paths = {},
-        },
-    },
-    -- CMP Source Priorities
-    cmp = {
-        source_priority = {
-            nvim_lsp = 1000,
-            luasnip = 750,
-            buffer = 500,
-            path = 250,
         },
     },
     -- Run after everything is loaded

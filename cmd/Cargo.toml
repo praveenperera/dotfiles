@@ -8,14 +8,14 @@ edition = "2021"
 [dependencies]
 # error handling
 color-eyre = "0.6.2"
-eyre = "0.6.8"
+eyre = "0.6.8" 
 
 # cli
 xflags = "0.3.1"
-xshell = "0.2.3"
+xshell = "0.2.5"
 
 # terminal colors
-colored = "2.0.0"
+colored = "2.0.4"
 
 # templating 
-sailfish = "0.6.0"
+sailfish = "0.8.0"
