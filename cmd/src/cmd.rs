@@ -10,6 +10,14 @@ const TOOLS: &[Tool] = &[
     ("cfg", bootstrap::config),
 ];
 
+fn tools_str() -> String {
+    TOOLS
+        .into_iter()
+        .map(|(name, _run)| *name)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub fn run(_sh: &Shell) -> Result<()> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     let program: PathBuf = args.first().cloned().unwrap_or_default().into();
@@ -23,7 +31,12 @@ pub fn run(_sh: &Shell) -> Result<()> {
     let (_name, run) = TOOLS
         .iter()
         .find(|&&(name, _run)| name == program)
-        .ok_or_else(|| eyre!("unknown tool: `{program}`"))?;
+        .ok_or_else(|| {
+            eyre!(
+                "unknown tool: `{program}`, possible values are: {}",
+                tools_str()
+            )
+        })?;
 
     let sh = Shell::new()?;
     run(&sh)

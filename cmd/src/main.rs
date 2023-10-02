@@ -9,6 +9,14 @@ use xshell::Shell;
 pub type Tool = (&'static str, fn(&Shell) -> Result<()>);
 const TOOLS: &[Tool] = &[("cmd", cmd::run)];
 
+fn tools_str() -> String {
+    TOOLS
+        .into_iter()
+        .map(|(name, _run)| *name)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub fn dotfiles_dir() -> PathBuf {
     let home = env::var("HOME").expect("HOME env var must be set");
 
@@ -32,7 +40,12 @@ fn main() -> Result<()> {
     let (_name, run) = TOOLS
         .iter()
         .find(|&&(name, _run)| name == program)
-        .ok_or_else(|| eyre!("unknown tool: `{program}`"))?;
+        .ok_or_else(|| {
+            eyre!(
+                "unknown tool: `{program}`, possible values are {}",
+                tools_str()
+            )
+        })?;
 
     let sh = Shell::new()?;
     run(&sh)
