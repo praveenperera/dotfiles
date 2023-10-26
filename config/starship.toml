@@ -48,7 +48,6 @@ $kubernetes\
 $line_break\
 $lua\
 $jobs\
-$battery\
 $time\
 $status\
 $character"""
