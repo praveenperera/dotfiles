@@ -10,10 +10,31 @@ use crate::SECRETS_DIR;
 type Cluster = (&'static str, Vec<GcloudCluster>);
 
 #[derive(serde::Deserialize)]
+struct GcloudSecrets {
+    account: String,
+    clusters: Vec<GcloudCluster>,
+}
+
+#[derive(serde::Deserialize)]
 struct GcloudCluster {
     name: String,
     region: String,
     project: String,
+}
+
+fn gcloud_secret(project: &str) -> Result<GcloudSecrets> {
+    let file = format!("{project}.yaml");
+
+    let file_yaml = SECRETS_DIR
+        .get_file(&file)
+        .unwrap()
+        .contents_utf8()
+        .ok_or_else(|| eyre!("failed to read {file}"))?;
+
+    let secret = serde_yaml::from_str::<GcloudSecrets>(file_yaml)
+        .wrap_err_with(|| format!("failed to parse {file}"))?;
+
+    Ok(secret)
 }
 
 fn clusters() -> Result<Vec<Cluster>> {
@@ -22,32 +43,24 @@ fn clusters() -> Result<Vec<Cluster>> {
     let mut clusters = Vec::new();
 
     for project in projects {
-        let file = format!("{project}.yaml");
-
-        let file_yaml = SECRETS_DIR
-            .get_file(&file)
-            .unwrap()
-            .contents_utf8()
-            .unwrap();
-
-        let file_secrets: serde_yaml::Value =
-            serde_yaml::from_str(file_yaml).wrap_err_with(|| format!("failed to parse {file}"))?;
-
-        let file_clusters = file_secrets["clusters"].clone();
-        let file_clusters: Vec<GcloudCluster> = serde_yaml::from_value(file_clusters).unwrap();
-
-        clusters.push((*project, file_clusters));
+        let gcloud_secret = gcloud_secret(project)?;
+        clusters.push((*project, gcloud_secret.clusters));
     }
 
     Ok(clusters)
 }
 
-pub fn login(sh: &Shell, _: &[&str]) -> Result<()> {
-    cmd!(sh, "gcloud auth login").run()?;
+pub fn login(sh: &Shell, args: &[&str]) -> Result<()> {
+    let project = args.first().ok_or_else(|| eyre!("project not specified"))?;
+    let account = gcloud_secret(project)?.account;
+
+    cmd!(sh, "gcloud config set account {account}").run()?;
     Ok(())
 }
 
 pub fn switch_project(sh: &Shell, args: &[&str]) -> Result<()> {
+    login(sh, args)?;
+
     let project = args.first().ok_or_else(|| eyre!("project not specified"))?;
 
     let clusters = clusters()?;
@@ -67,6 +80,8 @@ pub fn switch_project(sh: &Shell, args: &[&str]) -> Result<()> {
 }
 
 pub fn switch_cluster(sh: &Shell, args: &[&str]) -> Result<()> {
+    login(sh, args)?;
+
     let project = args.first().ok_or_else(|| eyre!("project not specified"))?;
     let cluster = args.get(1).ok_or_else(|| eyre!("cluster not specified"))?;
 
