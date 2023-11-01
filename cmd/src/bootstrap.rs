@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use eyre::Result;
 use sailfish::TemplateOnce;
@@ -103,7 +103,7 @@ const DOTFILES: &[&str] = &[
 
 const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm"];
 
-pub fn run(sh: &Shell) -> Result<()> {
+pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     // install rust components
     cmd!(sh, "rustup component add rustfmt clippy rust-analyzer").run()?;
 
@@ -135,12 +135,12 @@ pub fn run(sh: &Shell) -> Result<()> {
     }
 
     // run config
-    config(sh)?;
+    config(sh, args)?;
 
     Ok(())
 }
 
-pub fn config(sh: &Shell) -> Result<()> {
+pub fn config(sh: &Shell, _args: &[&str]) -> Result<()> {
     let path = crate::dotfiles_dir().join("zshrc");
     let zshrc = Zshrc { os: Os::current() };
 
@@ -154,6 +154,15 @@ pub fn config(sh: &Shell) -> Result<()> {
 
     // setup dotfiles and config dirs
     setup_config_and_dotfiles(sh)?;
+
+    Ok(())
+}
+
+pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
+    sh.change_dir(crate::dotfiles_dir());
+    sh.change_dir("cmd");
+
+    cmd!(sh, "./release").run()?;
 
     Ok(())
 }
@@ -205,7 +214,7 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     Ok(())
 }
 
-fn install_tpm(sh: &Shell, home: &PathBuf) -> Result<()> {
+fn install_tpm(sh: &Shell, home: &Path) -> Result<()> {
     let target = home.join(".tmux/plugins/tpm");
 
     if !sh.path_exists(&target) {
@@ -218,7 +227,7 @@ fn install_tpm(sh: &Shell, home: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn install_neovim(sh: &Shell, home: &PathBuf) -> Result<()> {
+fn install_neovim(sh: &Shell, home: &Path) -> Result<()> {
     let target = home.join(".config/nvim");
     let path = crate::dotfiles_dir().join("nvim");
 

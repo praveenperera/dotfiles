@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{bootstrap, Tool};
+use crate::{bootstrap, gcloud, Tool};
 use eyre::{eyre, Result};
 use xshell::Shell;
 
@@ -8,18 +8,19 @@ const TOOLS: &[Tool] = &[
     ("bootstrap", bootstrap::run),
     ("config", bootstrap::config),
     ("cfg", bootstrap::config),
+    ("switch-gcloud", gcloud::switch),
+    ("release", bootstrap::release),
 ];
 
 fn tools_str() -> String {
     TOOLS
-        .into_iter()
+        .iter()
         .map(|(name, _run)| *name)
         .collect::<Vec<_>>()
         .join(", ")
 }
 
-pub fn run(_sh: &Shell) -> Result<()> {
-    let args = std::env::args().skip(1).collect::<Vec<_>>();
+pub fn run(_sh: &Shell, args: &[&str]) -> Result<()> {
     let program: PathBuf = args.first().cloned().unwrap_or_default().into();
 
     let program = program
@@ -28,7 +29,7 @@ pub fn run(_sh: &Shell) -> Result<()> {
         .to_str()
         .unwrap_or_default();
 
-    let (_name, run) = TOOLS
+    let (_name, tool_run) = TOOLS
         .iter()
         .find(|&&(name, _run)| name == program)
         .ok_or_else(|| {
@@ -39,5 +40,5 @@ pub fn run(_sh: &Shell) -> Result<()> {
         })?;
 
     let sh = Shell::new()?;
-    run(&sh)
+    tool_run(&sh, &args[1..])
 }

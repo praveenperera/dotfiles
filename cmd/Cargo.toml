@@ -19,3 +19,6 @@ colored = "2.0.4"
 
 # templating 
 sailfish = "0.8.0"
+include_dir = "0.7.3"
+serde = { version = "1.0.190", features = ["derive"] }
+serde_yaml = "0.9.27"

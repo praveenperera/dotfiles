@@ -1,17 +1,21 @@
 pub mod bootstrap;
 pub mod cmd;
+pub mod gcloud;
 pub mod os;
 
 use eyre::{eyre, Result};
+use include_dir::{include_dir, Dir};
 use std::{env, path::PathBuf};
 use xshell::Shell;
 
-pub type Tool = (&'static str, fn(&Shell) -> Result<()>);
+pub type Tool = (&'static str, fn(&Shell, &[&str]) -> Result<()>);
 const TOOLS: &[Tool] = &[("cmd", cmd::run)];
+
+pub static SECRETS_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/secrets");
 
 fn tools_str() -> String {
     TOOLS
-        .into_iter()
+        .iter()
         .map(|(name, _run)| *name)
         .collect::<Vec<_>>()
         .join(", ")
@@ -30,7 +34,13 @@ pub fn command_exists(sh: &Shell, command: &str) -> bool {
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let program: PathBuf = std::env::args_os().next().unwrap_or_default().into();
+    let args = std::env::args_os()
+        .map(|x| x.into_string().unwrap_or_default())
+        .collect::<Vec<_>>();
+
+    let mut args_iter = args.iter();
+
+    let program: PathBuf = args_iter.next().expect("not enough args").into();
     let program = program
         .file_stem()
         .unwrap_or_default()
@@ -47,6 +57,8 @@ fn main() -> Result<()> {
             )
         })?;
 
+    let args_vec = args_iter.map(String::as_str).collect::<Vec<_>>();
+
     let sh = Shell::new()?;
-    run(&sh)
+    run(&sh, &args_vec[..])
 }
