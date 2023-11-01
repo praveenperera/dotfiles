@@ -6,11 +6,23 @@ use xshell::Shell;
 
 const TOOLS: &[Tool] = &[
     ("bootstrap", bootstrap::run),
-    ("config", bootstrap::config),
-    ("cfg", bootstrap::config),
-    ("switch-gcloud", gcloud::switch),
     ("release", bootstrap::release),
     ("secrets", secrets::run),
+    // config
+    ("config", bootstrap::config),
+    ("cfg", bootstrap::config),
+    // gcloud login
+    ("gl", gcloud::login),
+    ("gcloud-login", gcloud::login),
+    // gcloud switch project
+    ("gcloud-switch-project", gcloud::switch_project),
+    ("gsp", gcloud::switch_project),
+    // gcloud switch cluster
+    ("gcloud-switch-cluster", gcloud::switch_cluster),
+    ("gsc", gcloud::switch_cluster),
+    // secrets
+    ("secrets", secrets::run),
+    ("sec", secrets::run),
 ];
 
 fn tools_str() -> String {

@@ -1,6 +1,7 @@
 use eyre::Result;
 use eyre::WrapErr;
 
+use eyre::eyre;
 use xshell::cmd;
 use xshell::Shell;
 
@@ -15,7 +16,9 @@ struct GcloudCluster {
     project: String,
 }
 
-fn clusters(projects: &[&'static str]) -> Result<Vec<Cluster>> {
+fn clusters() -> Result<Vec<Cluster>> {
+    let projects = &["ln", "sq"];
+
     let mut clusters = Vec::new();
 
     for project in projects {
@@ -39,29 +42,62 @@ fn clusters(projects: &[&'static str]) -> Result<Vec<Cluster>> {
     Ok(clusters)
 }
 
-pub fn switch(sh: &Shell, args: &[&str]) -> Result<()> {
-    let clusters = clusters(&["ln", "sq"])?;
+pub fn login(sh: &Shell, _: &[&str]) -> Result<()> {
+    cmd!(sh, "gcloud auth login").run()?;
+    Ok(())
+}
 
-    let project = args
-        .first()
-        .ok_or_else(|| eyre::eyre!("project not specified"))?;
+pub fn switch_project(sh: &Shell, args: &[&str]) -> Result<()> {
+    let project = args.first().ok_or_else(|| eyre!("project not specified"))?;
 
+    let clusters = clusters()?;
     let clusters = clusters
         .iter()
         .find(|(p, _)| p == project)
         .map(|(_, c)| c)
-        .ok_or_else(|| eyre::eyre!("{project} not found in clusters"))?;
+        .ok_or_else(|| eyre!("{project} not found in clusters"))?;
 
     cmd!(sh, "gcloud auth login").run()?;
 
     for cluster in clusters {
-        let name = &cluster.name;
-        let region = &cluster.region;
-        let project = &cluster.project;
-
-        cmd!(sh, "gcloud config set project {project}").run()?;
-        cmd!(sh, "gcloud container clusters get-credentials {name} --region {region} --project {project}").run()?;
+        switch_to_single_cluster(sh, cluster)?;
     }
+
+    Ok(())
+}
+
+pub fn switch_cluster(sh: &Shell, args: &[&str]) -> Result<()> {
+    let project = args.first().ok_or_else(|| eyre!("project not specified"))?;
+    let cluster = args.get(1).ok_or_else(|| eyre!("cluster not specified"))?;
+
+    let clusters = clusters()?;
+    let clusters = clusters
+        .iter()
+        .find(|(p, _)| p == project)
+        .map(|(_, c)| c)
+        .ok_or_else(|| eyre!("{project} not found in clusters"))?;
+
+    let cluster = clusters
+        .iter()
+        .find(|c| c.name.contains(cluster))
+        .ok_or_else(|| eyre!("cluster {cluster} not found in {project}"))?;
+
+    switch_to_single_cluster(sh, cluster)?;
+
+    Ok(())
+}
+
+fn switch_to_single_cluster(sh: &Shell, cluster: &GcloudCluster) -> Result<(), eyre::Error> {
+    let name = &cluster.name;
+    let region = &cluster.region;
+    let project = &cluster.project;
+
+    cmd!(sh, "gcloud config set project {project}").run()?;
+    cmd!(
+        sh,
+        "gcloud container clusters get-credentials {name} --region {region} --project {project}"
+    )
+    .run()?;
 
     Ok(())
 }
