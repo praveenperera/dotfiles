@@ -7,7 +7,6 @@ use xshell::Shell;
 const TOOLS: &[Tool] = &[
     ("bootstrap", bootstrap::run),
     ("release", bootstrap::release),
-    ("secrets", secrets::run),
     // config
     ("config", bootstrap::config),
     ("cfg", bootstrap::config),
@@ -20,9 +19,12 @@ const TOOLS: &[Tool] = &[
     // gcloud switch cluster
     ("gcloud-switch-cluster", gcloud::switch_cluster),
     ("gsc", gcloud::switch_cluster),
-    // secrets
-    ("secrets", secrets::run),
-    ("sec", secrets::run),
+    // secrets get
+    ("secret-get", secrets::get),
+    ("sg", secrets::get),
+    // secrets update
+    ("secret-update", secrets::update),
+    ("su", secrets::update),
 ];
 
 fn tools_str() -> String {
