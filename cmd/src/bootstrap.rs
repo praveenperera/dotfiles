@@ -53,6 +53,7 @@ const TOOLS: &[&str] = &[
     "go",
     "antibody",
     "zsh",
+    "1password-cli",
 ];
 
 const BREW_CASKS: &[&str] = &[
