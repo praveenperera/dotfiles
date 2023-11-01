@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{bootstrap, gcloud, Tool};
+use crate::{bootstrap, gcloud, secrets, Tool};
 use eyre::{eyre, Result};
 use xshell::Shell;
 
@@ -10,6 +10,7 @@ const TOOLS: &[Tool] = &[
     ("cfg", bootstrap::config),
     ("switch-gcloud", gcloud::switch),
     ("release", bootstrap::release),
+    ("secrets", secrets::run),
 ];
 
 fn tools_str() -> String {

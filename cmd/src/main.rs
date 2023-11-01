@@ -2,6 +2,7 @@ pub mod bootstrap;
 pub mod cmd;
 pub mod gcloud;
 pub mod os;
+pub mod secrets;
 
 use eyre::{eyre, Result};
 use include_dir::{include_dir, Dir};
