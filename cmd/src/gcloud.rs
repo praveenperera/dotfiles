@@ -70,8 +70,6 @@ pub fn switch_project(sh: &Shell, args: &[&str]) -> Result<()> {
         .map(|(_, c)| c)
         .ok_or_else(|| eyre!("{project} not found in clusters"))?;
 
-    cmd!(sh, "gcloud auth login").run()?;
-
     for cluster in clusters {
         switch_to_single_cluster(sh, cluster)?;
     }
