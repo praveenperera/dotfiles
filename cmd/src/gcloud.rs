@@ -27,7 +27,7 @@ fn gcloud_secret(project: &str) -> Result<GcloudSecrets> {
 
     let file_yaml = SECRETS_DIR
         .get_file(&file)
-        .unwrap()
+        .ok_or_else(|| eyre::eyre!("failed to find {file}"))?
         .contents_utf8()
         .ok_or_else(|| eyre!("failed to read {file}"))?;
 
