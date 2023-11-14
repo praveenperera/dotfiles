@@ -81,15 +81,7 @@ const LINUX_TOOLS: &[&str] = &[
     "python3-setuptools",
 ];
 
-const CARGO_PKGS: &[&str] = &[
-    "cargo-watch",
-    "cargo-sweep",
-    "cargo-edit",
-    "cargo-udeps",
-    "zellij-runner",
-    "bacon",
-    "twm",
-];
+const CARGO_PKGS: &[&str] = &["cargo-watch", "bacon", "twm"];
 
 const DOTFILES: &[&str] = &[
     "zshrc",
@@ -272,7 +264,10 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
     cmd!(sh, "cargo install cargo-binstall").run()?;
 
     // install cargo packages  using cargo-bininstall
-    cmd!(sh, "cargo binstall").args(CARGO_PKGS).run()?;
+    cmd!(sh, "cargo binstall")
+        .args(CARGO_PKGS)
+        .arg("-y")
+        .run()?;
 
     cmd!(sh, "brew cleanup").run()?;
     cmd!(sh, "brew autoremove").run()?;

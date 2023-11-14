@@ -127,7 +127,6 @@ local config = {
             tsserver = function(_, opts)
                 require("typescript").setup({ server = opts })
             end,
-
             rust_analyzer = function(client, opts)
                 require("rust-tools").setup(
                     rust_tools.config(client, { server = opts })
