@@ -70,9 +70,16 @@ pub fn switch_project(sh: &Shell, args: &[&str]) -> Result<()> {
         .map(|(_, c)| c)
         .ok_or_else(|| eyre!("{project} not found in clusters"))?;
 
+    if clusters.is_empty() {
+        return Err(eyre!("{project} has no clusters"));
+    }
+
     for cluster in clusters {
         switch_to_single_cluster(sh, cluster)?;
     }
+
+    let cluster_name = &clusters.first().expect("already checked").name;
+    cmd!(sh, "gcloud config set container/cluster {cluster_name}").run()?;
 
     Ok(())
 }
@@ -96,6 +103,9 @@ pub fn switch_cluster(sh: &Shell, args: &[&str]) -> Result<()> {
         .ok_or_else(|| eyre!("cluster {cluster} not found in {project}"))?;
 
     switch_to_single_cluster(sh, cluster)?;
+    let cluster_name = &cluster.name;
+
+    cmd!(sh, "gcloud config set container/cluster {cluster_name}").run()?;
 
     Ok(())
 }
