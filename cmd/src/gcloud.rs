@@ -55,6 +55,7 @@ pub fn login(sh: &Shell, args: &[&str]) -> Result<()> {
     let account = gcloud_secret(project)?.account;
 
     cmd!(sh, "gcloud config set account {account}").run()?;
+
     Ok(())
 }
 
@@ -78,7 +79,9 @@ pub fn switch_project(sh: &Shell, args: &[&str]) -> Result<()> {
         switch_to_single_cluster(sh, cluster)?;
     }
 
-    let cluster_name = &clusters.first().expect("already checked").name;
+    let cluster = clusters.last().expect("already checked");
+    let cluster_name = &cluster.name;
+
     cmd!(sh, "gcloud config set container/cluster {cluster_name}").run()?;
 
     Ok(())
@@ -103,7 +106,9 @@ pub fn switch_cluster(sh: &Shell, args: &[&str]) -> Result<()> {
         .ok_or_else(|| eyre!("cluster {cluster} not found in {project}"))?;
 
     switch_to_single_cluster(sh, cluster)?;
+
     let cluster_name = &cluster.name;
+    let project_id = &cluster.project;
 
     cmd!(sh, "gcloud config set container/cluster {cluster_name}").run()?;
 
