@@ -15,6 +15,7 @@ alias pwd2=$(pwd | awk -F\/ '{print $(NF-1),$(NF)}' | sed "s/ /\\//" )
 alias gbb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias gb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'"
 alias gcch="git rev-parse HEAD"
+alias gho="github open"
 
 # zellij
 alias zz=zellij
@@ -40,6 +41,7 @@ alias agee=agee_func
 alias aged=aged_func
 alias lg="lazygit"
 alias vim="nvim"
+
 
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
