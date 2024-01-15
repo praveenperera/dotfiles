@@ -3,8 +3,23 @@ use std::path::PathBuf;
 use eyre::Result;
 use xshell::{cmd, Shell};
 
+use crate::util;
+
 static SECRET_NAME: &str = "cmd_secrets";
 static SECRETS: [&str; 2] = ["ln.yaml", "sq.yaml"];
+
+pub fn gen(_sh: &Shell, args: &[&str]) -> Result<()> {
+    let length = args
+        .first()
+        .map(|s| s.parse::<usize>())
+        .transpose()?
+        .unwrap_or(32);
+
+    let pass = util::random_ascii(length);
+    println!("{}", pass);
+
+    Ok(())
+}
 
 pub fn get(sh: &Shell, _args: &[&str]) -> Result<()> {
     let secret_dir = crate::dotfiles_dir().join("cmd/secrets");

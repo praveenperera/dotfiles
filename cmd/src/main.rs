@@ -3,6 +3,7 @@ pub mod cmd;
 pub mod gcloud;
 pub mod os;
 pub mod secrets;
+pub mod util;
 
 use eyre::{eyre, Result};
 use include_dir::{include_dir, Dir};

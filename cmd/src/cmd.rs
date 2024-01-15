@@ -19,6 +19,10 @@ const TOOLS: &[Tool] = &[
     // gcloud switch cluster
     ("gcloud-switch-cluster", gcloud::switch_cluster),
     ("gsc", gcloud::switch_cluster),
+    // secret-gen
+    ("secret-gen", secrets::gen),
+    ("secret-generate", secrets::gen),
+    ("sgen", secrets::gen),
     // secrets get
     ("secret-get", secrets::get),
     ("sg", secrets::get),
