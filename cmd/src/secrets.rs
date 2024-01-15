@@ -15,23 +15,49 @@ pub fn gen(_sh: &Shell, args: &[&str]) -> Result<()> {
         .transpose()?
         .unwrap_or(32);
 
-    let pass = util::random_ascii(length);
-    println!("{}", pass);
+    let string = if args.contains(&"--no-symbols") {
+        util::random_alpha_numeric(length)
+    } else {
+        util::random_ascii(length)
+    };
+
+    println!("{}", string);
 
     Ok(())
 }
 
-pub fn get(sh: &Shell, _args: &[&str]) -> Result<()> {
+pub fn save(sh: &Shell, _args: &[&str]) -> Result<()> {
     let secret_dir = crate::dotfiles_dir().join("cmd/secrets");
     for secret in SECRETS {
-        println!("getting secret: {secret}");
-        let secret_text = cmd!(sh, "op read op://Personal/{SECRET_NAME}/{secret}").read()?;
+        eprintln!("getting secret: {secret}");
+        let secret_text = get_and_return(sh, SECRET_NAME, secret)?;
         let secret_path = secret_dir.join(secret);
 
         std::fs::write(secret_path, secret_text.trim())?;
     }
 
     Ok(())
+}
+
+pub fn get(sh: &Shell, args: &[&str]) -> Result<()> {
+    let (secret_name, secret) = match *args {
+        [secret_name, secret] => (secret_name, secret),
+        [secret] => (SECRET_NAME, secret),
+        [] => return Err(eyre::eyre!("need arg for secret")),
+        _ => return Err(eyre::eyre!("too many args")),
+    };
+
+    eprintln!("getting secret: {secret}");
+
+    let secret_text = get_and_return(sh, secret_name, secret)?;
+    println!("{}", secret_text.trim());
+
+    Ok(())
+}
+
+pub fn get_and_return(sh: &Shell, secret_name: &str, secret: &str) -> Result<String> {
+    let secret_text = cmd!(sh, "op read op://Personal/{secret_name}/{secret}").read()?;
+    Ok(secret_text.trim().to_string())
 }
 
 pub fn update(sh: &Shell, args: &[&str]) -> Result<()> {

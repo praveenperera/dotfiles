@@ -26,6 +26,9 @@ const TOOLS: &[Tool] = &[
     // secrets get
     ("secret-get", secrets::get),
     ("sg", secrets::get),
+    // secrets save
+    ("secret-save", secrets::save),
+    ("ss", secrets::save),
     // secrets update
     ("secret-update", secrets::update),
     ("su", secrets::update),

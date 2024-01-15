@@ -108,7 +108,6 @@ pub fn switch_cluster(sh: &Shell, args: &[&str]) -> Result<()> {
     switch_to_single_cluster(sh, cluster)?;
 
     let cluster_name = &cluster.name;
-    let project_id = &cluster.project;
 
     cmd!(sh, "gcloud config set container/cluster {cluster_name}").run()?;
 
