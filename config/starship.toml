@@ -75,10 +75,13 @@ style = "bold 3"
 disabled = false
 format = 'on [⛵ $context $namespace]($style) '
 
-[kubernetes.context_aliases]
-"do-nyc1-avencera-rancher-cluster" = "avencera"
-"do-nyc1-tunevu-production" = "tunevu"
-"do-nyc3-us-east" = "primcloud"
+[[kubernetes.contexts]]
+context_pattern = "do-nyc1-avencera-rancher-cluster"
+context_alias = "avencera"
+
+[[kubernetes.contexts]]
+context_pattern = "gke_.*_(?P<cluster>[\\w-]+)"
+context_alias = "gke-$cluster"
 
 [nodejs]
 disabled = true
