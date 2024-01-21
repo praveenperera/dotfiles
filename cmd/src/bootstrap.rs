@@ -90,7 +90,7 @@ const DOTFILES: &[&str] = &[
     "zsh_plugins.sh",
     "gitignore",
     "direnvrc",
-    "alacritty.yml",
+    "alacritty.toml",
     "tmux.conf",
 ];
 
