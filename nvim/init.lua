@@ -369,6 +369,14 @@ local config = {
                 vim.cmd [[silent! GoInstallDeps]]
             end,
         },
+        {
+            "IndianBoy42/tree-sitter-just",
+            event = { "BufRead Justfile" },
+        },
+        {
+            "NoahTheDuke/vim-just",
+            event = { "BufRead Justfile" },
+        },
         { "Vigemus/iron.nvim",              cmd = "IronRepl", },
         { "kevinhwang91/nvim-bqf",          event = "VeryLazy",               opts = {} },
         { "christoomey/vim-tmux-navigator", event = "User AstroFile" },

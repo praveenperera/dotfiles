@@ -5,7 +5,7 @@ use rand::{
 
 pub fn random_ascii(length: usize) -> String {
     const CHARSET: &[u8] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#$%^&|-_=+*";
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#%^&|-_=+*";
     let mut rng = rand::thread_rng();
     let char_num = Uniform::from(0..CHARSET.len());
 
