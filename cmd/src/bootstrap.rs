@@ -4,7 +4,7 @@ use eyre::Result;
 use sailfish::TemplateOnce;
 use xshell::{cmd, Shell};
 
-use crate::{command_exists, os::Os};
+use crate::{command_exists, os::Os, CMD_TOOLS};
 use colored::Colorize;
 
 #[derive(TemplateOnce)]
@@ -157,6 +157,17 @@ pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
 
     cmd!(sh, "./release").run()?;
 
+    let cmd = "/usr/local/bin/cmd";
+
+    for (tool, _) in CMD_TOOLS {
+        if *tool == "cmd" {
+            continue;
+        }
+
+        let home = std::env::var("HOME").expect("HOME env var not set");
+        sh.hard_link(cmd, format!("{home}/.local/bin/{tool}"))?;
+    }
+
     Ok(())
 }
 
@@ -165,7 +176,7 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     let zsh_plugins = home.join(".zsh_plugins.txt");
 
     // setup zsh plugins
-    sh.remove_path(&zsh_plugins)?;
+    sh.remove_path(zsh_plugins)?;
     println!("{}", "setting up zsh_plugins.sh file...".green());
 
     let zsh_plugins_txt = crate::dotfiles_dir().join("zsh_plugins.txt");
@@ -173,7 +184,7 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
 
     let input_content = sh.read_file(zsh_plugins_txt)?;
     let output_content = cmd!(sh, "antibody bundle").stdin(input_content).read()?;
-    sh.write_file(zsh_plugins_sh, &output_content)?;
+    sh.write_file(zsh_plugins_sh, output_content)?;
 
     let mut path_and_target = vec![];
 

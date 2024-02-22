@@ -4,6 +4,7 @@ use eyre::Result;
 use xshell::{cmd, Shell};
 
 use crate::util;
+use crate::util::VAULT;
 
 static SECRET_NAME: &str = "cmd_secrets";
 static SECRETS: [&str; 2] = ["ln.yaml", "sq.yaml"];
@@ -56,7 +57,7 @@ pub fn get(sh: &Shell, args: &[&str]) -> Result<()> {
 }
 
 pub fn get_and_return(sh: &Shell, secret_name: &str, secret: &str) -> Result<String> {
-    let secret_text = cmd!(sh, "op read op://Personal/{secret_name}/{secret}").read()?;
+    let secret_text = cmd!(sh, "op read op://{VAULT}/{secret_name}/{secret}").read()?;
     Ok(secret_text.trim().to_string())
 }
 
@@ -77,7 +78,7 @@ pub fn update(sh: &Shell, args: &[&str]) -> Result<()> {
 
 fn update_single_secret(sh: &Shell, secret: &str, secret_path: PathBuf) -> Result<()> {
     let secret_text = std::fs::read_to_string(secret_path)?;
-    let cleaned_field = secret.replace(".", "\\.");
+    let cleaned_field = secret.replace('.', "\\.");
 
     cmd!(
         sh,

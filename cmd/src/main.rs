@@ -3,6 +3,7 @@ pub mod cmd;
 pub mod gcloud;
 pub mod os;
 pub mod secrets;
+pub mod terraform;
 pub mod util;
 
 use eyre::{eyre, Result};
@@ -11,12 +12,12 @@ use std::{env, path::PathBuf};
 use xshell::Shell;
 
 pub type Tool = (&'static str, fn(&Shell, &[&str]) -> Result<()>);
-const TOOLS: &[Tool] = &[("cmd", cmd::run)];
+pub const CMD_TOOLS: &[Tool] = &[("cmd", cmd::run), ("tf", terraform::run)];
 
 pub static SECRETS_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/secrets");
 
 fn tools_str() -> String {
-    TOOLS
+    CMD_TOOLS
         .iter()
         .map(|(name, _run)| *name)
         .collect::<Vec<_>>()
@@ -49,7 +50,7 @@ fn main() -> Result<()> {
         .to_str()
         .unwrap_or_default();
 
-    let (_name, run) = TOOLS
+    let (_name, run) = CMD_TOOLS
         .iter()
         .find(|&&(name, _run)| name == program)
         .ok_or_else(|| {

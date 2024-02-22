@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{bootstrap, gcloud, secrets, Tool};
+use crate::{bootstrap, gcloud, secrets, terraform, Tool};
 use eyre::{eyre, Result};
 use xshell::Shell;
 
@@ -32,6 +32,9 @@ const TOOLS: &[Tool] = &[
     // secrets update
     ("secret-update", secrets::update),
     ("su", secrets::update),
+    // terraform
+    ("tf", terraform::run),
+    ("terraform", terraform::run),
 ];
 
 fn tools_str() -> String {
