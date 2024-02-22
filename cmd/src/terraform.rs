@@ -9,7 +9,7 @@ use age::{
     secrecy::ExposeSecret as _,
     x25519::{Identity, Recipient},
 };
-use eyre::Result;
+use eyre::{ContextCompat as _, Result};
 use xshell::{cmd, Shell};
 
 use crate::util;
@@ -21,23 +21,17 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
         ["init", args @ ..] => {
             init(sh, args)?;
         }
+
         ["encrypt" | "enc"] => {
             encrypt(sh)?;
         }
+
         ["decrypt" | "dec"] => {
             decrypt(sh)?;
         }
-        // ["plan", args @ ..] => {
-        //     cmd!(sh, "terraform plan").run()?;
-        // }
-        // ["apply", args @ ..] => {
-        //     cmd!(sh, "terraform apply").run()?;
-        // }
-        // ["destroy", args @ ..] => {
-        //     cmd!(sh, "terraform destroy").run()?;
-        // }
-        [unknown, ..] => {
-            eprintln!("unknown terraform command ({unknown})");
+
+        [cmd, args @ ..] => {
+            run_terraform_cmd(sh, cmd, args)?;
         }
     }
 
@@ -74,19 +68,40 @@ fn init(sh: &Shell, _args: &[&str]) -> Result<()> {
 
     if terraform_state.is_empty() {
         eprintln!("terraform.tfstate.enc is empty");
-        cmd!(sh, "terraform init").run()?;
     } else {
         eprintln!("terraform.tfstate.enc is not empty");
     }
 
+    run_terraform_cmd(sh, "init", &[])?;
+
     Ok(())
 }
 
-pub fn encrypt(sh: &Shell) -> Result<()> {
+fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[&str]) -> Result<()> {
+    let tfstate = "terraform.tfstate";
+    decrypt_internal(sh, "terraform.tfstate.enc", tfstate)?;
+
+    if let Err(error) = cmd!(sh, "terraform {cmd} {args...}").run() {
+        sh.remove_path(tfstate)?;
+        return Err(error.into());
+    }
+
+    if ["apply", "destroy"].contains(&cmd) {
+        encrypt_internal(sh, tfstate, "terraform.tfstate.enc")?;
+    };
+
+    sh.remove_path(tfstate)?;
+
+    Ok(())
+}
+
+fn encrypt(sh: &Shell) -> Result<()> {
+    init(sh, &[])?;
     encrypt_internal(sh, "terraform.tfstate", "terraform.tfstate.enc")
 }
 
 fn encrypt_internal(sh: &Shell, input: &str, output: &str) -> Result<()> {
+    let secret_name = secret_name(sh, output)?;
     let tf_state = sh.read_file(input)?;
 
     if tf_state.is_empty() {
@@ -94,11 +109,9 @@ fn encrypt_internal(sh: &Shell, input: &str, output: &str) -> Result<()> {
     }
 
     if sh.path_exists(output) {
-        return Err(eyre::eyre!("{output} already exists"));
+        sh.remove_path(output)?;
     }
 
-    init(sh, &[])?;
-    let secret_name = secret_name(sh, output)?;
     let pubkey: Recipient = util::pass_read(sh, &secret_name, "public_key")?
         .parse()
         .map_err(|_| eyre::eyre!("could not parse public key from password store"))?;
@@ -117,28 +130,42 @@ fn encrypt_internal(sh: &Shell, input: &str, output: &str) -> Result<()> {
 
     let header = create_header(&secret_name);
 
-    sh.remove_path("terraform.tfstate.enc")?;
+    sh.remove_path(output)?;
     let mut file = std::fs::OpenOptions::new()
         .append(true)
         .create(true)
-        .open("terraform.tfstate.enc")?;
+        .open(output)?;
 
     file.write_all(header.as_bytes())?;
     file.write_all(b"\n")?;
     file.write_all(&encrypted)?;
 
-    sh.remove_path("terraform.tfstate")?;
+    sh.remove_path(input)?;
+
+    let input_parent = Path::new(input)
+        .parent()
+        .wrap_err("could not get parent of input file")?;
+
+    let tfstate = input_parent.join("terraform.tfstate");
+    let tfstate_backup = input_parent.join("terraform.tfstate.backup");
+
+    sh.remove_path(tfstate_backup)?;
+    sh.remove_path(tfstate)?;
 
     Ok(())
 }
 
 fn decrypt(sh: &Shell) -> Result<()> {
-    if sh.path_exists("terraform.tfstate") {
-        return Err(eyre::eyre!("terraform.tfstate already exists"));
+    decrypt_internal(sh, "terraform.tfstate.enc", "terraform.tfstate")
+}
+
+fn decrypt_internal(sh: &Shell, input: &str, output: &str) -> Result<()> {
+    if sh.path_exists(output) {
+        return Err(eyre::eyre!("{output} already exists"));
     }
 
-    let secret_name = secret_name(sh, "terraform.tfstate.enc")?;
-    let encrypted = read_encrypted_file("terraform.tfstate.enc")?;
+    let secret_name = secret_name(sh, input)?;
+    let encrypted = read_encrypted_file(input)?;
 
     let key: Identity = util::pass_read(sh, &secret_name, "password")?
         .parse()
@@ -157,7 +184,7 @@ fn decrypt(sh: &Shell) -> Result<()> {
         String::from_utf8(decrypted)?
     };
 
-    sh.write_file("terraform.tfstate", decrypted)?;
+    sh.write_file(output, decrypted)?;
 
     Ok(())
 }

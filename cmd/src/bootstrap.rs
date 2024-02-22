@@ -168,9 +168,11 @@ pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
 
         let tool_path = format!("{home}/.local/bin/{tool}");
 
-        if !sh.path_exists(&tool_path) {
-            std::os::unix::fs::symlink(&cmd, tool_path)?;
+        if sh.path_exists(&tool_path) {
+            sh.remove_path(&tool_path)?;
         }
+
+        sh.hard_link(&cmd, &tool_path)?;
     }
 
     Ok(())
