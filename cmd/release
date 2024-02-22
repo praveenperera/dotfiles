@@ -3,6 +3,6 @@
 . $HOME/.cargo/env
 cargo build --release
 
-[ -f /usr/local/bin/cmd ] || rm -rf /usr/local/bin/cmd
+[ -f /usr/local/bin/cmd ] || rm -rf $HOME/.local/bin/cmd
 
-sudo cp target/release/cmd /usr/local/bin/cmd
+sudo cp target/release/cmd $HOME/.local/bin/cmd

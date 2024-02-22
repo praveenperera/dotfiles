@@ -152,20 +152,25 @@ pub fn config(sh: &Shell, _args: &[&str]) -> Result<()> {
 }
 
 pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
+    let home = std::env::var("HOME").expect("HOME env var not set");
+
     sh.change_dir(crate::dotfiles_dir());
     sh.change_dir("cmd");
 
     cmd!(sh, "./release").run()?;
 
-    let cmd = "/usr/local/bin/cmd";
+    let cmd = format!("{home}/.local/bin/cmd");
 
     for (tool, _) in CMD_TOOLS {
         if *tool == "cmd" {
             continue;
         }
 
-        let home = std::env::var("HOME").expect("HOME env var not set");
-        sh.hard_link(cmd, format!("{home}/.local/bin/{tool}"))?;
+        let tool_path = format!("{home}/.local/bin/{tool}");
+
+        if !sh.path_exists(&tool_path) {
+            std::os::unix::fs::symlink(&cmd, tool_path)?;
+        }
     }
 
     Ok(())
