@@ -26,3 +26,8 @@ rand = "0.8.5"
 
 # encryption
 age = "0.10"
+sha2 = "0.10.0"
+hex = "0.4.3"
+
+# file
+tempfile = "3.10.0"

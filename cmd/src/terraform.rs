@@ -10,6 +10,7 @@ use age::{
     x25519::{Identity, Recipient},
 };
 use eyre::{ContextCompat as _, Result};
+use sha2::Digest;
 use xshell::{cmd, Shell};
 
 use crate::util;
@@ -78,17 +79,25 @@ fn init(sh: &Shell, _args: &[&str]) -> Result<()> {
 }
 
 fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[&str]) -> Result<()> {
-    let tfstate = "terraform.tfstate";
-    decrypt_internal(sh, "terraform.tfstate.enc", tfstate)?;
+    let tmpdir = tempfile::tempdir()?;
+    let tfstate = tmpdir.path().join("terraform.tfstate");
 
-    if let Err(error) = cmd!(sh, "terraform {cmd} {args...}").run() {
+    let tfstate = tfstate
+        .to_str()
+        .wrap_err("could not convert path to string")?;
+
+    decrypt_internal(sh, "terraform.tfstate.enc", tfstate)?;
+    let before_hash = sha2::Sha256::digest(sh.read_file(tfstate)?);
+
+    if let Err(error) = cmd!(sh, "terraform {cmd} -state {tfstate} {args...}").run() {
         sh.remove_path(tfstate)?;
         return Err(error.into());
     }
 
-    if ["apply", "destroy"].contains(&cmd) {
+    let after_hash = sha2::Sha256::digest(sh.read_file(tfstate)?);
+    if before_hash != after_hash {
         encrypt_internal(sh, tfstate, "terraform.tfstate.enc")?;
-    };
+    }
 
     sh.remove_path(tfstate)?;
 
