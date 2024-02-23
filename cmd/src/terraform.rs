@@ -90,27 +90,21 @@ fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[&str]) -> Result<()> {
     decrypt_internal(sh, "terraform.tfstate.enc", tfstate)?;
     let before_hash = sha2::Sha256::digest(sh.read_file(tfstate)?);
 
-    if ["apply", "destroy"].contains(&cmd) {
-        let result = Command::new("terraform")
-            .arg(cmd)
-            .arg("-state")
-            .arg(tfstate)
-            .args(args)
-            .spawn()
-            .wrap_err("could not spawn terraform")?
-            .wait()
-            .wrap_err("could not wait for terraform")?;
+    // use command instead of xshell because to deal with interactive prompts
+    let result = Command::new("terraform")
+        .arg(cmd)
+        .arg("-state")
+        .arg(tfstate)
+        .args(args)
+        .spawn()
+        .wrap_err("could not spawn terraform")?
+        .wait()
+        .wrap_err("could not wait for terraform")?;
 
-        if !result.success() {
-            sh.remove_path(tfstate)?;
-            return Err(eyre::eyre!("terraform {cmd} failed"));
-        };
-    } else {
-        if let Err(error) = cmd!(sh, "terraform {cmd} -state {tfstate} {args...}").run() {
-            sh.remove_path(tfstate)?;
-            return Err(error.into());
-        }
-    }
+    if !result.success() {
+        sh.remove_path(tfstate)?;
+        return Err(eyre::eyre!("terraform {cmd} failed"));
+    };
 
     let after_hash = sha2::Sha256::digest(sh.read_file(tfstate)?);
     if before_hash != after_hash {
