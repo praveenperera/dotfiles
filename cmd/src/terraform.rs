@@ -3,13 +3,14 @@ use std::{
     io::{BufRead, Read as _, Write},
     iter,
     path::Path,
+    process::Command,
 };
 
 use age::{
     secrecy::ExposeSecret as _,
     x25519::{Identity, Recipient},
 };
-use eyre::{ContextCompat as _, Result};
+use eyre::{Context as _, ContextCompat as _, Result};
 use sha2::Digest;
 use xshell::{cmd, Shell};
 
@@ -89,9 +90,26 @@ fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[&str]) -> Result<()> {
     decrypt_internal(sh, "terraform.tfstate.enc", tfstate)?;
     let before_hash = sha2::Sha256::digest(sh.read_file(tfstate)?);
 
-    if let Err(error) = cmd!(sh, "terraform {cmd} -state {tfstate} {args...}").run() {
-        sh.remove_path(tfstate)?;
-        return Err(error.into());
+    if ["apply", "destroy"].contains(&cmd) {
+        let result = Command::new("terraform")
+            .arg(cmd)
+            .arg("-state")
+            .arg(tfstate)
+            .args(args)
+            .spawn()
+            .wrap_err("could not spawn terraform")?
+            .wait()
+            .wrap_err("could not wait for terraform")?;
+
+        if !result.success() {
+            sh.remove_path(tfstate)?;
+            return Err(eyre::eyre!("terraform {cmd} failed"));
+        };
+    } else {
+        if let Err(error) = cmd!(sh, "terraform {cmd} -state {tfstate} {args...}").run() {
+            sh.remove_path(tfstate)?;
+            return Err(error.into());
+        }
     }
 
     let after_hash = sha2::Sha256::digest(sh.read_file(tfstate)?);
