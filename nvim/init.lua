@@ -4,6 +4,7 @@ local heirline = require("user.config.heirline")
 local telescope = require("user.config.telescope")
 local treesitter = require("user.config.treesitter")
 local copilot = require("user.config.copilot")
+local rustaceanvim = require("user.config.rustaceanvim")
 local cmp = require("user.config.cmp")
 local theme = require("user.config.theme")
 local mason_lspconfig = require("user.config.mason_lspconfig")
@@ -515,7 +516,7 @@ local config = {
 
         -- Set filetype for jinja
         vim.cmd("au BufNewFile,BufRead *.j2,*.jinja set ft=jinja")
+
+        vim.g.rustaceanvim = rustaceanvim.config()
     end,
 }
-
-return config
