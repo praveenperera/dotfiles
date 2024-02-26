@@ -1,6 +1,16 @@
 local M = {}
 
 M.config = function(_, opts)
+    local function file_exists(path)
+        local file = io.open(path, "r")
+        if file then
+            file:close()
+            return true
+        else
+            return false
+        end
+    end
+
     opts = {}
 
     -- Plugin configuration
@@ -14,6 +24,16 @@ M.config = function(_, opts)
 
     -- LSP configuration
     opts.server = {
+        settings = function(project_root)
+            local ra = require('rustaceanvim.config.server')
+
+            local current_file = vim.fn.getcwd() .. "/" .. "rust-analyzer.json"
+            local closest_root_with_config = file_exists(current_file) and vim.fn.getcwd() or project_root
+
+            return ra.load_rust_analyzer_settings(closest_root_with_config, {
+                settings_file_pattern = 'rust-analyzer.json'
+            })
+        end,
         on_attach = function(client, bufnr)
             -- default astrovim on_attach
             require("astronvim.utils.lsp").on_attach(client, bufnr)
