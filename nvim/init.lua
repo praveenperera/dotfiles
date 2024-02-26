@@ -3,7 +3,6 @@ local neogit = require("user.config.neogit")
 local heirline = require("user.config.heirline")
 local telescope = require("user.config.telescope")
 local treesitter = require("user.config.treesitter")
-local rust_tools = require("user.config.rust_tools")
 local copilot = require("user.config.copilot")
 local cmp = require("user.config.cmp")
 local theme = require("user.config.theme")
@@ -126,11 +125,6 @@ local config = {
         setup_handlers = {
             tsserver = function(_, opts)
                 require("typescript").setup({ server = opts })
-            end,
-            rust_analyzer = function(client, opts)
-                require("rust-tools").setup(
-                    rust_tools.config(client, { server = opts })
-                )
             end,
         },
         formatting = {
@@ -448,7 +442,11 @@ local config = {
             opts = neotree.config,
         },
         { "jose-elias-alvarez/typescript.nvim" },
-        { "simrat39/rust-tools.nvim" },
+        {
+            'mrcjkb/rustaceanvim',
+            version = '^4',
+            ft = { 'rust' },
+        },
         { "williamboman/mason-lspconfig.nvim", opts = mason_lspconfig.config },
         {
             "saecki/crates.nvim",

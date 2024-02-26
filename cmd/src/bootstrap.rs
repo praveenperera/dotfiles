@@ -96,6 +96,8 @@ const DOTFILES: &[&str] = &[
 
 const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm"];
 
+const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[("nvim/after", ".config/nvim/after")];
+
 pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     // install rust components
     cmd!(sh, "rustup component add rustfmt clippy rust-analyzer").run()?;
@@ -210,6 +212,13 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     for filename in CONFIG_FILE_OR_DIR {
         let path = crate::dotfiles_dir().join("config").join(filename);
         let target = home.join(format!(".config/{filename}"));
+
+        path_and_target.push((path, target));
+    }
+
+    for (src, dest) in CUSTOM_CONFIG_OR_DIR {
+        let path = crate::dotfiles_dir().join(src);
+        let target = home.join(dest);
 
         path_and_target.push((path, target));
     }
