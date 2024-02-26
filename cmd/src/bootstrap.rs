@@ -96,7 +96,10 @@ const DOTFILES: &[&str] = &[
 
 const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm"];
 
-const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[("nvim/after", ".config/nvim/after")];
+const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
+    ("nvim/after", ".config/nvim/after"),
+    ("nvim", ".config/nvim/lua/user"),
+];
 
 pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     // install rust components
@@ -225,6 +228,7 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
 
     for (path, target) in path_and_target.iter() {
         sh.remove_path(target)?;
+
         cmd!(sh, "ln -s {path} {target}").run()?;
     }
 

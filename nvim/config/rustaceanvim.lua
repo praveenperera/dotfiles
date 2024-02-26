@@ -1,6 +1,8 @@
 local M = {}
 
 M.config = function(_, opts)
+    opts = {}
+
     -- Plugin configuration
     opts.tools = {
         inlay_hints = {

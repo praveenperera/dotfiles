@@ -520,3 +520,5 @@ local config = {
         vim.g.rustaceanvim = rustaceanvim.config()
     end,
 }
+
+return config
