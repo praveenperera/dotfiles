@@ -28,7 +28,17 @@ M.config = function(_, opts)
             local ra = require('rustaceanvim.config.server')
 
             local current_file = vim.fn.getcwd() .. "/" .. "rust-analyzer.json"
-            local closest_root_with_config = file_exists(current_file) and vim.fn.getcwd() or project_root
+            local closest_root_with_config
+
+            if file_exists(current_file) then
+                closest_root_with_config = vim.fn.getcwd()
+            else
+                closest_root_with_config = project_root
+            end
+
+            if closest_root_with_config ~= project_root then
+                vim.notify("Using rust-analyzer.json from " .. closest_root_with_config)
+            end
 
             return ra.load_rust_analyzer_settings(closest_root_with_config, {
                 settings_file_pattern = 'rust-analyzer.json'
