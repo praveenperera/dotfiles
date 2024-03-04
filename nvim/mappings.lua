@@ -2,98 +2,9 @@ local telescope = require("user.plugins.telescope")
 
 return {
     n = {
-        -- Harpoon
+        -- Overwrite astronvim leader h, the rest is in harpoon.lua
         ["<leader>h"] = { name = "Harpoon" },
-        ["<leader>ha"] = {
-            function()
-                require("harpoon.mark").add_file()
-            end,
-            desc = "Add file",
-        },
-        ["<leader>he"] = {
-            function()
-                require("harpoon.ui").toggle_quick_menu()
-            end,
-            desc = "Toggle quick menu",
-        },
-        ["<leader>h1"] = {
-            function()
-                require("harpoon.ui").nav_file(1)
-            end,
-            desc = "Go to file 1",
-        },
-        ["<leader>h2"] = {
-            function()
-                require("harpoon.ui").nav_file(2)
-            end,
-            desc = "Go to file 2",
-        },
-        ["<leader>h3"] = {
-            function()
-                require("harpoon.ui").nav_file(3)
-            end,
-            desc = "Go to file 3",
-        },
-        ["<leader>h4"] = {
-            function()
-                require("harpoon.ui").nav_file(4)
-            end,
-            desc = "Go to file 4",
-        },
-        ["<leader>h5"] = {
-            function()
-                require("harpoon.ui").nav_file(5)
-            end,
-            desc = "Go to file 5",
-        },
-        ["<leader>h6"] = {
-            function()
-                require("harpoon.ui").nav_file(6)
-            end,
-            desc = "Go to file 6",
-        },
-        ["g1"] = {
-            function()
-                require("harpoon.ui").nav_file(1)
-            end,
-            desc = "Go to file 1",
-        },
-        ["g2"] = {
-            function()
-                require("harpoon.ui").nav_file(2)
-            end,
-            desc = "Go to file 2",
-        },
-        ["g3"] = {
-            function()
-                require("harpoon.ui").nav_file(3)
-            end,
-            desc = "Go to file 3",
-        },
-        ["g4"] = {
-            function()
-                require("harpoon.ui").nav_file(4)
-            end,
-            desc = "Go to file 4",
-        },
-        ["g5"] = {
-            function()
-                require("harpoon.ui").nav_file(5)
-            end,
-            desc = "Go to file 5",
-        },
-        ["g6"] = {
-            function()
-                require("harpoon.ui").nav_file(6)
-            end,
-            desc = "Go to file 6",
-        },
-        ["<leader>uc"] = {
-            function()
-                vim.cmd("TSContextToggle")
-            end,
-            desc = "Toggle TS Context",
-        },
+
         -- Save All
         ["<leader>W"] = {
             function()
@@ -101,23 +12,26 @@ return {
             end,
             desc = "Save all",
         },
-        -- quick save
-        ["<C-s>"] = { "<cmd>w!<cr>", desc = "Save File" },
+
         -- window navigation
         ["<leader>1"] = { "1<C-w>w", desc = "Go to window 1" },
         ["<leader>2"] = { "2<C-w>w", desc = "Go to window 2" },
         ["<leader>3"] = { "3<C-w>w", desc = "Go to window 3" },
         ["<leader>4"] = { "4<C-w>w", desc = "Go to window 4" },
+
         -- git
         ["<leader>gs"] = { "<cmd>Neogit <CR>", desc = "Git status" },
+
         -- move
         ["<C-d>"] = { "<C-d>zz", desc = "Half page up" },
         ["<C-u>"] = { "<C-u>zz", desc = "Half page down" },
+
         -- random
         ["U"] = { "<cmd>redo<cr>" },
         ["J"] = { "mzJ`z" },
         ["n"] = { "nzzzv" },
         ["N"] = { "Nzzzv" },
+
         -- toggleterm
         ["<leader>th"] = {
             "<cmd>ToggleTerm direction=horizontal<cr>",
@@ -143,18 +57,22 @@ return {
             "<cmd>ToggleTerm 4<cr>",
             desc = "ToggleTerm 4th Window",
         },
+
         -- system yank
         ["<leader>d"] = { [["_d]], desc = "Delete without register" },
         ["<leader>Y"] = { [["+Y]], desc = "Yank to system" },
         ["<leader>y"] = { [["+y]], desc = "Yank to system" },
+
         -- resize
         ["<C-Home>"] = { "<C-w>+", desc = "Resize up" },
         ["<C-End>"] = { "<C-w>-", desc = "Resize down" },
+
         -- find
         ["<leader>fi"] = {
             "<cmd>Telescope current_buffer_fuzzy_find case_mode=ignore_case<CR>",
             desc = "Find in Buffer",
         },
+
         ["<leader>ft"] = { "<cmd>TodoTelescope<CR>", desc = "Find TODOs" },
         ["<leader>ff"] = { telescope.find_files, desc = "Find all files" },
         ["<leader>fs"] = {
@@ -169,15 +87,18 @@ return {
             end,
             desc = "Search project symbols",
         },
-        --
+
+        -- OIL
         ["<leader>-"] = {
             function()
                 require("oil").open()
             end,
             desc = "Open parent directory",
         },
+
         -- undo
         ["<leader>U"] = { vim.cmd.UndotreeToggle, desc = "Undo tree" },
+
         -- hardmode (no arrows)
         ["<Up>"] = { "<nop>" },
         ["<Down>"] = { "<nop>" },
