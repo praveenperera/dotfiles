@@ -1,15 +1,10 @@
-local neotree            = require("user.config.neotree")
-local neogit             = require("user.config.neogit")
-local heirline           = require("user.config.heirline")
-local telescope          = require("user.config.telescope")
-local treesitter         = require("user.config.treesitter")
-local copilot            = require("user.config.copilot")
-local cmp                = require("user.config.cmp")
-local theme              = require("user.config.theme")
-local mason_lspconfig    = require("user.config.mason_lspconfig")
-local toggleterm         = require("user.config.toggleterm")
-local treesitter_context = require("user.config.treesitter_context")
-local minisurround       = require("user.config.minisurround")
+local neotree         = require("user.config.neotree")
+local neogit          = require("user.config.neogit")
+local treesitter      = require("user.config.treesitter")
+local copilot         = require("user.config.copilot")
+local cmp             = require("user.config.cmp")
+local theme           = require("user.config.theme")
+local mason_lspconfig = require("user.config.mason_lspconfig")
 
 -- Configure plugins
 return {
@@ -66,7 +61,6 @@ return {
     { "wakatime/vim-wakatime", event = "BufRead" },
     { "kamykn/spelunker.vim",  event = "BufRead" },
     { "AstroNvim/astrotheme",  opts = theme.config, },
-    { "rebelot/heirline.nvim", opts = heirline.config },
     { "nvim-lua/plenary.nvim" },
     {
         "TimUntersberger/neogit",
@@ -87,16 +81,6 @@ return {
             require("leap").add_default_mappings()
         end,
     },
-    { "echasnovski/mini.surround",         opts = minisurround.config, event = "BufRead" },
-    {
-        "akinsho/toggleterm.nvim",
-        version = "*",
-        opts = toggleterm.config,
-        cmd = {
-            "ToggleTerm",
-            "ToggleTermToggleAll",
-        },
-    },
     {
         "nvim-neo-tree/neo-tree.nvim",
         version = "v2.x",
@@ -113,7 +97,7 @@ return {
         version = '^4',
         ft = { 'rust' },
     },
-    { "williamboman/mason-lspconfig.nvim",       opts = mason_lspconfig.config },
+    { "williamboman/mason-lspconfig.nvim", opts = mason_lspconfig.config },
     {
         "saecki/crates.nvim",
         version = "v0.3.0",
@@ -131,14 +115,12 @@ return {
         event = { "BufRead *.stpl" },
         rtp = "syntax/vim"
     },
-    { "lepture/vim-jinja",                       event = { "BufRead *.j2", "BufRead *.jinja", "BufRead *.html" } },
-    { "nvim-telescope/telescope.nvim",           opts = telescope.config },
-    { "nvim-treesitter/nvim-treesitter",         opts = treesitter.config },
-    { "towolf/vim-helm",                         event = { "BufRead *.yaml", "BufRead *.tpl" } },
+    { "lepture/vim-jinja",               event = { "BufRead *.j2", "BufRead *.jinja", "BufRead *.html" } },
+    { "nvim-treesitter/nvim-treesitter", opts = treesitter.config },
+    { "towolf/vim-helm",                 event = { "BufRead *.yaml", "BufRead *.tpl" } },
     { "folke/neodev.nvim" },
-    { "tpope/vim-abolish",                       event = "BufRead" },
-    { "mg979/vim-visual-multi",                  event = "BufRead" },
-    { "nvim-treesitter/nvim-treesitter-context", opts = treesitter_context.config,                               cmd = { "TSContextToggle", "TSContextDisable", "TSContextEnable" } },
+    { "tpope/vim-abolish",               event = "BufRead" },
+    { "mg979/vim-visual-multi",          event = "BufRead" },
     {
         "tpope/vim-eunuch",
         cmd = {

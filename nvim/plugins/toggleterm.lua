@@ -1,5 +1,3 @@
-local M = {}
-
 local function size(term)
     if term.direction == "horizontal" then
         return 15
@@ -8,15 +6,16 @@ local function size(term)
     end
 end
 
-M.config = function(_, _)
-    local opts = {
+return {
+    "akinsho/toggleterm.nvim",
+    version = "*",
+    opts = {
         size = size,
         persist_size = true,
         start_in_insert = true,
-    }
-
-    return opts
-end
-
-
-return M
+    },
+    cmd = {
+        "ToggleTerm",
+        "ToggleTermToggleAll",
+    },
+}

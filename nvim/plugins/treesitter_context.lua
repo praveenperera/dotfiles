@@ -1,7 +1,6 @@
-local M = {}
-
-local function config(_, _)
-    local opts = {
+return {
+    "nvim-treesitter/nvim-treesitter-context",
+    opts = {
         enable = true,            -- Enable this plugin (Can be enabled/disabled later via commands)
 
         max_lines = 0,            -- How many lines the window should span. Values <= 0 mean no limit.
@@ -16,12 +15,6 @@ local function config(_, _)
         separator = nil,
         zindex = 20,     -- The Z-index of the context window
         on_attach = nil, -- (fun(buf: integer): boolean) return false to disable attaching
-    }
-
-    -- return the final configuration table
-    return opts
-end
-
-M.config = config
-
-return M
+    },
+    cmd = { "TSContextToggle", "TSContextDisable", "TSContextEnable" }
+}
