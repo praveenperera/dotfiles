@@ -1,5 +1,3 @@
-local default = {}
-
 local function config(_, opts)
     opts.filesystem.filtered_items = {
         visible = true,
@@ -12,9 +10,17 @@ local function config(_, opts)
             ".DS_Store",
         },
     }
-
     return opts
 end
 
-default.config = config
-return default
+
+return {
+    "nvim-neo-tree/neo-tree.nvim",
+    version = "v2.x",
+    dependencies = {
+        "nvim-lua/plenary.nvim",
+        "nvim-tree/nvim-web-devicons",
+        "MunifTanjim/nui.nvim",
+    },
+    opts = config
+}

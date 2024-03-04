@@ -1,5 +1,3 @@
-local rustaceanvim = require("user.config.rustaceanvim")
-
 local config = {
     updater = {
         remote = "origin",     -- remote to use
@@ -146,7 +144,7 @@ local config = {
         -- Set filetype for jinja
         vim.cmd("au BufNewFile,BufRead *.j2,*.jinja set ft=jinja")
 
-        vim.g.rustaceanvim = rustaceanvim.config()
+        vim.g.rustaceanvim = require("user.config.rustaceanvim").config()
     end,
 }
 

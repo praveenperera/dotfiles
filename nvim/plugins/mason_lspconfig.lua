@@ -1,5 +1,3 @@
-local M = {}
-
 local function config(_, opts)
     opts.ensure_installed = {
         "lua_ls",
@@ -14,5 +12,4 @@ local function config(_, opts)
     return opts
 end
 
-M.config = config
-return M
+return { "williamboman/mason-lspconfig.nvim", opts = config }

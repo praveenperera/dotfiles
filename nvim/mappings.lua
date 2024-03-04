@@ -1,4 +1,4 @@
-local telescope = require("user.config.telescope")
+local telescope = require("user.plugins.telescope")
 
 return {
     n = {

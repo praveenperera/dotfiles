@@ -1,7 +1,5 @@
-local M = {}
-
-
-M.config = function(_, opts)
+local opts = {}
+opts.config = function(_, _)
     local cmp = require "cmp"
 
     opts.sources = cmp.config.sources {
@@ -16,4 +14,8 @@ M.config = function(_, opts)
     return opts
 end
 
-return M
+return {
+    "hrsh7th/nvim-cmp",
+    dependencies = { "hrsh7th/cmp-emoji" },
+    opts = opts
+}
