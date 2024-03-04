@@ -229,6 +229,10 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     for (path, target) in path_and_target.iter() {
         sh.remove_path(target)?;
 
+        if let Some(parent) = PathBuf::from(target).parent() {
+            cmd!(sh, "mkdir -p {parent}").run()?;
+        }
+
         cmd!(sh, "ln -s {path} {target}").run()?;
     }
 
