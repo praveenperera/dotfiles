@@ -5,6 +5,14 @@ return {
         -- Overwrite astronvim leader h, the rest is in harpoon.lua
         ["<leader>h"] = { name = "Harpoon" },
 
+        -- Overwrite astronvim leader uc
+        ["<leader>uc"] = {
+            function()
+                vim.cmd("TSContextToggle")
+            end,
+            desc = "Toggle TS Context",
+        },
+
         -- Save All
         ["<leader>W"] = {
             function()

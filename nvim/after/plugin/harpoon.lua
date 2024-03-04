@@ -84,12 +84,6 @@ local maps = {
         end,
         desc = "Go to file 6",
     },
-    ["<leader>uc"] = {
-        function()
-            vim.cmd("TSContextToggle")
-        end,
-        desc = "Toggle TS Context",
-    },
 }
 
 -- set up key maps
