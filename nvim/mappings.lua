@@ -34,6 +34,12 @@ return {
             desc = "CDO Replace word under cursor",
         },
 
+        -- Close quickfix
+        ["<leader>rq"] = {
+            [[:cclose<CR>:lclose<CR>]],
+            desc = "Close quickfix menu",
+        },
+
         -- window navigation
         ["<leader>1"] = { "1<C-w>w", desc = "Go to window 1" },
         ["<leader>2"] = { "2<C-w>w", desc = "Go to window 2" },
