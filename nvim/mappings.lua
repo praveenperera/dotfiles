@@ -21,6 +21,19 @@ return {
             desc = "Save all",
         },
 
+
+        -- Replace word
+        ["<leader>rw"] = {
+            [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]],
+            desc = "Replace word under cursor",
+        },
+
+        -- Replace word with confirmation, in quickfix
+        ["<leader>rc"] = {
+            [[:cdo %s/\<<C-r><C-w>\>/<C-r><C-w>/gc<Left><Left><Left>]],
+            desc = "CDO Replace word under cursor",
+        },
+
         -- window navigation
         ["<leader>1"] = { "1<C-w>w", desc = "Go to window 1" },
         ["<leader>2"] = { "2<C-w>w", desc = "Go to window 2" },
