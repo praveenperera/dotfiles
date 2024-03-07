@@ -109,10 +109,6 @@ gclean() {
   git fetch -p && for branch in $(git for-each-ref --format '%(refname) %(upstream:track)' refs/heads | awk '$2 == "[gone]" {sub("refs/heads/", "", $1); print $1}'); do git branch -D $branch; done
 }
 
-eval "$(starship init zsh)"
-eval $(thefuck --alias)
-eval "$(direnv hook zsh)"
-
 agee_func() {
   age -e -r $AGE -o "$1".age "$1"
 }
@@ -227,9 +223,6 @@ bindkey "[C" forward-word
 bindkey '^[[1;3C' forward-word
 bindkey '^[[1;3D' backward-word
 
-# mcfly
-eval "$(mcfly init zsh)"
-
 setopt histreduceblanks
 setopt histignorespace
 setopt autocd autopushd pushdminus pushdsilent pushdtohome pushdignoredups
@@ -279,7 +272,6 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 
 # fnm
 export PATH="$PATH:$HOME/.fnm/"
-eval "$(fnm env)"
 
 # age
 export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
@@ -289,3 +281,10 @@ export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
 export NS_ROOT="$HOME/Library/Application Support/ns"
 export PATH="$NS_ROOT/bin:$PATH"
 <% } %>
+
+eval "$(fnm env)"
+eval "$(starship init zsh)"
+eval "$(thefuck --alias)"
+eval "$(direnv hook zsh)"
+eval "$(mcfly init zsh)"
+

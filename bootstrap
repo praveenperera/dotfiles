@@ -37,6 +37,6 @@ mkdir -p secrets
 sudo ./release
 
 cmd bootstrap
-sudo chsh -s $(which zsh)
+sudo chsh $(whoami) --shell $(which zsh)
 
 exec zsh

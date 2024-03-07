@@ -52,6 +52,7 @@ const TOOLS: &[&str] = &[
     "topgrade",
     "go",
     "antibody",
+    "mcfly",
     "zsh",
     "1password-cli",
 ];
