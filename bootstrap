@@ -6,6 +6,7 @@ set -e
 # Install nix
 if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]; then
     curl -L https://nixos.org/nix/install | sh
+    . $HOME/.nix-profile/etc/profile.d/nix.sh
 fi
 
 # unset RUSTC_WRAPPER if sccache is not installed
