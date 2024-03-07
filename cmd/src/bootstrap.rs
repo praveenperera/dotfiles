@@ -118,6 +118,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
                 .iter()
                 .filter(|tool| !LINUX_TOOLS.contains(tool))
                 .map(|tool| map_brew_tool_names_to_nix(tool))
+                .filter(|tool| !tool.is_empty())
                 .map(|tool| format!("nixpkgs.{tool}"))
                 .collect::<Vec<_>>();
 
@@ -315,6 +316,7 @@ fn map_brew_tool_names_to_nix(tool_name: &str) -> &str {
         "git-delta" => "delta",
         "sk" => "skim",
         "gpg" => "gnupg",
+        "1password-cli" => "",
         other => other,
     }
 }
