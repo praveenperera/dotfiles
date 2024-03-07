@@ -22,7 +22,7 @@ if [ ! -x "$(command -v cargo)" ]; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
     sh rustup-init.sh -y --no-modify-path --default-toolchain stable
     rm rustup-init.sh
-    . $HOME/.cargo/env
+    source "$HOME/.cargo/env"
 fi
 
 cd cmd
