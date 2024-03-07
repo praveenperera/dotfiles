@@ -40,7 +40,7 @@ const TOOLS: &[&str] = &[
     "fnm",
     "bottom",
     "htop",
-    "exa",
+    "eza",
     "pkg-config",
     "antibody",
     "zoxide",
