@@ -6,7 +6,7 @@ set -e
 # Install nix
 if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]; then
     curl -L https://nixos.org/nix/install | sh
-    . $HOME/.nix-profile/etc/profile.d/nix.sh
+    source "$HOME/.nix-profile/etc/profile.d/nix.sh"
 fi
 
 # unset RUSTC_WRAPPER if sccache is not installed
@@ -14,9 +14,16 @@ if [ ! -x "$(command -v sccache)" ]; then
     unset RUSTC_WRAPPER
 fi
 
+if [ ! -x "$(command -v cc)" ]; then
+    echo "Installing git..."
+    nix-env -i gcc
+fi
+
 # Install Rust
 if [ ! -x "$(command -v cargo)" ]; then
     echo "Installing Rust..."
+    echo "HOME is $HOME"
+
     export CARGO_HOME=$HOME/.cargo
     export RUSTUP_HOME=$HOME/.rustup
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
