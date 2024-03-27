@@ -177,9 +177,19 @@ key = "}"
 mods = "Shift|Command"
 
 [[keyboard.bindings]]
+chars = "\u0002n"
+key = "8"
+mods = "Shift|Control"
+
+[[keyboard.bindings]]
 chars = "\u0002p"
 key = "{"
 mods = "Shift|Command"
+
+[[keyboard.bindings]]
+chars = "\u0002p"
+key = "9"
+mods = "Shift|Control"
 
 [[keyboard.bindings]]
 action = "SearchForward"
