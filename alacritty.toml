@@ -178,8 +178,8 @@ mods = "Shift|Command"
 
 [[keyboard.bindings]]
 chars = "\u0002n"
-key = "8"
-mods = "Shift|Control"
+key = "L"
+mods = "Shift|Command"
 
 [[keyboard.bindings]]
 chars = "\u0002p"
@@ -188,8 +188,8 @@ mods = "Shift|Command"
 
 [[keyboard.bindings]]
 chars = "\u0002p"
-key = "9"
-mods = "Shift|Control"
+key = "H"
+mods = "Shift|Command"
 
 [[keyboard.bindings]]
 action = "SearchForward"
