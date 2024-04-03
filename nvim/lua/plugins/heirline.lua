@@ -1,7 +1,5 @@
-local status = require("astronvim.utils.status")
-
-
 local function config(_, opts)
+    local status = require("astroui.status")
     opts.statusline = {
         hl = { fg = "fg", bg = "bg" },
         status.component.mode({

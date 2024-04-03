@@ -55,6 +55,7 @@ const TOOLS: &[&str] = &[
     "mcfly",
     "zsh",
     "1password-cli",
+    "neovim",
 ];
 
 const BREW_CASKS: &[&str] = &[
@@ -97,10 +98,7 @@ const DOTFILES: &[&str] = &[
 
 const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm"];
 
-const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
-    ("nvim/after", ".config/nvim/after"),
-    ("nvim", ".config/nvim/lua/user"),
-];
+const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[("nvim", ".config/nvim")];
 
 pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     // install rust components
@@ -239,7 +237,6 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     }
 
     install_tpm(sh, &home)?;
-    install_neovim(sh, &home)?;
 
     Ok(())
 }
@@ -252,26 +249,6 @@ fn install_tpm(sh: &Shell, home: &Path) -> Result<()> {
         println!("{}", "install tmux package manager (TPM)".green());
 
         cmd!(sh, "git clone https://github.com/tmux-plugins/tpm {target}").run()?;
-    };
-
-    Ok(())
-}
-
-fn install_neovim(sh: &Shell, home: &Path) -> Result<()> {
-    let target = home.join(".config/nvim");
-    let path = crate::dotfiles_dir().join("nvim");
-
-    if !sh.path_exists(&target) {
-        println!("{}", "neovim config dir not found".blue());
-        println!("{}", "setting up neovim".green());
-
-        cmd!(
-            sh,
-            "git clone --depth 1 https://github.com/AstroNvim/AstroNvim {target}"
-        )
-        .run()?;
-
-        cmd!(sh, "ln -s {path} {target}/lua/user").run()?;
     };
 
     Ok(())

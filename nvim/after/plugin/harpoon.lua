@@ -89,6 +89,6 @@ local maps = {
 -- set up key maps
 for key, val in pairs(maps) do
     if type(val) == "table" and val[1] then
-        vim.keymap.set('n', key, val[1], { desc = val.desc, silent = true })
+        vim.keymap.set("n", key, val[1], { desc = val.desc, silent = true })
     end
 end
