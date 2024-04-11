@@ -39,6 +39,10 @@ return {
             desc = "Close quickfix menu",
         },
 
+        -- quickfix navigation
+        ["<C-m"] = { ":cprev<CR>", desc = "Previous Quickfix" },
+        ["<C-,>"] = { ":cnext<CR>", desc = "Next Quickfix" },
+
         -- window navigation
         ["<Leader>1"] = { "1<C-w>w", desc = "Go to window 1" },
         ["<Leader>2"] = { "2<C-w>w", desc = "Go to window 2" },
