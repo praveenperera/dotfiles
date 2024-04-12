@@ -39,9 +39,17 @@ return {
             desc = "Close quickfix menu",
         },
 
-        -- quickfix navigation
-        ["<C-m"] = { ":cprev<CR>", desc = "Previous Quickfix" },
-        ["<C-,>"] = { ":cnext<CR>", desc = "Next Quickfix" },
+        -- quickfix
+        ["<Leader>q"] = { "<nop>", desc = "Quickfix" },
+        ["<Leader>qo"] = { ":copen<CR>", desc = "Open Quickfix" },
+        ["<Leader>qq"] = { ":cclose<CR>", desc = "Close Quickfix" },
+        ["<Leader>qn"] = { ":cnext<CR>", desc = "Next Quickfix" },
+        ["<Leader>qp"] = { ":cprev<CR>", desc = "Previous Quickfix" },
+
+        ["<Leader>ql"] = { ":lopen<CR>", desc = "Open Location List" },
+        ["<Leader>qL"] = { ":lclose<CR>", desc = "Close Location List" },
+        ["<Leader>qN"] = { ":lnext<CR>", desc = "Next Location List" },
+        ["<Leader>qP"] = { ":lprev<CR>", desc = "Previous Location List" },
 
         -- window navigation
         ["<Leader>1"] = { "1<C-w>w", desc = "Go to window 1" },
