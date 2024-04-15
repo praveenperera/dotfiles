@@ -102,7 +102,7 @@ const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[("nvim", ".config/nvim")];
 
 pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     // install rust components
-    cmd!(sh, "rustup component add rustfmt clippy rust-analyzer").run()?;
+    cmd!(sh, "rustup component add rustfmt clippy").run()?;
 
     match Os::current() {
         Os::Linux => {
