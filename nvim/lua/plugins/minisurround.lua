@@ -8,17 +8,17 @@ local opts = {
 
     -- Module mappings. Use `""` (empty string) to disable one.
     mappings = {
-        add = "ya",             -- Add surrounding in Normal and Visual modes
-        delete = "yd",          -- Delete surrounding
-        replace = "yr",         -- Replace surrounding
+        add = "yc", -- Add surrounding in Normal and Visual modes
+        delete = "yd", -- Delete surrounding
+        replace = "yr", -- Replace surrounding
 
-        find = "gsf",           -- Find surrounding (to the right)
-        find_left = "gsF",      -- Find surrounding (to the left)
-        highlight = "gsh",      -- Highlight surrounding
+        find = "gsf", -- Find surrounding (to the right)
+        find_left = "gsF", -- Find surrounding (to the left)
+        highlight = "gsh", -- Highlight surrounding
         update_n_lines = "gsn", -- Update `n_lines`
 
-        suffix_last = "",       -- Suffix to search with "prev" method
-        suffix_next = "",       -- Suffix to search with "next" method
+        suffix_last = "", -- Suffix to search with "prev" method
+        suffix_next = "", -- Suffix to search with "next" method
     },
 
     -- Number of lines within which surrounding is searched
