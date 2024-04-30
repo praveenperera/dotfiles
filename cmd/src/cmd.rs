@@ -1,6 +1,11 @@
+pub mod bootstrap;
+pub mod gcloud;
+pub mod secrets;
+pub mod terraform;
+
 use std::path::PathBuf;
 
-use crate::{bootstrap, gcloud, secrets, terraform, Tool};
+use crate::Tool;
 use eyre::{eyre, Result};
 use xshell::Shell;
 

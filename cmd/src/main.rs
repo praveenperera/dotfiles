@@ -1,11 +1,9 @@
-pub mod bootstrap;
 pub mod cmd;
-pub mod gcloud;
+pub mod encrypt;
 pub mod os;
-pub mod secrets;
-pub mod terraform;
 pub mod util;
 
+use cmd::terraform;
 use eyre::{eyre, Result};
 use include_dir::{include_dir, Dir};
 use std::{env, path::PathBuf};
