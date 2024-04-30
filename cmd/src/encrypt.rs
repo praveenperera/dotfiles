@@ -10,7 +10,7 @@ use age::{
     x25519::{Identity, Recipient},
 };
 
-use eyre::Result;
+use eyre::{Context as _, Result};
 use xshell::{cmd, Shell};
 
 use crate::util;
@@ -83,11 +83,14 @@ pub fn create_secret_and_files(sh: &Shell, secret_prefix: &str, file_name: &str)
 }
 
 pub fn decrypt(sh: &Shell, input: &str, output: &str) -> Result<()> {
+    println!("decrypting {} to {}", input, output);
     if sh.path_exists(output) {
         return Err(eyre::eyre!("{output} already exists"));
     }
 
-    let secret_name = secret_name(sh, input)?;
+    let secret_name =
+        secret_name(sh, input).wrap_err("Could not get secret name for input file")?;
+
     let encrypted = read_encrypted_file(input)?;
 
     let key: Identity = util::pass_read(sh, &secret_name, "password")?

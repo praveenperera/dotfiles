@@ -15,14 +15,24 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
         }
 
         ["encrypt" | "enc"] => {
-            encrypt(sh)?;
+            encrypt(sh, "terraform.tfstate")?;
+        }
+
+        ["encrypt" | "enc", file] => {
+            encrypt(sh, file)?;
         }
 
         ["decrypt" | "dec"] => {
-            decrypt(sh)?;
+            decrypt(sh, "terraform.tfstate.enc")?;
+        }
+
+        ["decrypt" | "dec", file] => {
+            decrypt(sh, file)?;
         }
 
         [cmd, args @ ..] => {
+            dbg!(cmd);
+            dbg!(args);
             run_terraform_cmd(sh, cmd, args)?;
         }
     }
@@ -100,11 +110,11 @@ fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-fn encrypt(sh: &Shell) -> Result<()> {
+fn encrypt(sh: &Shell, input_file: &str) -> Result<()> {
     init(sh, &[])?;
-    encrypt::encrypt(sh, "terraform.tfstate", "terraform.tfstate.enc")
+    encrypt::encrypt(sh, input_file, "terraform.tfstate.enc")
 }
 
-fn decrypt(sh: &Shell) -> Result<()> {
-    encrypt::decrypt(sh, "terraform.tfstate.enc", "terraform.tfstate")
+fn decrypt(sh: &Shell, input_file: &str) -> Result<()> {
+    encrypt::decrypt(sh, input_file, "terraform.tfstate")
 }
