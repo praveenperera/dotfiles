@@ -2,11 +2,13 @@ pub mod bootstrap;
 pub mod gcloud;
 pub mod secrets;
 pub mod terraform;
+pub mod vault;
 
 use std::path::PathBuf;
 
 use crate::Tool;
 use eyre::{eyre, Result};
+use log::debug;
 use xshell::Shell;
 
 const TOOLS: &[Tool] = &[
@@ -40,6 +42,8 @@ const TOOLS: &[Tool] = &[
     // terraform
     ("tf", terraform::run),
     ("terraform", terraform::run),
+    // vault
+    ("vault", vault::run),
 ];
 
 fn tools_str() -> String {
@@ -51,6 +55,7 @@ fn tools_str() -> String {
 }
 
 pub fn run(_sh: &Shell, args: &[&str]) -> Result<()> {
+    debug!("cmd run args: {args:?}");
     let program: PathBuf = args.first().cloned().unwrap_or_default().into();
 
     let program = program

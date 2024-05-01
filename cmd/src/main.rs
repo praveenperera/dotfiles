@@ -3,14 +3,19 @@ pub mod encrypt;
 pub mod os;
 pub mod util;
 
-use cmd::terraform;
+use cmd::{terraform, vault};
 use eyre::{eyre, Result};
 use include_dir::{include_dir, Dir};
+use log::debug;
 use std::{env, path::PathBuf};
 use xshell::Shell;
 
 pub type Tool = (&'static str, fn(&Shell, &[&str]) -> Result<()>);
-pub const CMD_TOOLS: &[Tool] = &[("cmd", cmd::run), ("tf", terraform::run)];
+pub const CMD_TOOLS: &[Tool] = &[
+    ("cmd", cmd::run),
+    ("tf", terraform::run),
+    ("vault", vault::run),
+];
 
 pub static SECRETS_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/secrets");
 
@@ -34,10 +39,13 @@ pub fn command_exists(sh: &Shell, command: &str) -> bool {
 
 fn main() -> Result<()> {
     color_eyre::install()?;
+    env_logger::init();
 
     let args = std::env::args_os()
         .map(|x| x.into_string().unwrap_or_default())
         .collect::<Vec<_>>();
+
+    debug!("run args: {args:?}");
 
     let mut args_iter = args.iter();
 
@@ -59,6 +67,8 @@ fn main() -> Result<()> {
         })?;
 
     let args_vec = args_iter.map(String::as_str).collect::<Vec<_>>();
+
+    debug!("run args: {args:?}, run: {run:?}");
 
     let sh = Shell::new()?;
     run(&sh, &args_vec[..])

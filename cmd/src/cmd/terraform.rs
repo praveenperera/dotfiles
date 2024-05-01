@@ -1,12 +1,15 @@
 use std::{path::Path, process::Command};
 
 use eyre::{Context as _, ContextCompat as _, Result};
+use log::debug;
 use sha2::Digest;
 use xshell::Shell;
 
 use crate::encrypt;
 
 pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
+    debug!("terraform args: {args:?}");
+
     match args {
         [] => eprintln!("need args"),
 
@@ -14,20 +17,19 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
             init(sh, args)?;
         }
 
+        ["encrypt" | "enc", file] => {
+            encrypt(sh, file)?;
+        }
         ["encrypt" | "enc"] => {
             encrypt(sh, "terraform.tfstate")?;
         }
 
-        ["encrypt" | "enc", file] => {
-            encrypt(sh, file)?;
+        ["decrypt" | "dec", file] => {
+            decrypt(sh, file)?;
         }
 
         ["decrypt" | "dec"] => {
             decrypt(sh, "terraform.tfstate.enc")?;
-        }
-
-        ["decrypt" | "dec", file] => {
-            decrypt(sh, file)?;
         }
 
         [cmd, args @ ..] => {
@@ -48,7 +50,7 @@ fn init(sh: &Shell, _args: &[&str]) -> Result<()> {
         encrypt::create_secret_and_files(sh, "terraform-state-pw", "terraform.tfstate.enc")?;
     }
 
-    let terraform_state = encrypt::read_encrypted_file("")?;
+    let terraform_state = encrypt::read_encrypted_file("terraform.tfstate.enc")?;
 
     if terraform_state.is_empty() {
         eprintln!("terraform.tfstate.enc is empty");
@@ -112,9 +114,16 @@ fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[&str]) -> Result<()> {
 
 fn encrypt(sh: &Shell, input_file: &str) -> Result<()> {
     init(sh, &[])?;
-    encrypt::encrypt(sh, input_file, "terraform.tfstate.enc")
+    let output_file = Path::new(input_file).with_extension("enc").to_path_buf();
+    encrypt::encrypt(sh, input_file, output_file.to_string_lossy().as_ref())
 }
 
 fn decrypt(sh: &Shell, input_file: &str) -> Result<()> {
-    encrypt::decrypt(sh, input_file, "terraform.tfstate")
+    let output_file = if input_file.ends_with(".enc") {
+        input_file.trim_end_matches(".enc").to_string()
+    } else {
+        input_file.to_string() + ".dec"
+    };
+
+    encrypt::decrypt(sh, input_file, &output_file)
 }

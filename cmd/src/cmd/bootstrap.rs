@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use eyre::Result;
+use eyre::{Context as _, Result};
 use sailfish::TemplateOnce;
 use xshell::{cmd, Shell};
 
@@ -159,11 +159,16 @@ pub fn config(sh: &Shell, _args: &[&str]) -> Result<()> {
 pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
     let home = std::env::var("HOME").expect("HOME env var not set");
 
+    let current_path = std::env::current_exe().wrap_err("failed to get current path")?;
+    let current_exe_rename = format!("{}.old", current_path.display());
+
+    std::fs::rename(&current_path, &current_exe_rename)
+        .wrap_err("failed to rename current binary")?;
+
     sh.change_dir(crate::dotfiles_dir());
     sh.change_dir("cmd");
 
     cmd!(sh, "./release").run()?;
-
     let cmd = format!("{home}/.local/bin/cmd");
 
     for (tool, _) in CMD_TOOLS {
@@ -177,8 +182,10 @@ pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
             sh.remove_path(&tool_path)?;
         }
 
-        sh.hard_link(&cmd, &tool_path)?;
+        sh.hard_link(&cmd, tool_path)?;
     }
+
+    sh.remove_path(&current_exe_rename)?;
 
     Ok(())
 }

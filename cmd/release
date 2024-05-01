@@ -3,10 +3,5 @@
 . $HOME/.cargo/env
 cargo build --release
 
-if [ -f $HOME/.local/bin ]; then
-    [ -f $HOME/.local/bin ] || rm -rf $HOME/.local/bin/cmd
-    sudo cp target/release/cmd $HOME/.local/bin/cmd
-else
-    [ -f $HOME/.cargo/bin/cmd ] || rm -rf $HOME/.cargo/bin/cmd
-    sudo cp target/release/cmd $HOME/.cargo/bin/cmd
-fi
+sudo mkdir -p $HOME/.local/bin
+sudo cp target/release/cmd $HOME/.local/bin/cmd

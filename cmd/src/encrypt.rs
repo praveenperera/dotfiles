@@ -76,8 +76,8 @@ pub fn create_secret_and_files(sh: &Shell, secret_prefix: &str, file_name: &str)
     util::pass_edit(sh, &secret_name, "password", password.expose_secret())?;
     util::pass_edit(sh, &secret_name, "public_key", &pubkey.to_string())?;
 
-    // create terraform.tfstate.enc file
     sh.write_file(file_name, create_header(&secret_name))?;
+    log::debug!("created secret: {secret_name}, at {file_name}");
 
     Ok(())
 }
@@ -115,9 +115,11 @@ pub fn decrypt(sh: &Shell, input: &str, output: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn read_encrypted_file(path: &str) -> Result<Vec<u8>> {
-    let path = Path::new(path);
-    let file = File::open(path)?;
+pub fn read_encrypted_file(path_str: &str) -> Result<Vec<u8>> {
+    let path = Path::new(path_str);
+    let file =
+        File::open(path).wrap_err_with(|| format!("could not open file: {}", path.display()))?;
+
     let mut buf_reader = std::io::BufReader::new(file);
 
     // Skip the first line without allocating
