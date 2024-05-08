@@ -75,7 +75,11 @@ gm(){
   if git show-ref -q --heads master; then
     git co master
   else
-    git co main
+    if git show-ref -q --heads main; then
+      git co main
+    else
+      git co trunk
+    fi
   fi
 }
 
