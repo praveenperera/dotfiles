@@ -134,6 +134,15 @@ return {
             desc = "Open parent directory",
         },
 
+        -- Split resizing
+        ["<M-h>"] = { "<C-w><", desc = "Resize left" },
+        ["<M-l>"] = { "<C-w>>", desc = "Resize right" },
+        ["<M-j>"] = { "<C-w>-", desc = "Resize down" },
+        ["<M-k>"] = { "<C-w>+", desc = "Resize up" },
+
+        -- source file
+        ["<Leader>so"] = { "<cmd>source %<CR>", desc = "Source file" },
+
         -- undo
         ["<Leader>U"] = { vim.cmd.UndotreeToggle, desc = "Undo tree" },
 
