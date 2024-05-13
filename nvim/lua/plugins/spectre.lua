@@ -1,3 +1,4 @@
 return {
-    'nvim-pack/nvim-spectre', opts = {}
+    "nvim-pack/nvim-spectre",
+    opts = {},
 }

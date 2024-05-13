@@ -1,1 +1,5 @@
-return { "rust-sailfish/sailfish", event = { "BufRead *.stpl" }, rtp = "syntax/vim" }
+return {
+    "rust-sailfish/sailfish",
+    event = { "BufRead *.stpl" },
+    rtp = "syntax/vim",
+}

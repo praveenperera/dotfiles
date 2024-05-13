@@ -6,5 +6,4 @@ opts.find_files = function()
     })
 end
 
-
 return { "nvim-telescope/telescope.nvim", opts = opts }

@@ -10,12 +10,12 @@ local opts = {
             prev = "<C-a>",
             dismiss = "<C-]>",
         },
-    }
+    },
 }
 
 return {
     "zbirenbaum/copilot.lua",
     cmd = "Copilot",
     event = "InsertEnter",
-    opts = opts
+    opts = opts,
 }

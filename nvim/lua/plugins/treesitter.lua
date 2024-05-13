@@ -3,7 +3,7 @@ local opts = {
     highlight = { enable = true },
     indent = {
         enable = true,
-        disable = { "yaml" }
+        disable = { "yaml" },
     },
     additional_vim_regex_highlighting = false,
     auto_install = true,

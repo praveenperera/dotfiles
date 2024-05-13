@@ -7,7 +7,6 @@ local function config(_, _)
         end
     end
 
-
     return {
         size = size,
         persist_size = true,

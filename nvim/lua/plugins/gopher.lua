@@ -5,6 +5,6 @@ return {
         require("gopher").setup(opts)
     end,
     build = function()
-        vim.cmd [[silent! GoInstallDeps]]
+        vim.cmd([[silent! GoInstallDeps]])
     end,
 }

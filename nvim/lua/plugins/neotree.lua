@@ -13,7 +13,6 @@ local function config(_, opts)
     return opts
 end
 
-
 return {
     "nvim-neo-tree/neo-tree.nvim",
     version = "v2.x",
@@ -22,5 +21,5 @@ return {
         "nvim-tree/nvim-web-devicons",
         "MunifTanjim/nui.nvim",
     },
-    opts = config
+    opts = config,
 }
