@@ -157,14 +157,6 @@ return {
                         desc = "Search project symbols",
                     },
 
-                    -- OIL
-                    ["<Leader>-"] = {
-                        function()
-                            require("oil").open()
-                        end,
-                        desc = "Open parent directory",
-                    },
-
                     -- Split resizing
                     ["<M-h>"] = { "<C-w><", desc = "Resize left" },
                     ["<M-l>"] = { "<C-w>>", desc = "Resize right" },
