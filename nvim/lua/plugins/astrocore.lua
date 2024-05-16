@@ -1,5 +1,3 @@
-local mappings = require("mappings")
-
 ---@type LazySpec
 return {
     "AstroNvim/astrocore",
@@ -65,8 +63,5 @@ return {
                 heirline_bufferline = false, -- enable new heirline based bufferline (requires :PackerSync after changing)
             },
         },
-        -- Mappings can be configured through AstroCore as well.
-        -- NOTE: keycodes follow the casing in the vimdocs. For example, `<Leader>` must be capitalized
-        mappings = mappings,
     },
 }
