@@ -83,7 +83,7 @@
   name = Praveen Perera
   email = praveen@avencera.com
 [rerere]
-  enabled = 1
+  enabled = true
 [init]
   defaultBranch = master
 [format]

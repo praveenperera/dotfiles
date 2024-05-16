@@ -17,6 +17,9 @@ alias gb="git for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %
 alias gcch="git rev-parse HEAD"
 alias gho="github open"
 
+# github
+alias gpr="gh pr create --web"
+
 # zellij
 alias zz=zellij
 alias x=tmuxSessionSwitch
