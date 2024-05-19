@@ -96,7 +96,7 @@ const DOTFILES: &[&str] = &[
     "tmux.conf",
 ];
 
-const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm"];
+const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm", "topgrade"];
 
 const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[("nvim", ".config/nvim")];
 
