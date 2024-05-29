@@ -46,32 +46,37 @@ M.config = function(_, opts)
             })
         end,
         on_attach = function(client, bufnr)
+            local function desc(description)
+                return {
+                    noremap = true,
+                    silent = true,
+                    buffer = bufnr,
+                    desc = description,
+                }
+            end
+
             -- default astrovim on_attach
             require("astrolsp").on_attach(client, bufnr)
 
             vim.keymap.set("n", "<Leader>a", function()
                 vim.cmd.RustLsp("codeAction")
-            end, {
-                silent = true,
-                buffer = bufnr,
-                desc = "Rust Code Action",
-            })
+            end, desc("Code action"))
 
             vim.keymap.set("n", "<Leader>lC", function()
                 vim.cmd.RustLsp("openCargo")
-            end, {
-                silent = true,
-                buffer = bufnr,
-                desc = "Open Cargo.toml",
-            })
+            end, desc("Open Cargo.toml"))
 
             vim.keymap.set("n", "<Leader>lc", function()
                 vim.cmd.RustLsp("externalDocs")
-            end, {
-                silent = true,
-                buffer = bufnr,
-                desc = "Open docs.rs",
-            })
+            end, desc("Open external docs.rs"))
+
+            if client.server_capabilities.inlayHintProvider then
+                vim.keymap.set("n", "<Leader>lt", function()
+                    vim.lsp.inlay_hint.enable(
+                        not vim.lsp.inlay_hint.is_enabled()
+                    )
+                end, desc("Toggle inlay hints"))
+            end
         end,
         -- default_settings = {
         --     -- rust-analyzer language server configuration
