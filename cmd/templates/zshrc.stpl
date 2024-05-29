@@ -204,7 +204,6 @@ export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig${PKG_CONFIG_PATH:+:$
 source $HOME/.nix-profile/etc/profile.d/nix.sh
 <% } %>
 
-export TERM=screen-256color
 
 # kubectl autocompletions
 if [ $commands[kubectl] ]; then
@@ -301,4 +300,3 @@ eval "$(starship init zsh)"
 eval "$(thefuck --alias)"
 eval "$(direnv hook zsh)"
 eval "$(mcfly init zsh)"
-
