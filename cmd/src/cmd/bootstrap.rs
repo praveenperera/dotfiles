@@ -68,6 +68,7 @@ const BREW_CASKS: &[&str] = &[
     "sublime-text",
     "rectangle",
     "font-jetbrains-mono-nerd-font",
+    "font-recursive-mono-nerd-font",
 ];
 
 const LINUX_TOOLS: &[&str] = &[
