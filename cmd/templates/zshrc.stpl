@@ -167,7 +167,7 @@ export EDITOR="nvim"
 export ALTERNATE_EDITOR="code -w"
 export VISUAL="code -w"
 export PATH="/usr/local/sbin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$PATH:$HOME/.cargo/bin"
 export PATH="$PATH:$HOME/.local/bin"
 export ANT_HOME=/usr/local/opt/ant
 export MAVEN_HOME=/usr/local/opt/maven
@@ -273,6 +273,9 @@ if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion
 
 # llvm
 export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+
+# put brew bin first
+export PATH="/opt/homebrew/bin:$PATH"
 <% } %>
 
 # enable sccache for rust projects
