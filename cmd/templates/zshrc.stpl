@@ -289,6 +289,9 @@ export PATH="$PATH:$HOME/.fnm/"
 # age
 export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
 
+# ruby
+export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
+
 # nsc docker builder
 <% if os == Os::MacOS { %>
 export NS_ROOT="$HOME/Library/Application Support/ns"
