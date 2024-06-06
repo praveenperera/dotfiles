@@ -303,3 +303,5 @@ eval "$(starship init zsh)"
 eval "$(thefuck --alias)"
 eval "$(direnv hook zsh)"
 eval "$(mcfly init zsh)"
+
+
