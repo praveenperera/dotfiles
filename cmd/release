@@ -3,5 +3,5 @@
 . $HOME/.cargo/env
 cargo build --release
 
-sudo mkdir -p $HOME/.local/bin
-sudo cp target/release/cmd $HOME/.local/bin/cmd
+mkdir -p $HOME/.local/bin
+cp target/release/cmd $HOME/.local/bin/cmd

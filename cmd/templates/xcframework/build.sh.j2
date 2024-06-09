@@ -1,0 +1,52 @@
+#!/bin/bash
+# This script builds local {{ name }} Swift language bindings and corresponding {{module_name}}.xcframework.
+# The results of this script can be used for locally testing your SPM package adding a local package
+# to your application pointing at the {{ base_name }}-swift directory.
+
+# create all required dirs
+mkdir -p {{module_name}}.xcframework/ios-arm64/{{ name }}FFI.framework/Headers
+mkdir -p {{module_name}}.xcframework/ios-arm64_x86_64-simulator/{{ name }}FFI.framework/Headers
+mkdir -p {{module_name}}.xcframework/macos-arm64_x86_64/{{ name }}FFI.framework/Headers
+mkdir -p Sources/{{ module_name }}
+
+rustup default {{ rust_version }}
+rustup component add rust-src
+rustup target add aarch64-apple-ios      # iOS arm64
+rustup target add x86_64-apple-ios       # iOS x86_64
+rustup target add aarch64-apple-ios-sim  # simulator mac M1
+rustup target add aarch64-apple-darwin   # mac M1
+rustup target add x86_64-apple-darwin    # mac x86_64
+
+# go back to ffi root
+cd ../{{ package_name }}/ || exit
+
+cargo build --package {{ package_name }} --profile release-smaller --target x86_64-apple-darwin
+cargo build --package {{ package_name }} --profile release-smaller --target aarch64-apple-darwin
+cargo build --package {{ package_name }} --profile release-smaller --target x86_64-apple-ios
+cargo build --package {{ package_name }} --profile release-smaller --target aarch64-apple-ios
+cargo build --package {{ package_name }} --profile release-smaller --target aarch64-apple-ios-sim
+
+cargo run --bin uniffi-bindgen generate --library ./target/aarch64-apple-ios/release-smaller/lib{{ name }}.dylib --language swift --out-dir ../{{ base_name }}-swift/Sources/{{ module_name }}
+
+mkdir -p target/lipo-ios-sim/release-smaller
+lipo target/aarch64-apple-ios-sim/release-smaller/lib{{ name }}.a target/x86_64-apple-ios/release-smaller/lib{{ name }}.a -create -output target/lipo-ios-sim/release-smaller/lib{{ name }}.a
+
+mkdir -p target/lipo-macos/release-smaller
+lipo target/aarch64-apple-darwin/release-smaller/lib{{ name }}.a target/x86_64-apple-darwin/release-smaller/lib{{ name }}.a -create -output target/lipo-macos/release-smaller/lib{{ name }}.a
+
+# come back to this dir
+cd ../{{ base_name }}-swift/ || exit
+
+mv Sources/{{ module_name }}/{{ name }}.swift Sources/{{ module_name }}/{{ module_name }}.swift
+
+cp Sources/{{ module_name }}/{{ name }}FFI.h {{module_name}}.xcframework/ios-arm64/{{ name }}FFI.framework/Headers
+cp Sources/{{ module_name }}/{{ name }}FFI.h {{module_name}}.xcframework/ios-arm64_x86_64-simulator/{{ name }}FFI.framework/Headers
+cp Sources/{{ module_name }}/{{ name }}FFI.h {{module_name}}.xcframework/macos-arm64_x86_64/{{ name }}FFI.framework/Headers
+
+cp ../{{ package_name }}/target/aarch64-apple-ios/release-smaller/lib{{ name }}.a {{ module_name }}.xcframework/ios-arm64/{{ name }}FFI.framework/{{ name }}FFI
+cp ../{{ package_name }}/target/lipo-ios-sim/release-smaller/lib{{ name }}.a {{ module_name }}.xcframework/ios-arm64_x86_64-simulator/{{ name }}FFI.framework/{{ name }}FFI
+cp ../{{ package_name }}/target/lipo-macos/release-smaller/lib{{ name }}.a {{ module_name }}.xcframework/macos-arm64_x86_64/{{ name }}FFI.framework/{{ name }}FFI
+
+rm Sources/{{ module_name }}/{{ name }}FFI.h
+rm Sources/{{ module_name }}/{{ name }}FFI.modulemap
+

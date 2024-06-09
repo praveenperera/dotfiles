@@ -19,10 +19,16 @@ colored = "2.0.4"
 
 # templating 
 sailfish = "0.8.0"
+askama = "0.12.1"
 include_dir = "0.7.3"
+
+# serializationa
 serde = { version = "1.0.190", features = ["derive"] }
 serde_yaml = "0.9"
+
+# utils
 rand = "0.8.5"
+convert_case = "0.6.0"
 
 # encryption
 age = "0.10"

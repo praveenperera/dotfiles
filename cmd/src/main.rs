@@ -39,7 +39,7 @@ pub fn command_exists(sh: &Shell, command: &str) -> bool {
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let args = std::env::args_os()
         .map(|x| x.into_string().unwrap_or_default())

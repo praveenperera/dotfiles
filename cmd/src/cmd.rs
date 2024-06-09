@@ -1,5 +1,6 @@
 pub mod bootstrap;
 pub mod gcloud;
+pub mod generate;
 pub mod secrets;
 pub mod terraform;
 pub mod vault;
@@ -44,6 +45,9 @@ const TOOLS: &[Tool] = &[
     ("terraform", terraform::run),
     // vault
     ("vault", vault::run),
+    // generate
+    ("gen", generate::run),
+    ("generate", generate::run),
 ];
 
 fn tools_str() -> String {

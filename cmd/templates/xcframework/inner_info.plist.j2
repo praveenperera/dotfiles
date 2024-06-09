@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>{{ bundle_id }}</string>
+    <key>CFBundleName</key>
+    <string>{{ name }}FFI</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleExecutable</key>
+    <string>{{ name }}FFI</string>
+    {%- if os == Os::Ios  %}
+    <key>MinimumOSVersion</key>
+    <string>100</string>
+    {%- endif %}
+    {%- if os == Os::IosSim  %}
+    <key>MinimumOSVersion</key>
+    <string>15.0</string>
+    {%- endif %}
+    {%- if os == Os::Macos  %}
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    {%- endif %}
+</dict>
+</plist>
+
