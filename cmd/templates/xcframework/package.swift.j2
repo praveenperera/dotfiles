@@ -18,7 +18,15 @@ let package = Package(
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
+        {%- if is_template %}
+        .binaryTarget(
+            name: "{{name}}FFI",
+            url: "FFI_URL",
+            checksum: "FFI_CHECKSUM"
+        ),
+        {%- else %}
         .binaryTarget(name: "{{ name }}FFI", path: "./{{ module_name }}.xcframework"),
+        {%- endif %}
         .target(
             name: "{{ module_name }}",
             dependencies: ["{{name}}FFI"]

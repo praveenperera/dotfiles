@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use askama::Template as _;
 use convert_case::{Case, Casing};
 use eyre::{Context as _, Result};
+use log::{debug, info};
+use sailfish::TemplateOnce;
 use xshell::Shell;
 
 static RUST_VERSION: &str = "1.78.0";
@@ -19,11 +21,15 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
         [] => eprintln!("need args"),
 
         ["swift", name, identifier] => {
-            generate_swift(sh, name, identifier, ".")?;
+            generate_swift(sh, name, identifier, ".", &[])?;
         }
 
         ["swift", name, identifier, path] => {
-            generate_swift(sh, name, identifier, path)?;
+            generate_swift(sh, name, identifier, path, &[])?;
+        }
+
+        ["swift", name, identifier, path, rest @ ..] => {
+            generate_swift(sh, name, identifier, path, rest)?;
         }
 
         cmd => {
@@ -34,14 +40,45 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-fn generate_swift(sh: &Shell, package_name: &str, identifier: &str, out_path: &str) -> Result<()> {
-    log::info!("Generating Swift package {package_name} ({identifier}) in {out_path}");
+fn generate_swift(
+    sh: &Shell,
+    package_name: &str,
+    identifier: &str,
+    out_path: &str,
+    flags: &[&str],
+) -> Result<()> {
+    info!("Generating Swift package {package_name} ({identifier}) in {out_path}");
+    debug!("flags: {flags:?}");
 
     let out_path = PathBuf::from(out_path);
 
     let name = package_name.replace('-', "");
     let base_name = name.replace("ffi", "");
     let module_name = base_name.to_case(Case::Pascal);
+
+    // release repo, create only github action and Package.swift
+    if flags.contains(&"--release") || flags.contains(&"-r") {
+        let github_actions_dir = out_path.join(".github").join("workflows");
+        sh.create_dir(&github_actions_dir)?;
+
+        let github_workflow = GithubActionsTemplate {
+            package_name: package_name.to_string(),
+            name: name.to_string(),
+            module_name: module_name.clone(),
+            base_name: base_name.clone(),
+            rust_version: RUST_VERSION.to_string(),
+        };
+
+        let github_actions = github_actions_dir.join("publish-spm.yml");
+        sh.write_file(
+            github_actions,
+            github_workflow
+                .render_once()
+                .wrap_err("failed to render github workflow")?,
+        )?;
+
+        return Ok(());
+    }
 
     let xcframework_name = format!("{module_name}.xcframework");
     let framework_name = format!("{name}FFI.framework");
@@ -102,11 +139,26 @@ fn generate_swift(sh: &Shell, package_name: &str, identifier: &str, out_path: &s
     let package_swift = PackageSwiftTemplate {
         name: name.to_string(),
         module_name: module_name.clone(),
+        is_template: false,
     };
 
     sh.write_file(
         out_path.join("Package.swift"),
         package_swift
+            .render()
+            .wrap_err("failed to render Package.swift")?,
+    )?;
+
+    // Package.swift.txt
+    let package_swift_template = PackageSwiftTemplate {
+        name: name.to_string(),
+        module_name: module_name.clone(),
+        is_template: true,
+    };
+
+    sh.write_file(
+        out_path.join("Package.swift.txt"),
+        package_swift_template
             .render()
             .wrap_err("failed to render Package.swift")?,
     )?;
@@ -199,10 +251,21 @@ struct ModuleMapTemplate {
 struct PackageSwiftTemplate {
     name: String,
     module_name: String,
+    is_template: bool,
 }
 
 #[derive(askama::Template)]
 #[template(path = "xcframework/umbrella.h.j2")]
 struct UmbrellaHeader {
     name: String,
+}
+
+#[derive(TemplateOnce)]
+#[template(path = "xcframework/github_action.yaml.stpl")]
+struct GithubActionsTemplate {
+    package_name: String,
+    name: String,
+    module_name: String,
+    base_name: String,
+    rust_version: String,
 }
