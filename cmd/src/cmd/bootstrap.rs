@@ -54,9 +54,11 @@ const TOOLS: &[&str] = &[
     "antibody",
     "mcfly",
     "zsh",
-    "1password-cli",
     "neovim",
+    "pinentry-mac",
 ];
+
+const MAC_ONLY_TOOLS: &[&str] = &["pinentry-mac", "1password-cli"];
 
 const BREW_CASKS: &[&str] = &[
     "alacritty",
@@ -275,6 +277,7 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
 
     println!("{}", "installing brew tools".green());
     cmd!(sh, "brew install").args(TOOLS).run()?;
+    cmd!(sh, "brew install").args(MAC_ONLY_TOOLS).run()?;
 
     println!("{}", "installing brew casks".green());
     cmd!(sh, "brew install --cask").args(BREW_CASKS).run()?;
@@ -302,7 +305,6 @@ fn map_brew_tool_names_to_nix(tool_name: &str) -> &str {
         "git-delta" => "delta",
         "sk" => "skim",
         "gpg" => "gnupg",
-        "1password-cli" => "",
         other => other,
     }
 }

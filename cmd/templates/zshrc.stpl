@@ -162,6 +162,7 @@ export PATH=$PATH:$HOME/.mix/escripts
 <% if os == Os::MacOS { %>
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
 <% } %>
+
 export LANG='en_US.UTF-8'
 export EDITOR="nvim"
 export ALTERNATE_EDITOR="code -w"
@@ -169,13 +170,11 @@ export VISUAL="code -w"
 export PATH="/usr/local/sbin:$PATH"
 export PATH="$PATH:$HOME/.cargo/bin"
 export PATH="$PATH:$HOME/.local/bin"
-export ANT_HOME=/usr/local/opt/ant
-export MAVEN_HOME=/usr/local/opt/maven
-export GRADLE_HOME=/usr/local/opt/gradle
 
 <% if os == Os::MacOS { %>
 export ANDROID_HOME=$HOME/Library/Android/sdk
 <% } %>
+
 export ANDROID_SDK_ROOT=$ANDROID_HOME
 export PATH=$PATH:$ANDROID_HOME/emulator
 export PATH=$PATH:$ANDROID_HOME/tools
@@ -185,6 +184,7 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools
 export PATH=$ANT_HOME/bin:$PATH
 export PATH=$MAVEN_HOME/bin:$PATH
 export PATH=$GRADLE_HOME/bin:$PATH
+
 export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 export PATH=$HOME/go/bin:$PATH
 
@@ -304,4 +304,4 @@ eval "$(thefuck --alias)"
 eval "$(direnv hook zsh)"
 eval "$(mcfly init zsh)"
 
-
+export GPG_TTY=$(tty)
