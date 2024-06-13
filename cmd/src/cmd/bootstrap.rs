@@ -58,7 +58,7 @@ const TOOLS: &[&str] = &[
     "pinentry-mac",
 ];
 
-const MAC_ONLY_TOOLS: &[&str] = &["pinentry-mac", "1password-cli"];
+const MAC_ONLY_TOOLS: &[&str] = &["pinentry-mac", "1password-cli", "gpg-suite"];
 
 const BREW_CASKS: &[&str] = &[
     "alacritty",
