@@ -4,4 +4,4 @@ zsh_plugins.sh
 .DS_Store
 zshrc
 nvim/lazy-lock.json
-j
+
