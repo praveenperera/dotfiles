@@ -63,7 +63,6 @@ impl Rust{{ module_name }}ViewModel {
     /// Action from the frontend to change the state of the view model
     #[uniffi::method]
     pub fn dispatch(&self, action: {{ module_name }}ViewModelAction) {
-        // Handle event
         let state = self.state.clone();
 
         match action {}
