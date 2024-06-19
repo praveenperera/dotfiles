@@ -1,0 +1,71 @@
+use std::sync::Arc;
+
+use crossbeam::channel::{Receiver, Sender};
+use parking_lot::RwLock;
+
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
+pub enum {{ module_name }}ViewModelReconcileMessage {
+}
+
+#[uniffi::export(callback_interface)]
+pub trait {{ module_name }}ViewModelReconciler: Send + Sync + std::fmt::Debug + 'static {
+    /// Tells the frontend to reconcile the view model changes
+    fn reconcile(&self, message: {{ module_name }}ViewModelReconcileMessage);
+}
+
+#[derive(Clone, Debug, uniffi::Object)]
+pub struct Rust{{ module_name }}ViewModel {
+    pub state: Arc<RwLock<{{ module_name }}ViewModelState>>,
+    pub reconciler: Sender<{{ module_name }}ViewModelReconcileMessage>,
+    pub reconcile_receiver: Arc<Receiver<{{ module_name }}ViewModelReconcileMessage>>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct {{ module_name }}ViewModelState {
+    pub words: NumberOfBip39Words,
+}
+
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
+pub enum {{ module_name }}ViewModelAction {
+    UpdateWords(NumberOfBip39Words),
+}
+
+#[uniffi::export]
+impl Rust{{ module_name }}ViewModel {
+    #[uniffi::constructor]
+    pub fn new(words: NumberOfBip39Words) -> Self {
+        let (sender, receiver) = crossbeam::channel::bounded(1000);
+
+        Self {
+            state: Arc::new(RwLock::new({{ module_name }}ViewModelState::new(words))),
+            reconciler: sender,
+            reconcile_receiver: Arc::new(receiver),
+        }
+    }
+
+    #[uniffi::method]
+    pub fn get_state(&self) -> {{ module_name }}ViewModelState {
+        self.state.read().clone()
+    }
+
+    #[uniffi::method]
+    pub fn listen_for_updates(&self, reconciler: Box<dyn {{ module_name }}ViewModelReconciler>) {
+        let reconcile_receiver = self.reconcile_receiver.clone();
+
+        std::thread::spawn(move || {
+            while let Ok(field) = reconcile_receiver.recv() {
+                // call the reconcile method on the frontend
+                reconciler.reconcile(field);
+            }
+        });
+    }
+
+    /// Action from the frontend to change the state of the view model
+    #[uniffi::method]
+    pub fn dispatch(&self, action: {{ module_name }}ViewModelAction) {
+        // Handle event
+        let state = self.state.clone();
+
+        match action {}
+    }
+}

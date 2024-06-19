@@ -1,10 +1,11 @@
-use std::path::PathBuf;
+pub mod rmp;
 
 use askama::Template as _;
 use convert_case::{Case, Casing};
 use eyre::{Context as _, Result};
 use log::{debug, info};
 use sailfish::TemplateOnce;
+use std::path::PathBuf;
 use xshell::Shell;
 
 static RUST_VERSION: &str = "1.78.0";
@@ -19,6 +20,10 @@ pub enum Os {
 pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     match args {
         [] => eprintln!("need args"),
+
+        ["rmp", type_, module_name] => {
+            rmp::generate(sh, type_, module_name)?;
+        }
 
         ["swift", name, identifier] => {
             generate_swift(sh, name, identifier, ".", &[])?;

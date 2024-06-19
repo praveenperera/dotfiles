@@ -1,0 +1,26 @@
+import SwiftUI
+
+@Observable class {{ module_name }}ViewModel: {{ module_name }}ViewModelReconciler {
+    var rust: Rust{{ module_name }}ViewModel
+
+    public init() {
+        self.rust = Rust{{ module_name }}ViewModel(words: words)
+
+        self.words = words
+        self.rust.listenForUpdates(reconciler: self)
+    }
+
+    func reconcile(message: {{ module_name }}ViewModelReconcileMessage) {
+        Task {
+            await MainActor.run {
+                print("[swift] {{ module_name }}ViewModel Reconile: \(message)")
+
+                switch message {}
+            }
+        }
+    }
+
+    public func dispatch(action: {{ module_name }}ViewModelAction) {
+        self.rust.dispatch(action: action)
+    }
+}
