@@ -305,3 +305,6 @@ eval "$(direnv hook zsh)"
 eval "$(mcfly init zsh)"
 
 export GPG_TTY=$(tty)
+
+# use vim as the pager for `man`
+export MANPAGER="col -b | nvim -MR - "
