@@ -21,23 +21,19 @@ pub struct Rust{{ module_name }}ViewModel {
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
-pub struct {{ module_name }}ViewModelState {
-    pub words: NumberOfBip39Words,
-}
+pub struct {{ module_name }}ViewModelState { }
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
-pub enum {{ module_name }}ViewModelAction {
-    UpdateWords(NumberOfBip39Words),
-}
+pub enum {{ module_name }}ViewModelAction { }
 
 #[uniffi::export]
 impl Rust{{ module_name }}ViewModel {
     #[uniffi::constructor]
-    pub fn new(words: NumberOfBip39Words) -> Self {
+    pub fn new() -> Self {
         let (sender, receiver) = crossbeam::channel::bounded(1000);
 
         Self {
-            state: Arc::new(RwLock::new({{ module_name }}ViewModelState::new(words))),
+            state: Arc::new(RwLock::new({{ module_name }}ViewModelState::new())),
             reconciler: sender,
             reconcile_receiver: Arc::new(receiver),
         }
@@ -66,5 +62,12 @@ impl Rust{{ module_name }}ViewModel {
         let state = self.state.clone();
 
         match action {}
+    }
+    }
+
+
+impl {{ module_name }}ViewModelState {
+    pub fn new() -> Self {
+        Self {}
     }
 }
