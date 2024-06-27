@@ -18,6 +18,12 @@ end, { desc = "Format file or range (in visual mode)" })
 -- xcodebuild
 vim.keymap.set(
     "n",
+    "<leader>X",
+    "<cmd>XcodebuildPicker<cr>",
+    { desc = "Show All Xcodebuild Actions" }
+)
+vim.keymap.set(
+    "n",
     "<leader>xl",
     "<cmd>XcodebuildToggleLogs<cr>",
     { desc = "Toggle Xcodebuild Logs" }
@@ -48,12 +54,6 @@ vim.keymap.set(
 )
 vim.keymap.set(
     "n",
-    "<leader>X",
-    "<cmd>XcodebuildPicker<cr>",
-    { desc = "Show All Xcodebuild Actions" }
-)
-vim.keymap.set(
-    "n",
     "<leader>xd",
     "<cmd>XcodebuildSelectDevice<cr>",
     { desc = "Select Device" }
@@ -78,7 +78,7 @@ vim.keymap.set(
 )
 vim.keymap.set(
     "n",
-    "<leader>xq",
+    "<leaer>xq",
     "<cmd>Telescope quickfix<cr>",
     { desc = "Show QuickFix List" }
 )
