@@ -58,10 +58,6 @@ M.config = function(_, opts)
             -- default astrovim on_attach
             require("astrolsp").on_attach(client, bufnr)
 
-            vim.keymap.set("n", "<Leader>a", function()
-                vim.cmd.RustLsp("codeAction")
-            end, desc("Code action"))
-
             vim.keymap.set("n", "<Leader>lC", function()
                 vim.cmd.RustLsp("openCargo")
             end, desc("Open Cargo.toml"))

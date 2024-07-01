@@ -82,3 +82,10 @@ vim.keymap.set(
     "<cmd>Telescope quickfix<cr>",
     { desc = "Show QuickFix List" }
 )
+
+-- restart lsp
+vim.keymap.set("n", "<leader>lr", function()
+    vim.cmd("LspRestart")
+    local file = vim.fn.expand("%:p")
+    vim.cmd("e " .. file)
+end, { desc = "Restart LSP" })
