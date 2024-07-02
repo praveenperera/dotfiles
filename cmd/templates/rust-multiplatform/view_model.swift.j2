@@ -13,7 +13,10 @@ import SwiftUI
             await MainActor.run {
                 print("[swift] {{ module_name }}ViewModel Reconcile: \(message)")
 
-                switch message {}
+                switch message {
+                case .noOp:
+                   break 
+                }
             }
         }
     }

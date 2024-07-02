@@ -5,6 +5,7 @@ use parking_lot::RwLock;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
 pub enum {{ module_name }}ViewModelReconcileMessage {
+    NoOp
 }
 
 #[uniffi::export(callback_interface)]
@@ -24,7 +25,9 @@ pub struct Rust{{ module_name }}ViewModel {
 pub struct {{ module_name }}ViewModelState { }
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
-pub enum {{ module_name }}ViewModelAction { }
+pub enum {{ module_name }}ViewModelAction {
+    NoOp,
+}
 
 #[uniffi::export]
 impl Rust{{ module_name }}ViewModel {
@@ -61,9 +64,11 @@ impl Rust{{ module_name }}ViewModel {
     pub fn dispatch(&self, action: {{ module_name }}ViewModelAction) {
         let state = self.state.clone();
 
-        match action {}
+        match action {
+            {{ module_name }}ViewModelAction::NoOp => {}
+        }
     }
-    }
+}
 
 
 impl {{ module_name }}ViewModelState {
