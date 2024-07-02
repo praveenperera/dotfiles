@@ -1,5 +1,5 @@
 return {
-    "nvim-treesitter/nvim-ts-autotag",
+    "windwp/nvim-ts-autotag",
     opts = {
         enable = true,
     },
