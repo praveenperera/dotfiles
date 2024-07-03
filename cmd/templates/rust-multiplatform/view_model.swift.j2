@@ -1,6 +1,7 @@
 import SwiftUI
 
 @Observable class {{ module_name }}ViewModel: {{ module_name }}ViewModelReconciler {
+    private let logger = Log(id: "{{ module_name }}ViewModel")
     var rust: Rust{{ module_name }}ViewModel
 
     public init() {
@@ -11,7 +12,7 @@ import SwiftUI
     func reconcile(message: {{ module_name }}ViewModelReconcileMessage) {
         Task {
             await MainActor.run {
-                print("[swift] {{ module_name }}ViewModel Reconcile: \(message)")
+                logger.debug("Reconcile: \(message)")
 
                 switch message {
                 case .noOp:
@@ -22,6 +23,7 @@ import SwiftUI
     }
 
     public func dispatch(action: {{ module_name }}ViewModelAction) {
+        logger.debug("Dispatch: \(action)")
         self.rust.dispatch(action: action)
     }
 }
