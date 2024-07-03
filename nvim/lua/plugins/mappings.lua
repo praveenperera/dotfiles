@@ -1,4 +1,5 @@
 local telescope = require("telescope")
+local serpl = require("config.serpl")
 
 -- Mappings can be configured through AstroCore as well.
 -- NOTE: keycodes follow the casing in the vimdocs. For example, `<Leader>` must be capitalized
@@ -116,6 +117,12 @@ return {
                     ["<Leader>t4"] = {
                         "<cmd>ToggleTerm 4<cr>",
                         desc = "ToggleTerm 4th Window",
+                    },
+
+                    -- toggle serpl
+                    ["<Leader>sr"] = {
+                        serpl.serpl_toggle,
+                        desc = "Search and Replace",
                     },
 
                     -- system yank
