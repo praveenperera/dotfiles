@@ -120,9 +120,19 @@ return {
                     },
 
                     -- toggle serpl
-                    ["<Leader>sr"] = {
-                        serpl.serpl_toggle,
-                        desc = "Search and Replace",
+                    ["<Leader>srp"] = {
+                        serpl.serpl_project,
+                        desc = "Search and Replace Project",
+                    },
+
+                    ["<Leader>srf"] = {
+                        serpl.serpl_file,
+                        desc = "Search and Replace File",
+                    },
+
+                    ["<Leader>srd"] = {
+                        serpl.serpl_dir,
+                        desc = "Search and Replace Directory",
                     },
 
                     -- system yank
