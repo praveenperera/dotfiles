@@ -9,6 +9,11 @@ return {
         ---@type AstroCoreOpts
         opts = {
             mappings = {
+                i = {
+                    -- backspace word
+                    ["<C-w>"] = "<C-\\><C-o>dB",
+                    { noremap = true, desc = "Delete previous word" },
+                },
                 n = {
                     -- Overwrite astronvim leader h, the rest is in harpoon.lua
                     ["<Leader>h"] = { name = "Harpoon" },

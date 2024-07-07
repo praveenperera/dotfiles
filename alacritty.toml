@@ -220,6 +220,11 @@ chars = "\u0002$"
 key = "Period"
 mods = "Command"
 
+[[keyboard.bindings]]
+key = "Back"
+mods = "Alt"
+chars = "\u0017"
+
 [selection]
 save_to_clipboard = true
 semantic_escape_chars = ",│`|:\"' ()[]{}<>"
