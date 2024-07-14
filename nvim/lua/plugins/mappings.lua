@@ -11,7 +11,7 @@ return {
             mappings = {
                 i = {
                     -- backspace word
-                    ["<C-w>"] = "<C-\\><C-o>db",
+                    ["<C-w>"] = '<C-\\><C-o>"_db',
                     { noremap = true, desc = "Delete previous word" },
                 },
                 n = {
