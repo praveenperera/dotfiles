@@ -10,13 +10,14 @@ return {
         opts = {
             mappings = {
                 i = {
-                    -- backspace word
-                    ["<C-w>"] = '<C-\\><C-o>"_db',
-                    { noremap = true, desc = "Delete previous word" },
+                    ["<C-w>"] = {
+                        '<C-\\><C-o>"_db',
+                        desc = "Delete previous word",
+                    },
                 },
                 n = {
                     -- Overwrite astronvim leader h, the rest is in harpoon.lua
-                    ["<Leader>h"] = { name = "Harpoon" },
+                    ["<Leader>h"] = { desc = "Harpoon" },
 
                     -- Overwrite astronvim leader uc
                     ["<Leader>uc"] = {

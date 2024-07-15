@@ -302,7 +302,10 @@ eval "$(fnm env)"
 eval "$(starship init zsh)"
 eval "$(thefuck --alias)"
 eval "$(direnv hook zsh)"
-eval "$(mcfly init zsh)"
+
+eval "$(atuin init zsh)"
+bindkey '^[[A' history-substring-search-up
+# eval "$(mcfly init zsh)"
 
 export GPG_TTY=$(tty)
 
