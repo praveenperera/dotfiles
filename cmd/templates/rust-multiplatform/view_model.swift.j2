@@ -1,28 +1,27 @@
 import SwiftUI
 
-@Observable class {{ module_name }}ViewModel: {{ module_name }}ViewModelReconciler {
-    private let logger = Log(id: "{{ module_name }}ViewModel")
-    var rust: Rust{{ module_name }}ViewModel
+extension WeakReconciler: {{ module_name }}Reconciler where Reconciler == {{ view_model_name }} {}
+
+@Observable class {{ view_model_name }}: {{ view_model_name }}Reconciler {
+    private let logger = Log(id: "{{ view_model_name }}")
+    var rust: Rust{{ view_model_name }}
 
     public init() {
-        self.rust = Rust{{ module_name }}ViewModel()
-        self.rust.listenForUpdates(reconciler: self)
+        self.rust = Rust{{ view_model_name }}()
+        self.rust.listenForUpdates(reconciler: WeakReconciler(self))
     }
 
-    func reconcile(message: {{ module_name }}ViewModelReconcileMessage) {
-        Task {
-            await MainActor.run {
-                logger.debug("Reconcile: \(message)")
+    @MainActor
+    func reconcile(message: {{ view_model_name }}ReconcileMessage) {
+        logger.debug("Reconcile: \(message)")
 
-                switch message {
-                case .noOp:
-                   break 
-                }
-            }
+        switch message {
+        case .noOp:
+           break 
         }
     }
 
-    public func dispatch(action: {{ module_name }}ViewModelAction) {
+    public func dispatch(action: {{ view_model_name }}Action) {
         logger.debug("Dispatch: \(action)")
         self.rust.dispatch(action: action)
     }

@@ -15,6 +15,7 @@ struct RustViewModelTemplate {
 #[template(path = "rust-multiplatform/view_model.swift.j2")]
 struct SwiftViewModelTemplate {
     module_name: String,
+    view_model_name: String,
 }
 
 pub fn generate(_sh: &Shell, type_: &str, module_name: &str) -> Result<()> {
@@ -23,6 +24,7 @@ pub fn generate(_sh: &Shell, type_: &str, module_name: &str) -> Result<()> {
     let template = match type_ {
         "swift" => SwiftViewModelTemplate {
             module_name: module_name.to_string(),
+            view_model_name: format!("{module_name}ViewModel"),
         }
         .render(),
 
