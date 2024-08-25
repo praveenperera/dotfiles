@@ -45,6 +45,7 @@ M.config = function(_, opts)
                 settings_file_pattern = "rust-analyzer.json",
             })
         end,
+
         on_attach = function(client, bufnr)
             local function desc(description)
                 return {
@@ -74,10 +75,17 @@ M.config = function(_, opts)
                 end, desc("Toggle inlay hints"))
             end
         end,
-        -- default_settings = {
-        --     -- rust-analyzer language server configuration
-        --     -- ['rust-analyzer'] = {},
-        -- },
+        default_settings = {
+            -- rust-analyzer language server configuration
+            ["rust-analyzer"] = {
+                check = {
+                    command = "check",
+                },
+                checkOnSave = {
+                    command = "check",
+                },
+            },
+        },
     }
 
     -- DAP configuration
