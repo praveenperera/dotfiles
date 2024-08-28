@@ -25,10 +25,10 @@ local opts = {
             prev = "[[",
         },
     },
-    hints = { enabled = true },
+    hints = { enabled = false },
     windows = {
-        wrap = true,          -- similar to vim.o.wrap
-        width = 30,           -- default % based on available width
+        wrap = true, -- similar to vim.o.wrap
+        width = 30, -- default % based on available width
         sidebar_header = {
             align = "center", -- left, center, right for title
             rounded = true,
