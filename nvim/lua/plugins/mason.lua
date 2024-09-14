@@ -6,7 +6,7 @@ return {
             opts.ensure_installed =
                 require("astrocore").list_insert_unique(opts.ensure_installed, {
                     "lua_ls",
-                    "tsserver",
+                    "ts_ls",
                     "tflint",
                     "tailwindcss",
                     "pyre",
