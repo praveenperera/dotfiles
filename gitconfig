@@ -35,7 +35,8 @@
 [interactive]
   diffFilter = delta --color-only
 [alias]
-  co = checkout
+  co = switch
+  cob = switch -c
   ec = config --global -e
   up = !git pull --rebase --prune $@ && git submodule update --init --recursive
   cch = !git rev-parse HEAD | tr -d '\n'
@@ -45,7 +46,6 @@
   upstream = !git branch --set-upstream-to=origin/$(git cb)
   deploy = !git push && git push dokku master
   cb = !git branch --show-current | tr -d '\n'
-  cob = checkout -b
   cms = !git add -A && git commit -S -m
   cm = !git add -A && git commit -m
   save = !git add -A && git commit -m 'SAVEPOINT'
