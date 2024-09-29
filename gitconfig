@@ -23,7 +23,7 @@
 [delta]
   line-numbers = true
   features = side-by-side line-numbers decorations
-  syntax-theme = Monokai Extended
+  syntax-theme = Dracula
   side-by-side = true
   navigate = true
 [merge]
