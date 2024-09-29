@@ -8,30 +8,28 @@
 [pull]
 	rebase = true
 [push]
-  default = matching
+  autoSetupRemote = true
+  default = current
 [core]
   pager = delta
   editor = nvim
   difftool = true
   excludesfile = ~/.gitignore
-[diff]
-  tool = difftastic
-[difftool]
-  prompt = false
-[difftool "difftastic"]
-  cmd = difft "$LOCAL" "$REMOTE"
 [pager]
   diff = delta
   log = delta
   reflog = delta
   show = delta
 [delta]
-  plus-style = "syntax #012800"
-  minus-style = "syntax #340001"
+  line-numbers = true
   features = side-by-side line-numbers decorations
   syntax-theme = Monokai Extended
   side-by-side = true
   navigate = true
+[merge]
+  conflictstyle = diff3
+[diff]
+  colorMoved = default
 [interactive]
   diffFilter = delta --color-only
 [alias]
@@ -61,20 +59,6 @@
   unpublish = "!git push origin :$(git branch-name)"
   unstage = reset HEAD
   dft = difftool
-[color]
-  ui = true
-[color "diff-highlight"]
-  oldNormal = red bold
-  oldHighlight = red bold 52
-  newNormal = green bold
-  newHighlight = green bold 22
-[color "diff"]
-  meta = 227
-  frag = magenta bold
-  commit = 227 bold
-  old = red bold
-  new = green bold
-  whitespace = red reverse
 [interactive]
   diffFilter = delta --color-only
 [gpg]
