@@ -59,8 +59,6 @@
   unpublish = "!git push origin :$(git branch-name)"
   unstage = reset HEAD
   dft = difftool
-[interactive]
-  diffFilter = delta --color-only
 [gpg]
   program = gpg
 [user]
