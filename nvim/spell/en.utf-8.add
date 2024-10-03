@@ -7,3 +7,5 @@ txid
 struct
 structs
 strftime
+clippy
+Endianness

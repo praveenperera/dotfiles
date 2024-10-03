@@ -221,6 +221,11 @@ key = "Period"
 mods = "Command"
 
 [[keyboard.bindings]]
+key = "Space"
+mods = "Shift|Control"
+action = "ToggleViMode"
+
+[[keyboard.bindings]]
 key = "Back"
 mods = "Alt"
 chars = "\u0017"
