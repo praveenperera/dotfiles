@@ -37,6 +37,7 @@ end
 
 local function serpl_dir()
     local current_file_dir = vim.fn.expand("%:p:h")
+    vim.notify("Search and Replace on: " .. current_file_dir)
 
     local opts = serpl_opts
     opts.cmd = "serpl --project-root " .. current_file_dir
