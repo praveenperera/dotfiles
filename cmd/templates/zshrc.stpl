@@ -44,7 +44,7 @@ alias agee=agee_func
 alias aged=aged_func
 alias lg="lazygit"
 alias vim="nvim"
-
+alias term="nvim -c 'term'"
 
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
@@ -316,3 +316,4 @@ export MANPAGER="col -b | nvim -MR - "
 
 # if secret zshrc exists, source it
 [ -f ~/.secrets.zsh ] && source ~/.secrets.zsh
+
