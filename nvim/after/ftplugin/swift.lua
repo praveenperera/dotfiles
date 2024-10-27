@@ -84,7 +84,8 @@ vim.keymap.set(
 )
 
 -- restart lsp
-vim.keymap.set("n", "<leader>lr", function()
+vim.keymap.set("n", "<leader>lx", function()
+    vim.notify("Restarting LSP...")
     vim.cmd("LspRestart")
     local file = vim.fn.expand("%:p")
     vim.cmd("e " .. file)
