@@ -161,13 +161,13 @@ return {
 
                     -- mark in file
                     ["<Leader>fm"] = {
-                        "<cmd>Telescope current_buffer_fuzzy_find case_mode=smart_case default_text=MARK\\ <CR>",
+                        "<cmd>Telescope current_buffer_fuzzy_find case_mode=smart_case default_text=MARK:\\ <CR>",
                         desc = "Find in Buffer",
                     },
 
                     -- mark in project
                     ["<Leader>fM"] = {
-                        "<cmd>Telescope project_fuzzy_find case_mode=smart_case default_text=MARK\\ <CR>",
+                        "<cmd>Telescope live_grep case_mode=smart_case default_text=MARK:\\ <CR>",
                         desc = "Find in Buffer",
                     },
 
