@@ -165,5 +165,9 @@ return {
             -- this would disable semanticTokensProvider for all clients
             -- client.server_capabilities.semanticTokensProvider = nil
         end,
+
+        handlers = {
+            rust_analyzer = false,
+        },
     },
 }
