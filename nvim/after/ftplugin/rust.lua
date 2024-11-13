@@ -13,3 +13,10 @@ for _, method in ipairs({ "textDocument/diagnostic", "workspace/diagnostic" }) d
         return default_diagnostic_handler(err, result, context, config)
     end
 end
+
+vim.keymap.set("n", "<leader>lx", function()
+    vim.notify("Restarting LSP...")
+    vim.cmd("LspRestart")
+    local file = vim.fn.expand("%:p")
+    vim.cmd("e " .. file)
+end, { desc = "Restart LSP" })

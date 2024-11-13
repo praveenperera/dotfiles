@@ -1,4 +1,4 @@
-local config = function(_, opts)
+local config = function(_, _opts)
     local function file_exists(path)
         local file = io.open(path, "r")
         if file then
@@ -9,7 +9,7 @@ local config = function(_, opts)
         end
     end
 
-    opts = {}
+    local opts = _opts or {}
 
     -- Plugin configuration
     opts.tools = {
