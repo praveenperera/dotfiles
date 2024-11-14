@@ -90,7 +90,7 @@ const DOTFILES: &[&str] = &[
     "zshrc",
     "gitconfig",
     "wezterm.lua",
-    "zsh_plugins.sh",
+    "zsh_plugins.zsh",
     "gitignore",
     "direnvrc",
     "alacritty.toml",
@@ -193,18 +193,9 @@ pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
 
 fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     let home: PathBuf = std::env::var("HOME").expect("HOME env var not set").into();
-    let zsh_plugins = home.join(".zsh_plugins.txt");
 
     // setup zsh plugins
-    sh.remove_path(zsh_plugins)?;
-    println!("{}", "setting up zsh_plugins.sh file...".green());
-
-    let zsh_plugins_txt = crate::dotfiles_dir().join("zsh_plugins.txt");
-    let zsh_plugins_sh = crate::dotfiles_dir().join("zsh_plugins.sh");
-
-    let input_content = sh.read_file(zsh_plugins_txt)?;
-    let output_content = cmd!(sh, "antibody bundle").stdin(input_content).read()?;
-    sh.write_file(zsh_plugins_sh, output_content)?;
+    println!("{}", "setting up zsh_plugins.zsh file...".green());
 
     let mut path_and_target = vec![];
 

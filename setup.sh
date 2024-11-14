@@ -7,7 +7,9 @@ export PATH="$PATH:$HOME/.cargo/bin"
 
 # generate zsh plugins
 [ -f $HOME/.zsh_plugins.sh ] && rm $HOME/.zsh_plugins.sh
-antibody bundle < zsh_plugins.txt > zsh_plugins.sh
+export ANTIDOTE_HOME=~/.cache/antidote
+source $(brew --prefix)/opt/antidote/share/antidote/antidote.zsh 
+antidote bundle <zsh_plugins.txt >|zsh_plugins.zsh
 
 # make folders
 mkdir -p ~/.config

@@ -212,7 +212,7 @@ if [ $commands[kubectl] ]; then
 fi
 
 # zsh plugins
-source $HOME/.zsh_plugins.sh
+source $HOME/.zsh_plugins.zsh
 
 # zsh-history-substring-search
 bindkey '^[[A' history-substring-search-up
