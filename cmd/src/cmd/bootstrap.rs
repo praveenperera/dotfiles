@@ -69,6 +69,7 @@ const BREW_CASKS: &[&str] = &[
     "raycast",
     "font-jetbrains-mono-nerd-font",
     "font-recursive-mono-nerd-font",
+    "brave-browser",
 ];
 
 const LINUX_TOOLS: &[&str] = &[
