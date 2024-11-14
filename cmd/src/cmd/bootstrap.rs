@@ -146,6 +146,7 @@ pub fn config(sh: &Shell, _args: &[&str]) -> Result<()> {
     sh.write_file(&path, zshrc.render_once()?)?;
 
     if let Os::MacOS = Os::current() {
+        println!("{}", "installing osx defaults".green());
         let osx_defaults = OsxDefaults {}.render_once()?;
         create_and_run_file(sh, &osx_defaults, "osx_defaults.zsh")?;
     }
