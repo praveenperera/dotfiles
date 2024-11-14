@@ -42,7 +42,6 @@ const TOOLS: &[&str] = &[
     "htop",
     "eza",
     "pkg-config",
-    "antibody",
     "zoxide",
     "kubectl",
     "gpg",
@@ -51,7 +50,6 @@ const TOOLS: &[&str] = &[
     "elixir",
     "topgrade",
     "go",
-    "antibody",
     "mcfly",
     "zsh",
     "neovim",
@@ -68,7 +66,7 @@ const BREW_CASKS: &[&str] = &[
     "github",
     "signal",
     "sublime-text",
-    "rectangle",
+    "raycast",
     "font-jetbrains-mono-nerd-font",
     "font-recursive-mono-nerd-font",
 ];
@@ -86,7 +84,7 @@ const LINUX_TOOLS: &[&str] = &[
     "python3-setuptools",
 ];
 
-const CARGO_PKGS: &[&str] = &["cargo-watch", "bacon", "twm"];
+const CARGO_PKGS: &[&str] = &["cargo-watch", "bacon"];
 
 const DOTFILES: &[&str] = &[
     "zshrc",
@@ -273,7 +271,6 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
     }
 
     cmd!(sh, "brew update").run()?;
-    cmd!(sh, "brew tap homebrew/cask-fonts").run()?;
 
     println!("{}", "installing brew tools".green());
     cmd!(sh, "brew install").args(TOOLS).run()?;
