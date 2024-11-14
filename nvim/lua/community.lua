@@ -14,7 +14,6 @@ return {
     { import = "astrocommunity.pack.yaml" },
     { import = "astrocommunity.pack.zig" },
     { import = "astrocommunity.pack.elixir-phoenix" },
-    { import = "astrocommunity.pack.swift" },
     { import = "astrocommunity.pack.tailwindcss" },
     { import = "astrocommunity.pack.json" },
     { import = "astrocommunity.pack.markdown" },
