@@ -34,7 +34,7 @@ return {
                 undofile = true,
                 --
                 wrap = false,
-                -- colorcolumn = "80",
+                colorcolumn = "120",
                 termguicolors = true,
                 expandtab = true,
                 scrolloff = 5,
