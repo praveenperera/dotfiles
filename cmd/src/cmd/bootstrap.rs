@@ -93,11 +93,10 @@ const DOTFILES: &[&str] = &[
     "zsh_plugins.zsh",
     "gitignore",
     "direnvrc",
-    "alacritty.toml",
     "tmux.conf",
 ];
 
-const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm", "topgrade"];
+const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm", "topgrade", "alacritty"];
 
 const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[("nvim", ".config/nvim")];
 
@@ -196,6 +195,8 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
 
     // setup zsh plugins
     println!("{}", "setting up zsh_plugins.zsh file...".green());
+    let antidote_script = include_str!("../../scripts/antidote.zsh");
+    cmd!(sh, "zsh -c {antidote_script}").run()?;
 
     let mut path_and_target = vec![];
 
