@@ -206,7 +206,7 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
             crate::dotfiles_dir().to_str().expect("invalid path"),
         );
 
-        cmd!(sh, "zsh -c {antidote_script}").run()?;
+        cmd!(sh, "zsh -c {antidote_script}").quiet().run()?;
     }
 
     let mut path_and_target = vec![];
@@ -241,7 +241,7 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
         sh.remove_path(target)?;
 
         if let Some(parent) = PathBuf::from(target).parent() {
-            cmd!(sh, "mkdir -p {parent}").run()?;
+            cmd!(sh, "mkdir -p {parent}").quiet().run()?;
         }
 
         cmd!(sh, "ln -s {path} {target}").run()?;

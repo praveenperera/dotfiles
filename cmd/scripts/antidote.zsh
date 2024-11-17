@@ -6,4 +6,4 @@ if [ -z "$DOTFILES_DIR" ]; then
 fi
 
 source $(brew --prefix)/opt/antidote/share/antidote/antidote.zsh 
-antidote bundle < $DOTFILES_DIR/zsh_plugins.txt > | $DOTFILES_DIR/zsh_plugins.zsh
+antidote bundle < $DOTFILES_DIR/zsh_plugins.txt >| $DOTFILES_DIR/zsh_plugins.zsh
