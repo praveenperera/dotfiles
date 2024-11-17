@@ -55,9 +55,16 @@ const TOOLS: &[&str] = &[
     "zsh",
     "neovim",
     "pinentry-mac",
+    "just",
+    "rust-analyzer",
 ];
 
-const MAC_ONLY_TOOLS: &[&str] = &["pinentry-mac", "1password-cli", "gpg-suite"];
+const MAC_ONLY_TOOLS: &[&str] = &[
+    "pinentry-mac",
+    "1password-cli",
+    "gpg-suite",
+    "xcode-build-server",
+];
 
 const BREW_CASKS: &[&str] = &[
     "alacritty",
@@ -71,6 +78,8 @@ const BREW_CASKS: &[&str] = &[
     "font-jetbrains-mono-nerd-font",
     "font-recursive-mono-nerd-font",
     "brave-browser",
+    "appcleaner",
+    "iterm2",
 ];
 
 const LINUX_TOOLS: &[&str] = &[
