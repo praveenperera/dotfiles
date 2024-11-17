@@ -60,10 +60,10 @@ const TOOLS: &[&str] = &[
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
-    "pinentry-mac",
     "1password-cli",
-    "gpg-suite",
     "xcode-build-server",
+    "gpg-suite",
+    "pinentry-mac",
 ];
 
 const BREW_CASKS: &[&str] = &[
@@ -109,7 +109,10 @@ const DOTFILES: &[&str] = &[
 
 const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm", "topgrade", "alacritty"];
 
-const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[("nvim", ".config/nvim")];
+const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
+    ("nvim", ".config/nvim"),
+    ("gpg-agent.conf", ".gnupg/gpg-agent.conf"),
+];
 
 pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     // install rust components
@@ -250,7 +253,9 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
         sh.remove_path(target)?;
 
         if let Some(parent) = PathBuf::from(target).parent() {
-            cmd!(sh, "mkdir -p {parent}").quiet().run()?;
+            if !sh.path_exists(parent) {
+                cmd!(sh, "mkdir -p {parent}").quiet().run()?;
+            }
         }
 
         cmd!(sh, "ln -s {path} {target}").run()?;
