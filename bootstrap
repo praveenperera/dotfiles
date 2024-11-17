@@ -36,7 +36,10 @@ cd cmd
 mkdir -p secrets
 ./release
 
-cmd bootstrap
+$HOME/.local/bin/cmd bootstrap
 sudo chsh $(whoami) --shell $(which zsh)
+
+gpgconf --kill gpg-agent || true
+gpgconf --launch gpg-agent || true
 
 exec zsh
