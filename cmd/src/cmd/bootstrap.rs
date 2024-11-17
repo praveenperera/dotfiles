@@ -293,8 +293,31 @@ fn install_brew_and_tools(sh: &Shell) -> Result<()> {
     cmd!(sh, "brew install").args(TOOLS).run()?;
     cmd!(sh, "brew install").args(MAC_ONLY_TOOLS).run()?;
 
-    println!("{}", "installing brew casks".green());
-    cmd!(sh, "brew install --cask").args(BREW_CASKS).run()?;
+    let cask_list = cmd!(sh, "brew list --cask").read().unwrap_or_default();
+
+    let already_installed_casks = cask_list
+        .split('\n')
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>();
+
+    let casks_to_install = BREW_CASKS
+        .iter()
+        .filter(|cask| !already_installed_casks.contains(cask))
+        .cloned()
+        .collect::<Vec<_>>();
+
+    if !casks_to_install.is_empty() {
+        println!(
+            "{}: {}",
+            "installing brew casks".green(),
+            casks_to_install.join(", ").blue()
+        );
+
+        cmd!(sh, "brew install --cask")
+            .args(casks_to_install)
+            .run()?;
+    }
 
     println!("{}", "installing cargo plugins".green());
     std::env::set_var("RUSTC_WRAPPER", "sccache");
