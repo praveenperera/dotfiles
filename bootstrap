@@ -34,7 +34,7 @@ fi
 
 cd cmd
 mkdir -p secrets
-sudo ./release
+./release
 
 cmd bootstrap
 sudo chsh $(whoami) --shell $(which zsh)

@@ -50,6 +50,7 @@ const TOOLS: &[&str] = &[
     "elixir",
     "topgrade",
     "go",
+    "atuin",
     "mcfly",
     "zsh",
     "neovim",
@@ -198,7 +199,15 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     // setup zsh plugins
     println!("{}", "setting up zsh_plugins.zsh file...".green());
     let antidote_script = include_str!("../../scripts/antidote.zsh");
-    cmd!(sh, "zsh -c {antidote_script}").run()?;
+
+    {
+        let _dir = sh.push_env(
+            "DOTFILES_DIR",
+            crate::dotfiles_dir().to_str().expect("invalid path"),
+        );
+
+        cmd!(sh, "zsh -c {antidote_script}").run()?;
+    }
 
     let mut path_and_target = vec![];
 
