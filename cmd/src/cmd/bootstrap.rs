@@ -109,10 +109,9 @@ const DOTFILES: &[&str] = &[
 
 const CONFIG_FILE_OR_DIR: &[&str] = &["starship.toml", "zellij", "twm", "topgrade", "alacritty"];
 
-const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
-    ("nvim", ".config/nvim"),
-    ("gpg-agent.conf", ".gnupg/gpg-agent.conf"),
-];
+const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[("nvim", ".config/nvim")];
+const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
+    &[("gpg-agent.conf", ".gnupg/gpg-agent.conf")];
 
 pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     // install rust components
@@ -240,6 +239,16 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
         let target = home.join(format!(".config/{filename}"));
 
         path_and_target.push((path, target));
+    }
+
+    // mac only config
+    if let Os::MacOS = Os::current() {
+        for (src, dest) in MAC_ONLY_CUSTOM_CONFIG_OR_DIR {
+            let path = crate::dotfiles_dir().join(src);
+            let target = home.join(dest);
+
+            path_and_target.push((path, target));
+        }
     }
 
     for (src, dest) in CUSTOM_CONFIG_OR_DIR {
