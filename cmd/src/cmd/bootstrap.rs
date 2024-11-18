@@ -60,6 +60,7 @@ const TOOLS: &[&str] = &[
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
+    "swiftformat",
     "1password-cli",
     "xcode-build-server",
     "gpg-suite",
@@ -80,6 +81,7 @@ const BREW_CASKS: &[&str] = &[
     "brave-browser",
     "appcleaner",
     "iterm2",
+    "swiftformat-for-xcode",
 ];
 
 const LINUX_TOOLS: &[&str] = &[
