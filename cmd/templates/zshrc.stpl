@@ -292,6 +292,10 @@ export AGE=age16du95zg8vcerpjrj7n9xaj2a7hs0kcjukpguveg3xna8nd48yyzqc4k3kx
 # ruby
 export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 
+# pnpm
+export PNPM_HOME="$HOME/Library/pnpm"
+export PATH="$PNPM_HOME:$PATH"
+
 # nsc docker builder
 <% if os == Os::MacOS { %>
 export NS_ROOT="$HOME/Library/Application Support/ns"

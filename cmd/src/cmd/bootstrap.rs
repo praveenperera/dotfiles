@@ -59,7 +59,7 @@ const TOOLS: &[&str] = &[
     "rust-analyzer",
     "node",
     "npm",
-    "pnpm",
+    "yarn",
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
