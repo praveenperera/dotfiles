@@ -58,7 +58,6 @@ const TOOLS: &[&str] = &[
     "just",
     "rust-analyzer",
     "node",
-    "npm",
     "yarn",
 ];
 
