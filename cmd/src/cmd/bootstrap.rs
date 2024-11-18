@@ -57,6 +57,9 @@ const TOOLS: &[&str] = &[
     "pinentry-mac",
     "just",
     "rust-analyzer",
+    "node",
+    "npm",
+    "pnpm",
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
@@ -82,6 +85,8 @@ const BREW_CASKS: &[&str] = &[
     "appcleaner",
     "iterm2",
     "swiftformat-for-xcode",
+    "slack",
+    "selfcontrol",
 ];
 
 const LINUX_TOOLS: &[&str] = &[
@@ -97,7 +102,7 @@ const LINUX_TOOLS: &[&str] = &[
     "python3-setuptools",
 ];
 
-const CARGO_PKGS: &[&str] = &["cargo-watch", "bacon"];
+const CARGO_PKGS: &[&str] = &["cargo-watch", "bacon", "cargo-update"];
 
 const DOTFILES: &[&str] = &[
     "zshrc",
