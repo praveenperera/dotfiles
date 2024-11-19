@@ -86,6 +86,7 @@ const BREW_CASKS: &[&str] = &[
     "swiftformat-for-xcode",
     "slack",
     "selfcontrol",
+    "figma",
 ];
 
 const LINUX_TOOLS: &[&str] = &[
