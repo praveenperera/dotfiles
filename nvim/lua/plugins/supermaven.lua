@@ -7,6 +7,7 @@ return {
                 accept_word = "<C-y>",
                 accept_suggestion = "<C-l>",
                 clear_suggestion = "<C-]>",
+                next_suggestion = "<C-j>",
             },
         })
     end,
