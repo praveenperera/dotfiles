@@ -2,9 +2,6 @@
 defaults write -g InitialKeyRepeat -int 10 # normal minimum is 15 (225 ms)
 defaults write -g KeyRepeat -int 0.02 # normal minimum is 2 (30 ms)
 
-# safari debug
-defaults write com.apple.Safari IncludeInternalDebugMenu -bool true
-
 # disable the warning when changing a file extension
 defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 
@@ -37,3 +34,4 @@ defaults write -g NSNavPanelExpandedStateForSaveMode -bool true
 
 # disable the 'Are you sure you want to open this application?' dialog
 defaults write com.apple.LaunchServices LSQuarantine -bool true
+
