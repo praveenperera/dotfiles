@@ -5,16 +5,6 @@ vim.keymap.set("n", "<leader>ll", function()
     require("lint").try_lint()
 end, { desc = "Lint file", silent = true, buffer = bufnr })
 
--- format
-local conform = require("conform")
-vim.keymap.set({ "n", "v" }, "<leader>lf", function()
-    conform.format({
-        lsp_fallback = true,
-        async = false,
-        timeout_ms = 500,
-    })
-end, { desc = "Format file or range (in visual mode)" })
-
 -- xcodebuild
 vim.keymap.set(
     "n",
