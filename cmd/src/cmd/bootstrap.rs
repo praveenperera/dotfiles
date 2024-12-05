@@ -103,7 +103,13 @@ const LINUX_TOOLS: &[&str] = &[
     "python3-setuptools",
 ];
 
-const CARGO_PKGS: &[&str] = &["cargo-watch", "bacon", "cargo-update", "cargo-nextest"];
+const CARGO_PKGS: &[&str] = &[
+    "cargo-watch",
+    "bacon",
+    "cargo-update",
+    "cargo-nextest",
+    "hyperfine",
+];
 
 const DOTFILES: &[&str] = &[
     "zshrc",
