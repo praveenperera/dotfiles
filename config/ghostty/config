@@ -1,0 +1,54 @@
+## FONTS
+font-size = 12
+font-family = "JetbrainMono Nerd Font Mono"
+font-family-bold = "JetbrainMono Nerd Font Mono"
+
+font-family-italic = "RecMonoDuotone Nerd Font Mono"
+font-family-bold-italic = "RecMonoDuotone Nerd Font Mono"
+
+## COLORS
+# primary colors
+background = #262525
+foreground = #c7c7c7
+
+# normal colors (0-7)
+palette = 0=#333333
+palette = 1=#ef286f
+palette = 2=#a7e400
+palette = 3=#f1993a
+palette = 4=#69d8f2
+palette = 5=#c930c7
+palette = 6=#00c5c7
+palette = 7=#c7c7c7
+
+# bright colors (8-15)
+palette = 8=#676767
+palette = 9=#ef286f
+palette = 10=#a7e400
+palette = 11=#dfdc58
+palette = 12=#69d8f2
+palette = 13=#c930c7
+palette = 14=#5ffdff
+palette = 15=#feffff
+
+## KEYBINDS
+
+# scroll back buffer
+keybind = cmd+enter=text:\x02[
+
+# tmux pane splits
+keybind = cmd+d=text:\x02%
+keybind = cmd+shift+d=text:\x02"
+
+# tmux tab management
+keybind = cmd+t=text:\x02c
+keybind = cmd+w=text:\x02x
+keybind = cmd+shift+l=text:\x02n
+keybind = cmd+shift+h=text:\x02p
+
+# rename window/tab
+keybind = cmd+comma=text:\x02,
+keybind = cmd+period=text:\x02$
+
+# delete by word
+keybind = alt+backspace=text:\x17
