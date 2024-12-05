@@ -2,7 +2,7 @@
 macos-titlebar-style = hidden
 
 ## FONTS
-font-size = 12
+font-size = 11
 font-family = "JetbrainMono Nerd Font Mono"
 font-family-bold = "JetbrainMono Nerd Font Mono"
 
@@ -48,6 +48,15 @@ keybind = cmd+t=text:\x02c
 keybind = cmd+w=text:\x02x
 keybind = cmd+shift+l=text:\x02n
 keybind = cmd+shift+h=text:\x02p
+keybind = cmd+physical:one=text:\x021
+keybind = cmd+physical:two=text:\x022
+keybind = cmd+physical:three=text:\x023
+keybind = cmd+physical:four=text:\x024
+keybind = cmd+physical:five=text:\x025
+keybind = cmd+physical:six=text:\x026
+keybind = cmd+physical:seven=text:\x027
+keybind = cmd+physical:eight=text:\x028
+keybind = cmd+physical:nine=text:\x029
 
 # rename window/tab
 keybind = cmd+comma=text:\x02,
