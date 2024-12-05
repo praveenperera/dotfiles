@@ -2,12 +2,9 @@
 macos-titlebar-style = hidden
 
 ## FONTS
-font-size = 11
-font-family = "JetbrainMono Nerd Font Mono"
-font-family-bold = "JetbrainMono Nerd Font Mono"
-
-font-family-italic = "RecMonoDuotone Nerd Font Mono"
-font-family-bold-italic = "RecMonoDuotone Nerd Font Mono"
+font-size = 11.5
+font-family = JetBrainsMono Nerd Font Mono
+font-family-bold = JetBrainsMono NFM ExtraBold
 
 ## COLORS
 # primary colors
