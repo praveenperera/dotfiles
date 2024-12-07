@@ -57,9 +57,8 @@ const TOOLS: &[&str] = &[
     "pinentry-mac",
     "just",
     "rust-analyzer",
-    "node",
-    "yarn",
     "serpl",
+    "zig",
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
