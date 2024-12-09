@@ -12,7 +12,9 @@ defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
 defaults write -g NSWindowResizeTime -float 0.001
 
 # disable autocorrect
+defaults write -g NSAutomaticTextCompletionEnabled -bool false
 defaults write -g NSAutomaticSpellingCorrectionEnabled -bool false
+defaults write -g WebAutomaticSpellingCorrectionEnabled -bool false
 
 # enable subpixel font rendering on non-Apple LCDs
 defaults write -g AppleFontSmoothing -int 2
