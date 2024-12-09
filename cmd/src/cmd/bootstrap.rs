@@ -59,6 +59,8 @@ const TOOLS: &[&str] = &[
     "rust-analyzer",
     "serpl",
     "zig",
+    "zls",
+    "k9s",
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
@@ -87,6 +89,7 @@ const BREW_CASKS: &[&str] = &[
     "slack",
     "selfcontrol",
     "figma",
+    "lens",
 ];
 
 const LINUX_TOOLS: &[&str] = &[
