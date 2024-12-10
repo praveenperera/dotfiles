@@ -33,6 +33,12 @@ palette = 15=#feffff
 
 ## KEYBINDS
 
+# general
+keybind = cmd+shift+comma=reload_config
+
+# quick terminal with hyperkey
+keybind = global:cmd+shift+option+ctrl+t=toggle_quick_terminal
+
 # scroll back buffer
 keybind = cmd+enter=text:\x02[
 
@@ -61,3 +67,4 @@ keybind = cmd+period=text:\x02$
 
 # delete by word
 keybind = alt+backspace=text:\x17
+
