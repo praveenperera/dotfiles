@@ -61,6 +61,7 @@ const TOOLS: &[&str] = &[
     "zig",
     "zls",
     "k9s",
+    "gh",
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
