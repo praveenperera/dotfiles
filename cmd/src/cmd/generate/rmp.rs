@@ -6,29 +6,29 @@ use eyre::{Context as _, Result};
 use xshell::Shell;
 
 #[derive(askama::Template)]
-#[template(path = "rust-multiplatform/view_model.rs.j2")]
-struct RustViewModelTemplate {
+#[template(path = "rust-multiplatform/manager.rs.j2")]
+struct RustManagerTemplate {
     module_name: String,
 }
 
 #[derive(askama::Template)]
-#[template(path = "rust-multiplatform/view_model.swift.j2")]
-struct SwiftViewModelTemplate {
+#[template(path = "rust-multiplatform/manager.swift.j2")]
+struct SwiftManagerTemplate {
     module_name: String,
-    view_model_name: String,
+    manager_name: String,
 }
 
-pub fn generate(_sh: &Shell, type_: &str, module_name: &str) -> Result<()> {
+pub fn generate(_sh: &Shell, lang: &str, module_name: &str) -> Result<()> {
     let module_name = module_name.to_case(Case::Pascal);
 
-    let template = match type_ {
-        "swift" => SwiftViewModelTemplate {
+    let template = match lang {
+        "swift" => SwiftManagerTemplate {
             module_name: module_name.to_string(),
-            view_model_name: format!("{module_name}ViewModel"),
+            manager_name: format!("{module_name}Manager"),
         }
         .render(),
 
-        "rs" => RustViewModelTemplate {
+        "rs" => RustManagerTemplate {
             module_name: module_name.to_string(),
         }
         .render(),

@@ -1,0 +1,37 @@
+import SwiftUI
+
+extension WeakReconciler: {{ module_name }}Reconciler where Reconciler == {{ manager_name }} {}
+
+@Observable class {{ manager_name }}: AnyReconciler, {{ manager_name }}Reconciler {
+    private let logger = Log(id: "{{ manager_name }}")
+    var rust: Rust{{ manager_name }}
+
+    public init() {
+        self.rust = Rust{{ manager_name }}()
+        self.rust.listenForUpdates(reconciler: WeakReconciler(self))
+    }
+
+    func reconcile(message: {{ manager_name }}ReconcileMessage) {
+        Task { [weak self] in
+            guard let self else {
+                Log.error("{{ manager_name }} no longer available")
+                return
+            }
+
+            let rust = rust
+            logger.debug("reconcile: \(message)")
+
+            await MainActor.run {
+                switch message {
+                case .noOp:
+                  break 
+                }
+            }
+        }
+    }
+
+    public func dispatch(action: {{ manager_name }}Action) {
+        logger.debug("dispatch: \(action)")
+        self.rust.dispatch(action: action)
+    }
+}

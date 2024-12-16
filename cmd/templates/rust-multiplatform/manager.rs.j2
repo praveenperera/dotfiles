@@ -1,0 +1,77 @@
+use std::sync::Arc;
+
+use crossbeam::channel::{Receiver, Sender};
+use parking_lot::RwLock;
+
+use macros::impl_default_for;
+
+type Message = {{ module_name }}ManagerReconcileMessage
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
+pub enum {{ module_name }}ManagerReconcileMessage {
+    NoOp
+}
+
+#[uniffi::export(callback_interface)]
+pub trait {{ module_name }}ManagerReconciler: Send + Sync + std::fmt::Debug + 'static {
+    /// Tells the frontend to reconcile the manager changes
+    fn reconcile(&self, message: {{ module_name }}ManagerReconcileMessage);
+}
+
+#[derive(Clone, Debug, uniffi::Object)]
+pub struct Rust{{ module_name }}Manager {
+    pub state: Arc<RwLock<{{ module_name }}ManagerState>>,
+    pub reconciler: Sender<{{ module_name }}ManagerReconcileMessage>,
+    pub reconcile_receiver: Arc<Receiver<{{ module_name }}ManagerReconcileMessage>>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct {{ module_name }}ManagerState { }
+
+type Action = {{ module_name }}ManagerAction
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
+pub enum {{ module_name }}ManagerAction {
+    NoOp,
+}
+
+impl_default_for!(Rust{{ module_name }}Manager);
+#[uniffi::export]
+impl Rust{{ module_name }}Manager {
+    #[uniffi::constructor]
+    pub fn new() -> Self {
+        let (sender, receiver) = crossbeam::channel::bounded(1000);
+
+        Self {
+            state: Arc::new(RwLock::new({{ module_name }}ManagerState::new())),
+            reconciler: sender,
+            reconcile_receiver: Arc::new(receiver),
+        }
+    }
+
+    #[uniffi::method]
+    pub fn listen_for_updates(&self, reconciler: Box<dyn {{ module_name }}ManagerReconciler>) {
+        let reconcile_receiver = self.reconcile_receiver.clone();
+
+        std::thread::spawn(move || {
+            while let Ok(field) = reconcile_receiver.recv() {
+                // call the reconcile method on the frontend
+                reconciler.reconcile(field);
+            }
+        });
+    }
+
+    /// Action from the frontend to change the state of the view model
+    #[uniffi::method]
+    pub fn dispatch(&self, action: {{ module_name }}ManagerAction) {
+        match action {
+            {{ module_name }}ManagerAction::NoOp => {}
+        }
+    }
+}
+
+
+impl_default_for!({{ module_name }}ManagerState);
+impl {{ module_name }}ManagerState {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
