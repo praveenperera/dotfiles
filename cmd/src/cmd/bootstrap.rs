@@ -62,6 +62,7 @@ const TOOLS: &[&str] = &[
     "zls",
     "k9s",
     "gh",
+    "deno",
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
@@ -111,6 +112,7 @@ const CARGO_PKGS: &[&str] = &[
     "bacon",
     "cargo-update",
     "cargo-nextest",
+    "cargo-expand",
     "hyperfine",
 ];
 
