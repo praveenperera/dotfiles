@@ -63,6 +63,7 @@ const TOOLS: &[&str] = &[
     "k9s",
     "gh",
     "deno",
+    "yt-dlp",
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
