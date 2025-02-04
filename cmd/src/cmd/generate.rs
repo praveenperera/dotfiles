@@ -5,8 +5,11 @@ use convert_case::{Case, Casing};
 use eyre::{Context as _, Result};
 use log::{debug, info};
 use sailfish::TemplateOnce;
+use serde_json::json;
 use std::path::PathBuf;
 use xshell::Shell;
+
+use crate::util::hex_to_rgb;
 
 static RUST_VERSION: &str = "1.78.0";
 
@@ -35,6 +38,14 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
 
         ["swift", name, identifier, path, rest @ ..] => {
             generate_swift(sh, name, identifier, path, rest)?;
+        }
+
+        ["swift_color", name, hex] => {
+            generate_swift_color(sh, name, hex, None)?;
+        }
+
+        ["swift_color", name, light_hex, dark_hex] => {
+            generate_swift_color(sh, name, light_hex, Some(dark_hex))?;
         }
 
         cmd => {
@@ -216,6 +227,68 @@ fn generate_swift(
                 .wrap_err("failed to render umbrella header")?,
         )?;
     }
+
+    Ok(())
+}
+
+fn generate_swift_color(
+    _sh: &Shell,
+    color_name: &str,
+    light_hex: &str,
+    dark_hex: Option<&str>,
+) -> Result<()> {
+    info!("Generating Swift Color Set for {color_name}");
+    let dark_hex = dark_hex.unwrap_or(light_hex);
+    let light_rgb = hex_to_rgb(light_hex)?;
+    let dark_rgb = hex_to_rgb(dark_hex)?;
+
+    let colorset = json!({
+      "colors": [
+        {
+          "color": {
+            "color-space": "srgb",
+            "components": {
+              "alpha": "1.000",
+              "blue": format!("{:.4}", light_rgb.2),
+              "green": format!("{:.4}", light_rgb.1),
+              "red": format!("{:.4}", light_rgb.0)
+            }
+          },
+          "idiom": "universal"
+        },
+        {
+          "appearances": [
+            {
+              "appearance": "luminosity",
+              "value": "dark"
+            }
+          ],
+          "color": {
+            "color-space": "srgb",
+            "components": {
+              "alpha": "1.000",
+              "blue": format!("{:.4}", dark_rgb.2),
+              "green": format!("{:.4}", dark_rgb.1),
+              "red": format!("{:.4}", dark_rgb.0)
+            }
+          },
+          "idiom": "universal"
+        }
+      ],
+      "info": {
+        "author": "xcode",
+        "version": 1
+      }
+    });
+
+    println!("{}", colorset.to_string());
+    let current_dir = std::env::current_dir()?;
+    let folder_name = format!("{color_name}.colorset");
+    let output_path = current_dir.join(folder_name).join("Contents.json");
+
+    let _ = std::fs::remove_file(&output_path);
+    std::fs::create_dir_all(output_path.parent().unwrap())?;
+    std::fs::write(output_path, colorset.to_string())?;
 
     Ok(())
 }
