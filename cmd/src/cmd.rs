@@ -8,6 +8,7 @@ pub mod vault;
 use std::path::PathBuf;
 
 use crate::Tool;
+use colored::Colorize as _;
 use eyre::{eyre, Result};
 use log::debug;
 use xshell::Shell;
@@ -51,11 +52,10 @@ const TOOLS: &[Tool] = &[
 ];
 
 fn tools_str() -> String {
-    TOOLS
-        .iter()
-        .map(|(name, _run)| *name)
-        .collect::<Vec<_>>()
-        .join(", ")
+    let mut tools = TOOLS.iter().map(|(name, _run)| *name).collect::<Vec<_>>();
+
+    tools.sort_unstable();
+    tools.join(", ")
 }
 
 pub fn run(_sh: &Shell, args: &[&str]) -> Result<()> {
@@ -72,12 +72,41 @@ pub fn run(_sh: &Shell, args: &[&str]) -> Result<()> {
         .iter()
         .find(|&&(name, _run)| name == program)
         .ok_or_else(|| {
-            eyre!(
-                "unknown tool: `{program}`, possible values are: {}",
-                tools_str()
-            )
+            let did_you_mean = did_you_mean(program).join(", ");
+            println!(
+                "unknown tool: `{}`, did you mean one of: {}",
+                program.red(),
+                did_you_mean.green()
+            );
+            println!("all tools: {}", tools_str().yellow());
+            eyre!("unknown tool: {program}")
         })?;
 
     let sh = Shell::new()?;
     tool_run(&sh, &args[1..])
+}
+
+fn did_you_mean(user_text: &str) -> Vec<&str> {
+    use textdistance::nstr::damerau_levenshtein;
+
+    let mut suggestions = TOOLS
+        .iter()
+        .map(|(name, _run)| name)
+        .filter(|name| !name.starts_with(user_text))
+        .map(|name| (*name, damerau_levenshtein(user_text, name)))
+        .map(|(name, distance)| (name, distance * 100.0))
+        .map(|(name, distance)| (name, distance as usize))
+        .filter(|(_, distance)| *distance <= 90)
+        .collect::<Vec<_>>();
+
+    suggestions.sort_unstable_by(|a, b| a.1.cmp(&b.1));
+
+    let starts_with = TOOLS
+        .into_iter()
+        .map(|(name, _run)| *name)
+        .filter(|name| name.starts_with(user_text));
+
+    let suggestions = suggestions.into_iter().map(|(name, _)| name).take(3);
+
+    starts_with.into_iter().chain(suggestions).collect()
 }

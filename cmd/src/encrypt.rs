@@ -32,8 +32,10 @@ pub fn encrypt(sh: &Shell, input: &str, output: &str) -> Result<()> {
         .map_err(|_| eyre::eyre!("could not parse public key from password store"))?;
 
     let encrypted = {
-        let encryptor = age::Encryptor::with_recipients(vec![Box::new(pubkey.clone())])
-            .expect("we provided a recipient");
+        let recipients = iter::once(&pubkey as _);
+
+        let encryptor =
+            age::Encryptor::with_recipients(recipients).expect("we provided a recipient");
 
         let mut encrypted = vec![];
         let mut writer = encryptor.wrap_output(&mut encrypted)?;
@@ -98,10 +100,7 @@ pub fn decrypt(sh: &Shell, input: &str, output: &str) -> Result<()> {
         .map_err(|_| eyre::eyre!("could not parse private key from password store"))?;
 
     let decrypted = {
-        let decryptor = match age::Decryptor::new(&encrypted[..])? {
-            age::Decryptor::Recipients(d) => d,
-            _ => unreachable!(),
-        };
+        let decryptor = age::Decryptor::new(&encrypted[..])?;
 
         let mut decrypted = vec![];
         let mut reader = decryptor.decrypt(iter::once(&key as &dyn age::Identity))?;
