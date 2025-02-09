@@ -31,19 +31,7 @@ pub fn encrypt(sh: &Shell, input: &str, output: &str) -> Result<()> {
         .parse()
         .map_err(|_| eyre::eyre!("could not parse public key from password store"))?;
 
-    let encrypted = {
-        let recipients = iter::once(&pubkey as _);
-
-        let encryptor =
-            age::Encryptor::with_recipients(recipients).expect("we provided a recipient");
-
-        let mut encrypted = vec![];
-        let mut writer = encryptor.wrap_output(&mut encrypted)?;
-        writer.write_all(original.as_bytes())?;
-        writer.finish()?;
-
-        encrypted
-    };
+    let encrypted = age::encrypt(&pubkey, original.as_bytes())?;
 
     let header = create_header(&secret_name);
 

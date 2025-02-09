@@ -281,7 +281,7 @@ fn generate_swift_color(
       }
     });
 
-    println!("{}", colorset.to_string());
+    println!("{colorset}");
     let current_dir = std::env::current_dir()?;
     let folder_name = format!("{color_name}.colorset");
     let output_path = current_dir.join(folder_name).join("Contents.json");

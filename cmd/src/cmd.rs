@@ -102,7 +102,7 @@ fn did_you_mean(user_text: &str) -> Vec<&str> {
     suggestions.sort_unstable_by(|a, b| a.1.cmp(&b.1));
 
     let starts_with = TOOLS
-        .into_iter()
+        .iter()
         .map(|(name, _run)| *name)
         .filter(|name| name.starts_with(user_text));
 
