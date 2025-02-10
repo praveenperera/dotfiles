@@ -74,6 +74,18 @@ return {
                     timeout_ms = 2000,
                 },
             },
+            taplo = {
+                settings = {
+                    evenBetterToml = {
+                        formatter = {
+                            columnWidth = 120, -- Set max line length
+                            arrayAutoExpand = true, -- Prevent array multi-line expansion
+                            arrayAutoCollapse = false, -- Automatically collapse arrays if they fit in one line.
+                            compactArrays = true, -- Remove array whitespace
+                        },
+                    },
+                },
+            },
             emmet_language_server = function()
                 return {
                     filetypes = {
