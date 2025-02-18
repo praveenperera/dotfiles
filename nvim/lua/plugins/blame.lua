@@ -1,3 +1,5 @@
+vim.keymap.set("n", "<leader>gB", "<cmd>Git blame<cr>")
+
 return {
     {
         "FabijanZulj/blame.nvim",
