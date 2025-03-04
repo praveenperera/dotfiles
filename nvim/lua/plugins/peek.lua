@@ -1,3 +1,4 @@
+-- markdown preview
 return {
     "praveenperera/peek.nvim",
     event = { "VeryLazy" },
