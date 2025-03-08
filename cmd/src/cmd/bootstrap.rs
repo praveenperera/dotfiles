@@ -65,6 +65,7 @@ const TOOLS: &[&str] = &[
     "deno",
     "yt-dlp",
     "watchexec",
+    "uv",
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
