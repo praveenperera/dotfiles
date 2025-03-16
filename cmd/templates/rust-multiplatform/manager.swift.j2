@@ -1,8 +1,8 @@
 import SwiftUI
 
-extension WeakReconciler: {{ module_name }}Reconciler where Reconciler == {{ manager_name }} {}
+extension WeakReconciler: {{ manager_name }}Reconciler where Reconciler == {{ manager_name }} {}
 
-@Observable class {{ manager_name }}: AnyReconciler, {{ manager_name }}Reconciler {
+@Observable final class {{ manager_name }}: AnyReconciler, {{ manager_name }}Reconciler {
     private let logger = Log(id: "{{ manager_name }}")
     var rust: Rust{{ manager_name }}
 

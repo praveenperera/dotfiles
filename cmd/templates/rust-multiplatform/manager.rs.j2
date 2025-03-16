@@ -5,7 +5,7 @@ use parking_lot::RwLock;
 
 use macros::impl_default_for;
 
-type Message = {{ module_name }}ManagerReconcileMessage
+type Message = {{ module_name }}ManagerReconcileMessage;
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
 pub enum {{ module_name }}ManagerReconcileMessage {
     NoOp
@@ -27,7 +27,7 @@ pub struct Rust{{ module_name }}Manager {
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct {{ module_name }}ManagerState { }
 
-type Action = {{ module_name }}ManagerAction
+type Action = {{ module_name }}ManagerAction;
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
 pub enum {{ module_name }}ManagerAction {
     NoOp,
