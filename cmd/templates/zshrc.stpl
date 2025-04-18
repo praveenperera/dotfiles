@@ -45,6 +45,7 @@ alias aged=aged_func
 alias lg="lazygit"
 alias vim="nvim"
 alias term="nvim -c 'term'"
+alias codex="codex -a full-auto"
 
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)

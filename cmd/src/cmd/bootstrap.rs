@@ -138,7 +138,11 @@ const CONFIG_FILE_OR_DIR: &[&str] = &[
     "ghostty",
 ];
 
-const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[("nvim", ".config/nvim")];
+const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
+    ("nvim", ".config/nvim"),
+    ("config/codex/config.yaml", ".codex/config.yaml"),
+];
+
 const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
     &[("gpg-agent.conf", ".gnupg/gpg-agent.conf")];
 
