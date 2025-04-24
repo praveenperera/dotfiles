@@ -19,6 +19,7 @@ struct SwiftManagerTemplate {
 
 pub fn generate(_sh: &Shell, lang: &str, module_name: &str) -> Result<()> {
     let module_name = module_name.to_case(Case::Pascal);
+    let module_name = module_name.trim_end_matches("Manager");
 
     let template = match lang {
         "swift" => SwiftManagerTemplate {
