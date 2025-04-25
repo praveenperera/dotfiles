@@ -3,9 +3,13 @@ use std::sync::Arc;
 use crossbeam::channel::{Receiver, Sender};
 use parking_lot::RwLock;
 
-use macros::impl_default_for;
+use cove_macros::impl_default_for;
 
 type Message = {{ module_name }}ManagerReconcileMessage;
+type Action = {{ module_name }}ManagerAction;
+type State = {{ module_name }}ManagerState;
+type Reconciler = dyn {{ module_name }}ManagerReconciler;
+
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
 pub enum {{ module_name }}ManagerReconcileMessage {
     NoOp
@@ -14,20 +18,19 @@ pub enum {{ module_name }}ManagerReconcileMessage {
 #[uniffi::export(callback_interface)]
 pub trait {{ module_name }}ManagerReconciler: Send + Sync + std::fmt::Debug + 'static {
     /// Tells the frontend to reconcile the manager changes
-    fn reconcile(&self, message: {{ module_name }}ManagerReconcileMessage);
+    fn reconcile(&self, message: Message);
 }
 
 #[derive(Clone, Debug, uniffi::Object)]
 pub struct Rust{{ module_name }}Manager {
     pub state: Arc<RwLock<{{ module_name }}ManagerState>>,
-    pub reconciler: Sender<{{ module_name }}ManagerReconcileMessage>,
-    pub reconcile_receiver: Arc<Receiver<{{ module_name }}ManagerReconcileMessage>>,
+    pub reconciler: Sender<Message>,
+    pub reconcile_receiver: Arc<Receiver<Message>>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct {{ module_name }}ManagerState { }
 
-type Action = {{ module_name }}ManagerAction;
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
 pub enum {{ module_name }}ManagerAction {
     NoOp,
@@ -48,7 +51,7 @@ impl Rust{{ module_name }}Manager {
     }
 
     #[uniffi::method]
-    pub fn listen_for_updates(&self, reconciler: Box<dyn {{ module_name }}ManagerReconciler>) {
+    pub fn listen_for_updates(&self, reconciler: Box<Reconciler>) {
         let reconcile_receiver = self.reconcile_receiver.clone();
 
         std::thread::spawn(move || {
@@ -61,7 +64,7 @@ impl Rust{{ module_name }}Manager {
 
     /// Action from the frontend to change the state of the view model
     #[uniffi::method]
-    pub fn dispatch(&self, action: {{ module_name }}ManagerAction) {
+    pub fn dispatch(&self, action: Action) {
         match action {
             {{ module_name }}ManagerAction::NoOp => {}
         }
@@ -69,8 +72,8 @@ impl Rust{{ module_name }}Manager {
 }
 
 
-impl_default_for!({{ module_name }}ManagerState);
-impl {{ module_name }}ManagerState {
+impl_default_for!(State);
+impl State {
     pub fn new() -> Self {
         Self {}
     }
