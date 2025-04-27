@@ -1,1 +1,6 @@
-model: gpt-4.1
+model: o4-mini
+provider: openai
+history:
+  maxSize: 1000
+  saveHistory: true
+  sensitivePatterns: []
