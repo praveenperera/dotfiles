@@ -38,7 +38,7 @@ fn gcloud_secret(project: &str) -> Result<GcloudSecrets> {
 }
 
 fn clusters() -> Result<Vec<Cluster>> {
-    let projects = &["ln", "sq"];
+    let projects = &["sq"];
 
     let mut clusters = Vec::new();
 
