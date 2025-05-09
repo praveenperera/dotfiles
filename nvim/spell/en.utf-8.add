@@ -13,3 +13,6 @@ config
 hasn't
 auditable
 overprovisioning
+UTXO
+UTXOs
+BDK

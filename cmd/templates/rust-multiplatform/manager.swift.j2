@@ -30,8 +30,12 @@ extension WeakReconciler: {{ manager_name }}Reconciler where Reconciler == {{ ma
         }
     }
 
-    public func dispatch(action: {{ manager_name }}Action) {
-        logger.debug("dispatch: \(action)")
-        self.rust.dispatch(action: action)
+    private let dispatchQueue = DispatchQueue(label: "cove.{{ lowercased(manager_name) }}.dispatch")
+    public func dispatch(action: {{manager_name}}Action) { dispatch(action) }
+    public func dispatch(_ action: {{ manager_name }}Action) {
+        dispatchQueue.async {
+            logger.debug("dispatch: \(action)")
+            self.rust.dispatch(action: action)
+        }
     }
 }
