@@ -30,7 +30,7 @@ extension WeakReconciler: {{ manager_name }}Reconciler where Reconciler == {{ ma
         }
     }
 
-    private let dispatchQueue = DispatchQueue(label: "cove.{{ lowercased(manager_name) }}.dispatch")
+    private let dispatchQueue = DispatchQueue(label: "cove.{{ lowercased(manager_name) }}.dispatch", qos: .userInitiated)
     public func dispatch(action: {{manager_name}}Action) { dispatch(action) }
     public func dispatch(_ action: {{ manager_name }}Action) {
         dispatchQueue.async {
