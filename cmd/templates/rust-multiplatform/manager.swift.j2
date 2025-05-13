@@ -3,6 +3,9 @@ import SwiftUI
 extension WeakReconciler: {{ manager_name }}Reconciler where Reconciler == {{ manager_name }} {}
 
 @Observable final class {{ manager_name }}: AnyReconciler, {{ manager_name }}Reconciler {
+    typealias Message = {{manager_name }}ReconcileMessage
+    typealias Action = {{manager_name }}Action
+
     private let logger = Log(id: "{{ manager_name }}")
     var rust: Rust{{ manager_name }}
 
@@ -11,30 +14,46 @@ extension WeakReconciler: {{ manager_name }}Reconciler where Reconciler == {{ ma
         self.rust.listenForUpdates(reconciler: WeakReconciler(self))
     }
 
-    func reconcile(message: {{ manager_name }}ReconcileMessage) {
-        Task { [weak self] in
+    private func apply(_ message: Message) {
+        switch message {
+        case .noOp: ()
+        }
+    }
+
+    internal func reconcile(message: Message) {
+        rustBridge.async { [weak self] in
             guard let self else {
                 Log.error("{{ manager_name }} no longer available")
                 return
             }
 
-            let rust = rust
             logger.debug("reconcile: \(message)")
+            DispatchQueue.main.async { [self] in
+                self.apply(message)
+            }
+        }
+    }
+    
+    internal func reconcileMany(messages: [Message]) {
+        rustBridge.async { [weak self] in
+            guard let self else {
+                Log.error("{{ manager_name }} no longer available")
+                return
+            }
 
-            await MainActor.run {
-                switch message {
-                case .noOp:
-                  break 
+            logger.debug("reconcile_messages: \(messages)")
+            DispatchQueue.main.async { [self] in
+                for message in messages {
+                    self.apply(message)
                 }
             }
         }
     }
 
-    private let dispatchQueue = DispatchQueue(label: "cove.{{ lowercased(manager_name) }}.dispatch", qos: .userInitiated)
-    public func dispatch(action: {{manager_name}}Action) { dispatch(action) }
-    public func dispatch(_ action: {{ manager_name }}Action) {
-        dispatchQueue.async {
-            logger.debug("dispatch: \(action)")
+    public func dispatch(action: Action) { dispatch(action) }
+    public func dispatch(_ action: Action) {
+        rustBridge.async {
+            self.logger.debug("dispatch: \(action)")
             self.rust.dispatch(action: action)
         }
     }
