@@ -2,12 +2,11 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
+use crate::manager::deferred_sender;
+use crate::task;
+use cove_macros::{impl_default_for, impl_manager_message_send};
 use flume::{Receiver, Sender, TrySendError};
-use cove_macros::{impl_default_for, impl_message_manager;
-use crate::manager::{
-    deferred_sender::{self, MessageManager},
-    wallet::{RustWalletManager, actor::WalletActor},
-};
+use tracing::{debug, error, trace, warn};
 
 type Message = {{manager_name}}ReconcileMessage;
 type Action = {{manager_name}}Action;
@@ -15,6 +14,7 @@ type State = {{manager_name}}State;
 type Reconciler = dyn {{manager_name}}Reconciler;
 type SingleOrMany = deferred_sender::SingleOrMany<Message>;
 type DeferredSender = deferred_sender::DeferredSender<Arc<Rust{{ manager_name }}>, Message>;
+impl_manager_message_send!(Rust{{manager_name}});
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
 pub enum {{manager_name}}ReconcileMessage {
@@ -31,12 +31,12 @@ pub trait {{manager_name}}Reconciler: Send + Sync + std::fmt::Debug + 'static {
 #[derive(Clone, Debug, uniffi::Object)]
 pub struct Rust{{manager_name}} {
     pub state: Arc<Mutex<{{manager_name}}State>>,
-    pub reconciler: Sender<Message>,
-    pub reconcile_receiver: Arc<Receiver<Message>>,
+    pub reconciler: Sender<SingleOrMany>,
+    pub reconcile_receiver: Arc<Receiver<SingleOrMany>>,
 }
 
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct {{manager_name}}State { }
+#[derive(Clone, Debug, uniffi::Object)]
+pub struct {{manager_name}}State {}
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
 pub enum {{manager_name}}Action {
@@ -48,7 +48,7 @@ impl_default_for!(Rust{{manager_name}});
 impl Rust{{ manager_name }} {
     #[uniffi::constructor]
     pub fn new() -> Self {
-        let (sender, receiver) = crossbeam::channel::bounded(1000);
+        let (sender, receiver) = flume::bounded(10);
 
         Self {
             state: Arc::new(Mutex::new({{manager_name}}State::new())),
@@ -116,8 +116,3 @@ impl State {
     }
 }
 
-impl MessageManager<Message> for Arc<Rust{{manager_name}}> {
-    fn send(&self, msgs: SingleOrMany) {
-        self.send(msgs);
-    }
-}
