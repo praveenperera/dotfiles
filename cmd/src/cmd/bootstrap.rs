@@ -215,7 +215,14 @@ pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
     sh.change_dir(crate::dotfiles_dir());
     sh.change_dir("cmd");
 
-    cmd!(sh, "./release").run()?;
+    if cmd!(sh, "./release").run().is_err() {
+        println!("{}", "failed to build cmd binary".red());
+        std::fs::rename(&current_exe_rename, &current_path)
+            .wrap_err("failed to rename current binary")?;
+
+        std::process::exit(1);
+    }
+
     let cmd = format!("{home}/.local/bin/cmd");
 
     for (tool, _) in CMD_TOOLS {
