@@ -1,49 +1,49 @@
 use std::sync::Arc;
 
-use crossbeam::channel::{Receiver, Sender};
 use parking_lot::Mutex;
 
+use flume::{Receiver, Sender, TrySendError};
 use cove_macros::{impl_default_for, impl_message_manager;
 use crate::manager::{
     deferred_sender::{self, MessageManager},
     wallet::{RustWalletManager, actor::WalletActor},
 };
 
-type Message = {{ module_name }}ManagerReconcileMessage;
-type Action = {{ module_name }}ManagerAction;
-type State = {{ module_name }}ManagerState;
-type Reconciler = dyn {{ module_name }}ManagerReconciler;
+type Message = {{manager_name}}ReconcileMessage;
+type Action = {{manager_name}}Action;
+type State = {{manager_name}}State;
+type Reconciler = dyn {{manager_name}}Reconciler;
 type SingleOrMany = deferred_sender::SingleOrMany<Message>;
 type DeferredSender = deferred_sender::DeferredSender<Arc<Rust{{ manager_name }}>, Message>;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
-pub enum {{ module_name }}ManagerReconcileMessage {
+pub enum {{manager_name}}ReconcileMessage {
     NoOp
 }
 
 #[uniffi::export(callback_interface)]
-pub trait {{ module_name }}ManagerReconciler: Send + Sync + std::fmt::Debug + 'static {
+pub trait {{manager_name}}Reconciler: Send + Sync + std::fmt::Debug + 'static {
     /// Tells the frontend to reconcile the manager changes
     fn reconcile(&self, message: Message);
     fn reconcile_many(&self, message: Vec<Message>);
 }
 
 #[derive(Clone, Debug, uniffi::Object)]
-pub struct Rust{{ module_name }}Manager {
-    pub state: Arc<Mutex<{{ module_name }}ManagerState>>,
+pub struct Rust{{manager_name}} {
+    pub state: Arc<Mutex<{{manager_name}}State>>,
     pub reconciler: Sender<Message>,
     pub reconcile_receiver: Arc<Receiver<Message>>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
-pub struct {{ module_name }}ManagerState { }
+pub struct {{manager_name}}State { }
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
-pub enum {{ module_name }}ManagerAction {
+pub enum {{manager_name}}Action {
     NoOp,
 }
 
-impl_default_for!(Rust{{ module_name }}Manager);
+impl_default_for!(Rust{{manager_name}});
 #[uniffi::export]
 impl Rust{{ manager_name }} {
     #[uniffi::constructor]
@@ -51,7 +51,7 @@ impl Rust{{ manager_name }} {
         let (sender, receiver) = crossbeam::channel::bounded(1000);
 
         Self {
-            state: Arc::new(Mutex::new({{ module_name }}ManagerState::new())),
+            state: Arc::new(Mutex::new({{manager_name}}State::new())),
             reconciler: sender,
             reconcile_receiver: Arc::new(receiver),
         }
@@ -76,7 +76,7 @@ impl Rust{{ manager_name }} {
     #[uniffi::method]
     pub fn dispatch(&self, action: Action) {
         match action {
-            {{ module_name }}ManagerAction::NoOp => {}
+            {{manager_name}}Action::NoOp => {}
         }
     }
 }
@@ -96,6 +96,14 @@ impl Rust{{ manager_name }} {
             Err(e) => {
                 error!("unable to send message to send flow manager: {e:?}");
             }
+        }
+    }
+
+    async fn send_async(self: &Arc<Self>, message: impl Into<SingleOrMany>) {
+        let message = message.into();
+        debug!("send_async: {message:?}");
+        if let Err(err) = self.reconciler.send_async(message).await {
+            error!("unable to send message to send flow manager: {err}");
         }
     }
 }

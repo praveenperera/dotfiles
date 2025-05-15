@@ -8,7 +8,7 @@ use xshell::Shell;
 #[derive(askama::Template)]
 #[template(path = "rust-multiplatform/manager.rs.j2")]
 struct RustManagerTemplate {
-    module_name: String,
+    manager_name: String,
 }
 
 #[derive(askama::Template)]
@@ -28,7 +28,7 @@ pub fn generate(_sh: &Shell, lang: &str, module_name: &str) -> Result<()> {
         .render(),
 
         "rs" => RustManagerTemplate {
-            module_name: module_name.to_string(),
+            manager_name: format!("{module_name}Manager"),
         }
         .render(),
 
