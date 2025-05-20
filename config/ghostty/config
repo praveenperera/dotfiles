@@ -36,8 +36,7 @@ palette = 15=#feffff
 # general
 keybind = cmd+shift+comma=reload_config
 
-# quick terminal with hyperkey
-keybind = global:cmd+shift+option+ctrl+t=toggle_quick_terminal
+keybind = global:cmd+shift+grave_accent=toggle_quick_terminal
 quick-terminal-position = top
 
 # scroll back buffer
