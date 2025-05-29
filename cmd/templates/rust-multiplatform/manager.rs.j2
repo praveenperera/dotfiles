@@ -5,8 +5,8 @@ use parking_lot::Mutex;
 use crate::manager::deferred_sender::{self, MessageSender},
 use crate::task;
 use cove_macros::impl_default_for;
-use flume::{Receiver, TrySendError};
-use tracing::{debug, error, trace, warn};
+use flume::Receiver;
+use tracing::{debug, trace, warn};
 
 type Message = {{manager_name}}ReconcileMessage;
 type Action = {{manager_name}}Action;
