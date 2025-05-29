@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::manager::deferred_sender;
+use crate::manager::deferred_sender::{self, MessageSender},
 use crate::task;
-use cove_macros::{impl_default_for, impl_manager_message_send};
-use flume::{Receiver, Sender, TrySendError};
+use cove_macros::impl_default_for;
+use flume::{Receiver, TrySendError};
 use tracing::{debug, error, trace, warn};
 
 type Message = {{manager_name}}ReconcileMessage;
@@ -13,8 +13,7 @@ type Action = {{manager_name}}Action;
 type State = {{manager_name}}State;
 type Reconciler = dyn {{manager_name}}Reconciler;
 type SingleOrMany = deferred_sender::SingleOrMany<Message>;
-type DeferredSender = deferred_sender::DeferredSender<Arc<Rust{{ manager_name }}>, Message>;
-impl_manager_message_send!(Rust{{manager_name}});
+type DeferredSender = deferred_sender::DeferredSender<Message>;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, uniffi::Enum)]
 pub enum {{manager_name}}ReconcileMessage {
@@ -31,8 +30,8 @@ pub trait {{manager_name}}Reconciler: Send + Sync + std::fmt::Debug + 'static {
 #[derive(Clone, Debug, uniffi::Object)]
 pub struct Rust{{manager_name}} {
     pub state: Arc<Mutex<{{manager_name}}State>>,
-    pub reconciler: Sender<SingleOrMany>,
-    pub reconcile_receiver: Arc<Receiver<SingleOrMany>>,
+    reconciler: MessageSender<Message>,
+    reconcile_receiver: Arc<Receiver<SingleOrMany>>,
 }
 
 #[derive(Clone, Debug, uniffi::Object)]
@@ -52,7 +51,7 @@ impl Rust{{ manager_name }} {
 
         Self {
             state: Arc::new(Mutex::new({{manager_name}}State::new())),
-            reconciler: sender,
+            reconciler: MessageSender::new(sender),
             reconcile_receiver: Arc::new(receiver),
         }
     }
@@ -81,31 +80,7 @@ impl Rust{{ manager_name }} {
     }
 }
 
-impl Rust{{ manager_name }} {
-    fn send(self: &Arc<Self>, message: impl Into<SingleOrMany>) {
-        let message = message.into();
-        debug!("send: {message:?}");
-        match self.reconciler.try_send(message) {
-            Ok(_) => {}
-            Err(TrySendError::Full(message)) => {
-                warn!("[WARN] unable to send, queue is full sending async");
-
-                let me = self.clone();
-                task::spawn(async move { me.send_async(message).await });
-            }
-            Err(e) => {
-                error!("unable to send message to send flow manager: {e:?}");
-            }
-        }
-    }
-
-    async fn send_async(self: &Arc<Self>, message: impl Into<SingleOrMany>) {
-        let message = message.into();
-        debug!("send_async: {message:?}");
-        if let Err(err) = self.reconciler.send_async(message).await {
-            error!("unable to send message to send flow manager: {err}");
-        }
-    }
+impl Rust{{ manager_name }} { 
 }
 
 
