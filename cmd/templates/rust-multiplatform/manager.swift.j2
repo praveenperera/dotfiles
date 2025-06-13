@@ -7,6 +7,8 @@ extension WeakReconciler: {{ manager_name }}Reconciler where Reconciler == {{ ma
     typealias Action = {{manager_name }}Action
 
     private let logger = Log(id: "{{ manager_name }}")
+
+    @ObservationIgnored
     var rust: Rust{{ manager_name }}
 
     public init() {
@@ -30,8 +32,8 @@ extension WeakReconciler: {{ manager_name }}Reconciler where Reconciler == {{ ma
             }
 
             logger.debug("reconcile: \(message)")
-            DispatchQueue.main.async { [self] in
-                self.apply(message)
+            DispatchQueue.main.async { [weak self] in
+                self?.apply(message)
             }
         }
     }
@@ -44,9 +46,9 @@ extension WeakReconciler: {{ manager_name }}Reconciler where Reconciler == {{ ma
             }
 
             logger.debug("reconcile_messages: \(messages)")
-            DispatchQueue.main.async { [self] in
+            DispatchQueue.main.async { [weak self] in
                 for message in messages {
-                    self.apply(message)
+                    self?.apply(message)
                 }
             }
         }
