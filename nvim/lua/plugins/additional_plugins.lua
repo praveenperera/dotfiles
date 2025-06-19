@@ -5,7 +5,6 @@ return {
     { "Vigemus/iron.nvim", cmd = "IronRepl" },
     { "kevinhwang91/nvim-bqf", event = "VeryLazy" },
     { "ThePrimeagen/harpoon", event = "User AstroFile" },
-    { "wakatime/vim-wakatime", event = "BufRead" },
     { "kamykn/spelunker.vim", event = "BufRead" },
     {
         "lepture/vim-jinja",
