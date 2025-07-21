@@ -70,15 +70,14 @@ if [[ "$1" == "--minimal" ]]; then
   $HOME/.local/bin/cmd bootstrap --minimal
 elif [[ "$1" == "--full" ]]; then
   echo "Installing full packages..."
-  $HOME/.local/bin/cmd bootstrap 
+  $HOME/.local/bin/cmd bootstrap --full
+
+  gpgconf --kill gpg-agent || true
+  gpgconf --launch gpg-agent || true
 else
   echo "Must specify either --minimal or --full"
   exit 1
 fi
 
-sudo chsh $(whoami) --shell $(which zsh)
-
-gpgconf --kill gpg-agent || true
-gpgconf --launch gpg-agent || true
-
+sudo chsh $(whoami) --shell $(which zsh) || echo "Could not change shell"
 exec zsh
