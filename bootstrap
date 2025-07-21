@@ -40,9 +40,10 @@ fi
 
 # Install nix
 if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]; then
+    which sudo || apt install sudo -y || sudo apt-get install sudo -y || sudo apt-get install sudo -y
+
     curl -L https://nixos.org/nix/install | sh -s -- --daemon
     . "$HOME/.nix-profile/etc/profile.d/nix.sh" || . /etc/profile.d/nix.sh
-    which sudo || apt install sudo -y || sudo apt-get install sudo -y || sudo apt-get install sudo -y
     systemctl enable nix-daemon.socket
     systemctl start nix-daemon.socket
 fi
