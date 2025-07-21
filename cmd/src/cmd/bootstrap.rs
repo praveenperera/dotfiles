@@ -109,7 +109,6 @@ const LINUX_TOOLS: &[&str] = &[
 ];
 
 const CARGO_PKGS: &[&str] = &[
-    "cargo-watch",
     "bacon",
     "cargo-update",
     "cargo-nextest",
