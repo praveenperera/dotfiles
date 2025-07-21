@@ -209,6 +209,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
         .iter()
         .map(|s| std::ffi::OsString::from(s))
         .collect::<Vec<_>>();
+
     let flags = flags::Bootstrap::from_vec(args)?;
 
     // install rust components
