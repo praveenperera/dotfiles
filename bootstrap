@@ -5,7 +5,7 @@ set -e
 
 # Install nix
 if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]; then
-    curl -L https://nixos.org/nix/install | sh
+    curl -L https://nixos.org/nix/install | sh -s -- --daemon
     source "$HOME/.nix-profile/etc/profile.d/nix.sh"
 fi
 
