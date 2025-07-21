@@ -53,7 +53,6 @@ const TOOLS: &[&str] = &[
     "mcfly",
     "zsh",
     "neovim",
-    "pinentry-mac",
     "just",
     "rust-analyzer",
     "serpl",

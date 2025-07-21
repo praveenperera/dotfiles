@@ -3,6 +3,30 @@
 # exit on error
 set -e
 
+is_proxmox() {
+  # Method 1: look for the pveversion command
+  if command -v pveversion &>/dev/null; then
+    return 0
+  fi
+
+  # Method 2: check for the /etc/pve directory (cluster config)
+  if [[ -d /etc/pve ]]; then
+    return 0
+  fi
+
+  # Method 3: see if the running kernel is a PVE kernel
+  if uname -r | grep -qE 'pve-(kernel|enterprise)'; then
+    return 0
+  fi
+
+  return 1
+}
+
+if is_proxmox; then
+  echo "✅ This is a Proxmox VE node."
+  ./proxmox
+fi
+
 # Install nix
 if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]; then
     curl -L https://nixos.org/nix/install | sh -s -- --daemon
