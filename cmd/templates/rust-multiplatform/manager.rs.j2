@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::manager::deferred_sender::{self, MessageSender},
+use crate::manager::deferred_sender::{self, MessageSender};
 use crate::task;
-use cove_macros::impl_default_for;
+use {{app_name}}_macros::impl_default_for;
 use flume::Receiver;
 use tracing::{debug, trace, warn};
 

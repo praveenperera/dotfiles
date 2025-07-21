@@ -29,8 +29,12 @@ mod flags {
             cmd rmp {
                 /// either `swift` or `rs`
                 required lang: String
+
                 /// name of the module name ex: `MyModule`
                 required module_name: String
+
+                /// the name of the app, default to `cove`
+                optional -a, --app app: String
             }
 
             /// Swift related generators
@@ -66,16 +70,21 @@ mod flags {
 
     #[derive(Debug)]
     pub enum GenerateCmd {
+        Help(Help),
         Rmp(Rmp),
         Swift(Swift),
         SwiftColor(SwiftColor),
-        Help(Help),
     }
+
+    #[derive(Debug)]
+    pub struct Help;
 
     #[derive(Debug)]
     pub struct Rmp {
         pub lang: String,
         pub module_name: String,
+
+        pub app: Option<String>,
     }
 
     #[derive(Debug)]
@@ -92,9 +101,6 @@ mod flags {
         pub light_hex: String,
         pub dark_hex: Option<String>,
     }
-
-    #[derive(Debug)]
-    pub struct Help;
 
     impl Generate {
         #[allow(dead_code)]
@@ -124,7 +130,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     match flags::Generate::from_vec(args) {
         Ok(flags) => match flags.subcommand {
             flags::GenerateCmd::Rmp(rmp_flags) => {
-                rmp::generate(sh, &rmp_flags.lang, &rmp_flags.module_name)?;
+                rmp::generate(sh, &rmp_flags)?;
             }
 
             flags::GenerateCmd::Swift(swift_flags) => {

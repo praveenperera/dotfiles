@@ -22,7 +22,7 @@ extension WeakReconciler: {{ manager_name }}Reconciler where Reconciler == {{ ma
         }
     }
 
-    private let rustBridge = DispatchQueue(label: "cove.{{ manager_name }}.rustbridge", qos: .userInitiated)
+    private let rustBridge = DispatchQueue(label: "{{ app_name }}.{{ manager_name }}.rustbridge", qos: .userInitiated)
 
     internal func reconcile(message: Message) {
         rustBridge.async { [weak self] in
