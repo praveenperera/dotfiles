@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # exit on error
 set -e
@@ -6,7 +6,9 @@ set -e
 # Install nix
 if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]; then
     curl -L https://nixos.org/nix/install | sh -s -- --daemon
-    source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+    . "$HOME/.nix-profile/etc/profile.d/nix.sh" || . /etc/profile.d/nix.sh
+    systemctl enable nix-daemon.socket
+    systemctl start nix-daemon.socket
 fi
 
 # unset RUSTC_WRAPPER if sccache is not installed
@@ -15,8 +17,8 @@ if [ ! -x "$(command -v sccache)" ]; then
 fi
 
 if [ ! -x "$(command -v cc)" ]; then
-    echo "Installing git..."
-    nix-env -i gcc
+    echo "Installing gcc..."
+    nix-env -iA nixpkgs.stdenv.cc
 fi
 
 # Install Rust
@@ -29,7 +31,7 @@ if [ ! -x "$(command -v cargo)" ]; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
     sh rustup-init.sh -y --no-modify-path --default-toolchain stable
     rm rustup-init.sh
-    source "$HOME/.cargo/env"
+    . "$HOME/.cargo/env"
 fi
 
 cd cmd
