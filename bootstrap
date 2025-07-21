@@ -62,18 +62,12 @@ cd cmd
 mkdir -p secrets
 ./release
 
-# if --minimal is passed, install only the minimal set of packages
-# if --full is passed, install all packages
-# check only arg $1
 if [[ "$1" == "minimal" ]]; then
   echo "Installing minimal packages..."
-  $HOME/.local/bin/cmd bootstrap --minimal
 elif [[ "$1" == "full" ]]; then
   echo "Installing full packages..."
-  $HOME/.local/bin/cmd bootstrap --full
-
 else
-  echo "Must specify either --minimal or --full"
+  echo "Must specify either minimal or full"
   exit 1
 fi
 
