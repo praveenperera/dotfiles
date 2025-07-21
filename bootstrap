@@ -18,7 +18,7 @@ fi
 
 if [ ! -x "$(command -v cc)" ]; then
     echo "Installing gcc..."
-    apt install gcc -y || sudo apt-get install gcc -y
+    apt install gcc -y || sudo apt-get install gcc -y || apt-get install gcc -y || sudo apt-get install gcc -y
 fi
 
 # Install Rust
