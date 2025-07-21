@@ -62,7 +62,7 @@ cd cmd
 mkdir -p secrets
 ./release
 
-$HOME/.local/bin/cmd bootstrap $1
+$HOME/.local/bin/cmd bootstrap "$1"
 sudo chsh $(whoami) --shell $(which zsh)
 
 gpgconf --kill gpg-agent || true
