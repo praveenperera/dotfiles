@@ -126,6 +126,7 @@ const TOOLS_FULL: &[&str] = &[
 ];
 
 const TOOLS_MINIMAL: &[&str] = &[
+    "coreutils",
     "bat",
     "fd",
     "fzf",
