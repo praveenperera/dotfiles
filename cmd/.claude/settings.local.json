@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv:*)",
+      "Bash(cargo check:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(cargo --version)",
+      "Bash(rustc:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "WebFetch(domain:askama.readthedocs.io)"
+    ],
+    "deny": []
+  }
+}

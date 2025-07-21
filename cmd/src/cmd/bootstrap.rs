@@ -1,20 +1,20 @@
 use std::path::{Path, PathBuf};
 
+use askama::Template;
 use eyre::{Context as _, Result};
-use sailfish::TemplateOnce;
 use xshell::{cmd, Shell};
 
 use crate::{command_exists, os::Os, CMD_TOOLS};
 use colored::Colorize;
 
-#[derive(TemplateOnce)]
-#[template(path = "zshrc.stpl")]
+#[derive(askama::Template)]
+#[template(path = "zshrc.j2")]
 struct Zshrc {
     os: Os,
 }
 
-#[derive(TemplateOnce)]
-#[template(path = "osx_defaults.zsh.stpl")]
+#[derive(askama::Template)]
+#[template(path = "osx_defaults.zsh.j2")]
 struct OsxDefaults {}
 
 const TOOLS: &[&str] = &[
@@ -189,11 +189,11 @@ pub fn config(sh: &Shell, _args: &[&str]) -> Result<()> {
     let zshrc = Zshrc { os: Os::current() };
 
     println!("writing zshrc to {}", path.display().to_string().green());
-    sh.write_file(&path, zshrc.render_once()?)?;
+    sh.write_file(&path, zshrc.render()?)?;
 
     if let Os::MacOS = Os::current() {
         println!("{}", "installing osx defaults".green());
-        let osx_defaults = OsxDefaults {}.render_once()?;
+        let osx_defaults = OsxDefaults {}.render()?;
         create_and_run_file(sh, &osx_defaults, "osx_defaults.zsh")?;
     }
 

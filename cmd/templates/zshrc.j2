@@ -60,10 +60,10 @@ function tmuxSessionSwitch() {
   tmux attach -t "$session"
 }
 
-<% if os == Os::MacOS { %>
+{% if os == Os::MacOS %}
 # subl
 export PATH="/Applications/Sublime Text.app/Contents/SharedSupport/bin:$PATH"
-<% } %>
+{% endif %}
 
 ip() {
   ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'
@@ -170,9 +170,9 @@ export MCFLY_FUZZY=true
 # elixir escripts
 export PATH=$PATH:$HOME/.mix/escripts
 
-<% if os == Os::MacOS { %>
+{% if os == Os::MacOS %}
 export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
-<% } %>
+{% endif %}
 
 export LANG='en_US.UTF-8'
 export EDITOR="nvim"
@@ -182,9 +182,9 @@ export PATH="/usr/local/sbin:$PATH"
 export PATH="$PATH:$HOME/.cargo/bin"
 export PATH="$PATH:$HOME/.local/bin"
 
-<% if os == Os::MacOS { %>
+{% if os == Os::MacOS %}
 export ANDROID_HOME=$HOME/Library/Android/sdk
-<% } %>
+{% endif %}
 
 export ANDROID_SDK_ROOT=$ANDROID_HOME
 export PATH=$PATH:$ANDROID_HOME/emulator
@@ -202,18 +202,18 @@ export PATH=$HOME/go/bin:$PATH
 # Enable history in iex through Erlang(OTP)
 export ERL_AFLAGS="-kernel shell_history enabled"
 
-<% if os == Os::MacOS { %>
+{% if os == Os::MacOS %}
 # gstreamer
 export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/Current/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
-<% } %>
+{% endif %}
 
-<% if os == Os::Linux { %>
+{% if os == Os::Linux %}
 # pkg config
 export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 
 # nix env
 source $HOME/.nix-profile/etc/profile.d/nix.sh
-<% } %>
+{% endif %}
 
 
 # kubectl autocompletions
@@ -274,7 +274,7 @@ zstyle ':fzf-tab:*' switch-group ',' '.'
 zstyle ':completion:*' completer _complete _ignored _files
 ## / autocomplete settings
 
-<% if os == Os::MacOS { %>
+{% if os == Os::MacOS %}
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc' ]; then . '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'; fi
 
@@ -286,7 +286,7 @@ export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
 
 # put brew bin first
 export PATH="/opt/homebrew/bin:$PATH"
-<% } %>
+{% endif %}
 
 # enable sccache for rust projects
 export RUSTC_WRAPPER=$(which sccache)
@@ -308,10 +308,10 @@ export PNPM_HOME="$HOME/Library/pnpm"
 export PATH="$PNPM_HOME:$PATH"
 
 # nsc docker builder
-<% if os == Os::MacOS { %>
+{% if os == Os::MacOS %}
 export NS_ROOT="$HOME/Library/Application Support/ns"
 export PATH="$NS_ROOT/bin:$PATH"
-<% } %>
+{% endif %}
 
 eval "$(fnm env)"
 eval "$(starship init zsh)"

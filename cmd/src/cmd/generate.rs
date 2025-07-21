@@ -1,10 +1,9 @@
 pub mod rmp;
 
-use askama::Template as _;
+use askama::Template;
 use convert_case::{Case, Casing};
 use eyre::{Context as _, Result};
 use log::{debug, info};
-use sailfish::TemplateOnce;
 use serde_json::json;
 use std::path::PathBuf;
 use xshell::Shell;
@@ -199,7 +198,7 @@ fn generate_swift(
         sh.write_file(
             github_actions,
             github_workflow
-                .render_once()
+                .render()
                 .wrap_err("failed to render github workflow")?,
         )?;
 
@@ -448,8 +447,12 @@ struct UmbrellaHeader {
     name: String,
 }
 
-#[derive(TemplateOnce)]
-#[template(path = "xcframework/github_action.yaml.stpl")]
+#[derive(askama::Template)]
+#[template(
+    path = "xcframework/github_action.yaml.custom",
+    ext = "custom",
+    syntax = "custom"
+)]
 struct GithubActionsTemplate {
     package_name: String,
     name: String,

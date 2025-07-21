@@ -1,0 +1,13 @@
+[[syntax]]
+name = "custom"
+block_start = "[[%"
+block_end = "%]]"
+expr_start = "[%"
+expr_end = "%]"
+comment_start = "{#"
+comment_end = "#}"
+
+[[escaper]]
+path = "askama::filters::Text"
+extensions = ["custom"]
+
