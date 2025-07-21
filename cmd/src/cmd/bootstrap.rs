@@ -142,6 +142,7 @@ const TOOLS_MINIMAL: &[&str] = &[
     "zoxide",
     "tree",
     "mcfly",
+    "atuin",
     "zsh",
     "just",
     "watchexec",
