@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use askama::Template;
 use eyre::{Context as _, Result};
@@ -7,13 +8,32 @@ use xshell::{cmd, Shell};
 use crate::{command_exists, os::Os, CMD_TOOLS};
 use colored::Colorize;
 
+#[derive(Debug)]
+pub enum BootstrapMode {
+    Minimal,
+    Full,
+}
+
+impl FromStr for BootstrapMode {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "minimal" => Ok(BootstrapMode::Minimal),
+            "full" => Ok(BootstrapMode::Full),
+            _ => Err(format!("invalid bootstrap mode: {}. Use 'minimal' or 'full'", s)),
+        }
+    }
+}
+
 mod flags {
+    use super::BootstrapMode;
+    
     xflags::xflags! {
         src "./src/cmd/bootstrap.rs"
 
         cmd bootstrap {
-            /// Skip installing cargo tools
-            optional --minimal
+            /// Bootstrap mode: 'minimal' or 'full'
+            required mode: BootstrapMode
         }
     }
     // generated start
@@ -21,7 +41,7 @@ mod flags {
     // Run `env UPDATE_XFLAGS=1 cargo build` to regenerate.
     #[derive(Debug)]
     pub struct Bootstrap {
-        pub minimal: bool,
+        pub mode: BootstrapMode,
     }
 
     impl Bootstrap {
@@ -224,10 +244,9 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
                 .arg("-y")
                 .run()?;
 
-            let tools = if flags.minimal {
-                TOOLS_MINIMAL
-            } else {
-                TOOLS_FULL
+            let tools = match flags.mode {
+                BootstrapMode::Minimal => TOOLS_MINIMAL,
+                BootstrapMode::Full => TOOLS_FULL,
             };
 
             let nix_tools = tools
@@ -241,13 +260,14 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
             println!("{}", "installing tools using nix".green());
             cmd!(sh, "nix-env -iA").args(nix_tools).run()?;
 
-            if !flags.minimal {
+            if matches!(flags.mode, BootstrapMode::Full) {
                 println!("{}", "installing cargo plugins".green());
                 cmd!(sh, "cargo binstall").args(CARGO_PKGS).run()?;
             }
         }
         Os::MacOS => {
-            install_brew_and_tools(sh, flags.minimal)?;
+            let minimal = matches!(flags.mode, BootstrapMode::Minimal);
+            install_brew_and_tools(sh, minimal)?;
         }
     }
 
