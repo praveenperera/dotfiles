@@ -292,10 +292,11 @@ export PATH="/opt/homebrew/bin:$PATH"
 {% endif %}
 
 # enable sccache for rust projects
+{% if os == Os::MacOS %}
 export RUSTC_WRAPPER=$(which sccache)
 export SCCACHE_CACHE_SIZE="50G"
-export SKIM_DEFAULT_COMMAND="fd --type f || rg --files || find ."
 export HOMEBREW_NO_AUTO_UPDATE=1
+{% endif %}
 
 # fnm
 export PATH="$PATH:$HOME/.fnm/"
@@ -315,7 +316,6 @@ export PATH="$PNPM_HOME:$PATH"
 export NS_ROOT="$HOME/Library/Application Support/ns"
 export PATH="$NS_ROOT/bin:$PATH"
 {% endif %}
-
 
 {% if os == Os::MacOS %}
   eval "$(fnm env)"
