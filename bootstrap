@@ -3,6 +3,7 @@
 # exit on error
 set -e
 
+# functions
 is_proxmox() {
   # Method 1: look for the pveversion command
   if command -v pveversion &>/dev/null; then
@@ -21,6 +22,16 @@ is_proxmox() {
 
   return 1
 }
+
+if [[ "$1" == "minimal" ]]; then
+  echo "Installing minimal packages..."
+elif [[ "$1" == "full" ]]; then
+  echo "Installing full packages..."
+else
+  echo "Must specify either minimal or full"
+  exit 1
+fi
+
 
 if is_proxmox; then
   echo "✅ This is a Proxmox VE node."
@@ -61,15 +72,6 @@ fi
 cd cmd
 mkdir -p secrets
 ./release
-
-if [[ "$1" == "minimal" ]]; then
-  echo "Installing minimal packages..."
-elif [[ "$1" == "full" ]]; then
-  echo "Installing full packages..."
-else
-  echo "Must specify either minimal or full"
-  exit 1
-fi
 
 $HOME/.local/bin/cmd bootstrap "$1"
 gpgconf --kill gpg-agent ||
