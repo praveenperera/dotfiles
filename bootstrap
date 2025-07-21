@@ -75,5 +75,9 @@ $HOME/.local/bin/cmd bootstrap "$1"
 gpgconf --kill gpg-agent ||
 gpgconf --launch gpg-agent || true
 
-sudo chsh $(whoami) --shell $(which zsh) || echo "Could not change shell"
+# if macos, and full install, change shell to zsh
+if [[ "$1" == "full" ]] && [ $(uname) == "Darwin" ]; then
+  sudo chsh $(whoami) --shell $(which zsh) || echo "Could not change shell"
+fi
+
 exec zsh
