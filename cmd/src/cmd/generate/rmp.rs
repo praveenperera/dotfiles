@@ -43,7 +43,7 @@ pub fn generate(_sh: &Shell, flags: &flags::Rmp) -> Result<()> {
 
     let file = template.wrap_err("failed to render view model")?;
 
-    println!("{}", file);
+    println!("{file}");
 
     Ok(())
 }

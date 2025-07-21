@@ -20,14 +20,16 @@ impl FromStr for BootstrapMode {
         match s.to_lowercase().as_str() {
             "minimal" => Ok(BootstrapMode::Minimal),
             "full" => Ok(BootstrapMode::Full),
-            _ => Err(format!("invalid bootstrap mode: {}. Use 'minimal' or 'full'", s)),
+            found => Err(format!(
+                "invalid bootstrap mode: {found}. Use 'minimal' or 'full'",
+            )),
         }
     }
 }
 
 mod flags {
     use super::BootstrapMode;
-    
+
     xflags::xflags! {
         src "./src/cmd/bootstrap.rs"
 
@@ -120,6 +122,7 @@ const TOOLS_FULL: &[&str] = &[
     "watchexec",
     "uv",
     "hyperfine",
+    "nodejs",
 ];
 
 const TOOLS_MINIMAL: &[&str] = &[
@@ -149,7 +152,6 @@ const TOOLS_MINIMAL: &[&str] = &[
     "just",
     "watchexec",
     "uv",
-    "hyperfine",
 ];
 
 const MAC_ONLY_TOOLS: &[&str] = &[
@@ -227,7 +229,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     let args = args.iter().map(|s| s.to_string()).collect::<Vec<_>>();
     let args = args
         .iter()
-        .map(|s| std::ffi::OsString::from(s))
+        .map(std::ffi::OsString::from)
         .collect::<Vec<_>>();
 
     let flags = flags::Bootstrap::from_vec(args)?;

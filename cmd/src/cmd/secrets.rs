@@ -22,7 +22,7 @@ pub fn gen(_sh: &Shell, args: &[&str]) -> Result<()> {
         util::random_ascii(length)
     };
 
-    println!("{}", string);
+    println!("{string}");
 
     Ok(())
 }

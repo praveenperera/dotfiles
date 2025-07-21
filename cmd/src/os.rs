@@ -15,7 +15,7 @@ impl From<&str> for Os {
         match s {
             "linux" => Os::Linux,
             "macos" => Os::MacOS,
-            _ => panic!("unknown os: {}", s),
+            _ => panic!("unknown os: {s}"),
         }
     }
 }

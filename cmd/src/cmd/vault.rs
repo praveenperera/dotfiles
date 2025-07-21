@@ -26,7 +26,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
 }
 
 fn encrypt(sh: &Shell, file: &str) -> Result<()> {
-    let output = format!("{}.enc", file);
+    let output = format!("{file}.enc");
 
     if !sh.path_exists(&output) {
         sh.write_file(&output, DEFAULT_SECRET_HEADER)?;

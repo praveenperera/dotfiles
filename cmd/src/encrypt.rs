@@ -73,7 +73,7 @@ pub fn create_secret_and_files(sh: &Shell, secret_prefix: &str, file_name: &str)
 }
 
 pub fn decrypt(sh: &Shell, input: &str, output: &str) -> Result<()> {
-    println!("decrypting {} to {}", input, output);
+    println!("decrypting {input} to {output}");
     if sh.path_exists(output) {
         return Err(eyre::eyre!("{output} already exists"));
     }
