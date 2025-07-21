@@ -28,7 +28,6 @@ const TOOLS: &[&str] = &[
     "git-delta",
     "gnupg",
     "direnv",
-    "thefuck",
     "htop",
     "jq",
     "neovim",
