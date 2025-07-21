@@ -37,7 +37,7 @@ const TOOLS: &[&str] = &[
     "sk",
     "tmux",
     "fnm",
-    "bottom",
+    "btop",
     "htop",
     "eza",
     "pkg-config",
