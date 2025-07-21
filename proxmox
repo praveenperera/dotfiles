@@ -3,9 +3,8 @@
 # remove proxmox enterprise repo
 rm /etc/apt/sources.list.d/pve-enterprise.list || true
 
+# look for enterprise repos
 grep -R "enterprise.proxmox.com" /etc/apt/sources.list.d/
-/etc/apt/sources.list.d/pve-enterprise.list:deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise
-/etc/apt/sources.list.d/pve-enterprise.list:deb https://enterprise.proxmox.com/debian/ceph-quincy bookworm main
 
 # comment out all of those lines in one go:
 for f in /etc/apt/sources.list.d/*.list; do
