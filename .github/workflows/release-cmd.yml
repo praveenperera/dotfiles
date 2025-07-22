@@ -154,17 +154,17 @@ jobs:
           toolchain: stable
           target: x86_64-unknown-linux-musl
 
-      - name: Configure APT to use runner‐writable cache
+      - name: Configure APT to use runner‐writable archives only
         run: |
-          sudo mkdir -p /home/runner/apt-cache/{archives,partial,pkgcache}
-          echo 'Dir::Cache::archives "/home/runner/apt-cache/archives";
-                Dir::Cache::pkgcache "/home/runner/apt-cache/pkgcache";' \
+          sudo mkdir -p /home/runner/apt-cache/{archives,partial}
+          # Only override where .deb files get stored:
+          echo 'Dir::Cache::archives "/home/runner/apt-cache/archives";' \
             | sudo tee /etc/apt/apt.conf.d/99runner-cache
 
       - name: Cache APT packages
         uses: actions/cache@v4
         with:
-          path: /home/runner/apt-cache
+          path: /home/runner/apt-cache/archives
           key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/release-cmd.yml') }}
           restore-keys: |
             ${{ runner.os }}-apt-
