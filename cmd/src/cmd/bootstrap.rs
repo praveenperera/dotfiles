@@ -154,8 +154,11 @@ const TOOLS_FULL: &[&str] = &[
     "nodejs",
 ];
 
-const TOOLS_MINIMAL: &[&str] = &[
-    "bat", "fzf", "htop", "btop", "ripgrep", "starship", "zoxide", "atuin", "zsh",
+const TOOLS_MINIMAL: &[&str] = &["bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh"];
+
+const TOOLS_VIA_SHELL_SCRIPT: &[(&str, &str)] = &[
+    ("https://starship.rs/install.sh", "starship"),
+    ("https://setup.atuin.sh", "atuin"),
 ];
 
 const LINUX_TOOLS_MINIMAL: &[&str] = &["ca-certificates", "curl", "unzip", "xsel"];
@@ -224,27 +227,13 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
                     // install linux tools with apt
                     cmd!(sh, "sudo apt-get install")
                         .args(LINUX_TOOLS_MINIMAL)
+                        .args(TOOLS_MINIMAL)
                         .arg("-y")
                         .run()?;
 
-                    // filter out tools that need special installation
-                    let apt_tools: Vec<&str> = TOOLS_MINIMAL
-                        .iter()
-                        .filter(|&tool| !matches!(tool, "starship" | "atuin"))
-                        .copied()
-                        .collect();
-
-                    if !apt_tools.is_empty() {
-                        println!("{}", "installing tools using apt".green());
-                        cmd!(sh, "sudo apt-get install")
-                            .args(&apt_tools)
-                            .arg("-y")
-                            .run()?;
+                    for (url, tool) in TOOLS_VIA_SHELL_SCRIPT {
+                        install_via_shell_script(sh, url, tool)?;
                     }
-
-                    // install starship and atuin via shell scripts
-                    install_via_shell_script(sh, "https://starship.rs/install.sh", "starship")?;
-                    install_via_shell_script(sh, "https://setup.atuin.sh", "atuin")?;
                 }
 
                 BootstrapMode::Full => {
@@ -500,19 +489,27 @@ fn map_brew_tool_names_to_nix(tool_name: &str) -> &str {
 }
 
 fn install_via_shell_script(sh: &Shell, url: &str, tool_name: &str) -> Result<()> {
-    println!("{} {}", format!("installing {tool_name}").green(), "via shell script".blue());
-    
+    println!(
+        "{} {}",
+        format!("installing {tool_name}").green(),
+        "via shell script".blue()
+    );
+
     // create temp directory for the script
     let tmp_dir = sh.create_temp_dir()?;
     let script_path = tmp_dir.path().join(format!("{tool_name}_install.sh"));
-    
+
     // download the script
-    cmd!(sh, "curl --proto '=https' --tlsv1.2 -LsSf {url} -o {script_path}").run()?;
-    
+    cmd!(
+        sh,
+        "curl --proto '=https' --tlsv1.2 -LsSf {url} -o {script_path}"
+    )
+    .run()?;
+
     // make script executable and run it
     cmd!(sh, "chmod +x {script_path}").run()?;
     cmd!(sh, "sh {script_path}").run()?;
-    
+
     // cleanup is automatic when tmp_dir goes out of scope
     Ok(())
 }
