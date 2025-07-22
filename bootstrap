@@ -43,7 +43,7 @@ fi
 command -v sudo || which sudo || apt install sudo -y
 
 # Install nix
-if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]  && [[ "$1" != "minimal" ]];; then
+if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]  && [[ "$1" != "minimal" ]]; then
     which sudo || apt install sudo -y || sudo apt-get install sudo -y || sudo apt-get install sudo -y
 
     curl -L https://nixos.org/nix/install | sh -s -- --daemon
