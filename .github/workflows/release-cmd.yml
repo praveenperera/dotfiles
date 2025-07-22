@@ -154,16 +154,17 @@ jobs:
           toolchain: stable
           target: x86_64-unknown-linux-musl
 
-      - name: Prepare APT cache for save
+      - name: Configure APT to use runner‐writable cache
         run: |
-          sudo rm -f /var/cache/apt/archives/lock
-          sudo rm -rf /var/cache/apt/archives/partial
-          sudo chmod -R a+rX /var/cache/apt/archives /var/lib/apt/lists
+          sudo mkdir -p /home/runner/apt-cache/{archives,partial,pkgcache}
+          echo 'Dir::Cache::archives "/home/runner/apt-cache/archives";
+                Dir::Cache::pkgcache "/home/runner/apt-cache/pkgcache";' \
+            | sudo tee /etc/apt/apt.conf.d/99runner-cache
 
       - name: Cache APT packages
         uses: actions/cache@v4
         with:
-          path: /var/cache/apt/archives
+          path: /home/runner/apt-cache
           key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/release-cmd.yml') }}
           restore-keys: |
             ${{ runner.os }}-apt-
@@ -172,6 +173,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y musl-tools
+
+      - name: Prune default APT cache
+        run: sudo rm -rf /var/cache/apt/archives /var/cache/apt/lists
 
       - name: Build
         run: |
