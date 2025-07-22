@@ -38,9 +38,12 @@ if is_proxmox; then
   ./proxmox
 fi
 
+
+# make sure we have sudo
+command -v sudo || which sudo || apt install sudo -y
+
 # Install nix
-if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]; then
-    rm -rf  /etc/bashrc.backup-before-nix
+if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]  && [[ "$1" != "minimal" ]];; then
     which sudo || apt install sudo -y || sudo apt-get install sudo -y || sudo apt-get install sudo -y
 
     curl -L https://nixos.org/nix/install | sh -s -- --daemon
