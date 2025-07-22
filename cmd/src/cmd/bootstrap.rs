@@ -158,9 +158,9 @@ const TOOLS_MINIMAL: &[&str] = &[
     "bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh", "direnv",
 ];
 
-const TOOLS_VIA_SHELL_SCRIPT: &[(&str, &str)] = &[
-    ("https://starship.rs/install.sh", "starship"),
-    ("https://setup.atuin.sh", "atuin"),
+const TOOLS_VIA_SHELL_SCRIPT: &[(&str, &str, &[&str])] = &[
+    ("https://starship.rs/install.sh", "starship", &["--yes"]),
+    ("https://setup.atuin.sh", "atuin", &[]),
 ];
 
 const LINUX_TOOLS_MINIMAL: &[&str] = &["ca-certificates", "curl", "unzip", "xsel"];
@@ -233,8 +233,8 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
                         .arg("-y")
                         .run()?;
 
-                    for (url, tool) in TOOLS_VIA_SHELL_SCRIPT {
-                        install_via_shell_script(sh, url, tool)?;
+                    for (url, tool, args) in TOOLS_VIA_SHELL_SCRIPT.into_iter() {
+                        install_via_shell_script(sh, url, tool, args)?;
                     }
                 }
 
@@ -490,7 +490,7 @@ fn map_brew_tool_names_to_nix(tool_name: &str) -> &str {
     }
 }
 
-fn install_via_shell_script(sh: &Shell, url: &str, tool_name: &str) -> Result<()> {
+fn install_via_shell_script(sh: &Shell, url: &str, tool_name: &str, args: &[&str]) -> Result<()> {
     println!(
         "{} {}",
         format!("installing {tool_name}").green(),
@@ -510,7 +510,9 @@ fn install_via_shell_script(sh: &Shell, url: &str, tool_name: &str) -> Result<()
 
     // make script executable and run it
     cmd!(sh, "chmod +x {script_path}").run()?;
-    cmd!(sh, "sh {script_path}").run()?;
+
+    let args = args.join(" ");
+    cmd!(sh, "sh {script_path} {args}").run()?;
 
     // cleanup is automatic when tmp_dir goes out of scope
     Ok(())
