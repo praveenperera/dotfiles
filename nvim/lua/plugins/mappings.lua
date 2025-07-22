@@ -198,6 +198,10 @@ return {
                     ["<M-j>"] = { "<C-w>-", desc = "Resize down" },
                     ["<M-k>"] = { "<C-w>+", desc = "Resize up" },
 
+                    -- split resizing on ssh requires ctrl and alt
+                    ["<C-M-h>"] = { "<C-w><", desc = "Resize left" },
+                    ["<C-M-l>"] = { "<C-w>>", desc = "Resize right" },
+
                     -- source file
                     ["<Leader>so"] = {
                         "<cmd>source %<CR>",
