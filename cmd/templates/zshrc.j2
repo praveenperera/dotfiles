@@ -324,6 +324,7 @@ export PATH="$NS_ROOT/bin:$PATH"
 eval "$(starship init zsh)"
 eval "$(direnv hook zsh)"
 
+export PATH="$HOME/.atuin/bin:$PATH"
 export ATUIN_NOBIND="true"
 eval "$(atuin init zsh)"
 bindkey '^r' atuin-search

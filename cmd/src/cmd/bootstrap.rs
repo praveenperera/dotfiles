@@ -154,7 +154,9 @@ const TOOLS_FULL: &[&str] = &[
     "nodejs",
 ];
 
-const TOOLS_MINIMAL: &[&str] = &["bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh"];
+const TOOLS_MINIMAL: &[&str] = &[
+    "bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh", "direnv",
+];
 
 const TOOLS_VIA_SHELL_SCRIPT: &[(&str, &str)] = &[
     ("https://starship.rs/install.sh", "starship"),
