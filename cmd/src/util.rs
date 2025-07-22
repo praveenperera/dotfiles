@@ -2,7 +2,7 @@ use rand::{
     distr::{Alphanumeric, SampleString as _, Uniform},
     Rng,
 };
-use xshell::cmd;
+use xshell::{cmd, Shell};
 
 pub const VAULT: &str = "CLI";
 
@@ -82,4 +82,8 @@ pub fn hex_to_rgb(hex: &str) -> Result<(f32, f32, f32), std::num::ParseIntError>
     let b = b as f32 / 255.0;
 
     Ok((r, g, b))
+}
+
+pub fn has_tool(sh: &Shell, tool: &str) -> bool {
+    cmd!(sh, "command -v {tool}").quiet().run().is_ok()
 }

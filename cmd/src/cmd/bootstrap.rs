@@ -5,7 +5,7 @@ use askama::Template;
 use eyre::{Context as _, Result};
 use xshell::{cmd, Shell};
 
-use crate::{command_exists, os::Os, CMD_TOOLS};
+use crate::{command_exists, os::Os, util::has_tool, CMD_TOOLS};
 use colored::Colorize;
 
 #[derive(Debug)]
@@ -218,19 +218,18 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
             cmd!(sh, "sudo apt-get update").run()?;
             println!("{}", "installing linux tools".green());
 
+            // install linux tools with apt
+            let linux_tools = match flags.mode {
+                BootstrapMode::Minimal => LINUX_TOOLS_MINIMAL,
+                BootstrapMode::Full => LINUX_TOOLS_FULL,
+            };
+
             cmd!(sh, "sudo apt-get install")
-                .args(LINUX_TOOLS_MINIMAL)
+                .args(linux_tools)
                 .arg("-y")
                 .run()?;
 
-            // install additional tools for full mode
-            if matches!(flags.mode, BootstrapMode::Full) {
-                cmd!(sh, "sudo apt-get install")
-                    .args(LINUX_TOOLS_FULL)
-                    .arg("-y")
-                    .run()?;
-            }
-
+            // install tools with nix
             let tools = match flags.mode {
                 BootstrapMode::Minimal => TOOLS_MINIMAL,
                 BootstrapMode::Full => TOOLS_FULL,
@@ -251,6 +250,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
                 cmd!(sh, "cargo binstall").args(CARGO_PKGS).run()?;
             }
         }
+
         Os::MacOS => {
             install_brew_and_tools(sh)?;
         }
@@ -388,7 +388,10 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
         cmd!(sh, "ln -s {path} {target}").run()?;
     }
 
-    install_tpm(sh, &home)?;
+    // only install tpm if tmux exists
+    if has_tool(sh, "tmux") {
+        install_tpm(sh, &home)?;
+    }
 
     Ok(())
 }
