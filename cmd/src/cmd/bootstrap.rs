@@ -221,13 +221,30 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
 
             match flags.mode {
                 BootstrapMode::Minimal => {
-                    // use apt for minimal tools that are available in apt
-                    println!("{}", "installing additional tools using apt".green());
+                    // install linux tools with apt
                     cmd!(sh, "sudo apt-get install")
-                        .args(TOOLS_MINIMAL)
                         .args(LINUX_TOOLS_MINIMAL)
                         .arg("-y")
                         .run()?;
+
+                    // filter out tools that need special installation
+                    let apt_tools: Vec<&str> = TOOLS_MINIMAL
+                        .iter()
+                        .filter(|&tool| !matches!(tool, "starship" | "atuin"))
+                        .copied()
+                        .collect();
+
+                    if !apt_tools.is_empty() {
+                        println!("{}", "installing tools using apt".green());
+                        cmd!(sh, "sudo apt-get install")
+                            .args(&apt_tools)
+                            .arg("-y")
+                            .run()?;
+                    }
+
+                    // install starship and atuin via shell scripts
+                    install_via_shell_script(sh, "https://starship.rs/install.sh", "starship")?;
+                    install_via_shell_script(sh, "https://setup.atuin.sh", "atuin")?;
                 }
 
                 BootstrapMode::Full => {
@@ -480,6 +497,24 @@ fn map_brew_tool_names_to_nix(tool_name: &str) -> &str {
         "gpg" => "gnupg",
         other => other,
     }
+}
+
+fn install_via_shell_script(sh: &Shell, url: &str, tool_name: &str) -> Result<()> {
+    println!("{} {}", format!("installing {tool_name}").green(), "via shell script".blue());
+    
+    // create temp directory for the script
+    let tmp_dir = sh.create_temp_dir()?;
+    let script_path = tmp_dir.path().join(format!("{tool_name}_install.sh"));
+    
+    // download the script
+    cmd!(sh, "curl --proto '=https' --tlsv1.2 -LsSf {url} -o {script_path}").run()?;
+    
+    // make script executable and run it
+    cmd!(sh, "chmod +x {script_path}").run()?;
+    cmd!(sh, "sh {script_path}").run()?;
+    
+    // cleanup is automatic when tmp_dir goes out of scope
+    Ok(())
 }
 
 fn create_and_run_file(sh: &Shell, contents: &str, file: &str) -> Result<()> {
