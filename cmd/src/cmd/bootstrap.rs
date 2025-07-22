@@ -235,6 +235,9 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
                         .arg("-y")
                         .run()?;
 
+                    // alias batcat to bat
+                    cmd!(sh, "ln -s /usr/bin/batcat ~/.local/bin/bat").run()?;
+
                     for (url, tool, args) in TOOLS_VIA_SHELL_SCRIPT.iter() {
                         install_via_shell_script(sh, url, tool, args)?;
                     }
