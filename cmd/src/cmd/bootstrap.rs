@@ -155,7 +155,7 @@ const TOOLS_FULL: &[&str] = &[
 ];
 
 const TOOLS_MINIMAL: &[&str] = &[
-    "bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh", "direnv",
+    "bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh", "direnv", "jq",
 ];
 
 const TOOLS_VIA_SHELL_SCRIPT: &[(&str, &str, &[&str])] = &[
@@ -235,7 +235,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
                         .arg("-y")
                         .run()?;
 
-                    for (url, tool, args) in TOOLS_VIA_SHELL_SCRIPT.into_iter() {
+                    for (url, tool, args) in TOOLS_VIA_SHELL_SCRIPT.iter() {
                         install_via_shell_script(sh, url, tool, args)?;
                     }
                 }
@@ -301,19 +301,22 @@ pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
 
     // check if this is a minimal install (no cargo or rust)
     if !has_tool(sh, "cargo") || !has_tool(sh, "rustc") {
-        println!("{}", "detected minimal install, using release-minimal script".blue());
-        
+        println!(
+            "{}",
+            "detected minimal install, using release-minimal script".blue()
+        );
+
         sh.change_dir(crate::dotfiles_dir());
         sh.change_dir("cmd");
-        
+
         if cmd!(sh, "./release-minimal").run().is_err() {
             println!("{}", "failed to download cmd binary from github".red());
             std::process::exit(1);
         }
-        
+
         // create hard links for all tools
         let cmd = format!("{home}/.local/bin/cmd");
-        
+
         for (tool, _) in CMD_TOOLS {
             if *tool == "cmd" {
                 continue;
@@ -327,7 +330,7 @@ pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
 
             sh.hard_link(&cmd, tool_path)?;
         }
-        
+
         return Ok(());
     }
 
