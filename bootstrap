@@ -60,7 +60,7 @@ if [[ "$1" == "full" ]] && [ ! -x "$(command -v cc)" ]; then
 fi
 
 # only install rust for full mode or if cmd binary doesn't exist
-if [[ "$1" == "full" ]] || [ ! -x "$HOME/.local/bin/cmd" ]; then
+if [[ "$1" == "full" ]] && [ ! -x "$HOME/.local/bin/cmd" ]; then
     if [ ! -x "$(command -v cargo)" ]; then
         echo "Installing Rust..."
         echo "HOME is $HOME"

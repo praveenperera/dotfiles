@@ -210,8 +210,9 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
 
     let flags = flags::Bootstrap::from_vec(args)?;
 
-    // install rust components
-    cmd!(sh, "rustup component add rustfmt clippy").run()?;
+    if matches!(flags.mode, BootstrapMode::Full) {
+        cmd!(sh, "rustup component add rustfmt clippy").run()?;
+    }
 
     match Os::current() {
         Os::Linux => {
