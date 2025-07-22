@@ -4,5 +4,5 @@ fmt:
 clippy:
     cd cmd && cargo clippy
 
-check:
+check
     cd cmd && cargo check

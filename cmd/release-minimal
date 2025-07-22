@@ -30,61 +30,59 @@ fi
 # check if cmd binary exists
 CMD_PATH="$HOME/.local/bin/cmd"
 
-# cmd doesn't exist, download from GitHub
-if [[ ! -x "$CMD_PATH" ]]; then
-    echo "minimal mode: downloading cmd binary from GitHub releases..."
-    
-    # create directory if it doesn't exist
-    mkdir -p "$HOME/.local/bin"
-    
-    # get latest release info
-    REPO_OWNER="praveenperera"  # update this to your GitHub username
-    REPO_NAME="dotfiles"  # update this to your repo name
-    
-    LATEST_RELEASE_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
-    
-    # get latest release tag
-    if command -v curl >/dev/null 2>&1; then
-        LATEST_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name"' | sed -E 's/.*"tag_name": "([^"]+)".*/\1/')
-    elif command -v wget >/dev/null 2>&1; then
-        LATEST_TAG=$(wget -qO- "$LATEST_RELEASE_URL" | grep '"tag_name"' | sed -E 's/.*"tag_name": "([^"]+)".*/\1/')
-    else
-        echo "error: neither curl nor wget is available"
-        exit 1
-    fi
-    
-    if [[ -z "$LATEST_TAG" ]]; then
-        echo "error: could not fetch latest release tag"
-        exit 1
-    fi
-    
-    echo "downloading cmd binary version $LATEST_TAG..."
-    
-    # construct download URL
-    ASSET_NAME="cmd-${LATEST_TAG}-${RELEASE_SUFFIX}.tar.gz"
-    DOWNLOAD_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${LATEST_TAG}/${ASSET_NAME}"
-    
-    # download and extract
-    TMP_DIR=$(mktemp -d)
-    cd "$TMP_DIR"
-    
-    if command -v curl >/dev/null 2>&1; then
-        curl -L -o "$ASSET_NAME" "$DOWNLOAD_URL"
-    else
-        wget -O "$ASSET_NAME" "$DOWNLOAD_URL"
-    fi
-    
-    # extract and install
-    tar -xzf "$ASSET_NAME"
-    chmod +x cmd
-    mv cmd "$CMD_PATH"
-    
-    # cleanup
-    rm -rf "$TMP_DIR"
-    
-    echo "cmd binary installed successfully at $CMD_PATH"
-else
-    echo "cmd binary already exists at $CMD_PATH"
+if [[ -f "$CMD_PATH" ]]; then
+    echo "cmd binary already exists at $CMD_PATH, removing"
+    rm "$CMD_PATH"
 fi
 
-echo "done!"
+echo "minimal mode: downloading cmd binary from GitHub releases..."
+
+# create directory if it doesn't exist
+mkdir -p "$HOME/.local/bin"
+
+# get latest release info
+REPO_OWNER="praveenperera"  # update this to your GitHub username
+REPO_NAME="dotfiles"  # update this to your repo name
+
+LATEST_RELEASE_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
+
+# get latest release tag
+if command -v curl >/dev/null 2>&1; then
+    LATEST_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name"' | sed -E 's/.*"tag_name": "([^"]+)".*/\1/')
+elif command -v wget >/dev/null 2>&1; then
+    LATEST_TAG=$(wget -qO- "$LATEST_RELEASE_URL" | grep '"tag_name"' | sed -E 's/.*"tag_name": "([^"]+)".*/\1/')
+else
+    echo "error: neither curl nor wget is available"
+    exit 1
+fi
+
+if [[ -z "$LATEST_TAG" ]]; then
+    echo "error: could not fetch latest release tag"
+    exit 1
+fi
+
+echo "downloading cmd binary version $LATEST_TAG..."
+
+# construct download URL
+ASSET_NAME="cmd-${LATEST_TAG}-${RELEASE_SUFFIX}.tar.gz"
+DOWNLOAD_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${LATEST_TAG}/${ASSET_NAME}"
+
+# download and extract
+TMP_DIR=$(mktemp -d)
+cd "$TMP_DIR"
+
+if command -v curl >/dev/null 2>&1; then
+    curl -L -o "$ASSET_NAME" "$DOWNLOAD_URL"
+else
+    wget -O "$ASSET_NAME" "$DOWNLOAD_URL"
+fi
+
+# extract and install
+tar -xzf "$ASSET_NAME"
+chmod +x cmd
+mv cmd "$CMD_PATH"
+
+# cleanup
+rm -rf "$TMP_DIR"
+
+echo "cmd binary installed successfully at $CMD_PATH"
