@@ -75,6 +75,35 @@ struct Zshrc {
 #[template(path = "osx_defaults.zsh.j2")]
 struct OsxDefaults {}
 
+const MAC_ONLY_TOOLS: &[&str] = &[
+    "swiftformat",
+    "1password-cli",
+    "xcode-build-server",
+    "gpg-suite",
+    "pinentry-mac",
+];
+
+const BREW_CASKS: &[&str] = &[
+    "alacritty",
+    "google-cloud-sdk",
+    "visual-studio-code",
+    "bettertouchtool",
+    "github",
+    "signal",
+    "sublime-text",
+    "raycast",
+    "font-jetbrains-mono-nerd-font",
+    "font-recursive-mono-nerd-font",
+    "brave-browser",
+    "appcleaner",
+    "iterm2",
+    "swiftformat-for-xcode",
+    "slack",
+    "selfcontrol",
+    "figma",
+    "lens",
+];
+
 const TOOLS_FULL: &[&str] = &[
     "bat",
     "coreutils",
@@ -126,66 +155,18 @@ const TOOLS_FULL: &[&str] = &[
 ];
 
 const TOOLS_MINIMAL: &[&str] = &[
-    "coreutils",
-    "bat",
-    "fd",
-    "fzf",
-    "direnv",
-    "htop",
-    "btop",
-    "jq",
-    "neovim",
-    "ripgrep",
-    "starship",
-    "tmux",
-    "eza",
-    "pkg-config",
-    "zoxide",
-    "tree",
-    "mcfly",
-    "atuin",
-    "zsh",
-    "just",
-    "watchexec",
-    "uv",
+    "bat", "fd", "fzf", "direnv", "htop", "jq", "ripgrep", "starship", "zoxide", "atuin", "zsh",
 ];
 
-const MAC_ONLY_TOOLS: &[&str] = &[
-    "swiftformat",
-    "1password-cli",
-    "xcode-build-server",
-    "gpg-suite",
-    "pinentry-mac",
-];
+const LINUX_TOOLS_MINIMAL: &[&str] = &["ca-certificates", "curl", "unzip", "xsel"];
 
-const BREW_CASKS: &[&str] = &[
-    "alacritty",
-    "google-cloud-sdk",
-    "visual-studio-code",
-    "bettertouchtool",
-    "github",
-    "signal",
-    "sublime-text",
-    "raycast",
-    "font-jetbrains-mono-nerd-font",
-    "font-recursive-mono-nerd-font",
-    "brave-browser",
-    "appcleaner",
-    "iterm2",
-    "swiftformat-for-xcode",
-    "slack",
-    "selfcontrol",
-    "figma",
-    "lens",
-];
-
-const LINUX_TOOLS: &[&str] = &[
-    "libssl-dev",
-    "pkg-config",
-    "xsel",
+const LINUX_TOOLS_FULL: &[&str] = &[
     "ca-certificates",
     "curl",
     "unzip",
+    "xsel",
+    "libssl-dev",
+    "pkg-config",
     "gcc",
     "python3-dev",
     "python3-pip",
@@ -193,7 +174,6 @@ const LINUX_TOOLS: &[&str] = &[
 ];
 
 const CARGO_PKGS: &[&str] = &["bacon", "cargo-update", "cargo-nextest", "cargo-expand"];
-
 const DOTFILES: &[&str] = &[
     "zshrc",
     "gitconfig",
@@ -237,10 +217,19 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
         Os::Linux => {
             cmd!(sh, "sudo apt-get update").run()?;
             println!("{}", "installing linux tools".green());
+
             cmd!(sh, "sudo apt-get install")
-                .args(LINUX_TOOLS)
+                .args(LINUX_TOOLS_MINIMAL)
                 .arg("-y")
                 .run()?;
+
+            // install additional tools for full mode
+            if matches!(flags.mode, BootstrapMode::Full) {
+                cmd!(sh, "sudo apt-get install")
+                    .args(LINUX_TOOLS_FULL)
+                    .arg("-y")
+                    .run()?;
+            }
 
             let tools = match flags.mode {
                 BootstrapMode::Minimal => TOOLS_MINIMAL,
@@ -249,7 +238,6 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
 
             let nix_tools = tools
                 .iter()
-                .filter(|tool| !LINUX_TOOLS.contains(tool))
                 .map(|tool| map_brew_tool_names_to_nix(tool))
                 .filter(|tool| !tool.is_empty())
                 .map(|tool| format!("nixpkgs.{tool}"))
@@ -264,8 +252,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
             }
         }
         Os::MacOS => {
-            let minimal = matches!(flags.mode, BootstrapMode::Minimal);
-            install_brew_and_tools(sh, minimal)?;
+            install_brew_and_tools(sh)?;
         }
     }
 
@@ -419,7 +406,8 @@ fn install_tpm(sh: &Shell, home: &Path) -> Result<()> {
     Ok(())
 }
 
-fn install_brew_and_tools(sh: &Shell, minimal: bool) -> Result<()> {
+/// mac only tools
+fn install_brew_and_tools(sh: &Shell) -> Result<()> {
     if !command_exists(sh, "brew") {
         println!("{} {}", "brew not found".blue(), "installing...".green());
 
@@ -459,19 +447,17 @@ fn install_brew_and_tools(sh: &Shell, minimal: bool) -> Result<()> {
             .run()?;
     }
 
-    if !minimal {
-        println!("{}", "installing cargo plugins".green());
-        std::env::set_var("RUSTC_WRAPPER", "sccache");
+    println!("{}", "installing cargo plugins".green());
+    std::env::set_var("RUSTC_WRAPPER", "sccache");
 
-        // install cargo-binstall
-        cmd!(sh, "cargo install cargo-binstall").run()?;
+    // install cargo-binstall
+    cmd!(sh, "cargo install cargo-binstall").run()?;
 
-        // install cargo packages  using cargo-bininstall
-        cmd!(sh, "cargo binstall")
-            .args(CARGO_PKGS)
-            .arg("-y")
-            .run()?;
-    }
+    // install cargo packages  using cargo-bininstall
+    cmd!(sh, "cargo binstall")
+        .args(CARGO_PKGS)
+        .arg("-y")
+        .run()?;
 
     cmd!(sh, "brew cleanup").run()?;
     cmd!(sh, "brew autoremove").run()?;

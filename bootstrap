@@ -53,22 +53,25 @@ if [ ! -x "$(command -v sccache)" ]; then
     unset RUSTC_WRAPPER
 fi
 
-if [ ! -x "$(command -v cc)" ]; then
+# only install gcc for full mode
+if [[ "$1" == "full" ]] && [ ! -x "$(command -v cc)" ]; then
     echo "Installing gcc..."
     apt install gcc -y || sudo apt-get install gcc -y || apt-get install gcc -y || sudo apt-get install gcc -y
 fi
 
-# Install Rust
-if [ ! -x "$(command -v cargo)" ]; then
-    echo "Installing Rust..."
-    echo "HOME is $HOME"
+# only install rust for full mode or if cmd binary doesn't exist
+if [[ "$1" == "full" ]] || [ ! -x "$HOME/.local/bin/cmd" ]; then
+    if [ ! -x "$(command -v cargo)" ]; then
+        echo "Installing Rust..."
+        echo "HOME is $HOME"
 
-    export CARGO_HOME=$HOME/.cargo
-    export RUSTUP_HOME=$HOME/.rustup
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
-    sh rustup-init.sh -y --no-modify-path --default-toolchain stable
-    rm rustup-init.sh
-    . "$HOME/.cargo/env"
+        export CARGO_HOME=$HOME/.cargo
+        export RUSTUP_HOME=$HOME/.rustup
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+        sh rustup-init.sh -y --no-modify-path --default-toolchain stable
+        rm rustup-init.sh
+        . "$HOME/.cargo/env"
+    fi
 fi
 
 cd cmd
