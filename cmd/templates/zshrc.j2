@@ -339,3 +339,8 @@ export MANPAGER="col -b | nvim -MR - "
 # if secret zshrc exists, source it
 [ -f ~/.secrets.zsh ] && source ~/.secrets.zsh
 
+# On the *remote* machine — copy stdin to Mac clipboard
+alias rpbcopy='printf "\e]52;c;$(base64 | tr -d '\n')\a"'
+
+# On the *remote* machine — paste from Mac clipboard into stdout
+alias rpbpaste='nc -U /tmp/osc52-sock < /dev/null'  # requires term support to read; not all do

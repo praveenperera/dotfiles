@@ -299,6 +299,39 @@ pub fn config(sh: &Shell, _args: &[&str]) -> Result<()> {
 pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
     let home = std::env::var("HOME").expect("HOME env var not set");
 
+    // check if this is a minimal install (no cargo or rust)
+    if !has_tool(sh, "cargo") || !has_tool(sh, "rustc") {
+        println!("{}", "detected minimal install, using release-minimal script".blue());
+        
+        sh.change_dir(crate::dotfiles_dir());
+        sh.change_dir("cmd");
+        
+        if cmd!(sh, "./release-minimal").run().is_err() {
+            println!("{}", "failed to download cmd binary from github".red());
+            std::process::exit(1);
+        }
+        
+        // create hard links for all tools
+        let cmd = format!("{home}/.local/bin/cmd");
+        
+        for (tool, _) in CMD_TOOLS {
+            if *tool == "cmd" {
+                continue;
+            }
+
+            let tool_path = format!("{home}/.local/bin/{tool}");
+
+            if sh.path_exists(&tool_path) {
+                sh.remove_path(&tool_path)?;
+            }
+
+            sh.hard_link(&cmd, tool_path)?;
+        }
+        
+        return Ok(());
+    }
+
+    // full install path - build from source
     let current_path = std::env::current_exe().wrap_err("failed to get current path")?;
     let current_exe_rename = format!("{}.old", current_path.display());
 
