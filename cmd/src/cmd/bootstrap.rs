@@ -155,7 +155,7 @@ const TOOLS_FULL: &[&str] = &[
 ];
 
 const TOOLS_MINIMAL: &[&str] = &[
-    "bat", "fd", "fzf", "direnv", "htop", "jq", "ripgrep", "starship", "zoxide", "atuin", "zsh",
+    "bat", "fzf", "htop", "btop", "ripgrep", "starship", "zoxide", "atuin", "zsh",
 ];
 
 const LINUX_TOOLS_MINIMAL: &[&str] = &["ca-certificates", "curl", "unzip", "xsel"];
@@ -219,32 +219,36 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
             cmd!(sh, "sudo apt-get update").run()?;
             println!("{}", "installing linux tools".green());
 
-            // install linux tools with apt
-            let linux_tools = match flags.mode {
-                BootstrapMode::Minimal => LINUX_TOOLS_MINIMAL,
-                BootstrapMode::Full => LINUX_TOOLS_FULL,
-            };
+            match flags.mode {
+                BootstrapMode::Minimal => {
+                    // use apt for minimal tools that are available in apt
+                    println!("{}", "installing additional tools using apt".green());
+                    cmd!(sh, "sudo apt-get install")
+                        .args(TOOLS_MINIMAL)
+                        .args(LINUX_TOOLS_MINIMAL)
+                        .arg("-y")
+                        .run()?;
+                }
 
-            cmd!(sh, "sudo apt-get install")
-                .args(linux_tools)
-                .arg("-y")
-                .run()?;
+                BootstrapMode::Full => {
+                    // install linux tools with apt
+                    cmd!(sh, "sudo apt-get install")
+                        .args(LINUX_TOOLS_FULL)
+                        .arg("-y")
+                        .run()?;
 
-            // install tools with nix
-            let tools = match flags.mode {
-                BootstrapMode::Minimal => TOOLS_MINIMAL,
-                BootstrapMode::Full => TOOLS_FULL,
-            };
+                    // install tools with nix for full mode
+                    let nix_tools = TOOLS_FULL
+                        .iter()
+                        .map(|tool| map_brew_tool_names_to_nix(tool))
+                        .filter(|tool| !tool.is_empty())
+                        .map(|tool| format!("nixpkgs.{tool}"))
+                        .collect::<Vec<_>>();
 
-            let nix_tools = tools
-                .iter()
-                .map(|tool| map_brew_tool_names_to_nix(tool))
-                .filter(|tool| !tool.is_empty())
-                .map(|tool| format!("nixpkgs.{tool}"))
-                .collect::<Vec<_>>();
-
-            println!("{}", "installing tools using nix".green());
-            cmd!(sh, "nix-env -iA").args(nix_tools).run()?;
+                    println!("{}", "installing tools using nix".green());
+                    cmd!(sh, "nix-env -iA").args(nix_tools).run()?;
+                }
+            }
 
             if matches!(flags.mode, BootstrapMode::Full) {
                 println!("{}", "installing cargo plugins".green());
