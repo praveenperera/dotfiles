@@ -155,7 +155,7 @@ const TOOLS_FULL: &[&str] = &[
 ];
 
 const TOOLS_MINIMAL: &[&str] = &[
-    "bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh", "direnv", "rust-eza",
+    "bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh", "direnv",
 ];
 
 const TOOLS_VIA_SHELL_SCRIPT: &[(&str, &str, &[&str])] = &[
@@ -163,7 +163,7 @@ const TOOLS_VIA_SHELL_SCRIPT: &[(&str, &str, &[&str])] = &[
     ("https://setup.atuin.sh", "atuin", &[]),
 ];
 
-const LINUX_TOOLS_MINIMAL: &[&str] = &["ca-certificates", "curl", "unzip", "xsel"];
+const LINUX_TOOLS_MINIMAL: &[&str] = &["ca-certificates", "curl", "unzip", "xsel", "wget", "gpg"];
 
 const LINUX_TOOLS_FULL: &[&str] = &[
     "ca-certificates",
@@ -176,6 +176,8 @@ const LINUX_TOOLS_FULL: &[&str] = &[
     "python3-dev",
     "python3-pip",
     "python3-setuptools",
+    "wget",
+    "gpg",
 ];
 
 const CARGO_PKGS: &[&str] = &["bacon", "cargo-update", "cargo-nextest", "cargo-expand"];
