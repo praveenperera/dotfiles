@@ -54,9 +54,10 @@ jobs:
           cd cmd
           # update version in Cargo.toml
           sed -i 's/^version = .*/version = "${{ steps.tag.outputs.version }}"/' Cargo.toml
+
           # update Cargo.lock with new version
-          cargo update --workspace --offline || cargo check
-          
+          cargo update || cargo check
+
       - name: Commit version bump
         run: |
           git config --local user.email "action@github.com"
