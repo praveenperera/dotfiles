@@ -158,7 +158,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/release-cmd.yml') }}
           restore-keys: |
             ${{ runner.os }}-apt-
 
