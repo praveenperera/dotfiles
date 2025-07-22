@@ -76,6 +76,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create dummy secrets directory
+        run: |
+          cd cmd
+          mkdir -p secrets
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            cmd/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('cmd/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -107,6 +123,22 @@ jobs:
     needs: create-release
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create dummy secrets directory
+        run: |
+          cd cmd
+          mkdir -p secrets
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            cmd/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('cmd/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
