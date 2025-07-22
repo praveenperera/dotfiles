@@ -155,7 +155,7 @@ const TOOLS_FULL: &[&str] = &[
 ];
 
 const TOOLS_MINIMAL: &[&str] = &[
-    "bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh", "direnv",
+    "bat", "fzf", "htop", "btop", "ripgrep", "zoxide", "zsh", "direnv", "rust-eza",
 ];
 
 const TOOLS_VIA_SHELL_SCRIPT: &[(&str, &str, &[&str])] = &[
