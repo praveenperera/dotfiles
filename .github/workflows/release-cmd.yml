@@ -44,17 +44,24 @@ jobs:
           echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Setup Rust for version update
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
       - name: Update Cargo.toml version
         run: |
           cd cmd
           # update version in Cargo.toml
           sed -i 's/^version = .*/version = "${{ steps.tag.outputs.version }}"/' Cargo.toml
+          # update Cargo.lock with new version
+          cargo update --workspace --offline || cargo check
           
       - name: Commit version bump
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add cmd/Cargo.toml
+          git add cmd/Cargo.toml cmd/Cargo.lock
           git commit -m "bump version to ${{ steps.tag.outputs.tag }}" || exit 0
           git tag ${{ steps.tag.outputs.tag }}
           git push origin HEAD --tags
