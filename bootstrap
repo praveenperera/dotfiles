@@ -76,7 +76,12 @@ fi
 
 cd cmd
 mkdir -p secrets
-./release
+
+if [[ "$1" == "full" ]]; then
+  ./release
+else
+  ./release-minimal
+fi
 
 $HOME/.local/bin/cmd bootstrap "$1"
 gpgconf --kill gpg-agent ||
@@ -85,6 +90,8 @@ gpgconf --launch gpg-agent || true
 # if macos, and full install, change shell to zsh
 if [[ "$1" == "full" ]] && [ $(uname) == "Darwin" ]; then
   sudo chsh $(whoami) --shell $(which zsh) || echo "Could not change shell"
+else
+  chsh $(whoami) --shell $(which zsh) || echo "Could not change shell"
 fi
 
 exec zsh
