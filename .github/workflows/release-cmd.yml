@@ -154,6 +154,11 @@ jobs:
           toolchain: stable
           target: x86_64-unknown-linux-musl
 
+      - name: Point APT cache to user dir
+        run: |
+          echo 'Dir::Cache::archives "/home/runner/apt-cache";' | sudo tee /etc/apt/apt.conf.d/99cache
+          sudo mkdir -p /home/runner/apt-cache/partial
+
       - name: Cache APT packages
         uses: actions/cache@v4
         with:
