@@ -1,4 +1,4 @@
-name: Release CMD Binary
+name: release-cmd
 
 on:
   push:
