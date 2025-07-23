@@ -39,9 +39,11 @@ if is_proxmox; then
 fi
 
 
-# make sure we have sudo and gpg
+# make sure we have sudo and gpg on linux
+if [ $(uname) != "Darwin" ]; then
 command -v sudo || which sudo || apt install sudo -y
 command -v gpg || which gpg || apt install gpg -y || gpg apt-get install gpg -y || gpg apt-get install gpg -y
+fi
 
 # Install nix
 if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]  && [[ "$1" != "minimal" ]]; then
