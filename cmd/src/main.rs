@@ -47,6 +47,12 @@ fn main() -> Result<()> {
 
     debug!("run args: {args:?}");
 
+    // check for --version flag
+    if args.len() > 1 && args[1] == "--version" {
+        println!("{}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+
     let mut args_iter = args.iter();
 
     let program: PathBuf = args_iter.next().expect("not enough args").into();
