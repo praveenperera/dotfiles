@@ -6,3 +6,4 @@ clippy:
 
 check:
     cd cmd && cargo check
+

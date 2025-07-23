@@ -99,6 +99,26 @@ return {
                     ["n"] = { "nzzzv" },
                     ["N"] = { "Nzzzv" },
 
+                    -- yank, delete, paste buffer
+                    ["<Leader>by"] = {
+                        "<cmd>silent! %y+<cr>",
+                        desc = "[B]uffer [Yank]",
+                        noremap = true,
+                        silent = true,
+                    },
+                    ["<Leader>bd"] = {
+                        "<cmd>%delete _<CR>",
+                        desc = "[B]uffer [Delete]",
+                        noremap = true,
+                        silent = true,
+                    },
+                    ["<Leader>bp"] = {
+                        "<cmd>%delete _ | 0put +<CR>",
+                        noremap = true,
+                        desc = "[B]uffer [Paste]",
+                        silent = true,
+                    },
+
                     -- toggleterm
                     ["<Leader>th"] = {
                         "<cmd>ToggleTerm direction=horizontal<cr>",
