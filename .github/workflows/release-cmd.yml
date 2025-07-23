@@ -157,11 +157,10 @@ jobs:
       - name: Configure APT to use runner‐writable archives only
         run: |
           sudo mkdir -p /home/runner/apt-cache/{archives,partial}
-          # Only override where .deb files get stored:
           echo 'Dir::Cache::archives "/home/runner/apt-cache/archives";' \
             | sudo tee /etc/apt/apt.conf.d/99runner-cache
 
-      - name: Cache APT packages
+      - name: Cache APT archives
         uses: actions/cache@v4
         with:
           path: /home/runner/apt-cache/archives
