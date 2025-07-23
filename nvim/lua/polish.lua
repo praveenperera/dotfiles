@@ -26,14 +26,14 @@ vim.api.nvim_create_autocmd("FileType", {
         vim.opt_local.indentexpr = ""
 
         vim.opt_local.expandtab = true -- Use spaces
-        vim.opt_local.tabstop = 2 -- Number of spaces for a tab
-        vim.opt_local.shiftwidth = 2 -- Spaces per indent level
+        vim.opt_local.tabstop = 2      -- Number of spaces for a tab
+        vim.opt_local.shiftwidth = 2   -- Spaces per indent level
     end,
 })
 
 -- ssh clipboard
 if vim.env.SSH_CONNECTION then -- only when remoted in
-    vim.g.clipboard = require("vim.clipboard.osc52") -- built-in helper
+    vim.g.clipboard = "osc52"
 end
 
 -- use "+ register by default
