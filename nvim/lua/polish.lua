@@ -30,3 +30,20 @@ vim.api.nvim_create_autocmd("FileType", {
         vim.opt_local.shiftwidth = 2 -- Spaces per indent level
     end,
 })
+
+-- ssh clipboard
+if vim.env.SSH_CONNECTION then -- only when remoted in
+    vim.g.clipboard = require("vim.clipboard.osc52") -- built-in helper
+end
+
+-- use "+ register by default
+vim.opt.clipboard:append({ "unnamedplus" })
+
+-- tell netrw to use /tmp/netrw for its local copy
+vim.g.netrw_localcopydir = "/tmp/netrw"
+-- don’t recreate the remote directory tree locally
+vim.g.netrw_keepdir = 0
+-- turn off backup files (so netrw won’t try to write *.swp next to the remote path)
+vim.g.netrw_backup = 0
+-- optional: narrow the netrw split height
+vim.g.netrw_winsize = 20
