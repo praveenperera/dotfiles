@@ -236,7 +236,8 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
                         .run()?;
 
                     // alias batcat to bat
-                    cmd!(sh, "ln -s /usr/bin/batcat ~/.local/bin/bat").run()?;
+                    let home = std::env::var("HOME").expect("HOME env var not set");
+                    cmd!(sh, "ln -s /usr/bin/batcat {home}/.local/bin/bat").run()?;
 
                     for (url, tool, args) in TOOLS_VIA_SHELL_SCRIPT.iter() {
                         install_via_shell_script(sh, url, tool, args)?;
