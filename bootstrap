@@ -39,13 +39,13 @@ if is_proxmox; then
 fi
 
 
-# make sure we have sudo
+# make sure we have sudo and gpg
 command -v sudo || which sudo || apt install sudo -y
+command -v gpg || which gpg || apt install gpg -y || gpg apt-get install gpg -y || gpg apt-get install gpg -y
 
 # Install nix
 if [ ! -x "$(command -v nix-env)" ] && [ $(uname) != "Darwin" ]  && [[ "$1" != "minimal" ]]; then
     which sudo || apt install sudo -y || sudo apt-get install sudo -y || sudo apt-get install sudo -y
-    which gpg || apt install gpg -y || gpg apt-get install gpg -y || gpg apt-get install gpg -y
 
     curl -L https://nixos.org/nix/install | sh -s -- --daemon
     . "$HOME/.nix-profile/etc/profile.d/nix.sh" || . /etc/profile.d/nix.sh
