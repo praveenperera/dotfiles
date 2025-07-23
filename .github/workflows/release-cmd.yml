@@ -160,12 +160,7 @@ jobs:
         run: |
           cd cmd
           cargo build --release --target x86_64-unknown-linux-musl
-
-      - name: Clean APT cache before save
-        run: |
-          sudo rm -f /home/runner/apt-cache/archives/lock
-          sudo rm -rf /home/runner/apt-cache/archives/partial
-
+          
       - name: Package
         run: |
           cd cmd
