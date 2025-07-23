@@ -184,7 +184,6 @@ const CARGO_PKGS: &[&str] = &["bacon", "cargo-update", "cargo-nextest", "cargo-e
 const DOTFILES: &[&str] = &[
     "zshrc",
     "gitconfig",
-    "wezterm.lua",
     "zsh_plugins.zsh",
     "gitignore",
     "direnvrc",
