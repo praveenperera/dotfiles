@@ -85,5 +85,5 @@ pub fn hex_to_rgb(hex: &str) -> Result<(f32, f32, f32), std::num::ParseIntError>
 }
 
 pub fn has_tool(sh: &Shell, tool: &str) -> bool {
-    cmd!(sh, "command -v {tool}").quiet().run().is_ok()
+    cmd!(sh, "command -v {tool}").quiet().output().is_ok()
 }

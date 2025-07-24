@@ -29,7 +29,6 @@ fn tools_str() -> String {
 
 pub fn dotfiles_dir() -> PathBuf {
     let home = env::var("HOME").expect("HOME env var must be set");
-
     PathBuf::new().join(home).join("code/dotfiles")
 }
 
@@ -41,8 +40,11 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let args = std::env::args_os()
-        .map(|x| x.into_string().unwrap_or_default())
+    let os_args = std::env::args_os().collect::<Vec<_>>();
+
+    let args = os_args
+        .iter()
+        .filter_map(|x| x.to_str())
         .collect::<Vec<_>>();
 
     debug!("run args: {args:?}");
@@ -53,9 +55,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let mut args_iter = args.iter();
-
-    let program: PathBuf = args_iter.next().expect("not enough args").into();
+    let program: PathBuf = args.iter().next().expect("not enough args").into();
     let program = program
         .file_stem()
         .unwrap_or_default()
@@ -72,10 +72,6 @@ fn main() -> Result<()> {
             )
         })?;
 
-    let args_vec = args_iter.map(String::as_str).collect::<Vec<_>>();
-
-    debug!("run args: {args:?}, run: {run:?}");
-
     let sh = Shell::new()?;
-    run(&sh, &args_vec[..])
+    run(&sh, &args[1..])
 }
