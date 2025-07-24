@@ -22,43 +22,12 @@ xflags::xflags! {
 
         /// Google Cloud operations
         cmd gcloud {
-            /// Google Cloud login (alias: gl)
-            cmd login gl {
-                repeated args: String
-            }
-
-            /// Google Cloud switch project (alias: gsp)
-            cmd switch-project sp {
-                repeated args: String
-            }
-
-            /// Google Cloud switch cluster (alias: gsc)
-            cmd switch-cluster sc {
-                repeated args: String
-            }
+            repeated args: String
         }
 
         /// Secret operations
         cmd secret {
-            /// Generate secret (aliases: generate, sgen)
-            cmd gen generate sgen {
-                repeated args: String
-            }
-
-            /// Get secret (alias: sg)
-            cmd get sg {
-                repeated args: String
-            }
-
-            /// Save secret (alias: ss)
-            cmd save ss {
-                repeated args: String
-            }
-
-            /// Update secret (alias: su)
-            cmd update su {
-                repeated args: String
-            }
+            repeated args: String
         }
 
         /// Terraform (alias: tf)
@@ -116,61 +85,11 @@ pub struct Config {
 
 #[derive(Debug)]
 pub struct Gcloud {
-    pub subcommand: GcloudCmd,
-}
-
-#[derive(Debug)]
-pub enum GcloudCmd {
-    Login(Login),
-    SwitchProject(SwitchProject),
-    SwitchCluster(SwitchCluster),
-}
-
-#[derive(Debug)]
-pub struct Login {
-    pub args: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct SwitchProject {
-    pub args: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct SwitchCluster {
     pub args: Vec<String>,
 }
 
 #[derive(Debug)]
 pub struct Secret {
-    pub subcommand: SecretCmd,
-}
-
-#[derive(Debug)]
-pub enum SecretCmd {
-    Gen(Gen),
-    Get(Get),
-    Save(Save),
-    Update(Update),
-}
-
-#[derive(Debug)]
-pub struct Gen {
-    pub args: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct Get {
-    pub args: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct Save {
-    pub args: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct Update {
     pub args: Vec<String>,
 }
 

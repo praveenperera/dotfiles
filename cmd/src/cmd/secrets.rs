@@ -37,6 +37,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
+
 pub fn gen(_sh: &Shell, length: Option<usize>, no_symbols: bool) -> Result<()> {
     let length = length.unwrap_or(32);
 

@@ -75,6 +75,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
+
 pub fn login(sh: &Shell, project: &str) -> Result<()> {
     let account = gcloud_secret(project)?.account;
 
