@@ -96,3 +96,9 @@ impl Generate {
     }
 }
 // generated end
+//
+impl Generate {
+    pub fn help() -> &'static str {
+        Generate::HELP_
+    }
+}

@@ -68,5 +68,11 @@ fn main() -> Result<()> {
         })?;
 
     let sh = Shell::new()?;
-    run(&sh, &args[1..])
+    match run(&sh, &args[1..]) {
+        Ok(_) => std::process::exit(0),
+        Err(err) => {
+            debug!("{err}");
+            std::process::exit(1);
+        }
+    }
 }

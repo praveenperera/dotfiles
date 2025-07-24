@@ -182,6 +182,6 @@ impl Vault {
 
 impl Generate {
     pub fn help(&self) -> &'static str {
-        ""
+        crate::cmd::generate::flags::Generate::help()
     }
 }

@@ -144,8 +144,9 @@ pub fn handle_xflags_error<T>(
                     Err(eyre!("failed to parse arguments: {err}"))
                 }
                 None => {
+                    println!("need args\n");
                     println!("{help_txt}\n");
-                    Err(eyre!("failed to parse arguments: {err}"))
+                    Err(eyre!("no args provided"))
                 }
             }
         }
