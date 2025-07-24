@@ -1,3 +1,6 @@
+pub mod flags;
+
+use std::ffi::OsString;
 use eyre::Result;
 use xshell::Shell;
 
@@ -5,20 +8,15 @@ use crate::encrypt;
 
 static DEFAULT_SECRET_HEADER: &str = "!!CMD!!ID!!vault-default";
 
-pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
-    match args {
-        [] => eprintln!("need args"),
+pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
+    let flags = flags::Vault::from_args(args)?;
 
-        ["enc" | "encrypt", file] => {
-            encrypt(sh, file)?;
+    match flags.subcommand {
+        flags::VaultCmd::Encrypt(cmd) => {
+            encrypt(sh, &cmd.file)?;
         }
-
-        ["dec" | "decrypt", file] => {
-            decrypt(sh, file)?;
-        }
-
-        cmd => {
-            eprintln!("vault command not implemented: {cmd:?}");
+        flags::VaultCmd::Decrypt(cmd) => {
+            decrypt(sh, &cmd.file)?;
         }
     }
 
@@ -39,11 +37,6 @@ fn encrypt(sh: &Shell, file: &str) -> Result<()> {
 fn decrypt(sh: &Shell, file: &str) -> Result<()> {
     let output = file.trim_end_matches(".enc");
 
-    if file == output {
-        return Err(eyre::eyre!("file does not end with .enc"));
-    }
-
     encrypt::decrypt(sh, file, output)?;
-
     Ok(())
 }

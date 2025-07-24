@@ -1,3 +1,6 @@
+pub mod flags;
+
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use eyre::Result;
@@ -9,14 +12,32 @@ use crate::util::VAULT;
 static SECRET_NAME: &str = "cmd_secrets";
 static SECRETS: [&str; 2] = ["ln.yaml", "sq.yaml"];
 
-pub fn gen(_sh: &Shell, args: &[&str]) -> Result<()> {
-    let length = args
-        .first()
-        .map(|s| s.parse::<usize>())
-        .transpose()?
-        .unwrap_or(32);
+pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
+    let flags = flags::Secrets::from_args(args)?;
 
-    let string = if args.contains(&"--no-symbols") {
+    match flags.subcommand {
+        flags::SecretsCmd::Gen(cmd) => {
+            gen(sh, cmd.length, cmd.no_symbols)?;
+        }
+        flags::SecretsCmd::Get(cmd) => {
+            get(sh, cmd.secret_name.as_deref(), &cmd.secret)?;
+        }
+        flags::SecretsCmd::Save(_) => {
+            save(sh)?;
+        }
+        flags::SecretsCmd::Update(cmd) => {
+            update(sh, &cmd.secret)?;
+        }
+    }
+
+    Ok(())
+}
+
+
+pub fn gen(_sh: &Shell, length: Option<usize>, no_symbols: bool) -> Result<()> {
+    let length = length.unwrap_or(32);
+
+    let string = if no_symbols {
         util::random_alpha_numeric(length)
     } else {
         util::random_ascii(length)
@@ -27,7 +48,7 @@ pub fn gen(_sh: &Shell, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn save(sh: &Shell, _args: &[&str]) -> Result<()> {
+pub fn save(sh: &Shell) -> Result<()> {
     let secret_dir = crate::dotfiles_dir().join("cmd/secrets");
     for secret in SECRETS {
         eprintln!("getting secret: {secret}");
@@ -40,13 +61,8 @@ pub fn save(sh: &Shell, _args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn get(sh: &Shell, args: &[&str]) -> Result<()> {
-    let (secret_name, secret) = match *args {
-        [secret_name, secret] => (secret_name, secret),
-        [secret] => (SECRET_NAME, secret),
-        [] => return Err(eyre::eyre!("need arg for secret")),
-        _ => return Err(eyre::eyre!("too many args")),
-    };
+pub fn get(sh: &Shell, secret_name: Option<&str>, secret: &str) -> Result<()> {
+    let secret_name = secret_name.unwrap_or(SECRET_NAME);
 
     eprintln!("getting secret: {secret}");
 
@@ -61,10 +77,10 @@ pub fn get_and_return(sh: &Shell, secret_name: &str, secret: &str) -> Result<Str
     Ok(secret_text.trim().to_string())
 }
 
-pub fn update(sh: &Shell, args: &[&str]) -> Result<()> {
+pub fn update(sh: &Shell, secret: &str) -> Result<()> {
     let secret_dir = crate::dotfiles_dir().join("cmd/secrets");
 
-    match *args.first().expect("need arg for secret") {
+    match secret {
         "all" => {
             for secret in SECRETS {
                 update_single_secret(sh, secret, secret_dir.join(secret))?;

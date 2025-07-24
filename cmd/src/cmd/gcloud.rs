@@ -1,3 +1,6 @@
+pub mod flags;
+
+use std::ffi::OsString;
 use eyre::Result;
 use eyre::WrapErr;
 
@@ -50,8 +53,26 @@ fn clusters() -> Result<Vec<Cluster>> {
     Ok(clusters)
 }
 
-pub fn login(sh: &Shell, args: &[&str]) -> Result<()> {
-    let project = args.first().ok_or_else(|| eyre!("project not specified"))?;
+pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
+    let flags = flags::Gcloud::from_args(args)?;
+
+    match flags.subcommand {
+        flags::GcloudCmd::Login(cmd) => {
+            login(sh, &cmd.project)?;
+        }
+        flags::GcloudCmd::SwitchProject(cmd) => {
+            switch_project(sh, &cmd.project)?;
+        }
+        flags::GcloudCmd::SwitchCluster(cmd) => {
+            switch_cluster(sh, &cmd.project, &cmd.cluster)?;
+        }
+    }
+
+    Ok(())
+}
+
+
+pub fn login(sh: &Shell, project: &str) -> Result<()> {
     let account = gcloud_secret(project)?.account;
 
     cmd!(sh, "gcloud config set account {account}").run()?;
@@ -59,15 +80,13 @@ pub fn login(sh: &Shell, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn switch_project(sh: &Shell, args: &[&str]) -> Result<()> {
-    login(sh, args)?;
-
-    let project = args.first().ok_or_else(|| eyre!("project not specified"))?;
+pub fn switch_project(sh: &Shell, project: &str) -> Result<()> {
+    login(sh, project)?;
 
     let clusters = clusters()?;
     let clusters = clusters
         .iter()
-        .find(|(p, _)| p == project)
+        .find(|(p, _)| *p == project)
         .map(|(_, c)| c)
         .ok_or_else(|| eyre!("{project} not found in clusters"))?;
 
@@ -87,23 +106,20 @@ pub fn switch_project(sh: &Shell, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn switch_cluster(sh: &Shell, args: &[&str]) -> Result<()> {
-    login(sh, args)?;
-
-    let project = args.first().ok_or_else(|| eyre!("project not specified"))?;
-    let cluster = args.get(1).ok_or_else(|| eyre!("cluster not specified"))?;
+pub fn switch_cluster(sh: &Shell, project: &str, cluster_name: &str) -> Result<()> {
+    login(sh, project)?;
 
     let clusters = clusters()?;
     let clusters = clusters
         .iter()
-        .find(|(p, _)| p == project)
+        .find(|(p, _)| *p == project)
         .map(|(_, c)| c)
         .ok_or_else(|| eyre!("{project} not found in clusters"))?;
 
     let cluster = clusters
         .iter()
-        .find(|c| c.name.contains(cluster))
-        .ok_or_else(|| eyre!("cluster {cluster} not found in {project}"))?;
+        .find(|c| c.name.contains(cluster_name))
+        .ok_or_else(|| eyre!("cluster {cluster_name} not found in {project}"))?;
 
     switch_to_single_cluster(sh, cluster)?;
 

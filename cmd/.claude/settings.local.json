@@ -8,7 +8,8 @@
       "Bash(rustc:*)",
       "Bash(find:*)",
       "Bash(cat:*)",
-      "WebFetch(domain:askama.readthedocs.io)"
+      "WebFetch(domain:askama.readthedocs.io)",
+      "Bash(cargo clippy:*)"
     ],
     "deny": []
   }
