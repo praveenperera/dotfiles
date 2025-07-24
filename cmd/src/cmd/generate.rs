@@ -1,5 +1,5 @@
 pub mod rmp;
-mod flags;
+pub mod flags;
 
 use askama::Template;
 use convert_case::{Case, Casing};

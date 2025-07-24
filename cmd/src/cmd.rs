@@ -24,18 +24,14 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
 
     let sh = Shell::new()?;
     match flags.subcommand {
+        CmdCmd::Release(_) => bootstrap::release(&sh),
+        CmdCmd::Config(_) => bootstrap::config(&sh),
+
         CmdCmd::Bootstrap(cmd) => bootstrap::run(
             &sh,
             &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
         ),
-        CmdCmd::Release(cmd) => bootstrap::release(
-            &sh,
-            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
-        ),
-        CmdCmd::Config(cmd) => bootstrap::config(
-            &sh,
-            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
-        ),
+
         CmdCmd::Gcloud(cmd) => gcloud::run(
             &sh,
             &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),

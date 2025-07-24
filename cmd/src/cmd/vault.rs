@@ -1,4 +1,4 @@
-mod flags;
+pub mod flags;
 
 use std::ffi::OsString;
 use eyre::Result;

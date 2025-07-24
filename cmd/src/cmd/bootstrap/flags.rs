@@ -33,3 +33,17 @@ impl Bootstrap {
     }
 }
 // generated end
+//
+impl Bootstrap {
+    pub fn help() -> &'static str {
+        Self::HELP_
+    }
+
+    pub fn help_(&self) -> &'static str {
+        Self::HELP_
+    }
+
+    pub fn from_args(args: &[std::ffi::OsString]) -> eyre::Result<Self> {
+        crate::util::handle_xflags_error(Self::from_vec(args.to_vec()), args, Self::help())
+    }
+}

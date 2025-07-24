@@ -14,12 +14,12 @@ xflags::xflags! {
 
         /// Release/update cmd binary
         cmd release {
-            repeated args: String
+            optional args: String
         }
 
         /// Configure dotfiles (alias: cfg)
         cmd config cfg {
-            repeated args: String
+            optional args: String
         }
 
         /// Google Cloud operations
@@ -77,12 +77,12 @@ pub struct Bootstrap {
 
 #[derive(Debug)]
 pub struct Release {
-    pub args: Vec<String>,
+    pub args: Option<String>,
 }
 
 #[derive(Debug)]
 pub struct Config {
-    pub args: Vec<String>,
+    pub args: Option<String>,
 }
 
 #[derive(Debug)]
@@ -138,3 +138,50 @@ impl Cmd {
     }
 }
 
+impl Bootstrap {
+    pub fn help(&self) -> &'static str {
+        crate::cmd::bootstrap::flags::Bootstrap::help()
+    }
+}
+
+impl Release {
+    pub fn help(&self) -> &'static str {
+        "run with no args"
+    }
+}
+
+impl Config {
+    pub fn help(&self) -> &'static str {
+        "run with no args"
+    }
+}
+
+impl Gcloud {
+    pub fn help(&self) -> &'static str {
+        crate::cmd::gcloud::flags::Gcloud::help()
+    }
+}
+
+impl Secret {
+    pub fn help(&self) -> &'static str {
+        crate::util::VAULT
+    }
+}
+
+impl Terraform {
+    pub fn help(&self) -> &'static str {
+        "run with subcommands"
+    }
+}
+
+impl Vault {
+    pub fn help(&self) -> &'static str {
+        "run with args"
+    }
+}
+
+impl Generate {
+    pub fn help(&self) -> &'static str {
+        ""
+    }
+}

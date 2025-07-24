@@ -6,6 +6,8 @@ use rand::{
 };
 use xshell::{cmd, Shell};
 
+use crate::cmd::flags::{Cmd, CmdCmd};
+
 pub const VAULT: &str = "CLI";
 
 pub fn random_ascii(length: usize) -> String {
@@ -94,7 +96,7 @@ pub fn has_tool(sh: &Shell, tool: &str) -> bool {
 
 pub fn extract_unknown_command_from_args(args: &[std::ffi::OsString]) -> Option<String> {
     // get the first argument which should be the subcommand
-    args.first().and_then(|s| s.to_str()).map(|s| s.to_string())
+    args.last().and_then(|s| s.to_str()).map(|s| s.to_string())
 }
 
 pub fn handle_xflags_error<T>(
@@ -104,24 +106,46 @@ pub fn handle_xflags_error<T>(
 ) -> Result<T> {
     match result {
         Ok(flags) => Ok(flags),
-        Err(_err) => {
+        Err(err) => {
             let unknown_cmd = extract_unknown_command_from_args(args);
             match unknown_cmd.as_deref() {
                 Some("help" | "-h" | "--help") => {
-                    println!("{help_txt}");
-                    Err(eyre!("help requested"))
+                    // default help
+                    if args.len() < 2 {
+                        println!("{help_txt}");
+                        std::process::exit(0);
+                    }
+
+                    let mut args = args.to_vec();
+                    args.pop();
+
+                    let cmd = Cmd::from_vec(args.to_vec())?;
+                    let help = match cmd.subcommand {
+                        CmdCmd::Bootstrap(cmd) => cmd.help(),
+                        CmdCmd::Release(release) => release.help(),
+                        CmdCmd::Config(config) => config.help(),
+                        CmdCmd::Gcloud(gcloud) => gcloud.help(),
+                        CmdCmd::Secret(secret) => secret.help(),
+                        CmdCmd::Terraform(terraform) => terraform.help(),
+                        CmdCmd::Vault(vault) => vault.help(),
+                        CmdCmd::Generate(generate) => generate.help(),
+                    };
+
+                    println!("{}\n\n", help);
+                    std::process::exit(0);
                 }
                 Some(unknown_cmd) => {
                     let suggestions = did_you_mean(unknown_cmd, help_txt);
+                    println!("unknown command: {}", unknown_cmd.red());
                     if !suggestions.is_empty() {
                         println!("\ndid you mean: {}\n", suggestions.join(", ").yellow());
                     }
-                    println!("{help_txt}");
-                    Err(eyre!("failed to parse arguments"))
+                    println!("{help_txt}\n");
+                    Err(eyre!("failed to parse arguments: {err}"))
                 }
                 None => {
-                    println!("{help_txt}");
-                    Err(eyre!("failed to parse arguments"))
+                    println!("{help_txt}\n");
+                    Err(eyre!("failed to parse arguments: {err}"))
                 }
             }
         }
