@@ -1,3 +1,5 @@
+use crate::util::handle_xflags_error;
+
 xflags::xflags! {
     src "./src/cmd/flags.rs"
 
@@ -129,6 +131,10 @@ impl Cmd {
 impl Cmd {
     pub fn help() -> &'static str {
         Cmd::HELP_
+    }
+
+    pub fn from_args(args: &[std::ffi::OsString]) -> eyre::Result<Self> {
+        handle_xflags_error(Cmd::from_vec(args.to_vec()), args, Cmd::help())
     }
 }
 

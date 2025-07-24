@@ -73,4 +73,8 @@ impl Gcloud {
     pub fn help() -> &'static str {
         Self::HELP_
     }
+
+    pub fn from_args(args: &[std::ffi::OsString]) -> eyre::Result<Self> {
+        crate::util::handle_xflags_error(Gcloud::from_vec(args.to_vec()), args, Gcloud::help())
+    }
 }

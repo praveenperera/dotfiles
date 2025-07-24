@@ -7,12 +7,12 @@ use log::debug;
 use sha2::Digest;
 use xshell::Shell;
 
-use crate::{encrypt, util::handle_xflags_error};
+use crate::encrypt;
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     debug!("terraform args: {args:?}");
 
-    let flags = handle_xflags_error(flags::Terraform::from_vec(args.to_vec()), args, flags::Terraform::help())?;
+    let flags = flags::Terraform::from_args(args)?;
 
     match flags.subcommand {
         flags::TerraformCmd::Init(cmd) => {

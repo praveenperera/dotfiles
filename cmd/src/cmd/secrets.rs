@@ -6,14 +6,14 @@ use std::path::PathBuf;
 use eyre::Result;
 use xshell::{cmd, Shell};
 
-use crate::{util, util::handle_xflags_error};
+use crate::util;
 use crate::util::VAULT;
 
 static SECRET_NAME: &str = "cmd_secrets";
 static SECRETS: [&str; 2] = ["ln.yaml", "sq.yaml"];
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = handle_xflags_error(flags::Secrets::from_vec(args.to_vec()), args, flags::Secrets::help())?;
+    let flags = flags::Secrets::from_args(args)?;
 
     match flags.subcommand {
         flags::SecretsCmd::Gen(cmd) => {

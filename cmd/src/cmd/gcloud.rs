@@ -8,7 +8,7 @@ use eyre::eyre;
 use xshell::cmd;
 use xshell::Shell;
 
-use crate::{SECRETS_DIR, util::handle_xflags_error};
+use crate::SECRETS_DIR;
 
 type Cluster = (&'static str, Vec<GcloudCluster>);
 
@@ -54,7 +54,7 @@ fn clusters() -> Result<Vec<Cluster>> {
 }
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = handle_xflags_error(flags::Gcloud::from_vec(args.to_vec()), args, flags::Gcloud::help())?;
+    let flags = flags::Gcloud::from_args(args)?;
 
     match flags.subcommand {
         flags::GcloudCmd::Login(cmd) => {

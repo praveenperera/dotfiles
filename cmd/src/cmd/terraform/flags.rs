@@ -84,4 +84,8 @@ impl Terraform {
     pub fn help() -> &'static str {
         Self::HELP_
     }
+
+    pub fn from_args(args: &[std::ffi::OsString]) -> eyre::Result<Self> {
+        crate::util::handle_xflags_error(Terraform::from_vec(args.to_vec()), args, Terraform::help())
+    }
 }

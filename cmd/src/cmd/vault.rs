@@ -4,12 +4,12 @@ use std::ffi::OsString;
 use eyre::Result;
 use xshell::Shell;
 
-use crate::{encrypt, util::handle_xflags_error};
+use crate::encrypt;
 
 static DEFAULT_SECRET_HEADER: &str = "!!CMD!!ID!!vault-default";
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = handle_xflags_error(flags::Vault::from_vec(args.to_vec()), args, flags::Vault::help())?;
+    let flags = flags::Vault::from_args(args)?;
 
     match flags.subcommand {
         flags::VaultCmd::Encrypt(cmd) => {

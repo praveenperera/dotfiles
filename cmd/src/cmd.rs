@@ -16,8 +16,7 @@ use std::ffi::OsString;
 pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
     debug!("cmd run args: {args:?}");
 
-    let flags = handle_xflags_error(Cmd::from_vec(args.to_vec()), args, Cmd::help())?;
-
+    let flags = Cmd::from_args(args)?;
     if flags.version {
         println!("{}", env!("CARGO_PKG_VERSION"));
         return Ok(());
