@@ -35,35 +35,35 @@ pub enum MainCmd {
     #[command(arg_required_else_help = true)]
     Gcloud {
         #[command(subcommand)]
-        subcommand: crate::cmd::gcloud::flags::GcloudCmd,
+        subcommand: crate::cmd::gcloud::GcloudCmd,
     },
 
     /// Secret operations
     #[command(arg_required_else_help = true)]
     Secret {
         #[command(subcommand)]
-        subcommand: crate::cmd::secrets::flags::SecretsCmd,
+        subcommand: crate::cmd::secrets::SecretsCmd,
     },
 
     /// Terraform operations
     #[command(visible_alias = "tf", arg_required_else_help = true)]
     Terraform {
         #[command(subcommand)]
-        subcommand: crate::cmd::terraform::flags::TerraformCmd,
+        subcommand: crate::cmd::terraform::TerraformCmd,
     },
 
     /// Vault operations
     #[command(arg_required_else_help = true)]
     Vault {
         #[command(subcommand)]
-        subcommand: crate::cmd::vault::flags::VaultCmd,
+        subcommand: crate::cmd::vault::VaultCmd,
     },
 
     /// Generate code/files
     #[command(visible_alias = "gen", arg_required_else_help = true)]
     Generate {
         #[command(subcommand)]
-        subcommand: crate::cmd::generate::flags::GenerateCmd,
+        subcommand: crate::cmd::generate::GenerateCmd,
     },
 }
 

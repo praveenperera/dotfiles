@@ -1,6 +1,4 @@
-pub mod flags;
-
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use eyre::Result;
 use eyre::WrapErr;
 use std::ffi::OsString;
@@ -10,6 +8,38 @@ use xshell::cmd;
 use xshell::Shell;
 
 use crate::SECRETS_DIR;
+
+#[derive(Debug, Clone, Parser)]
+pub struct Gcloud {
+    #[command(subcommand)]
+    pub subcommand: GcloudCmd,
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum GcloudCmd {
+    /// Google Cloud login
+    #[command(arg_required_else_help = true)]
+    Login {
+        /// Project to login to
+        project: String,
+    },
+
+    /// Google Cloud switch project
+    #[command(name = "switch-project", visible_alias = "sp", arg_required_else_help = true)]
+    SwitchProject {
+        /// Project to switch to
+        project: String,
+    },
+
+    /// Google Cloud switch cluster
+    #[command(name = "switch-cluster", visible_alias = "sc", arg_required_else_help = true)]
+    SwitchCluster {
+        /// Project containing the cluster
+        project: String,
+        /// Cluster name to switch to
+        cluster: String,
+    },
+}
 
 type Cluster = (&'static str, Vec<GcloudCluster>);
 
@@ -55,19 +85,19 @@ fn clusters() -> Result<Vec<Cluster>> {
 }
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = flags::Gcloud::parse_from(args);
+    let flags = Gcloud::parse_from(args);
     run_with_flags(sh, flags)
 }
 
-pub fn run_with_flags(sh: &Shell, flags: flags::Gcloud) -> Result<()> {
+pub fn run_with_flags(sh: &Shell, flags: Gcloud) -> Result<()> {
     match flags.subcommand {
-        flags::GcloudCmd::Login { project } => {
+        GcloudCmd::Login { project } => {
             login(sh, &project)?;
         }
-        flags::GcloudCmd::SwitchProject { project } => {
+        GcloudCmd::SwitchProject { project } => {
             switch_project(sh, &project)?;
         }
-        flags::GcloudCmd::SwitchCluster { project, cluster } => {
+        GcloudCmd::SwitchCluster { project, cluster } => {
             switch_cluster(sh, &project, &cluster)?;
         }
     }

@@ -1,5 +1,3 @@
-pub mod flags;
-
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
@@ -15,6 +13,12 @@ use colored::Colorize;
 pub enum BootstrapMode {
     Minimal,
     Full,
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct Bootstrap {
+    /// Bootstrap mode: 'minimal' or 'full'
+    pub mode: BootstrapMode,
 }
 
 #[derive(askama::Template)]
@@ -160,11 +164,11 @@ const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
     &[("gpg-agent.conf", ".gnupg/gpg-agent.conf")];
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = flags::Bootstrap::parse_from(args);
+    let flags = Bootstrap::parse_from(args);
     run_with_flags(sh, flags)
 }
 
-pub fn run_with_flags(sh: &Shell, flags: flags::Bootstrap) -> Result<()> {
+pub fn run_with_flags(sh: &Shell, flags: Bootstrap) -> Result<()> {
     if matches!(flags.mode, BootstrapMode::Full) {
         cmd!(sh, "rustup component add rustfmt clippy").run()?;
     }
