@@ -11,7 +11,7 @@ color-eyre = "0.6.2"
 eyre = "0.6.8"
 
 # cli
-xflags = "0.4.0-pre.2"
+bpaf = { version = "0.9", features = ["derive"] }
 xshell = "0.2.5"
 
 # terminal colors

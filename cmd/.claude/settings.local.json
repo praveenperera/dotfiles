@@ -9,7 +9,13 @@
       "Bash(find:*)",
       "Bash(cat:*)",
       "WebFetch(domain:askama.readthedocs.io)",
-      "Bash(cargo clippy:*)"
+      "Bash(cargo clippy:*)",
+      "Bash(cargo:*)",
+      "Bash(mkdir:*)",
+      "Bash(./target/debug/cmd:*)",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:pacak.github.io)",
+      "WebFetch(domain:)"
     ],
     "deny": []
   }

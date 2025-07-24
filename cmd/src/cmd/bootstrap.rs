@@ -11,7 +11,7 @@ use xshell::{cmd, Shell};
 use crate::{command_exists, os::Os, util::has_tool, CMD_TOOLS};
 use colored::Colorize;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BootstrapMode {
     Minimal,
     Full,
@@ -174,6 +174,10 @@ const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     let flags = flags::Bootstrap::from_args(args)?;
+    run_with_flags(sh, flags)
+}
+
+pub fn run_with_flags(sh: &Shell, flags: flags::Bootstrap) -> Result<()> {
     if matches!(flags.mode, BootstrapMode::Full) {
         cmd!(sh, "rustup component add rustfmt clippy").run()?;
     }

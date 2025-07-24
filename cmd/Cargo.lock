@@ -235,6 +235,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "bpaf"
+version = "0.9.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "473976d7a8620bb1e06dcdd184407c2363fe4fec8e983ee03ed9197222634a31"
+dependencies = [
+ "bpaf_derive",
+]
+
+[[package]]
+name = "bpaf_derive"
+version = "0.5.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fefb4feeec9a091705938922f26081aad77c64cd2e76cd1c4a9ece8e42e1618a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -281,6 +301,7 @@ version = "0.0.24"
 dependencies = [
  "age",
  "askama",
+ "bpaf",
  "color-eyre",
  "colored",
  "convert_case",
@@ -296,7 +317,6 @@ dependencies = [
  "sha2",
  "tempfile",
  "textdistance",
- "xflags",
  "xshell",
 ]
 
@@ -1859,21 +1879,6 @@ dependencies = [
  "serde",
  "zeroize",
 ]
-
-[[package]]
-name = "xflags"
-version = "0.4.0-pre.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6a40f95e4e200baabdfe8b813e3ee754b58407a677141bd2890c28ef4a89c21"
-dependencies = [
- "xflags-macros",
-]
-
-[[package]]
-name = "xflags-macros"
-version = "0.4.0-pre.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a6d9b56f406f5754a3808524166b6e6bdfe219c0526e490cfc39ecc0582a4e6"
 
 [[package]]
 name = "xshell"

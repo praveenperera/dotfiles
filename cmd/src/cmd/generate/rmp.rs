@@ -5,7 +5,12 @@ use convert_case::{Case, Casing};
 use eyre::{Context as _, Result};
 use xshell::Shell;
 
-use crate::cmd::generate::flags;
+#[derive(Debug)]
+pub struct RmpFlags {
+    pub lang: String,
+    pub module_name: String,
+    pub app: Option<String>,
+}
 
 #[derive(askama::Template)]
 #[template(path = "rust-multiplatform/manager.rs.j2")]
@@ -21,7 +26,7 @@ struct SwiftManagerTemplate {
     app_name: String,
 }
 
-pub fn generate(_sh: &Shell, flags: &flags::Rmp) -> Result<()> {
+pub fn generate(_sh: &Shell, flags: &RmpFlags) -> Result<()> {
     let module_name = flags.module_name.to_case(Case::Pascal);
     let module_name = module_name.trim_end_matches("Manager");
 

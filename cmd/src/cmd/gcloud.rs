@@ -1,8 +1,8 @@
 pub mod flags;
 
-use std::ffi::OsString;
 use eyre::Result;
 use eyre::WrapErr;
+use std::ffi::OsString;
 
 use eyre::eyre;
 use xshell::cmd;
@@ -55,22 +55,26 @@ fn clusters() -> Result<Vec<Cluster>> {
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     let flags = flags::Gcloud::from_args(args)?;
+    run_with_flags(sh, flags)
+}
+
+pub fn run_with_flags(sh: &Shell, flags: flags::Gcloud) -> Result<()> {
 
     match flags.subcommand {
-        flags::GcloudCmd::Login(cmd) => {
-            login(sh, &cmd.project)?;
+        flags::GcloudCmd::Login { project } => {
+            login(sh, &project)?;
         }
-        flags::GcloudCmd::SwitchProject(cmd) => {
-            switch_project(sh, &cmd.project)?;
+        flags::GcloudCmd::SwitchProject { project } | flags::GcloudCmd::Sp { project } => {
+            switch_project(sh, &project)?;
         }
-        flags::GcloudCmd::SwitchCluster(cmd) => {
-            switch_cluster(sh, &cmd.project, &cmd.cluster)?;
+        flags::GcloudCmd::SwitchCluster { project, cluster }
+        | flags::GcloudCmd::Sc { project, cluster } => {
+            switch_cluster(sh, &project, &cluster)?;
         }
     }
 
     Ok(())
 }
-
 
 pub fn login(sh: &Shell, project: &str) -> Result<()> {
     let account = gcloud_secret(project)?.account;
