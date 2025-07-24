@@ -19,8 +19,8 @@ pub struct Cmd {
 #[command(subcommand_value_name = "COMMAND")]
 pub enum MainCmd {
     /// Bootstrap dotfiles
+    #[command(arg_required_else_help = true)]
     Bootstrap {
-        /// Bootstrap mode: 'minimal' or 'full'
         mode: crate::cmd::bootstrap::BootstrapMode,
     },
 
