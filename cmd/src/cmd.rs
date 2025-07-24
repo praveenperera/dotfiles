@@ -1,7 +1,7 @@
 pub mod bootstrap;
-pub mod flags;
 pub mod gcloud;
 pub mod generate;
+pub mod main_cmd;
 pub mod secrets;
 pub mod terraform;
 pub mod vault;
@@ -10,7 +10,7 @@ use eyre::Result;
 use log::debug;
 use xshell::Shell;
 
-use flags::{Cmd, MainCmd};
+use main_cmd::{Cmd, MainCmd};
 use std::ffi::OsString;
 
 pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {

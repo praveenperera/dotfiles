@@ -15,7 +15,8 @@
       "Bash(./target/debug/cmd:*)",
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:pacak.github.io)",
-      "WebFetch(domain:)"
+      "WebFetch(domain:)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
