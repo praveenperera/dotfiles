@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use askama::Template;
+use clap::Parser;
 use eyre::{Context as _, Result};
 use xshell::{cmd, Shell};
 
@@ -173,7 +174,7 @@ const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
     &[("gpg-agent.conf", ".gnupg/gpg-agent.conf")];
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = flags::Bootstrap::from_args(args)?;
+    let flags = flags::Bootstrap::parse_from(args);
     run_with_flags(sh, flags)
 }
 

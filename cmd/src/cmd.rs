@@ -25,7 +25,7 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
     let sh = Shell::new()?;
     match flags.subcommand {
         MainCmd::Release => bootstrap::release(&sh),
-        MainCmd::Config | MainCmd::Cfg => bootstrap::config(&sh),
+        MainCmd::Config => bootstrap::config(&sh),
 
         MainCmd::Bootstrap { mode } => {
             let bootstrap_flags = crate::cmd::bootstrap::flags::Bootstrap { mode };
@@ -40,7 +40,7 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
             let secret_flags = crate::cmd::secrets::flags::Secrets { subcommand };
             secrets::run_with_flags(&sh, secret_flags)
         }
-        MainCmd::Terraform { subcommand } | MainCmd::Tf { subcommand } => {
+        MainCmd::Terraform { subcommand } => {
             let terraform_flags = crate::cmd::terraform::flags::Terraform { subcommand };
             terraform::run_with_flags(&sh, terraform_flags)
         }
@@ -48,7 +48,7 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
             let vault_flags = crate::cmd::vault::flags::Vault { subcommand };
             vault::run_with_flags(&sh, vault_flags)
         }
-        MainCmd::Generate { subcommand } | MainCmd::Gen { subcommand } => {
+        MainCmd::Generate { subcommand } => {
             let generate_flags = crate::cmd::generate::flags::Generate { subcommand };
             generate::run_with_flags(&sh, generate_flags)
         }

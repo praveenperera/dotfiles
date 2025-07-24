@@ -1,5 +1,6 @@
 pub mod flags;
 
+use clap::Parser;
 use eyre::Result;
 use std::ffi::OsString;
 use xshell::Shell;
@@ -9,17 +10,17 @@ use crate::encrypt;
 static DEFAULT_SECRET_HEADER: &str = "!!CMD!!ID!!vault-default";
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = flags::Vault::from_args(args)?;
+    let flags = flags::Vault::parse_from(args);
     run_with_flags(sh, flags)
 }
 
 pub fn run_with_flags(sh: &Shell, flags: flags::Vault) -> Result<()> {
 
     match flags.subcommand {
-        flags::VaultCmd::Encrypt { file } | flags::VaultCmd::Enc { file } => {
+        flags::VaultCmd::Encrypt { file } => {
             encrypt(sh, &file)?;
         }
-        flags::VaultCmd::Decrypt { file } | flags::VaultCmd::Dec { file } => {
+        flags::VaultCmd::Decrypt { file } => {
             decrypt(sh, &file)?;
         }
     }

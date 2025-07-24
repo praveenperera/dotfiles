@@ -1,5 +1,6 @@
 pub mod flags;
 
+use clap::Parser;
 use std::{ffi::OsString, path::Path, process::Command};
 
 use eyre::{Context as _, ContextCompat as _, Result};
@@ -12,7 +13,7 @@ use crate::encrypt;
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     debug!("terraform args: {args:?}");
 
-    let flags = flags::Terraform::from_args(args)?;
+    let flags = flags::Terraform::parse_from(args);
     run_with_flags(sh, flags)
 }
 
@@ -22,11 +23,11 @@ pub fn run_with_flags(sh: &Shell, flags: flags::Terraform) -> Result<()> {
         flags::TerraformCmd::Init { args } => {
             init(sh, &args)?;
         }
-        flags::TerraformCmd::Encrypt { file } | flags::TerraformCmd::Enc { file } => {
+        flags::TerraformCmd::Encrypt { file } => {
             let file = file.as_deref().unwrap_or("terraform.tfstate");
             encrypt(sh, file)?;
         }
-        flags::TerraformCmd::Decrypt { file } | flags::TerraformCmd::Dec { file } => {
+        flags::TerraformCmd::Decrypt { file } => {
             let file = file.as_deref().unwrap_or("terraform.tfstate.enc");
             decrypt(sh, file)?;
         }

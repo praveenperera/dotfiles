@@ -2,6 +2,7 @@ pub mod flags;
 pub mod rmp;
 
 use askama::Template;
+use clap::Parser;
 use convert_case::{Case, Casing};
 use eyre::{Context as _, Result};
 use log::{debug, info};
@@ -22,7 +23,7 @@ pub enum Os {
 static RUST_VERSION: &str = "1.85.0";
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = flags::Generate::from_args(args)?;
+    let flags = flags::Generate::parse_from(args);
     run_with_flags(sh, flags)
 }
 
@@ -61,9 +62,6 @@ pub fn run_with_flags(sh: &Shell, flags: flags::Generate) -> Result<()> {
             generate_swift_color(sh, &name, &light_hex, dark_hex.as_deref())?;
         }
 
-        flags::GenerateCmd::Help => {
-            eprintln!("{}", flags::Generate::HELP);
-        }
     }
 
     Ok(())

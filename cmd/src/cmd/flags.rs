@@ -1,105 +1,80 @@
-use bpaf::Bpaf;
+use clap::{Parser, Subcommand};
 
-#[derive(Debug, Clone, Bpaf)]
-#[bpaf(options)]
+#[derive(Debug, Clone, Parser)]
+#[command(
+    name = "cmd",
+    about = "Command line utilities",
+    arg_required_else_help = true
+)]
 pub struct Cmd {
     /// Print version information
-    #[bpaf(switch)]
+    #[arg(long, short = 'V')]
     pub version: bool,
 
-    #[bpaf(external(main_cmd))]
+    #[command(subcommand)]
     pub subcommand: MainCmd,
 }
 
-#[derive(Debug, Clone, Bpaf)]
+#[derive(Debug, Clone, Subcommand)]
+#[command(subcommand_value_name = "COMMAND")]
 pub enum MainCmd {
     /// Bootstrap dotfiles
-    #[bpaf(command)]
     Bootstrap {
         /// Bootstrap mode: 'minimal' or 'full'
-        #[bpaf(positional("MODE"))]
         mode: crate::cmd::bootstrap::BootstrapMode,
     },
 
     /// Release/update cmd binary
-    #[bpaf(command)]
     Release,
 
     /// Configure dotfiles
-    #[bpaf(command("config"))]
+    #[command(visible_alias = "cfg")]
     Config,
 
-    /// Configure dotfiles (alias)
-    #[bpaf(command("cfg"))]
-    Cfg,
-
     /// Google Cloud operations
-    #[bpaf(command)]
     Gcloud {
-        #[bpaf(external(crate::cmd::gcloud::flags::gcloud_cmd))]
+        #[command(subcommand)]
         subcommand: crate::cmd::gcloud::flags::GcloudCmd,
     },
 
     /// Secret operations
-    #[bpaf(command)]
     Secret {
-        #[bpaf(external(crate::cmd::secrets::flags::secrets_cmd))]
+        #[command(subcommand)]
         subcommand: crate::cmd::secrets::flags::SecretsCmd,
     },
 
     /// Terraform operations
-    #[bpaf(command)]
+    #[command(visible_alias = "tf")]
     Terraform {
-        #[bpaf(external(crate::cmd::terraform::flags::terraform_cmd))]
-        subcommand: crate::cmd::terraform::flags::TerraformCmd,
-    },
-
-    /// Terraform operations (alias)
-    #[bpaf(command("tf"))]
-    Tf {
-        #[bpaf(external(crate::cmd::terraform::flags::terraform_cmd))]
+        #[command(subcommand)]
         subcommand: crate::cmd::terraform::flags::TerraformCmd,
     },
 
     /// Vault operations
-    #[bpaf(command)]
     Vault {
-        #[bpaf(external(crate::cmd::vault::flags::vault_cmd))]
+        #[command(subcommand)]
         subcommand: crate::cmd::vault::flags::VaultCmd,
     },
 
     /// Generate code/files
-    #[bpaf(command)]
+    #[command(visible_alias = "gen")]
     Generate {
-        #[bpaf(external(crate::cmd::generate::flags::generate_cmd))]
-        subcommand: crate::cmd::generate::flags::GenerateCmd,
-    },
-
-    /// Generate code/files (alias)
-    #[bpaf(command("gen"))]
-    Gen {
-        #[bpaf(external(crate::cmd::generate::flags::generate_cmd))]
+        #[command(subcommand)]
         subcommand: crate::cmd::generate::flags::GenerateCmd,
     },
 }
 
 impl Cmd {
     pub fn from_args(args: &[std::ffi::OsString]) -> eyre::Result<Self> {
-        match cmd().fallback_to_usage().run_inner(args) {
-            Ok(result) => Ok(result),
-            Err(bpaf::ParseFailure::Stdout(doc, _)) => {
-                println!("{}", doc);
-                std::process::exit(0);
-            }
-            Err(bpaf::ParseFailure::Stderr(doc)) => {
-                eprintln!("{}", doc);
-                std::process::exit(1);
-            }
-            Err(bpaf::ParseFailure::Completion(completion)) => {
-                println!("{}", completion);
-                std::process::exit(0);
+        use clap::Parser;
+        let mut full_args = vec![std::ffi::OsString::from("cmd")];
+        full_args.extend_from_slice(args);
+        match Self::try_parse_from(full_args) {
+            Ok(cmd) => Ok(cmd),
+            Err(err) => {
+                err.print().unwrap();
+                std::process::exit(err.exit_code());
             }
         }
     }
 }
-
