@@ -20,39 +20,45 @@ xflags::xflags! {
             repeated args: String
         }
 
-        /// Google Cloud login (alias: gl)
-        cmd gcloud-login gl {
-            repeated args: String
+        /// Google Cloud operations
+        cmd gcloud {
+            /// Google Cloud login (alias: gl)
+            cmd login gl {
+                repeated args: String
+            }
+
+            /// Google Cloud switch project (alias: gsp)
+            cmd switch-project sp {
+                repeated args: String
+            }
+
+            /// Google Cloud switch cluster (alias: gsc)
+            cmd switch-cluster sc {
+                repeated args: String
+            }
         }
 
-        /// Google Cloud switch project (alias: gsp)
-        cmd gcloud-switch-project gsp {
-            repeated args: String
-        }
+        /// Secret operations
+        cmd secret {
+            /// Generate secret (aliases: generate, sgen)
+            cmd gen generate sgen {
+                repeated args: String
+            }
 
-        /// Google Cloud switch cluster (alias: gsc)
-        cmd gcloud-switch-cluster gsc {
-            repeated args: String
-        }
+            /// Get secret (alias: sg)
+            cmd get sg {
+                repeated args: String
+            }
 
-        /// Generate secret (aliases: secret-generate, sgen)
-        cmd secret-gen secret-generate sgen {
-            repeated args: String
-        }
+            /// Save secret (alias: ss)
+            cmd save ss {
+                repeated args: String
+            }
 
-        /// Get secret (alias: sg)
-        cmd secret-get sg {
-            repeated args: String
-        }
-
-        /// Save secret (alias: ss)
-        cmd secret-save ss {
-            repeated args: String
-        }
-
-        /// Update secret (alias: su)
-        cmd secret-update su {
-            repeated args: String
+            /// Update secret (alias: su)
+            cmd update su {
+                repeated args: String
+            }
         }
 
         /// Terraform (alias: tf)
@@ -86,13 +92,8 @@ pub enum CmdCmd {
     Bootstrap(Bootstrap),
     Release(Release),
     Config(Config),
-    GcloudLogin(GcloudLogin),
-    GcloudSwitchProject(GcloudSwitchProject),
-    GcloudSwitchCluster(GcloudSwitchCluster),
-    SecretGen(SecretGen),
-    SecretGet(SecretGet),
-    SecretSave(SecretSave),
-    SecretUpdate(SecretUpdate),
+    Gcloud(Gcloud),
+    Secret(Secret),
     Terraform(Terraform),
     Vault(Vault),
     Generate(Generate),
@@ -114,37 +115,62 @@ pub struct Config {
 }
 
 #[derive(Debug)]
-pub struct GcloudLogin {
+pub struct Gcloud {
+    pub subcommand: GcloudCmd,
+}
+
+#[derive(Debug)]
+pub enum GcloudCmd {
+    Login(Login),
+    SwitchProject(SwitchProject),
+    SwitchCluster(SwitchCluster),
+}
+
+#[derive(Debug)]
+pub struct Login {
     pub args: Vec<String>,
 }
 
 #[derive(Debug)]
-pub struct GcloudSwitchProject {
+pub struct SwitchProject {
     pub args: Vec<String>,
 }
 
 #[derive(Debug)]
-pub struct GcloudSwitchCluster {
+pub struct SwitchCluster {
     pub args: Vec<String>,
 }
 
 #[derive(Debug)]
-pub struct SecretGen {
+pub struct Secret {
+    pub subcommand: SecretCmd,
+}
+
+#[derive(Debug)]
+pub enum SecretCmd {
+    Gen(Gen),
+    Get(Get),
+    Save(Save),
+    Update(Update),
+}
+
+#[derive(Debug)]
+pub struct Gen {
     pub args: Vec<String>,
 }
 
 #[derive(Debug)]
-pub struct SecretGet {
+pub struct Get {
     pub args: Vec<String>,
 }
 
 #[derive(Debug)]
-pub struct SecretSave {
+pub struct Save {
     pub args: Vec<String>,
 }
 
 #[derive(Debug)]
-pub struct SecretUpdate {
+pub struct Update {
     pub args: Vec<String>,
 }
 

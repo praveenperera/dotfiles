@@ -70,13 +70,46 @@ pub fn run(_sh: &Shell, args: &[&str]) -> Result<()> {
             &sh,
             &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
         ),
-        CmdCmd::GcloudLogin(cmd) => gcloud::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
-        CmdCmd::GcloudSwitchProject(cmd) => gcloud::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
-        CmdCmd::GcloudSwitchCluster(cmd) => gcloud::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
-        CmdCmd::SecretGen(cmd) => secrets::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
-        CmdCmd::SecretGet(cmd) => secrets::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
-        CmdCmd::SecretSave(cmd) => secrets::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
-        CmdCmd::SecretUpdate(cmd) => secrets::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
+        CmdCmd::Gcloud(cmd) => {
+            let mut args = Vec::new();
+            match &cmd.subcommand {
+                flags::GcloudCmd::Login(login_cmd) => {
+                    args.push("login");
+                    args.extend(login_cmd.args.iter().map(|s| s.as_str()));
+                }
+                flags::GcloudCmd::SwitchProject(sp_cmd) => {
+                    args.push("switch-project");
+                    args.extend(sp_cmd.args.iter().map(|s| s.as_str()));
+                }
+                flags::GcloudCmd::SwitchCluster(sc_cmd) => {
+                    args.push("switch-cluster");
+                    args.extend(sc_cmd.args.iter().map(|s| s.as_str()));
+                }
+            }
+            gcloud::run(&sh, &args)
+        }
+        CmdCmd::Secret(cmd) => {
+            let mut args = Vec::new();
+            match &cmd.subcommand {
+                flags::SecretCmd::Gen(gen_cmd) => {
+                    args.push("gen");
+                    args.extend(gen_cmd.args.iter().map(|s| s.as_str()));
+                }
+                flags::SecretCmd::Get(get_cmd) => {
+                    args.push("get");
+                    args.extend(get_cmd.args.iter().map(|s| s.as_str()));
+                }
+                flags::SecretCmd::Save(save_cmd) => {
+                    args.push("save");
+                    args.extend(save_cmd.args.iter().map(|s| s.as_str()));
+                }
+                flags::SecretCmd::Update(update_cmd) => {
+                    args.push("update");
+                    args.extend(update_cmd.args.iter().map(|s| s.as_str()));
+                }
+            }
+            secrets::run(&sh, &args)
+        }
         CmdCmd::Terraform(cmd) => terraform::run(
             &sh,
             &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
