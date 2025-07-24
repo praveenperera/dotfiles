@@ -7,10 +7,10 @@ use cmd::{terraform, vault};
 use eyre::{eyre, Result};
 use include_dir::{include_dir, Dir};
 use log::debug;
-use std::{env, path::PathBuf};
+use std::{env, ffi::OsString, path::PathBuf};
 use xshell::Shell;
 
-pub type Tool = (&'static str, fn(&Shell, &[&str]) -> Result<()>);
+pub type Tool = (&'static str, fn(&Shell, &[OsString]) -> Result<()>);
 pub const CMD_TOOLS: &[Tool] = &[
     ("cmd", cmd::run),
     ("tf", terraform::run),
@@ -40,12 +40,7 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let os_args = std::env::args_os().collect::<Vec<_>>();
-
-    let args = os_args
-        .iter()
-        .filter_map(|x| x.to_str())
-        .collect::<Vec<_>>();
+    let args = std::env::args_os().collect::<Vec<_>>();
 
     debug!("run args: {args:?}");
 

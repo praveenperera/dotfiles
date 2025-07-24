@@ -1,5 +1,6 @@
 mod flags;
 
+use std::ffi::OsString;
 use eyre::Result;
 use eyre::WrapErr;
 
@@ -52,13 +53,8 @@ fn clusters() -> Result<Vec<Cluster>> {
     Ok(clusters)
 }
 
-pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
-    let os_args = args
-        .iter()
-        .map(|s| std::ffi::OsString::from(*s))
-        .collect::<Vec<_>>();
-
-    let flags = handle_xflags_error(flags::Gcloud::from_vec(os_args), args, flags::Gcloud::help())?;
+pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
+    let flags = handle_xflags_error(flags::Gcloud::from_vec(args.to_vec()), args, flags::Gcloud::help())?;
 
     match flags.subcommand {
         flags::GcloudCmd::Login(cmd) => {

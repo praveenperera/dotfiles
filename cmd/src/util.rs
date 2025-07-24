@@ -92,14 +92,14 @@ pub fn has_tool(sh: &Shell, tool: &str) -> bool {
 
 // xflags utility functions
 
-pub fn extract_unknown_command_from_args(args: &[&str]) -> Option<String> {
+pub fn extract_unknown_command_from_args(args: &[std::ffi::OsString]) -> Option<String> {
     // get the first argument which should be the subcommand
-    args.first().map(|s| s.to_string())
+    args.first().and_then(|s| s.to_str()).map(|s| s.to_string())
 }
 
 pub fn handle_xflags_error<T>(
     result: xflags::Result<T>,
-    args: &[&str],
+    args: &[std::ffi::OsString],
     help_txt: &str,
 ) -> Result<T> {
     match result {

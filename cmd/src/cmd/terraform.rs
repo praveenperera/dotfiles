@@ -1,6 +1,6 @@
 mod flags;
 
-use std::{path::Path, process::Command};
+use std::{ffi::OsString, path::Path, process::Command};
 
 use eyre::{Context as _, ContextCompat as _, Result};
 use log::debug;
@@ -9,19 +9,14 @@ use xshell::Shell;
 
 use crate::{encrypt, util::handle_xflags_error};
 
-pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
+pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     debug!("terraform args: {args:?}");
 
-    let os_args = args
-        .iter()
-        .map(|s| std::ffi::OsString::from(*s))
-        .collect::<Vec<_>>();
-
-    let flags = handle_xflags_error(flags::Terraform::from_vec(os_args), args, flags::Terraform::help())?;
+    let flags = handle_xflags_error(flags::Terraform::from_vec(args.to_vec()), args, flags::Terraform::help())?;
 
     match flags.subcommand {
         flags::TerraformCmd::Init(cmd) => {
-            let args: Vec<&str> = cmd.args.iter().map(|s| s.as_str()).collect();
+            let args: Vec<OsString> = cmd.args.iter().map(|s| OsString::from(s)).collect();
             init(sh, &args)?;
         }
         flags::TerraformCmd::Encrypt(cmd) => {
@@ -33,7 +28,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
             decrypt(sh, file)?;
         }
         flags::TerraformCmd::Run(cmd) => {
-            let args: Vec<&str> = cmd.args.iter().map(|s| s.as_str()).collect();
+            let args: Vec<OsString> = cmd.args.iter().map(|s| OsString::from(s)).collect();
             run_terraform_cmd(sh, &cmd.command, &args)?;
         }
     }
@@ -41,7 +36,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-fn init(sh: &Shell, _args: &[&str]) -> Result<()> {
+fn init(sh: &Shell, _args: &[OsString]) -> Result<()> {
     if sh.path_exists("terraform.tfstate.enc") {
         eprintln!("terraform.tfstate.enc already exists");
     } else {
@@ -62,7 +57,7 @@ fn init(sh: &Shell, _args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[&str]) -> Result<()> {
+fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[OsString]) -> Result<()> {
     let tmpdir = tempfile::tempdir()?;
     let tfstate = tmpdir.path().join("terraform.tfstate");
 

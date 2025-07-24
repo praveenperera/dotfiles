@@ -1,5 +1,6 @@
 mod flags;
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -171,14 +172,8 @@ const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
 const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
     &[("gpg-agent.conf", ".gnupg/gpg-agent.conf")];
 
-pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
-    let args = args.iter().map(|s| s.to_string()).collect::<Vec<_>>();
-    let args = args
-        .iter()
-        .map(std::ffi::OsString::from)
-        .collect::<Vec<_>>();
-
-    let flags = flags::Bootstrap::from_vec(args)?;
+pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
+    let flags = flags::Bootstrap::from_vec(args.to_vec())?;
 
     if matches!(flags.mode, BootstrapMode::Full) {
         cmd!(sh, "rustup component add rustfmt clippy").run()?;
@@ -244,7 +239,7 @@ pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn config(sh: &Shell, _args: &[&str]) -> Result<()> {
+pub fn config(sh: &Shell, _args: &[OsString]) -> Result<()> {
     let path = crate::dotfiles_dir().join("zshrc");
     let zshrc = Zshrc { os: Os::current() };
 
@@ -263,7 +258,7 @@ pub fn config(sh: &Shell, _args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn release(sh: &Shell, _: &[&str]) -> Result<()> {
+pub fn release(sh: &Shell, _: &[OsString]) -> Result<()> {
     let home = std::env::var("HOME").expect("HOME env var not set");
 
     // check if this is a minimal install (no cargo or rust)

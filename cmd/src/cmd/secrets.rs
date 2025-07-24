@@ -1,5 +1,6 @@
 mod flags;
 
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use eyre::Result;
@@ -11,13 +12,8 @@ use crate::util::VAULT;
 static SECRET_NAME: &str = "cmd_secrets";
 static SECRETS: [&str; 2] = ["ln.yaml", "sq.yaml"];
 
-pub fn run(sh: &Shell, args: &[&str]) -> Result<()> {
-    let os_args = args
-        .iter()
-        .map(|s| std::ffi::OsString::from(*s))
-        .collect::<Vec<_>>();
-
-    let flags = handle_xflags_error(flags::Secrets::from_vec(os_args), args, flags::Secrets::help())?;
+pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
+    let flags = handle_xflags_error(flags::Secrets::from_vec(args.to_vec()), args, flags::Secrets::help())?;
 
     match flags.subcommand {
         flags::SecretsCmd::Gen(cmd) => {
