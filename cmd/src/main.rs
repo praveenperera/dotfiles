@@ -55,7 +55,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let program: PathBuf = args.iter().next().expect("not enough args").into();
+    let program: PathBuf = args.first().expect("not enough args").into();
     let program = program
         .file_stem()
         .unwrap_or_default()

@@ -10,6 +10,7 @@ use eyre::{eyre, Result};
 use log::debug;
 use xshell::Shell;
 
+use crate::util::{did_you_mean, handle_xflags_error};
 use flags::{Cmd, CmdCmd};
 
 mod flags {
@@ -215,7 +216,7 @@ pub fn run(_sh: &Shell, args: &[&str]) -> Result<()> {
     let flags = match Cmd::from_vec(os_args) {
         Ok(flags) => flags,
         Err(_err) => {
-            let unknown_cmd = extract_unknown_command_from_args(args);
+            let unknown_cmd = crate::util::extract_unknown_command_from_args(args);
             match unknown_cmd.as_deref() {
                 Some("help" | "-h" | "--help") => {
                     println!("{}", Cmd::help());
@@ -223,7 +224,7 @@ pub fn run(_sh: &Shell, args: &[&str]) -> Result<()> {
                 }
 
                 Some(unknown_cmd) => {
-                    let suggestions = did_you_mean(&unknown_cmd);
+                    let suggestions = did_you_mean(unknown_cmd, Cmd::help());
                     if !suggestions.is_empty() {
                         println!("\ndid you mean: {}\n", suggestions.join(", ").yellow());
                     }
@@ -258,34 +259,13 @@ pub fn run(_sh: &Shell, args: &[&str]) -> Result<()> {
             &sh,
             &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
         ),
-        CmdCmd::GcloudLogin(cmd) => gcloud::login(
-            &sh,
-            &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-        ),
-        CmdCmd::GcloudSwitchProject(cmd) => gcloud::switch_project(
-            &sh,
-            &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-        ),
-        CmdCmd::GcloudSwitchCluster(cmd) => gcloud::switch_cluster(
-            &sh,
-            &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-        ),
-        CmdCmd::SecretGen(cmd) => secrets::gen(
-            &sh,
-            &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-        ),
-        CmdCmd::SecretGet(cmd) => secrets::get(
-            &sh,
-            &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-        ),
-        CmdCmd::SecretSave(cmd) => secrets::save(
-            &sh,
-            &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-        ),
-        CmdCmd::SecretUpdate(cmd) => secrets::update(
-            &sh,
-            &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-        ),
+        CmdCmd::GcloudLogin(cmd) => gcloud::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
+        CmdCmd::GcloudSwitchProject(cmd) => gcloud::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
+        CmdCmd::GcloudSwitchCluster(cmd) => gcloud::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
+        CmdCmd::SecretGen(cmd) => secrets::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
+        CmdCmd::SecretGet(cmd) => secrets::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
+        CmdCmd::SecretSave(cmd) => secrets::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
+        CmdCmd::SecretUpdate(cmd) => secrets::run(&sh, &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
         CmdCmd::Terraform(cmd) => terraform::run(
             &sh,
             &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
@@ -299,74 +279,4 @@ pub fn run(_sh: &Shell, args: &[&str]) -> Result<()> {
             &cmd.args.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
         ),
     }
-}
-
-fn extract_unknown_command_from_args(args: &[&str]) -> Option<String> {
-    // get the first argument which should be the subcommand
-    args.first().map(|s| s.to_string())
-}
-
-fn extract_commands_from_help() -> Vec<String> {
-    let help_text = flags::Cmd::help();
-    let mut commands = Vec::new();
-
-    // parse the help text to extract subcommands
-    // look for lines that start with spaces followed by command names
-    for line in help_text.lines() {
-        let trimmed = line.trim_start();
-        if line.starts_with("  ") && !line.starts_with("   ") && !trimmed.starts_with('-') {
-            // this looks like a command line (starts with 2 spaces, not 3+, not a flag)
-            if let Some(command) = trimmed.split_whitespace().next() {
-                // extract the main command name and any aliases
-                if command.contains(',') {
-                    // handle commands with aliases like "config, cfg"
-                    for cmd in command.split(',') {
-                        let cmd = cmd.trim();
-                        if !cmd.is_empty() {
-                            commands.push(cmd.to_string());
-                        }
-                    }
-                } else {
-                    commands.push(command.to_string());
-                }
-            }
-        }
-    }
-
-    commands.sort();
-    commands.dedup();
-    commands
-}
-
-fn did_you_mean(user_text: &str) -> Vec<&str> {
-    use textdistance::nstr::damerau_levenshtein;
-
-    // get available commands from xflags help text
-    static AVAILABLE_COMMANDS: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
-    let available_commands = AVAILABLE_COMMANDS.get_or_init(extract_commands_from_help);
-
-    let mut suggestions = available_commands
-        .iter()
-        .filter(|name| !name.starts_with(user_text))
-        .map(|name| (name.as_str(), damerau_levenshtein(user_text, name)))
-        .map(|(name, distance)| (name, distance * 100.0))
-        .map(|(name, distance)| (name, distance as usize))
-        .filter(|(_, distance)| *distance <= 90)
-        .collect::<Vec<_>>();
-
-    suggestions.sort_unstable_by(|a, b| a.1.cmp(&b.1));
-
-    let starts_with: Vec<&str> = available_commands
-        .iter()
-        .map(|s| s.as_str())
-        .filter(|name| name.starts_with(user_text))
-        .collect();
-
-    let suggestions: Vec<&str> = suggestions
-        .into_iter()
-        .map(|(name, _)| name)
-        .take(3)
-        .collect();
-
-    starts_with.into_iter().chain(suggestions).collect()
 }
