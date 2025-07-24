@@ -9,6 +9,7 @@ pub struct Terraform {
 #[derive(Debug, Clone, Subcommand)]
 pub enum TerraformCmd {
     /// Run terraform command (default)
+    #[command(arg_required_else_help = true)]
     Run {
         command: String,
         #[arg(trailing_var_arg = true)]

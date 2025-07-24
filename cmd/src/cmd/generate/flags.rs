@@ -9,6 +9,7 @@ pub struct Generate {
 #[derive(Debug, Clone, Subcommand)]
 pub enum GenerateCmd {
     /// Rust multi platform
+    #[command(arg_required_else_help = true)]
     Rmp {
         /// either `swift` or `rs`
         lang: String,
@@ -22,6 +23,7 @@ pub enum GenerateCmd {
     },
 
     /// Swift related generators
+    #[command(arg_required_else_help = true)]
     Swift {
         name: String,
         identifier: String,
@@ -31,6 +33,7 @@ pub enum GenerateCmd {
     },
 
     /// Swift Colors
+    #[command(arg_required_else_help = true)]
     SwiftColor {
         name: String,
         light_hex: String,
