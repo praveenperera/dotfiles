@@ -1,7 +1,7 @@
 pub mod rmp;
-pub mod flags;
 
 use askama::Template;
+use clap::{Parser, Subcommand};
 use convert_case::{Case, Casing};
 use eyre::{Context as _, Result};
 use log::{debug, info};
@@ -11,6 +11,47 @@ use std::path::PathBuf;
 use xshell::Shell;
 
 use crate::util::hex_to_rgb;
+
+#[derive(Debug, Clone, Parser)]
+pub struct Generate {
+    #[command(subcommand)]
+    pub subcommand: GenerateCmd,
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum GenerateCmd {
+    /// Rust multi platform
+    #[command(arg_required_else_help = true)]
+    Rmp {
+        /// either `swift` or `rs`
+        lang: String,
+        
+        /// name of the module name ex: `MyModule`
+        module_name: String,
+        
+        /// the name of the app, default to `cove`
+        #[arg(short, long)]
+        app: Option<String>,
+    },
+
+    /// Swift related generators
+    #[command(arg_required_else_help = true)]
+    Swift {
+        name: String,
+        identifier: String,
+        path: Option<String>,
+        #[arg(trailing_var_arg = true)]
+        rest: Vec<String>,
+    },
+
+    /// Swift Colors
+    #[command(arg_required_else_help = true)]
+    SwiftColor {
+        name: String,
+        light_hex: String,
+        dark_hex: Option<String>,
+    },
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Os {
@@ -22,40 +63,45 @@ pub enum Os {
 static RUST_VERSION: &str = "1.85.0";
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    match flags::Generate::from_vec(args.to_vec()) {
-        Ok(flags) => match flags.subcommand {
-            flags::GenerateCmd::Rmp(rmp_flags) => {
-                rmp::generate(sh, &rmp_flags)?;
-            }
+    let flags = Generate::parse_from(args);
+    run_with_flags(sh, flags)
+}
 
-            flags::GenerateCmd::Swift(swift_flags) => {
-                let path = swift_flags.path.as_deref().unwrap_or(".");
-                let rest = swift_flags
-                    .rest
-                    .iter()
-                    .map(|s| s.as_str())
-                    .collect::<Vec<&str>>();
+pub fn run_with_flags(sh: &Shell, flags: Generate) -> Result<()> {
 
-                generate_swift(sh, &swift_flags.name, &swift_flags.identifier, path, &rest)?;
-            }
-
-            flags::GenerateCmd::SwiftColor(color_flags) => {
-                generate_swift_color(
-                    sh,
-                    &color_flags.name,
-                    &color_flags.light_hex,
-                    color_flags.dark_hex.as_deref(),
-                )?;
-            }
-
-            flags::GenerateCmd::Help(_) => {
-                eprintln!("{}", flags::Generate::HELP);
-            }
-        },
-
-        Err(err) => {
-            err.exit();
+    match flags.subcommand {
+        GenerateCmd::Rmp {
+            lang,
+            module_name,
+            app,
+        } => {
+            let rmp_flags = rmp::RmpFlags {
+                lang,
+                module_name,
+                app,
+            };
+            rmp::generate(sh, &rmp_flags)?;
         }
+
+        GenerateCmd::Swift {
+            name,
+            identifier,
+            path,
+            rest,
+        } => {
+            let path = path.as_deref().unwrap_or(".");
+            let rest = rest.iter().map(|s| s.as_str()).collect::<Vec<&str>>();
+            generate_swift(sh, &name, &identifier, path, &rest)?;
+        }
+
+        GenerateCmd::SwiftColor {
+            name,
+            light_hex,
+            dark_hex,
+        } => {
+            generate_swift_color(sh, &name, &light_hex, dark_hex.as_deref())?;
+        }
+
     }
 
     Ok(())

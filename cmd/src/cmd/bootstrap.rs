@@ -1,33 +1,24 @@
-pub mod flags;
-
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 
 use askama::Template;
+use clap::{Parser, ValueEnum};
 use eyre::{Context as _, Result};
 use xshell::{cmd, Shell};
 
 use crate::{command_exists, os::Os, util::has_tool, CMD_TOOLS};
 use colored::Colorize;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, ValueEnum)]
 pub enum BootstrapMode {
     Minimal,
     Full,
 }
 
-impl FromStr for BootstrapMode {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "minimal" => Ok(BootstrapMode::Minimal),
-            "full" => Ok(BootstrapMode::Full),
-            found => Err(format!(
-                "invalid bootstrap mode: {found}. Use 'minimal' or 'full'",
-            )),
-        }
-    }
+#[derive(Debug, Clone, Parser)]
+pub struct Bootstrap {
+    /// Bootstrap mode: 'minimal' or 'full'
+    pub mode: BootstrapMode,
 }
 
 #[derive(askama::Template)]
@@ -173,7 +164,11 @@ const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
     &[("gpg-agent.conf", ".gnupg/gpg-agent.conf")];
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = flags::Bootstrap::from_args(args)?;
+    let flags = Bootstrap::parse_from(args);
+    run_with_flags(sh, flags)
+}
+
+pub fn run_with_flags(sh: &Shell, flags: Bootstrap) -> Result<()> {
     if matches!(flags.mode, BootstrapMode::Full) {
         cmd!(sh, "rustup component add rustfmt clippy").run()?;
     }

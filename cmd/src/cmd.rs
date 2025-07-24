@@ -10,7 +10,7 @@ use eyre::Result;
 use log::debug;
 use xshell::Shell;
 
-use flags::{Cmd, CmdCmd};
+use flags::{Cmd, MainCmd};
 use std::ffi::OsString;
 
 pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
@@ -24,33 +24,33 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
 
     let sh = Shell::new()?;
     match flags.subcommand {
-        CmdCmd::Release(_) => bootstrap::release(&sh),
-        CmdCmd::Config(_) => bootstrap::config(&sh),
+        MainCmd::Release => bootstrap::release(&sh),
+        MainCmd::Config => bootstrap::config(&sh),
 
-        CmdCmd::Bootstrap(cmd) => bootstrap::run(
-            &sh,
-            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
-        ),
+        MainCmd::Bootstrap { mode } => {
+            let bootstrap_flags = bootstrap::Bootstrap { mode };
+            bootstrap::run_with_flags(&sh, bootstrap_flags)
+        }
 
-        CmdCmd::Gcloud(cmd) => gcloud::run(
-            &sh,
-            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
-        ),
-        CmdCmd::Secret(cmd) => secrets::run(
-            &sh,
-            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
-        ),
-        CmdCmd::Terraform(cmd) => terraform::run(
-            &sh,
-            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
-        ),
-        CmdCmd::Vault(cmd) => vault::run(
-            &sh,
-            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
-        ),
-        CmdCmd::Generate(cmd) => generate::run(
-            &sh,
-            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
-        ),
+        MainCmd::Gcloud { subcommand } => {
+            let gcloud_flags = gcloud::Gcloud { subcommand };
+            gcloud::run_with_flags(&sh, gcloud_flags)
+        }
+        MainCmd::Secret { subcommand } => {
+            let secret_flags = secrets::Secrets { subcommand };
+            secrets::run_with_flags(&sh, secret_flags)
+        }
+        MainCmd::Terraform { subcommand } => {
+            let terraform_flags = terraform::Terraform { subcommand };
+            terraform::run_with_flags(&sh, terraform_flags)
+        }
+        MainCmd::Vault { subcommand } => {
+            let vault_flags = vault::Vault { subcommand };
+            vault::run_with_flags(&sh, vault_flags)
+        }
+        MainCmd::Generate { subcommand } => {
+            let generate_flags = generate::Generate { subcommand };
+            generate::run_with_flags(&sh, generate_flags)
+        }
     }
 }

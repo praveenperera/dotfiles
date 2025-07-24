@@ -1,5 +1,4 @@
-pub mod flags;
-
+use clap::{Parser, Subcommand};
 use std::{ffi::OsString, path::Path, process::Command};
 
 use eyre::{Context as _, ContextCompat as _, Result};
@@ -9,27 +8,65 @@ use xshell::Shell;
 
 use crate::encrypt;
 
+#[derive(Debug, Clone, Parser)]
+pub struct Terraform {
+    #[command(subcommand)]
+    pub subcommand: TerraformCmd,
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum TerraformCmd {
+    /// Run terraform command (default)
+    #[command(arg_required_else_help = true)]
+    Run {
+        command: String,
+        #[arg(trailing_var_arg = true)]
+        args: Vec<String>,
+    },
+
+    /// Initialize terraform state
+    Init {
+        #[arg(trailing_var_arg = true)]
+        args: Vec<String>,
+    },
+
+    /// Encrypt terraform state file
+    #[command(visible_alias = "enc")]
+    Encrypt {
+        file: Option<String>,
+    },
+
+    /// Decrypt terraform state file
+    #[command(visible_alias = "dec")]
+    Decrypt {
+        file: Option<String>,
+    },
+}
+
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     debug!("terraform args: {args:?}");
 
-    let flags = flags::Terraform::from_args(args)?;
+    let flags = Terraform::parse_from(args);
+    run_with_flags(sh, flags)
+}
+
+pub fn run_with_flags(sh: &Shell, flags: Terraform) -> Result<()> {
 
     match flags.subcommand {
-        flags::TerraformCmd::Init(cmd) => {
-            let args = cmd.args.as_slice();
-            init(sh, args)?;
+        TerraformCmd::Init { args } => {
+            init(sh, &args)?;
         }
-        flags::TerraformCmd::Encrypt(cmd) => {
-            let file = cmd.file.as_deref().unwrap_or("terraform.tfstate");
+        TerraformCmd::Encrypt { file } => {
+            let file = file.as_deref().unwrap_or("terraform.tfstate");
             encrypt(sh, file)?;
         }
-        flags::TerraformCmd::Decrypt(cmd) => {
-            let file = cmd.file.as_deref().unwrap_or("terraform.tfstate.enc");
+        TerraformCmd::Decrypt { file } => {
+            let file = file.as_deref().unwrap_or("terraform.tfstate.enc");
             decrypt(sh, file)?;
         }
-        flags::TerraformCmd::Run(cmd) => {
-            let args: Vec<OsString> = cmd.args.iter().map(OsString::from).collect();
-            run_terraform_cmd(sh, &cmd.command, &args)?;
+        TerraformCmd::Run { command, args } => {
+            let args: Vec<OsString> = args.iter().map(OsString::from).collect();
+            run_terraform_cmd(sh, &command, &args)?;
         }
     }
 
@@ -121,4 +158,3 @@ fn decrypt(sh: &Shell, input_file: &str) -> Result<()> {
 
     encrypt::decrypt(sh, input_file, &output_file)
 }
-

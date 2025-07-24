@@ -1,22 +1,46 @@
-pub mod flags;
-
-use std::ffi::OsString;
+use clap::{Parser, Subcommand};
 use eyre::Result;
+use std::ffi::OsString;
 use xshell::Shell;
 
 use crate::encrypt;
 
+#[derive(Debug, Clone, Parser)]
+pub struct Vault {
+    #[command(subcommand)]
+    pub subcommand: VaultCmd,
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum VaultCmd {
+    /// Encrypt file
+    #[command(visible_alias = "enc", arg_required_else_help = true)]
+    Encrypt {
+        file: String,
+    },
+
+    /// Decrypt file
+    #[command(visible_alias = "dec", arg_required_else_help = true)]
+    Decrypt {
+        file: String,
+    },
+}
+
 static DEFAULT_SECRET_HEADER: &str = "!!CMD!!ID!!vault-default";
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = flags::Vault::from_args(args)?;
+    let flags = Vault::parse_from(args);
+    run_with_flags(sh, flags)
+}
+
+pub fn run_with_flags(sh: &Shell, flags: Vault) -> Result<()> {
 
     match flags.subcommand {
-        flags::VaultCmd::Encrypt(cmd) => {
-            encrypt(sh, &cmd.file)?;
+        VaultCmd::Encrypt { file } => {
+            encrypt(sh, &file)?;
         }
-        flags::VaultCmd::Decrypt(cmd) => {
-            decrypt(sh, &cmd.file)?;
+        VaultCmd::Decrypt { file } => {
+            decrypt(sh, &file)?;
         }
     }
 

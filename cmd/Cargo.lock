@@ -276,11 +276,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap"
+version = "4.5.41"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be92d32e80243a54711e5d7ce823c35c41c9d929dc4ab58e1276f625841aadf9"
+dependencies = [
+ "clap_builder",
+ "clap_derive",
+]
+
+[[package]]
+name = "clap_builder"
+version = "4.5.41"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "707eab41e9622f9139419d573eca0900137718000c517d47da73045f54331c3d"
+dependencies = [
+ "anstyle",
+ "clap_lex",
+]
+
+[[package]]
+name = "clap_derive"
+version = "4.5.41"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef4f52386a59ca4c860f7393bcf8abd8dfd91ecccc0f774635ff68e92eeef491"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "clap_lex"
+version = "0.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
+
+[[package]]
 name = "cmd"
 version = "0.0.24"
 dependencies = [
  "age",
  "askama",
+ "clap",
  "color-eyre",
  "colored",
  "convert_case",
@@ -296,7 +335,6 @@ dependencies = [
  "sha2",
  "tempfile",
  "textdistance",
- "xflags",
  "xshell",
 ]
 
@@ -674,6 +712,12 @@ name = "hashbrown"
 version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5971ac85611da7067dbfcabef3c70ebb5606018acd9e2a3903a0da507521e0d5"
+
+[[package]]
+name = "heck"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hex"
@@ -1859,21 +1903,6 @@ dependencies = [
  "serde",
  "zeroize",
 ]
-
-[[package]]
-name = "xflags"
-version = "0.4.0-pre.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6a40f95e4e200baabdfe8b813e3ee754b58407a677141bd2890c28ef4a89c21"
-dependencies = [
- "xflags-macros",
-]
-
-[[package]]
-name = "xflags-macros"
-version = "0.4.0-pre.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a6d9b56f406f5754a3808524166b6e6bdfe219c0526e490cfc39ecc0582a4e6"
 
 [[package]]
 name = "xshell"
