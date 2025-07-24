@@ -219,13 +219,14 @@ export TERM=xterm-256color
 {% endif %}
 
 
+autoload -U +X compinit && compinit
+
 # kubectl autocompletions
 if [ $commands[kubectl] ]; then
   source <(kubectl completion zsh)
 fi
 
 # zsh plugins
-autoload -U +X compinit && compinit
 source $HOME/.zsh_plugins.zsh
 
 # zsh-history-substring-search
