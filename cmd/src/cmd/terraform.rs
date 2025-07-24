@@ -16,7 +16,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 
     match flags.subcommand {
         flags::TerraformCmd::Init(cmd) => {
-            let args: Vec<OsString> = cmd.args.iter().map(|s| OsString::from(s)).collect();
+            let args: Vec<OsString> = cmd.args.iter().map(OsString::from).collect();
             init(sh, &args)?;
         }
         flags::TerraformCmd::Encrypt(cmd) => {
@@ -28,7 +28,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             decrypt(sh, file)?;
         }
         flags::TerraformCmd::Run(cmd) => {
-            let args: Vec<OsString> = cmd.args.iter().map(|s| OsString::from(s)).collect();
+            let args: Vec<OsString> = cmd.args.iter().map(OsString::from).collect();
             run_terraform_cmd(sh, &cmd.command, &args)?;
         }
     }

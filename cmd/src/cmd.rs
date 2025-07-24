@@ -10,10 +10,8 @@ use eyre::Result;
 use log::debug;
 use xshell::Shell;
 
-use std::ffi::OsString;
-use crate::util::handle_xflags_error;
 use flags::{Cmd, CmdCmd};
-
+use std::ffi::OsString;
 
 pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
     debug!("cmd run args: {args:?}");
@@ -29,35 +27,35 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
     match flags.subcommand {
         CmdCmd::Bootstrap(cmd) => bootstrap::run(
             &sh,
-            &cmd.args.iter().map(|s| OsString::from(s)).collect::<Vec<_>>(),
+            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
         ),
         CmdCmd::Release(cmd) => bootstrap::release(
             &sh,
-            &cmd.args.iter().map(|s| OsString::from(s)).collect::<Vec<_>>(),
+            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
         ),
         CmdCmd::Config(cmd) => bootstrap::config(
             &sh,
-            &cmd.args.iter().map(|s| OsString::from(s)).collect::<Vec<_>>(),
+            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
         ),
         CmdCmd::Gcloud(cmd) => gcloud::run(
             &sh,
-            &cmd.args.iter().map(|s| OsString::from(s)).collect::<Vec<_>>(),
+            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
         ),
         CmdCmd::Secret(cmd) => secrets::run(
             &sh,
-            &cmd.args.iter().map(|s| OsString::from(s)).collect::<Vec<_>>(),
+            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
         ),
         CmdCmd::Terraform(cmd) => terraform::run(
             &sh,
-            &cmd.args.iter().map(|s| OsString::from(s)).collect::<Vec<_>>(),
+            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
         ),
         CmdCmd::Vault(cmd) => vault::run(
             &sh,
-            &cmd.args.iter().map(|s| OsString::from(s)).collect::<Vec<_>>(),
+            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
         ),
         CmdCmd::Generate(cmd) => generate::run(
             &sh,
-            &cmd.args.iter().map(|s| OsString::from(s)).collect::<Vec<_>>(),
+            &cmd.args.iter().map(OsString::from).collect::<Vec<_>>(),
         ),
     }
 }
