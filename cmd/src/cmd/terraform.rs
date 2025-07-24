@@ -16,8 +16,8 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 
     match flags.subcommand {
         flags::TerraformCmd::Init(cmd) => {
-            let args: Vec<OsString> = cmd.args.iter().map(OsString::from).collect();
-            init(sh, &args)?;
+            let args = cmd.args.as_slice();
+            init(sh, args)?;
         }
         flags::TerraformCmd::Encrypt(cmd) => {
             let file = cmd.file.as_deref().unwrap_or("terraform.tfstate");
@@ -36,7 +36,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     Ok(())
 }
 
-fn init(sh: &Shell, _args: &[OsString]) -> Result<()> {
+fn init(sh: &Shell, _args: &[String]) -> Result<()> {
     if sh.path_exists("terraform.tfstate.enc") {
         eprintln!("terraform.tfstate.enc already exists");
     } else {
@@ -121,3 +121,4 @@ fn decrypt(sh: &Shell, input_file: &str) -> Result<()> {
 
     encrypt::decrypt(sh, input_file, &output_file)
 }
+
