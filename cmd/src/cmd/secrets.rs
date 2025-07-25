@@ -15,13 +15,14 @@ pub struct Secrets {
 }
 
 #[derive(Debug, Clone, Subcommand)]
+#[command(arg_required_else_help = true)]
 pub enum SecretsCmd {
     /// Generate a random secret
     Gen {
         /// Length of the secret to generate
         #[arg(long, short)]
         length: Option<usize>,
-        
+
         /// Generate without symbols (alphanumeric only)
         #[arg(long)]
         no_symbols: bool,
@@ -32,7 +33,7 @@ pub enum SecretsCmd {
     Get {
         /// Secret key to retrieve
         secret: String,
-        
+
         /// Name of the secret store
         secret_name: Option<String>,
     },
