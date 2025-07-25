@@ -15,15 +15,11 @@ pub struct Vault {
 pub enum VaultCmd {
     /// Encrypt file
     #[command(visible_alias = "enc", arg_required_else_help = true)]
-    Encrypt {
-        file: String,
-    },
+    Encrypt { file: String },
 
     /// Decrypt file
     #[command(visible_alias = "dec", arg_required_else_help = true)]
-    Decrypt {
-        file: String,
-    },
+    Decrypt { file: String },
 }
 
 static DEFAULT_SECRET_HEADER: &str = "!!CMD!!ID!!vault-default";
@@ -34,7 +30,6 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Vault) -> Result<()> {
-
     match flags.subcommand {
         VaultCmd::Encrypt { file } => {
             encrypt(sh, &file)?;

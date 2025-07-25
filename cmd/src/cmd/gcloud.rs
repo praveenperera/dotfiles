@@ -25,14 +25,22 @@ pub enum GcloudCmd {
     },
 
     /// Google Cloud switch project
-    #[command(name = "switch-project", visible_alias = "sp", arg_required_else_help = true)]
+    #[command(
+        name = "switch-project",
+        visible_alias = "sp",
+        arg_required_else_help = true
+    )]
     SwitchProject {
         /// Project to switch to
         project: String,
     },
 
     /// Google Cloud switch cluster
-    #[command(name = "switch-cluster", visible_alias = "sc", arg_required_else_help = true)]
+    #[command(
+        name = "switch-cluster",
+        visible_alias = "sc",
+        arg_required_else_help = true
+    )]
     SwitchCluster {
         /// Project containing the cluster
         project: String,

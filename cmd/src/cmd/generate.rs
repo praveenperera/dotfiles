@@ -25,10 +25,10 @@ pub enum GenerateCmd {
     Rmp {
         /// either `swift` or `rs`
         lang: String,
-        
+
         /// name of the module name ex: `MyModule`
         module_name: String,
-        
+
         /// the name of the app, default to `cove`
         #[arg(short, long)]
         app: Option<String>,
@@ -68,7 +68,6 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Generate) -> Result<()> {
-
     match flags.subcommand {
         GenerateCmd::Rmp {
             lang,
@@ -101,7 +100,6 @@ pub fn run_with_flags(sh: &Shell, flags: Generate) -> Result<()> {
         } => {
             generate_swift_color(sh, &name, &light_hex, dark_hex.as_deref())?;
         }
-
     }
 
     Ok(())

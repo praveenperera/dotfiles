@@ -32,15 +32,11 @@ pub enum TerraformCmd {
 
     /// Encrypt terraform state file
     #[command(visible_alias = "enc")]
-    Encrypt {
-        file: Option<String>,
-    },
+    Encrypt { file: Option<String> },
 
     /// Decrypt terraform state file
     #[command(visible_alias = "dec")]
-    Decrypt {
-        file: Option<String>,
-    },
+    Decrypt { file: Option<String> },
 }
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
@@ -51,7 +47,6 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Terraform) -> Result<()> {
-
     match flags.subcommand {
         TerraformCmd::Init { args } => {
             init(sh, &args)?;
