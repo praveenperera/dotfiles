@@ -87,36 +87,45 @@ fn init(sh: &Shell) -> Result<()> {
 
 fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[OsString]) -> Result<()> {
     let tmpdir = tempfile::tempdir()?;
-    let tfstate = tmpdir.path().join("terraform.tfstate");
-
-    let tfstate = tfstate
+    let decrypted_tf_state_path = tmpdir.path().join("terraform.tfstate");
+    let decrypted_tf_state_path_str = decrypted_tf_state_path
         .to_str()
         .wrap_err("could not convert path to string")?;
 
-    encrypt::encrypt(sh, "terraform.tfstate.enc", tfstate)?;
-    let before_hash = sha2::Sha256::digest(sh.read_file(tfstate)?);
+    encrypt::decrypt(sh, "terraform.tfstate.enc", decrypted_tf_state_path_str)?;
+    let before_hash = sha2::Sha256::digest(sh.read_file(decrypted_tf_state_path_str)?);
+
+    if !decrypted_tf_state_path.exists() {
+        return Err(eyre::eyre!("could not find decrypted tf state file"));
+    }
+
+    let state_config = format!("-backend-config=\"path={}\"", decrypted_tf_state_path_str);
+    println!("state config: {state_config}");
 
     // use command instead of xshell because to deal with interactive prompts
-    let result = Command::new("terraform")
+    let result = Command::new("tofu")
         .arg(cmd)
-        .arg("-state")
-        .arg(tfstate)
+        .arg(state_config)
         .args(args)
         .spawn()
-        .wrap_err("could not spawn terraform")?
+        .wrap_err_with(|| {
+            format!(
+                "could not spawn terraform with args: {args:?} in: {decrypted_tf_state_path_str:?}"
+            )
+        })?
         .wait()
         .wrap_err("could not wait for terraform")?;
 
     if !result.success() {
-        sh.remove_path(tfstate)?;
+        sh.remove_path(decrypted_tf_state_path_str)?;
         return Err(eyre::eyre!("terraform {cmd} failed"));
     };
 
-    let after_hash = sha2::Sha256::digest(sh.read_file(tfstate)?);
+    let after_hash = sha2::Sha256::digest(sh.read_file(decrypted_tf_state_path_str)?);
     if before_hash != after_hash {
-        encrypt::encrypt(sh, tfstate, "terraform.tfstate.enc")?;
+        encrypt::encrypt(sh, decrypted_tf_state_path_str, "terraform.tfstate.enc")?;
 
-        let tfstate_parent = Path::new(tfstate)
+        let tfstate_parent = Path::new(decrypted_tf_state_path_str)
             .parent()
             .wrap_err("could not get parent of input file")?;
 
@@ -129,7 +138,7 @@ fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[OsString]) -> Result<()> {
         sh.remove_path(tfstate)?;
     }
 
-    sh.remove_path(tfstate)?;
+    sh.remove_path(decrypted_tf_state_path)?;
 
     Ok(())
 }

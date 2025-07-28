@@ -84,6 +84,12 @@ pub fn decrypt(sh: &Shell, input: &str, output: impl AsRef<Path>) -> Result<()> 
         secret_name(sh, input).wrap_err("Could not get secret name for input file")?;
 
     let encrypted = read_encrypted_file(input)?;
+    if encrypted.is_empty() {
+        sh.write_file(&output, "")
+            .wrap_err("could not write empty file")?;
+
+        return Ok(());
+    }
 
     let key: Identity = util::pass_read(sh, &secret_name, "password")?
         .parse()
@@ -93,8 +99,13 @@ pub fn decrypt(sh: &Shell, input: &str, output: impl AsRef<Path>) -> Result<()> 
         let decryptor = age::Decryptor::new(&encrypted[..])?;
 
         let mut decrypted = vec![];
-        let mut reader = decryptor.decrypt(iter::once(&key as &dyn age::Identity))?;
-        reader.read_to_end(&mut decrypted)?;
+        let mut reader = decryptor
+            .decrypt(iter::once(&key as &dyn age::Identity))
+            .wrap_err("could not decrypt")?;
+
+        reader
+            .read_to_end(&mut decrypted)
+            .wrap_err("could not read decrypted file")?;
 
         String::from_utf8(decrypted)?
     };
