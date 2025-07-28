@@ -25,10 +25,7 @@ pub enum TerraformCmd {
     },
 
     /// Initialize terraform state
-    Init {
-        #[arg(trailing_var_arg = true)]
-        args: Vec<String>,
-    },
+    Init,
 
     /// Encrypt terraform state file
     #[command(visible_alias = "enc")]
@@ -48,8 +45,8 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 
 pub fn run_with_flags(sh: &Shell, flags: Terraform) -> Result<()> {
     match flags.subcommand {
-        TerraformCmd::Init { args } => {
-            init(sh, &args)?;
+        TerraformCmd::Init => {
+            init(sh)?;
         }
         TerraformCmd::Encrypt { file } => {
             let file = file.as_deref().unwrap_or("terraform.tfstate");
@@ -68,7 +65,7 @@ pub fn run_with_flags(sh: &Shell, flags: Terraform) -> Result<()> {
     Ok(())
 }
 
-fn init(sh: &Shell, _args: &[String]) -> Result<()> {
+fn init(sh: &Shell) -> Result<()> {
     if sh.path_exists("terraform.tfstate.enc") {
         eprintln!("terraform.tfstate.enc already exists");
     } else {
@@ -139,7 +136,7 @@ fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[OsString]) -> Result<()> {
 }
 
 fn encrypt(sh: &Shell, input_file: &str) -> Result<()> {
-    init(sh, &[])?;
+    init(sh)?;
     let output_file = Path::new(input_file).with_extension("enc").to_path_buf();
     encrypt::encrypt(sh, input_file, output_file.to_string_lossy().as_ref())
 }
