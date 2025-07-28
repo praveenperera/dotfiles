@@ -37,8 +37,7 @@ pub enum TerraformCmd {
 }
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    debug!("terraform args: {args:?}");
-
+    debug!("terraform args 1: {args:?}");
     let flags = Terraform::parse_from(args);
     run_with_flags(sh, flags)
 }
@@ -142,11 +141,20 @@ fn encrypt(sh: &Shell, input_file: &str) -> Result<()> {
 }
 
 fn decrypt(sh: &Shell, input_file: &str) -> Result<()> {
+    let input_file_path =
+        std::fs::canonicalize(input_file).wrap_err("could not canonicalize input path")?;
+
+    let parent = input_file_path
+        .parent()
+        .wrap_err("could not get parent of input file")?;
+
     let output_file = if input_file.ends_with(".enc") {
         input_file.trim_end_matches(".enc").to_string()
     } else {
         input_file.to_string() + ".dec"
     };
 
-    encrypt::decrypt(sh, input_file, &output_file)
+    let output_path = parent.join(output_file);
+
+    encrypt::decrypt(sh, input_file, &output_path)
 }

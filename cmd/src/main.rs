@@ -68,11 +68,12 @@ fn main() -> Result<()> {
         })?;
 
     let sh = Shell::new()?;
-    match run(&sh, &args[1..]) {
-        Ok(_) => std::process::exit(0),
-        Err(err) => {
-            debug!("{err}");
-            std::process::exit(1);
-        }
-    }
+
+    let args = match program {
+        "cmd" => &args[1..],
+        _ => &args,
+    };
+
+    run(&sh, args)?;
+    Ok(())
 }

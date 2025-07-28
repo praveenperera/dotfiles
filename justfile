@@ -7,3 +7,5 @@ clippy:
 check:
     cd cmd && cargo check
 
+bacon:
+    cd cmd && bacon

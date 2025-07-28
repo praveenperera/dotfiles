@@ -72,10 +72,12 @@ pub fn create_secret_and_files(sh: &Shell, secret_prefix: &str, file_name: &str)
     Ok(())
 }
 
-pub fn decrypt(sh: &Shell, input: &str, output: &str) -> Result<()> {
-    println!("decrypting {input} to {output}");
-    if sh.path_exists(output) {
-        return Err(eyre::eyre!("{output} already exists"));
+pub fn decrypt(sh: &Shell, input: &str, output: impl AsRef<Path>) -> Result<()> {
+    let output = output.as_ref();
+
+    println!("decrypting {input} to {output:?}");
+    if sh.path_exists(&output) {
+        return Err(eyre::eyre!("{output:?} already exists"));
     }
 
     let secret_name =
@@ -97,7 +99,8 @@ pub fn decrypt(sh: &Shell, input: &str, output: &str) -> Result<()> {
         String::from_utf8(decrypted)?
     };
 
-    sh.write_file(output, decrypted)?;
+    sh.write_file(&output, decrypted)?;
+    println!("decrypted {input} to {output:?}");
 
     Ok(())
 }

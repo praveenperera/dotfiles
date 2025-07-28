@@ -221,6 +221,8 @@ return {
                     -- split resizing on ssh requires ctrl and alt
                     ["<C-M-h>"] = { "<C-w><", desc = "Resize left" },
                     ["<C-M-l>"] = { "<C-w>>", desc = "Resize right" },
+                    ["<C-M-j>"] = { "<C-w>-", desc = "Resize down" },
+                    ["<C-M-k>"] = { "<C-w>+", desc = "Resize up" },
 
                     -- source file
                     ["<Leader>so"] = {
