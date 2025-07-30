@@ -76,7 +76,7 @@ pub fn decrypt(sh: &Shell, input: &str, output: impl AsRef<Path>) -> Result<()> 
     let output = output.as_ref();
 
     println!("decrypting {input} to {output:?}");
-    if sh.path_exists(&output) {
+    if sh.path_exists(output) {
         return Err(eyre::eyre!("{output:?} already exists"));
     }
 
@@ -85,7 +85,7 @@ pub fn decrypt(sh: &Shell, input: &str, output: impl AsRef<Path>) -> Result<()> 
 
     let encrypted = read_encrypted_file(input)?;
     if encrypted.is_empty() {
-        sh.write_file(&output, "")
+        sh.write_file(output, "")
             .wrap_err("could not write empty file")?;
 
         return Ok(());
@@ -110,7 +110,7 @@ pub fn decrypt(sh: &Shell, input: &str, output: impl AsRef<Path>) -> Result<()> 
         String::from_utf8(decrypted)?
     };
 
-    sh.write_file(&output, decrypted)?;
+    sh.write_file(output, decrypted)?;
     println!("decrypted {input} to {output:?}");
 
     Ok(())

@@ -99,7 +99,7 @@ fn run_terraform_cmd(sh: &Shell, cmd: &str, args: &[OsString]) -> Result<()> {
         return Err(eyre::eyre!("could not find decrypted tf state file"));
     }
 
-    let state_config = format!("-backend-config=\"path={}\"", decrypted_tf_state_path_str);
+    let state_config = format!("-backend-config=\"path={decrypted_tf_state_path_str}\"");
     println!("state config: {state_config}");
 
     // use command instead of xshell because to deal with interactive prompts
