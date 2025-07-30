@@ -25,8 +25,11 @@ jobs:
         id: tag
         run: |
           # get the last tag or use v0.0.0 if no tags exist
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "Last tag: $LAST_TAG"
+          REPO_OWNER="praveenperera"  
+          REPO_NAME="dotfiles"
+          LATEST_RELEASE_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
+          LAST_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name"' | sed -E 's/.*"tag_name": "([^"]+)".*/\1/')
+
 
           # extract version number and increment patch version
           VERSION=$(echo $LAST_TAG | sed 's/v//')
@@ -160,7 +163,7 @@ jobs:
         run: |
           cd cmd
           cargo build --release --target x86_64-unknown-linux-musl
-          
+
       - name: Package
         run: |
           cd cmd
