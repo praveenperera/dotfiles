@@ -68,3 +68,4 @@ keybind = cmd+period=text:\x02$
 # delete by word
 keybind = alt+backspace=text:\x17
 
+keybind = shift+enter=text:\x1b\r
