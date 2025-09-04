@@ -21,6 +21,8 @@ local config = function(_, _opts)
 
     -- LSP configuration
     opts.server = {
+        cmd = { "ra-multiplex", "client" },
+
         settings = function(project_root)
             local ra = require("rustaceanvim.config.server")
 
@@ -73,15 +75,12 @@ local config = function(_, _opts)
                 end, desc("Toggle inlay hints"))
             end
         end,
+
         default_settings = {
             -- rust-analyzer language server configuration
             ["rust-analyzer"] = {
-                check = {
-                    command = "check",
-                },
-                checkOnSave = {
-                    command = "check",
-                },
+                check = { command = "check" },
+                checkOnSave = { command = "check" },
             },
         },
     }
