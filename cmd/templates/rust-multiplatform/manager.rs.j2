@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::manager::deferred_sender::{self, MessageSender};
+use super::deferred_sender::{self, MessageSender};
 use crate::task;
 use {{app_name}}_macros::impl_default_for;
 use flume::Receiver;
