@@ -91,9 +91,24 @@ pub enum MainCmd {
 
 impl Cmd {
     pub fn from_args(args: &[std::ffi::OsString]) -> eyre::Result<Self> {
-        use clap::Parser;
+        use clap::{CommandFactory, Parser};
         let mut full_args = vec![std::ffi::OsString::from("cmd")];
         full_args.extend_from_slice(args);
+
+        // check if help is requested or no args provided
+        let is_help_or_no_args = (full_args.iter().any(|arg| {
+            arg == "--help" || arg == "-h"
+        }) && full_args.len() == 2) || full_args.len() == 1;
+
+        if is_help_or_no_args {
+            // generate custom help with symlinked commands info
+            let mut cmd = Self::command();
+            let symlinked_help = crate::symlinked_commands_help();
+            cmd = cmd.after_help(symlinked_help);
+            cmd.print_help().unwrap();
+            std::process::exit(0);
+        }
+
         match Self::try_parse_from(full_args) {
             Ok(cmd) => Ok(cmd),
             Err(err) => {

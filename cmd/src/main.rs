@@ -30,6 +30,45 @@ fn tools_str() -> String {
         .join(", ")
 }
 
+// generate help text for symlinked commands
+pub fn symlinked_commands_help() -> String {
+    use std::collections::HashMap;
+
+    // group commands by their function pointer (same function = aliases)
+    let mut groups: HashMap<usize, Vec<&str>> = HashMap::new();
+
+    for &(name, func) in CMD_TOOLS {
+        // skip "cmd" itself as it's not a subcommand
+        if name == "cmd" {
+            continue;
+        }
+
+        let func_ptr = func as usize;
+        groups.entry(func_ptr).or_insert_with(Vec::new).push(name);
+    }
+
+    if groups.is_empty() {
+        return String::new();
+    }
+
+    let mut lines = vec![
+        String::new(),
+        "Available as standalone commands (also symlinked in PATH):".to_string(),
+    ];
+
+    // sort groups by the first command name for consistent output
+    let mut sorted_groups: Vec<_> = groups.into_iter().collect();
+    sorted_groups.sort_by_key(|(_, names)| names[0].to_string());
+
+    for (_, mut names) in sorted_groups {
+        names.sort();
+        let names_str = names.join(", ");
+        lines.push(format!("  {}", names_str));
+    }
+
+    lines.join("\n")
+}
+
 pub fn dotfiles_dir() -> PathBuf {
     let home = env::var("HOME").expect("HOME env var must be set");
     PathBuf::new().join(home).join("code/dotfiles")
