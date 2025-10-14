@@ -10,22 +10,22 @@ use xshell::Shell;
 #[command(visible_alias = "prc")]
 pub struct Args {
     /// GitHub PR URL or repository in format "owner/repo"
-    repo_or_url: String,
+    pub repo_or_url: String,
 
     /// Pull request number (optional if URL is provided)
-    pr_number: Option<u64>,
+    pub pr_number: Option<u64>,
 
     /// GitHub token (optional, for higher rate limits)
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    pub token: Option<String>,
 
     /// Only include comments with code references
     #[arg(short = 'c', long)]
-    code_only: bool,
+    pub code_only: bool,
 
     /// Compact output (only author, body, and code_reference)
     #[arg(short = 'C', long)]
-    compact: bool,
+    pub compact: bool,
 }
 
 // data structure for GitHub API PR review comment response
@@ -112,7 +112,10 @@ struct CompactPrContext {
 
 pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
     let args = Args::parse_from(args);
+    run_with_args(_sh, args)
+}
 
+pub fn run_with_args(_sh: &Shell, args: Args) -> Result<()> {
     // parse the input to extract owner, repo, and pr_number
     let (owner, repo, pr_number) = parse_input(&args.repo_or_url, args.pr_number)?;
 
