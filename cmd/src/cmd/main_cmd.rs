@@ -65,6 +65,32 @@ pub enum MainCmd {
         #[command(subcommand)]
         subcommand: crate::cmd::generate::GenerateCmd,
     },
+
+    /// Fetch PR comments and their code references from GitHub
+    #[command(visible_alias = "prc")]
+    PrContext {
+        /// GitHub PR URL or repository in format "owner/repo"
+        repo_or_url: String,
+
+        /// Pull request number (optional if URL is provided)
+        pr_number: Option<u64>,
+
+        /// GitHub token (optional, for higher rate limits)
+        #[arg(short, long, env = "GITHUB_TOKEN")]
+        token: Option<String>,
+
+        /// Only include comments with code references
+        #[arg(short = 'c', long)]
+        code_only: bool,
+
+        /// Compact output (only author, body, and code_reference)
+        #[arg(short = 'C', long)]
+        compact: bool,
+
+        /// Output format
+        #[arg(short = 'f', long, default_value = "markdown")]
+        format: crate::pr_context::OutputFormat,
+    },
 }
 
 impl Cmd {

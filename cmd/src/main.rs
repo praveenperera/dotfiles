@@ -1,6 +1,7 @@
 pub mod cmd;
 pub mod encrypt;
 pub mod os;
+pub mod pr_context;
 pub mod util;
 
 use cmd::{terraform, vault};
@@ -13,6 +14,8 @@ use xshell::Shell;
 pub type Tool = (&'static str, fn(&Shell, &[OsString]) -> Result<()>);
 pub const CMD_TOOLS: &[Tool] = &[
     ("cmd", cmd::run),
+    ("pr-context", pr_context::run),
+    ("prc", pr_context::run),
     ("tf", terraform::run),
     ("vault", vault::run),
 ];
