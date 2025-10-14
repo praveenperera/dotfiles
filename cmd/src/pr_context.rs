@@ -287,27 +287,35 @@ async fn fetch_review_comments(
     pr_number: u64,
     token: &Option<String>,
 ) -> Result<Vec<ReviewComment>> {
-    let url = format!(
-        "https://api.github.com/repos/{}/{}/pulls/{}/comments",
+    let mut all_comments = Vec::new();
+    let mut url = Some(format!(
+        "https://api.github.com/repos/{}/{}/pulls/{}/comments?per_page=100",
         owner, repo, pr_number
-    );
+    ));
 
-    let mut request = client.get(&url);
+    while let Some(current_url) = url {
+        let mut request = client.get(&current_url);
 
-    if let Some(token) = token {
-        request = request.header("Authorization", format!("Bearer {}", token));
+        if let Some(token) = token {
+            request = request.header("Authorization", format!("Bearer {}", token));
+        }
+
+        let response = request.send().await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await?;
+            eyre::bail!("GitHub API request failed with status {}: {}", status, body);
+        }
+
+        // extract next page URL from Link header
+        url = parse_next_link(response.headers());
+
+        let comments: Vec<ReviewComment> = response.json().await?;
+        all_comments.extend(comments);
     }
 
-    let response = request.send().await?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await?;
-        eyre::bail!("GitHub API request failed with status {}: {}", status, body);
-    }
-
-    let comments: Vec<ReviewComment> = response.json().await?;
-    Ok(comments)
+    Ok(all_comments)
 }
 
 async fn fetch_issue_comments(
@@ -317,25 +325,57 @@ async fn fetch_issue_comments(
     pr_number: u64,
     token: &Option<String>,
 ) -> Result<Vec<IssueComment>> {
-    let url = format!(
-        "https://api.github.com/repos/{}/{}/issues/{}/comments",
+    let mut all_comments = Vec::new();
+    let mut url = Some(format!(
+        "https://api.github.com/repos/{}/{}/issues/{}/comments?per_page=100",
         owner, repo, pr_number
-    );
+    ));
 
-    let mut request = client.get(&url);
+    while let Some(current_url) = url {
+        let mut request = client.get(&current_url);
 
-    if let Some(token) = token {
-        request = request.header("Authorization", format!("Bearer {}", token));
+        if let Some(token) = token {
+            request = request.header("Authorization", format!("Bearer {}", token));
+        }
+
+        let response = request.send().await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await?;
+            eyre::bail!("GitHub API request failed with status {}: {}", status, body);
+        }
+
+        // extract next page URL from Link header
+        url = parse_next_link(response.headers());
+
+        let comments: Vec<IssueComment> = response.json().await?;
+        all_comments.extend(comments);
     }
 
-    let response = request.send().await?;
+    Ok(all_comments)
+}
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await?;
-        eyre::bail!("GitHub API request failed with status {}: {}", status, body);
+// parse the Link header to extract the next page URL
+// github returns Link header in format:
+// <https://api.github.com/...?page=2>; rel="next", <https://api.github.com/...?page=3>; rel="last"
+fn parse_next_link(headers: &reqwest::header::HeaderMap) -> Option<String> {
+    let link_header = headers.get(reqwest::header::LINK)?.to_str().ok()?;
+
+    // split by comma to get individual links
+    for link_part in link_header.split(',') {
+        let link_part = link_part.trim();
+
+        // check if this is the "next" relation
+        if link_part.contains("rel=\"next\"") {
+            // extract URL between < and >
+            if let Some(start) = link_part.find('<') {
+                if let Some(end) = link_part.find('>') {
+                    return Some(link_part[start + 1..end].to_string());
+                }
+            }
+        }
     }
 
-    let comments: Vec<IssueComment> = response.json().await?;
-    Ok(comments)
+    None
 }
