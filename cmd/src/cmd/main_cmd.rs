@@ -86,6 +86,10 @@ pub enum MainCmd {
         /// Compact output (only author, body, and code_reference)
         #[arg(short = 'C', long)]
         compact: bool,
+
+        /// Output format
+        #[arg(short = 'f', long, default_value = "markdown")]
+        format: crate::pr_context::OutputFormat,
     },
 }
 

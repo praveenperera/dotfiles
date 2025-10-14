@@ -1,8 +1,14 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use color_eyre::eyre::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use xshell::Shell;
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum OutputFormat {
+    Markdown,
+    Json,
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "pr-context")]
@@ -26,6 +32,10 @@ pub struct Args {
     /// Compact output (only author, body, and code_reference)
     #[arg(short = 'C', long)]
     pub compact: bool,
+
+    /// Output format
+    #[arg(short = 'f', long, default_value = "markdown")]
+    pub format: OutputFormat,
 }
 
 // data structure for GitHub API PR review comment response
@@ -127,26 +137,35 @@ pub fn run_with_args(_sh: &Shell, args: Args) -> Result<()> {
         pr_context.comments.retain(|c| c.code_reference.is_some());
     }
 
-    // output compact or full format
-    if args.compact {
-        let compact_context = CompactPrContext {
-            repo: pr_context.repo,
-            pr_number: pr_context.pr_number,
-            comments: pr_context
-                .comments
-                .into_iter()
-                .map(|c| CompactComment {
-                    author: c.author,
-                    body: c.body,
-                    code_reference: c.code_reference,
-                })
-                .collect(),
-        };
-        let json = serde_json::to_string_pretty(&compact_context)?;
-        println!("{}", json);
-    } else {
-        let json = serde_json::to_string_pretty(&pr_context)?;
-        println!("{}", json);
+    // output based on format flag
+    match args.format {
+        OutputFormat::Markdown => {
+            let markdown = format_as_markdown(&pr_context, args.compact);
+            print!("{}", markdown);
+        }
+        OutputFormat::Json => {
+            // output compact or full format
+            if args.compact {
+                let compact_context = CompactPrContext {
+                    repo: pr_context.repo,
+                    pr_number: pr_context.pr_number,
+                    comments: pr_context
+                        .comments
+                        .into_iter()
+                        .map(|c| CompactComment {
+                            author: c.author,
+                            body: c.body,
+                            code_reference: c.code_reference,
+                        })
+                        .collect(),
+                };
+                let json = serde_json::to_string_pretty(&compact_context)?;
+                println!("{}", json);
+            } else {
+                let json = serde_json::to_string_pretty(&pr_context)?;
+                println!("{}", json);
+            }
+        }
     }
 
     Ok(())
@@ -378,4 +397,50 @@ fn parse_next_link(headers: &reqwest::header::HeaderMap) -> Option<String> {
     }
 
     None
+}
+
+// format PR context as markdown
+fn format_as_markdown(pr_context: &PrContext, compact: bool) -> String {
+    let mut output = String::new();
+
+    output.push_str(&format!("# PR #{} - {}\n\n", pr_context.pr_number, pr_context.repo));
+    output.push_str(&format!("**Total comments:** {}\n\n", pr_context.comments.len()));
+
+    for comment in &pr_context.comments {
+        output.push_str("---\n\n");
+
+        if !compact {
+            output.push_str(&format!("**Comment ID:** {}\n", comment.comment_id));
+            output.push_str(&format!("**Type:** {}\n", comment.comment_type));
+        }
+
+        output.push_str(&format!("**Author:** @{}\n", comment.author));
+
+        if !compact {
+            output.push_str(&format!("**Created:** {}\n", comment.created_at));
+        }
+
+        if let Some(code_ref) = &comment.code_reference {
+            output.push_str(&format!("**File:** `{}`\n", code_ref.file_path));
+
+            if let Some(line) = code_ref.line {
+                output.push_str(&format!("**Line:** {}\n", line));
+            } else if let Some(start_line) = code_ref.start_line {
+                output.push_str(&format!("**Lines:** {}-...\n", start_line));
+            }
+
+            if !compact && !code_ref.diff_hunk.is_empty() {
+                output.push_str("\n**Diff:**\n");
+                output.push_str("```diff\n");
+                output.push_str(&code_ref.diff_hunk);
+                output.push_str("\n```\n");
+            }
+        }
+
+        output.push_str("\n**Comment:**\n");
+        output.push_str(&comment.body);
+        output.push_str("\n\n");
+    }
+
+    output
 }

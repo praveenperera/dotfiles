@@ -58,6 +58,7 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
             token,
             code_only,
             compact,
+            format,
         } => {
             let args = crate::pr_context::Args {
                 repo_or_url,
@@ -65,6 +66,7 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
                 token,
                 code_only,
                 compact,
+                format,
             };
             crate::pr_context::run_with_args(&sh, args)
         }
