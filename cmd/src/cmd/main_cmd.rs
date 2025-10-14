@@ -1,4 +1,29 @@
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
+
+#[derive(Debug, Clone, Args)]
+pub struct PrContextArgs {
+    /// GitHub PR URL or repository in format "owner/repo"
+    pub repo_or_url: String,
+
+    /// Pull request number (optional if URL is provided)
+    pub pr_number: Option<u64>,
+
+    /// GitHub token (optional, for higher rate limits)
+    #[arg(short, long, env = "GITHUB_TOKEN")]
+    pub token: Option<String>,
+
+    /// Only include comments with code references
+    #[arg(short = 'c', long)]
+    pub code_only: bool,
+
+    /// Compact output (only author, body, and code_reference)
+    #[arg(short = 'C', long)]
+    pub compact: bool,
+
+    /// Output format
+    #[arg(short = 'f', long, default_value = "markdown")]
+    pub format: crate::pr_context::OutputFormat,
+}
 
 #[derive(Debug, Clone, Parser)]
 #[command(
@@ -68,29 +93,7 @@ pub enum MainCmd {
 
     /// Fetch PR comments and their code references from GitHub
     #[command(visible_alias = "prc")]
-    PrContext {
-        /// GitHub PR URL or repository in format "owner/repo"
-        repo_or_url: String,
-
-        /// Pull request number (optional if URL is provided)
-        pr_number: Option<u64>,
-
-        /// GitHub token (optional, for higher rate limits)
-        #[arg(short, long, env = "GITHUB_TOKEN")]
-        token: Option<String>,
-
-        /// Only include comments with code references
-        #[arg(short = 'c', long)]
-        code_only: bool,
-
-        /// Compact output (only author, body, and code_reference)
-        #[arg(short = 'C', long)]
-        compact: bool,
-
-        /// Output format
-        #[arg(short = 'f', long, default_value = "markdown")]
-        format: crate::pr_context::OutputFormat,
-    },
+    PrContext(#[command(flatten)] PrContextArgs),
 }
 
 impl Cmd {

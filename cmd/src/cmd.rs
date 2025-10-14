@@ -52,23 +52,6 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
             let generate_flags = generate::Generate { subcommand };
             generate::run_with_flags(&sh, generate_flags)
         }
-        MainCmd::PrContext {
-            repo_or_url,
-            pr_number,
-            token,
-            code_only,
-            compact,
-            format,
-        } => {
-            let args = crate::pr_context::Args {
-                repo_or_url,
-                pr_number,
-                token,
-                code_only,
-                compact,
-                format,
-            };
-            crate::pr_context::run_with_args(&sh, args)
-        }
+        MainCmd::PrContext(args) => crate::pr_context::run_with_flags(&sh, args)
     }
 }

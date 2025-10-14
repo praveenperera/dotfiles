@@ -1,5 +1,6 @@
 pub mod cmd;
 pub mod encrypt;
+pub mod github;
 pub mod os;
 pub mod pr_context;
 pub mod util;
