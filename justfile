@@ -9,3 +9,6 @@ check:
 
 bacon:
     cd cmd && bacon
+
+update:
+    cd cmd && cargo update
