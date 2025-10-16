@@ -8,4 +8,4 @@
 # `pip_review_local`, `pipupgrade`, `pipx`, `pkg`, `pkgin`, `pnpm`, `powershell`, `protonup`, `raco`, `rcm`, `remotes`, `restarts`, 
 # `rtcl`, `ruby_gems`, `rustup`, `scoop`, `sdkman`, `self_update`, `sheldon`, `shell`, `snap`, `sparkle`, `spicetify`, `stack`, `stew`,
 # `system`, `tldr`, `tlmgr`, `tmux`, `toolbx`, `vagrant`, `vcpkg`, `vim`, `vscode`, `winget`, `wsl`, `wsl_update`, `yadm`, `yarn`
-disable = ["flutter", "yarn", "gem", "ruby_gems", "vscode", "certbot", "pnpm", "uv"]
+disable = ["flutter", "yarn", "gem", "ruby_gems", "vscode", "certbot", "pnpm", "uv", "android_studio"]
