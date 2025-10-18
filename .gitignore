@@ -5,3 +5,15 @@ zsh_plugins.sh
 zshrc
 nvim/lazy-lock.json
 
+# .claude machine-specific files
+claude/history.jsonl
+claude/projects/
+claude/debug/
+claude/file-history/
+claude/shell-snapshots/
+claude/todos/
+claude/__store.db
+claude/plugins/
+claude/statsig/
+claude/config.json
+

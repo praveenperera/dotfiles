@@ -158,6 +158,7 @@ const CONFIG_FILE_OR_DIR: &[&str] = &[
 const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
     ("nvim", ".config/nvim"),
     ("config/codex/config.yaml", ".codex/config.yaml"),
+    ("claude", ".claude"),
 ];
 
 const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
