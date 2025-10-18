@@ -1,0 +1,6 @@
+model: gpt-5-codex
+provider: openai
+history:
+  maxSize: 1000
+  saveHistory: true
+  sensitivePatterns: []
