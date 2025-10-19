@@ -28,3 +28,10 @@ codex/sessions/
 codex/update-check.json
 codex/version.json
 
+# .config/opencode machine-specific files
+opencode/history/
+opencode/sessions/
+opencode/logs/
+opencode/cache/
+opencode/.opencode.json
+
