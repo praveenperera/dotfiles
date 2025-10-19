@@ -6,32 +6,27 @@ zshrc
 nvim/lazy-lock.json
 
 # .claude machine-specific files
-claude/history.jsonl
+claude/*.jsonl
+claude/*.db
+claude/config.json
 claude/projects/
 claude/debug/
 claude/file-history/
 claude/shell-snapshots/
 claude/todos/
-claude/__store.db
 claude/plugins/
 claude/statsig/
-claude/config.json
 
 # .codex machine-specific files
-codex/auth.json
-codex/config.toml
-codex/history.json
-codex/history.jsonl
-codex/internal_storage.json
+codex/*.json
+codex/*.toml
 codex/log/
 codex/sessions/
-codex/update-check.json
-codex/version.json
 
 # .config/opencode machine-specific files
+opencode/.opencode.json
 opencode/history/
 opencode/sessions/
 opencode/logs/
 opencode/cache/
-opencode/.opencode.json
 
