@@ -1,0 +1,9 @@
+model = "gpt-5"
+model_reasoning_effort = "medium"
+
+[projects."/Users/praveen/code/*"]
+trust_level = "trusted"
+
+# [mcp_servers.github]
+# type = "http"
+# url = "https://api.githubcopilot.com/mcp/"

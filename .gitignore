@@ -18,8 +18,12 @@ claude/plugins/
 claude/statsig/
 
 # .codex machine-specific files
-codex/*.json
-codex/*.toml
+codex/auth.json
+codex/history.json
+codex/history.jsonl
+codex/internal_storage.json
+codex/update-check.json
+codex/version.json
 codex/log/
 codex/sessions/
 
