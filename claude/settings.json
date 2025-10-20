@@ -1,7 +1,24 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "alwaysThinkingEnabled": false,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
-  }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git show:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr comments:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh api:*)",
+      "Bash(find:*)",
+      "Bash(cargo *)",
+      "Bash(git checkout:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {},
+  "alwaysThinkingEnabled": false
 }
