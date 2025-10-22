@@ -1,24 +1,41 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "feedbackSurveyState": {
-    "lastShownTime": 1754075865483
-  },
   "permissions": {
     "allow": [
       "Bash(git show:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
+      "Bash(gh pr list)",
+      "Bash(gh pr diff:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr comments:*)",
       "Bash(gh issue view:*)",
       "Bash(gh api:*)",
+      "Bash(gh project list)",
       "Bash(find:*)",
-      "Bash(cargo *)",
-      "Bash(git checkout:*)"
+      "Bash(cargo :*)",
+      "Bash(git checkout:*)",
+      "Bash(xcodebuild:*)",
+      "WebFetch(domain:doc.rust-lang.org)",
+      "WebFetch(domain:docs.rs)",
+      "Bash(cargo check:*)",
+      "Bash(awk:*)",
+      "Bash(cargo metadata:*)",
+      "Bash(tee:*)",
+      "Bash(cat:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo fix:*)",
+      "Bash(cargo doc:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(cargo build:*)"
     ],
     "deny": [],
     "ask": []
   },
   "hooks": {},
-  "alwaysThinkingEnabled": false
+  "alwaysThinkingEnabled": true,
+  "feedbackSurveyState": {
+    "lastShownTime": 1754075865483
+  }
 }
