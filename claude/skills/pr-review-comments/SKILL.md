@@ -1,6 +1,6 @@
 ---
 name: pr-review-comments
-description: Fetch and load GitHub pull request review comments to help address reviewer feedback. Use when the user asks to review PR comments, address PR feedback, check reviewer comments, or work on PR revisions. Works with PR URLs or repo/PR-number combinations.
+description: Fetch and analyze GitHub PR review comments and code-level feedback using the prc CLI. Use this skill whenever the user mentions PR comments, PR feedback, reviewer feedback, review comments, addressing reviews, fixing PR issues, checking what reviewers said, loading PR context, or working on PR revisions. Accepts PR numbers (auto-detects repo), PR URLs, or owner/repo format.
 ---
 
 # PR Review Comments
