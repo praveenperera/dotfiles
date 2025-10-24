@@ -6,7 +6,10 @@
       "Bash(chmod:*)",
       "Bash(python3:*)",
       "Bash(./target/release/cmd prc:*)",
-      "Bash(cmd release:*)"
+      "Bash(cmd release:*)",
+      "Bash(git -C /Users/praveen/code/dotfiles ls-files codex/ claude/)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

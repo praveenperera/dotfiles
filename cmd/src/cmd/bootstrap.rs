@@ -157,8 +157,8 @@ const CONFIG_FILE_OR_DIR: &[&str] = &[
 
 const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
     ("nvim", ".config/nvim"),
-    ("codex", ".codex"),
     ("claude", ".claude"),
+    ("claude/CLAUDE.md", ".codex/AGENT.md"),
     ("opencode", ".config/opencode"),
 ];
 

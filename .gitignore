@@ -17,16 +17,6 @@ claude/todos/
 claude/plugins/
 claude/statsig/
 
-# .codex machine-specific files
-codex/auth.json
-codex/history.json
-codex/history.jsonl
-codex/internal_storage.json
-codex/update-check.json
-codex/version.json
-codex/log/
-codex/sessions/
-
 # .config/opencode machine-specific files
 opencode/.opencode.json
 opencode/history/
