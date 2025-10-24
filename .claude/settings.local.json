@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(prc:*)"
+      "Bash(prc:*)",
+      "Read(//Users/praveen/Downloads/mnt/skills/**)",
+      "Bash(chmod:*)",
+      "Bash(python3:*)",
+      "Bash(./target/release/cmd prc:*)",
+      "Bash(cmd release:*)"
     ],
     "deny": [],
     "ask": []
