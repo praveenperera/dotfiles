@@ -4,6 +4,7 @@
 - Don't add comments that need old removed code to make sense in context
 - If creating git commits never co author the commit with cluade or add any notes about claude just use my name
 - I like all my comments to start with a lowercase (unless they are doc comments ex starting with /// in rust), and only add important comments to explain why something is being done
+- Try to minimize nesting in functions
 
 # Rust Project Specific
 

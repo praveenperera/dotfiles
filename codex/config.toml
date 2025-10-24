@@ -1,11 +1,9 @@
 model = "gpt-5-codex"
 model_reasoning_effort = "high"
 
-[projects."/Users/praveen/code/*"]
-trust_level = "trusted"
-
-[projects."/Users/praveen/code"]
-trust_level = "trusted"
+projects = [
+    "/Users/praveen/code/**",
+]
 
 # [mcp_servers.github]
 # type = "http"
