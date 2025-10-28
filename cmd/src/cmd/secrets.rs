@@ -24,7 +24,7 @@ pub enum SecretsCmd {
         length: Option<usize>,
 
         /// Generate without symbols (alphanumeric only)
-        #[arg(long)]
+        #[arg(long, short = 'n')]
         no_symbols: bool,
     },
 
