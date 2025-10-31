@@ -9,7 +9,8 @@
       "Bash(cmd release:*)",
       "Bash(git -C /Users/praveen/code/dotfiles ls-files codex/ claude/)",
       "Bash(git rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

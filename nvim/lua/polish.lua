@@ -1,10 +1,20 @@
 local cove = require("config.cove_build")
 
--- Set filetype for terraform files
-vim.cmd("au BufRead,BufNewFile *.tfvars set filetype=terraform")
+-- set filetype for terraform files
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+    pattern = "*.tfvars",
+    callback = function()
+        vim.bo.filetype = "terraform"
+    end,
+})
 
--- Set filetype for jinja
-vim.cmd("au BufNewFile,BufRead *.j2,*.jinja set ft=jinja")
+-- set filetype for jinja
+vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
+    pattern = { "*.j2", "*.jinja" },
+    callback = function()
+        vim.bo.filetype = "jinja"
+    end,
+})
 
 local home = vim.fn.expand("$HOME")
 local project_path = home .. "/code/bitcoinppl/cove/*"
