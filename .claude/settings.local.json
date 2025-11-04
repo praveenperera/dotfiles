@@ -10,7 +10,10 @@
       "Bash(git -C /Users/praveen/code/dotfiles ls-files codex/ claude/)",
       "Bash(git rm:*)",
       "Bash(git add:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git config:*)",
+      "WebFetch(domain:www.anthropic.com)",
+      "WebFetch(domain:cloudartisan.com)"
     ],
     "deny": [],
     "ask": []
