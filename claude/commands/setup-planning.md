@@ -8,7 +8,8 @@ You are setting up a planning workflow.
 Planning topic: **$ARGUMENTS**
 
 **First, check if a planning topic was provided:**
-- If the line above shows "Planning topic: ****" (empty), simply ask the user what they want to plan and wait for their response
+
+- If the line above shows "Planning topic: \*\*\*\*" (empty), simply ask the user what they want to plan and wait for their response
 - Once you have the planning topic (either from arguments or from asking), proceed with the workflow below
 
 Follow these steps:
@@ -30,6 +31,7 @@ Follow these steps:
    - Structure it clearly with markdown headings
    - Base it on your codebase research
    - Be thorough and detailed, include specifics and edge cases
+   - If you did WebSearch research tell me what you found with relevant links
 
    **temp_docs/plan_progress.md:**
    - Initialize with a progress tracking structure
