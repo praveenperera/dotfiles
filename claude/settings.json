@@ -34,7 +34,7 @@
     "ask": []
   },
   "hooks": {},
-  "alwaysThinkingEnabled": false,
+  "alwaysThinkingEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
   }
