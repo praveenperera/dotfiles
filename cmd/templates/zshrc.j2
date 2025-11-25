@@ -45,10 +45,16 @@ alias aged=aged_func
 alias lg="lazygit"
 alias vim="nvim"
 alias term="nvim -c 'term'"
+
 alias cl="claude"
 alias clr="claude --resume"
-alias clp="claude --permission-mode plan"
 alias cld="claude --permission-mode bypassPermissions"
+
+alias clp="claude --permission-mode plan"
+alias cls="claude --permission-mode plan --model sonnet"
+
+alias clpo="claude --permission-mode plan --model opus"
+alias clps="claude --permission-mode plan --model sonnet"
 
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
