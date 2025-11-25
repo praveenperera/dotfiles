@@ -15,7 +15,8 @@
       "WebFetch(domain:www.anthropic.com)",
       "WebFetch(domain:cloudartisan.com)",
       "Bash(gemini --help:*)",
-      "Bash(xxd:*)"
+      "Bash(xxd:*)",
+      "WebFetch(domain:crates.io)"
     ],
     "deny": [],
     "ask": []
