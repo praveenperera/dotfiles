@@ -16,7 +16,10 @@
       "WebFetch(domain:cloudartisan.com)",
       "Bash(gemini --help:*)",
       "Bash(xxd:*)",
-      "WebFetch(domain:crates.io)"
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:opencode.ai)",
+      "Bash(git -C /Users/praveen/code/dotfiles show --name-only HEAD~5..HEAD)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
     "ask": []
