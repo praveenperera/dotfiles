@@ -8,6 +8,7 @@
 - Don't end comments with a period (periods within comments are fine)
 - Only add important comments to explain why something is being done
 - Try to minimize nesting in functions
+- All comments should make sense without the context if this particular conversation
 
 # Rust Project Specific
 
