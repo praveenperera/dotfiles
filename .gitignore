@@ -26,3 +26,4 @@ opencode/logs/
 opencode/cache/
 
 claude/plans/
+claude/stats-cache.json
