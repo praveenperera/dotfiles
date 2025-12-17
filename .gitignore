@@ -17,6 +17,7 @@ claude/todos/
 claude/plugins/
 claude/statsig/
 claude/plans
+claude/transcripts
 
 # .config/opencode machine-specific files
 opencode/.opencode.json
