@@ -4,6 +4,9 @@
     "oh-my-opencode",
     "opencode-openai-codex-auth"
   ],
+  "tools": {
+    "websearch_exa": false
+  },
   "provider": {
     "openai": {
       "options": {

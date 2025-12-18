@@ -20,7 +20,10 @@
       "WebFetch(domain:opencode.ai)",
       "Bash(git -C /Users/praveen/code/dotfiles show --name-only HEAD~5..HEAD)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(codex:*)"
+      "Bash(codex:*)",
+      "Bash(git clone:*)",
+      "Bash(ls:*)",
+      "Bash(xargs basename:*)"
     ],
     "deny": [],
     "ask": []
