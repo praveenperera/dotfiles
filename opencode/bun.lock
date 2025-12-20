@@ -4,7 +4,7 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "@opencode-ai/plugin": "1.0.168",
+        "@opencode-ai/plugin": "1.0.169",
         "opencode-openai-codex-auth": "code-yeongyu/opencode-openai-codex-auth#fix/orphaned-function-call-output-with-tools",
       },
     },
@@ -12,9 +12,9 @@
   "packages": {
     "@openauthjs/openauth": ["@openauthjs/openauth@0.4.3", "", { "dependencies": { "@standard-schema/spec": "1.0.0-beta.3", "aws4fetch": "1.0.20", "jose": "5.9.6" }, "peerDependencies": { "arctic": "^2.2.2", "hono": "^4.0.0" } }, "sha512-RlnjqvHzqcbFVymEwhlUEuac4utA5h4nhSK/i2szZuQmxTIqbGUxZ+nM+avM+VV4Ing+/ZaNLKILoXS3yrkOOw=="],
 
-    "@opencode-ai/plugin": ["@opencode-ai/plugin@1.0.168", "", { "dependencies": { "@opencode-ai/sdk": "1.0.168", "zod": "4.1.8" } }, "sha512-Y/mERc6bN47Smx/gvvXLqomu4/MBrTbKgMK/CnsjIKmcjolvoLjafogFg9LpAL+9jNMR5/M3Ixk0zlUFrSQFQA=="],
+    "@opencode-ai/plugin": ["@opencode-ai/plugin@1.0.169", "", { "dependencies": { "@opencode-ai/sdk": "1.0.169", "zod": "4.1.8" } }, "sha512-7f1cVIsc82+8t1K6dM3bo+X7amWuCrkFwGqQb+2awjdKIejTRme76D8NpzC+BuQhMbF9JiH7yzJrAvJ9MejWIg=="],
 
-    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.0.168", "", {}, "sha512-2186Cui6VsNfA5Xesg8vQbvD3e/83EFXhE8R7ml3YvTzcIh7WRY5sQjBDRp0t1wwA0fQDUAkLp2Ow7yMhqEXyw=="],
+    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.0.169", "", {}, "sha512-c9XyrvQlZOQ+WxtD3io+VKkwhH1g82e9eNgczpXe3h+rkt5LANFgiwCGSHVArD0p/5FiPQPUEGk7mwqAjGL/GQ=="],
 
     "@oslojs/asn1": ["@oslojs/asn1@1.0.0", "", { "dependencies": { "@oslojs/binary": "1.0.0" } }, "sha512-zw/wn0sj0j0QKbIXfIlnEcTviaCzYOY3V5rAyjR6YtOByFtJiT574+8p9Wlach0lZH9fddD4yb9laEAIl4vXQA=="],
 
