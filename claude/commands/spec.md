@@ -1,57 +1,81 @@
 ---
-description: Create planning workflow files and maintain them automatically
-argument-hint: [what to plan]
+description: Interview-driven spec writing with planning workflow
+argument-hint: [vague idea or feature name]
 ---
 
-You are setting up a planning workflow.
+You are helping the user turn a vague idea into a comprehensive spec through in-depth interviewing.
 
-Planning topic: **$ARGUMENTS**
+Feature idea: **$ARGUMENTS**
 
-**First, check if a planning topic was provided:**
+**Phase 1: Get the idea**
 
-- If the line above shows "Planning topic: \*\*\*\*" (empty), simply ask the user what they want to plan and wait for their response
-- Once you have the planning topic (either from arguments or from asking), proceed with the workflow below
+If the line above shows "Feature idea: \*\*\*\*" (empty), ask the user what they want to build and wait for their response.
 
-Follow these steps:
+**Phase 2: Research the codebase**
 
-1. **Create the directory structure:**
-   - Create `temp_docs/` directory in the current working directory if it doesn't exist
+Before interviewing, research the codebase to understand:
+- Relevant files, patterns, and existing implementations
+- Dependencies, constraints, or related functionality
+- Use WebSearch if needed for external context
 
-2. **Research the codebase:**
-   - Use appropriate tools (Grep, Glob, Read) to understand the codebase related to the planning topic
-   - Identify relevant files, patterns, and existing implementations
-   - Note any dependencies, constraints, or related functionality
-   - Use WebSearch to find relevant documentation, blogs, or forums for further research if needed
+**Phase 3: Interview (CRITICAL)**
 
-3. **Create and populate the planning files:**
+Interview the user in detail using the AskUserQuestion tool about literally anything: technical implementation, UI & UX, concerns, tradeoffs, etc. Make sure the questions are NOT obvious.
 
-   **temp_docs/plan.md:**
-   - Write a comprehensive implementation plan
-   - Include: overview, approach, detailed steps, considerations, potential challenges
-   - Structure it clearly with markdown headings
-   - Base it on your codebase research
-   - Be thorough and detailed, include specifics and edge cases
-   - If you did WebSearch research tell me what you found with relevant links
+Be very in-depth and continue interviewing continually until it's complete.
 
-   **temp_docs/plan_progress.md:**
-   - Initialize with a progress tracking structure
-   - List the main tasks/steps from the plan
-   - Mark all as pending initially
-   - Include a format that's easy to update (e.g., checkboxes or status indicators)
+**Question Guidelines:**
+- Don't ask surface-level questions - probe deeper
+- Edge cases, failure modes, and integration points
+- Non-obvious implications of design decisions
+- "What if" scenarios
+- Performance, scalability, and maintenance concerns
+- Assumptions that might be hiding complexity
+- User mental models and expectations
+- Error states and recovery paths
+- Security implications and attack surfaces
+- Data lifecycle and cleanup
+- UI/UX specifics and user flows
+- Tradeoffs between approaches
 
-   **temp_docs/plan_context.md:**
-   - Initialize with sections for:
-     - Important learnings and context from codebase research
-     - Known blockers or challenges
-     - Unanswered questions that need resolution
-   - Populate with initial findings from your research
+**Interview Loop:**
+1. Ask 1-4 probing questions at a time using AskUserQuestion
+2. Incorporate answers into your understanding
+3. Repeat until you have comprehensive understanding
+4. Do NOT stop interviewing prematurely - a good spec requires thorough exploration
 
-4. **Ongoing maintenance (IMPORTANT):**
-   Throughout this conversation, automatically maintain these files:
-   - Update `plan_progress.md` as tasks are started and completed
-   - Add new learnings, blockers, suprising findings, and questions to `plan_context.md`
-   - Update `plan.md` if the approach or steps change
-   - Do this proactively without being asked
+**Phase 4: Create the spec files**
 
-5. **Confirm:**
-   After creating the files, provide a brief summary of the plan and confirm the planning workflow is active.
+Once the interview is complete, derive a short kebab-case feature name and create:
+
+```
+temp_docs/<feature-name>/
+├── spec.md        # The comprehensive spec
+├── progress.md    # Task tracking with checkboxes
+└── context.md     # Learnings, blockers, questions
+```
+
+**spec.md contents:**
+- Overview and goals
+- Detailed requirements from the interview
+- Technical approach
+- Edge cases and error handling
+- UI/UX specifics (if applicable)
+- Open questions or future considerations
+
+**progress.md contents:**
+- Checkbox list of implementation tasks
+- All marked as pending initially
+
+**context.md contents:**
+- Important learnings from codebase research
+- Known blockers or challenges
+- Any remaining questions
+
+**Phase 5: Ongoing maintenance**
+
+Throughout the conversation, automatically maintain these files:
+- Update `progress.md` as tasks are started and completed
+- Add new learnings, blockers, surprising findings to `context.md`
+- Update `spec.md` if requirements change
+- Do this proactively without being asked
