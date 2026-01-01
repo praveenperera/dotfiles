@@ -14,6 +14,7 @@ If the line above shows "Feature idea: \*\*\*\*" (empty), ask the user what they
 **Phase 2: Research the codebase**
 
 Before interviewing, research the codebase to understand:
+
 - Relevant files, patterns, and existing implementations
 - Dependencies, constraints, or related functionality
 - Use WebSearch if needed for external context
@@ -25,6 +26,7 @@ Interview the user in detail using the AskUserQuestion tool about literally anyt
 Be very in-depth and continue interviewing continually until it's complete.
 
 **Question Guidelines:**
+
 - Don't ask surface-level questions - probe deeper
 - Edge cases, failure modes, and integration points
 - Non-obvious implications of design decisions
@@ -39,6 +41,7 @@ Be very in-depth and continue interviewing continually until it's complete.
 - Tradeoffs between approaches
 
 **Interview Loop:**
+
 1. Ask 1-4 probing questions at a time using AskUserQuestion
 2. Incorporate answers into your understanding
 3. Repeat until you have comprehensive understanding
@@ -46,16 +49,21 @@ Be very in-depth and continue interviewing continually until it's complete.
 
 **Phase 4: Create the spec files**
 
-Once the interview is complete, derive a short kebab-case feature name and create:
+Once the interview is complete:
+
+1. Derive the project ID from the current git repo name: `basename $(git rev-parse --show-toplevel) | sed 's/-wk.*$//'`
+2. Derive a short kebab-case feature name from the feature being planned
+3. Create the spec files:
 
 ```
-temp_docs/<feature-name>/
+~/.claude/plans/<project-id>/<feature-name>/
 ├── spec.md        # The comprehensive spec
 ├── progress.md    # Task tracking with checkboxes
 └── context.md     # Learnings, blockers, questions
 ```
 
 **spec.md contents:**
+
 - Overview and goals
 - Detailed requirements from the interview
 - Technical approach
@@ -64,10 +72,12 @@ temp_docs/<feature-name>/
 - Open questions or future considerations
 
 **progress.md contents:**
+
 - Checkbox list of implementation tasks
 - All marked as pending initially
 
 **context.md contents:**
+
 - Important learnings from codebase research
 - Known blockers or challenges
 - Any remaining questions
@@ -75,6 +85,7 @@ temp_docs/<feature-name>/
 **Phase 5: Ongoing maintenance**
 
 Throughout the conversation, automatically maintain these files:
+
 - Update `progress.md` as tasks are started and completed
 - Add new learnings, blockers, surprising findings to `context.md`
 - Update `spec.md` if requirements change
