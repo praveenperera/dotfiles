@@ -14,6 +14,5 @@ Ask non-obvious, in-depth questions. Continue interviewing until the topic is fu
 
 **Create the spec files:**
 
-1. Derive the project ID from the current git repo name: `basename $(git rev-parse --show-toplevel) | sed 's/-wk.*$//'`
-2. Derive a short kebab-case feature name from the topic being explored
-3. Create the spec file at `~/.claude/plans/<project-id>/<feature-name>/spec.md`
+1. Derive a short kebab-case feature name from the topic being explored
+2. Create the spec file at `./_cl_plans/<feature-name>/spec.md` (in the root of the project)
