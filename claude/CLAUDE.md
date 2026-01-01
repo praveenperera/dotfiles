@@ -13,7 +13,8 @@
 # Rust Project Specific
 
 - `info` and `error` logs are okay to start capitalized
-- Generate a docs for a crate with cargo doc -p <crate-name>, this will then be available at target/doc/<crate-name>/index.html, if you are unsure about how to use a crate, please generate the docs and read them
+- Generate docs for a crate with `cargo doc -p <crate-name>`, this will then be available at `target/doc/<crate-name>/index.html`, if you are unsure about how to use a crate, please generate the docs and read them
+- If docs have already been generated, check `target/doc/` for existing documentation of the project and its dependencies before regenerating
 - Whenever you get clippy errors first run cargo fix --allow-dirty and then fix whatever remains
 - I always prefer eyre (color-eyre if cli) to anyhow
 - if-let chains are stable in Rust now, always collapse nested if-lets into a single statement using `&&`
