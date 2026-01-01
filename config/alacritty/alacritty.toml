@@ -63,6 +63,12 @@ chars = "\u0002\""
 key = "D"
 mods = "Command|Shift"
 
+# tmux pane zoom
+[[keyboard.bindings]]
+chars = "\u0002z"
+key = "E"
+mods = "Command|Shift"
+
 [[keyboard.bindings]]
 chars = "\u001Bj"
 key = "J"
