@@ -56,7 +56,7 @@ Once the interview is complete:
 3. Create the spec files:
 
 ```
-./_cl_plans/<feature-name>/spec.md (in the root of the project)
+./_plans/<feature-name>/spec.md (in the root of the project)
   ├── spec.md        # The comprehensive spec
   ├── progress.md    # Task tracking with checkboxes
   └── context.md     # Learnings, blockers, questions

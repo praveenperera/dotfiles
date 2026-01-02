@@ -18,7 +18,7 @@ to ask if I want the feedback incorporated into the plan if we are in plan mode 
 If the user asks to create a spec.md file do the following:
 
 1. Derive a short kebab-case feature name from the topic being explored
-2. Create the spec file at `./_cl_plans/<feature-name>/spec.md` (in the root of the project)
+2. Create the spec file at `./_plans/<feature-name>/spec.md` (in the root of the project)
 3. Add this note at the end of spec.md:
 
 ```
