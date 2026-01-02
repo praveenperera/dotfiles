@@ -7,45 +7,28 @@ use xshell::{cmd, Shell};
 
 pub const VAULT: &str = "CLI";
 
-pub fn random_ascii(length: usize) -> String {
-    const CHARSET: &[u8] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#%^&|-_=+*";
+fn random_with_charset(length: usize, charset: &[u8]) -> String {
     let mut rng = rand::rng();
-    let char_num = Uniform::new(0, CHARSET.len()).expect("invalid char set");
-
+    let dist = Uniform::new(0, charset.len()).expect("invalid charset");
     (0..length)
-        .map(|_| CHARSET[rng.sample(char_num)] as char)
+        .map(|_| charset[rng.sample(dist)] as char)
         .collect()
+}
+
+pub fn random_ascii(length: usize) -> String {
+    random_with_charset(length, b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#%^&|-_=+*")
 }
 
 pub fn random_alpha(length: usize) -> String {
-    const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    let mut rng = rand::rng();
-    let char_num = Uniform::new(0, CHARSET.len()).expect("invalid char set");
-
-    (0..length)
-        .map(|_| CHARSET[rng.sample(char_num)] as char)
-        .collect()
+    random_with_charset(length, b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 }
 
 pub fn random_base32(length: usize) -> String {
-    const CHARSET: &[u8] = b"23456789abcdefghjkmnopqrstuvwxyz";
-    let mut rng = rand::rng();
-    let char_num = Uniform::new(0, CHARSET.len()).expect("invalid char set");
-
-    (0..length)
-        .map(|_| CHARSET[rng.sample(char_num)] as char)
-        .collect()
+    random_with_charset(length, b"23456789abcdefghjkmnopqrstuvwxyz")
 }
 
 pub fn random_pin(length: usize) -> String {
-    const CHARSET: &[u8] = b"01234567890";
-    let mut rng = rand::rng();
-    let char_num = Uniform::new(0, CHARSET.len()).expect("invalid char set");
-
-    (0..length)
-        .map(|_| CHARSET[rng.sample(char_num)] as char)
-        .collect()
+    random_with_charset(length, b"0123456789")
 }
 
 pub fn random_alpha_numeric(length: usize) -> String {
