@@ -23,7 +23,13 @@
       "Bash(codex:*)",
       "Bash(git clone:*)",
       "Bash(ls:*)",
-      "Bash(xargs basename:*)"
+      "Bash(xargs basename:*)",
+      "Bash(tmux source-file:*)",
+      "Bash(tmux list-windows:*)",
+      "Bash(tmux move-window:*)",
+      "Bash(tmux select-window:*)",
+      "Bash(bash -c:*)",
+      "Bash(/Users/praveen/code/dotfiles/cmd/target/release/cmd tmux:*)"
     ],
     "deny": [],
     "ask": []

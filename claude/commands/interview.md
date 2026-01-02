@@ -12,7 +12,10 @@ Interview me in detail using the AskUserQuestionTool about $ARGUMENTS covering:
 
 Ask non-obvious, in-depth questions. Continue interviewing until the topic is fully explored.
 
-**Create the spec files:**
+After the interview is complete use the AskUserQuestion
+to ask if I want the feedback incorporated into the plan if we are in plan mode or to create a spec.md file.
+
+If the user asks to create a spec.md file do the following:
 
 1. Derive a short kebab-case feature name from the topic being explored
 2. Create the spec file at `./_cl_plans/<feature-name>/spec.md` (in the root of the project)
