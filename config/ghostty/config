@@ -49,6 +49,9 @@ keybind = cmd+shift+d=text:\x02"
 # tmux pane zoom
 keybind = cmd+shift+e=text:\x02z
 
+# tmux move window after
+keybind = cmd+shift+m=text:\x02m
+
 # tmux tab management
 keybind = cmd+t=text:\x02c
 keybind = cmd+w=text:\x02x

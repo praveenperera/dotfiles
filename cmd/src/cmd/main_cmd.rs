@@ -91,6 +91,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::generate::GenerateCmd,
     },
 
+    /// Tmux operations
+    #[command(arg_required_else_help = true)]
+    Tmux {
+        #[command(subcommand)]
+        subcommand: crate::cmd::tmux::TmuxCmd,
+    },
+
     /// Fetch PR comments and their code references from GitHub
     #[command(visible_alias = "prc")]
     PrContext(#[command(flatten)] PrContextArgs),

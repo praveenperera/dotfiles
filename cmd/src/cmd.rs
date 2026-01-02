@@ -4,6 +4,7 @@ pub mod generate;
 pub mod main_cmd;
 pub mod secrets;
 pub mod terraform;
+pub mod tmux;
 pub mod vault;
 
 use eyre::Result;
@@ -51,6 +52,10 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::Generate { subcommand } => {
             let generate_flags = generate::Generate { subcommand };
             generate::run_with_flags(&sh, generate_flags)
+        }
+        MainCmd::Tmux { subcommand } => {
+            let tmux_flags = tmux::Tmux { subcommand };
+            tmux::run_with_flags(&sh, tmux_flags)
         }
         MainCmd::PrContext(args) => crate::pr_context::run_with_flags(&sh, args)
     }
