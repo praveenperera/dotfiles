@@ -9,7 +9,6 @@ pub struct Github {
 impl Github {
     const BASE_URL: &'static str = "https://api.github.com";
 
-
     pub fn new(token: Option<String>) -> Result<Self> {
         let client = reqwest::Client::builder()
             .user_agent("pr-context-cli")
@@ -27,7 +26,10 @@ impl Github {
         let mut all_comments = Vec::new();
         let mut url = Some(format!(
             "{}/repos/{}/{}/pulls/{}/comments?per_page=100",
-            Self::BASE_URL, owner, repo, pr_number
+            Self::BASE_URL,
+            owner,
+            repo,
+            pr_number
         ));
 
         while let Some(current_url) = url {
@@ -64,7 +66,10 @@ impl Github {
         let mut all_comments = Vec::new();
         let mut url = Some(format!(
             "{}/repos/{}/{}/issues/{}/comments?per_page=100",
-            Self::BASE_URL, owner, repo, pr_number
+            Self::BASE_URL,
+            owner,
+            repo,
+            pr_number
         ));
 
         while let Some(current_url) = url {
@@ -154,7 +159,9 @@ pub fn parse_url(url: &str) -> Result<(String, String, u64)> {
 
     // need at least: owner/repo/pull/number
     if parts.len() < 4 {
-        eyre::bail!("Invalid GitHub PR URL format. Expected: https://github.com/owner/repo/pull/123");
+        eyre::bail!(
+            "Invalid GitHub PR URL format. Expected: https://github.com/owner/repo/pull/123"
+        );
     }
 
     if parts[2] != "pull" {
