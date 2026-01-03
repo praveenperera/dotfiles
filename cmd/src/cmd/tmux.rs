@@ -83,7 +83,13 @@ fn clear_bell(sh: &Shell) -> Result<()> {
     Ok(())
 }
 
-fn notify(sh: &Shell, kinds: &[NotifyKind], message: Option<&str>, title: &str, force: bool) -> Result<()> {
+fn notify(
+    sh: &Shell,
+    kinds: &[NotifyKind],
+    message: Option<&str>,
+    title: &str,
+    force: bool,
+) -> Result<()> {
     // Get the pane ID where this command is running (not the active pane)
     let pane = std::env::var("TMUX_PANE").unwrap_or_default();
     if pane.is_empty() {
@@ -96,6 +102,7 @@ fn notify(sh: &Shell, kinds: &[NotifyKind], message: Option<&str>, title: &str, 
         .quiet()
         .read()
         .unwrap_or_default();
+
     let window_info = window_info.trim().trim_start_matches("🔔");
     let (window_index, window_name) = window_info
         .split_once(':')
