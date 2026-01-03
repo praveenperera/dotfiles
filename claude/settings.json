@@ -37,7 +37,19 @@
     "deny": [],
     "ask": []
   },
-  "hooks": {},
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd tmux notify bell,macos"
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
     "feature-dev@claude-plugins-official": true,
     "github@claude-plugins-official": true,
