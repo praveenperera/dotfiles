@@ -91,7 +91,8 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
     let (owner, repo, pr_number) = parse_input(&args.repo_or_url, args.pr_number)?;
 
     let runtime = tokio::runtime::Runtime::new()?;
-    let mut pr_context = runtime.block_on(fetch_pr_context(&owner, &repo, pr_number, &args.token))?;
+    let mut pr_context =
+        runtime.block_on(fetch_pr_context(&owner, &repo, pr_number, &args.token))?;
 
     // filter to only comments with code references if requested
     if args.code_only {
@@ -133,12 +134,12 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
 }
 
 pub fn run_with_flags(_sh: &Shell, args: crate::cmd::main_cmd::PrContextArgs) -> Result<()> {
-
     // parse the input to extract owner, repo, and pr_number
     let (owner, repo, pr_number) = parse_input(&args.repo_or_url, args.pr_number)?;
 
     let runtime = tokio::runtime::Runtime::new()?;
-    let mut pr_context = runtime.block_on(fetch_pr_context(&owner, &repo, pr_number, &args.token))?;
+    let mut pr_context =
+        runtime.block_on(fetch_pr_context(&owner, &repo, pr_number, &args.token))?;
 
     // filter to only comments with code references if requested
     if args.code_only {
@@ -249,7 +250,8 @@ async fn fetch_pr_context(
 
 // detect GitHub owner/repo from git remote origin
 fn git_remote_repo(sh: &Shell) -> Result<(String, String)> {
-    let output = sh.cmd("git")
+    let output = sh
+        .cmd("git")
         .args(&["remote", "get-url", "origin"])
         .output()
         .context("Failed to run git remote get-url origin")?;
@@ -268,7 +270,8 @@ fn git_remote_repo(sh: &Shell) -> Result<(String, String)> {
     // HTTPS: https://github.com/owner/repo.git
 
     // find "github.com" in the URL
-    let github_pos = remote_url.find("github.com")
+    let github_pos = remote_url
+        .find("github.com")
         .ok_or_else(|| eyre::eyre!("Not a GitHub repository URL: {}", remote_url))?;
 
     // find the separator (: for SSH, / for HTTPS) after github.com
@@ -315,12 +318,13 @@ fn parse_input(input: &str, pr_number: Option<u64>) -> Result<(String, String, u
     // otherwise treat as owner/repo format
     let parts: Vec<&str> = input.split('/').collect();
     if parts.len() != 2 {
-        eyre::bail!("Repository must be in format 'owner/repo', a PR number, or a valid GitHub PR URL");
+        eyre::bail!(
+            "Repository must be in format 'owner/repo', a PR number, or a valid GitHub PR URL"
+        );
     }
 
-    let pr_num = pr_number.ok_or_else(|| {
-        eyre::eyre!("PR number is required when using 'owner/repo' format")
-    })?;
+    let pr_num = pr_number
+        .ok_or_else(|| eyre::eyre!("PR number is required when using 'owner/repo' format"))?;
 
     Ok((parts[0].to_string(), parts[1].to_string(), pr_num))
 }
@@ -329,8 +333,14 @@ fn parse_input(input: &str, pr_number: Option<u64>) -> Result<(String, String, u
 fn format_as_markdown(pr_context: &PrContext, compact: bool) -> String {
     let mut output = String::new();
 
-    output.push_str(&format!("# PR #{} - {}\n\n", pr_context.pr_number, pr_context.repo));
-    output.push_str(&format!("**Total comments:** {}\n\n", pr_context.comments.len()));
+    output.push_str(&format!(
+        "# PR #{} - {}\n\n",
+        pr_context.pr_number, pr_context.repo
+    ));
+    output.push_str(&format!(
+        "**Total comments:** {}\n\n",
+        pr_context.comments.len()
+    ));
 
     for comment in &pr_context.comments {
         output.push_str("---\n\n");
