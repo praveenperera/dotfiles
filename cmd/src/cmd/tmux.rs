@@ -1,15 +1,12 @@
 use clap::{Args, Subcommand, ValueEnum};
-use derive_more::Display;
 use eyre::Result;
 use xshell::{cmd, Shell};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum NotifyKind {
     /// Send BEL character (marks tmux window)
-    #[display("bell")]
     Bell,
     /// Send macOS desktop notification via osascript
-    #[display("macos")]
     Macos,
 }
 
@@ -154,4 +151,13 @@ fn notify(
         }
     }
     Ok(())
+}
+
+impl std::fmt::Display for NotifyKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NotifyKind::Bell => write!(f, "bell"),
+            NotifyKind::Macos => write!(f, "macos"),
+        }
+    }
 }

@@ -28,7 +28,6 @@ serde_yaml = "0.9"
 # utils
 rand = "0.9"
 convert_case = "0.8.0"
-derive_more = { version = "2.0", features = ["display"] }
 
 # encryption
 age = "0.11"
