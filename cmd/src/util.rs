@@ -16,11 +16,17 @@ fn random_with_charset(length: usize, charset: &[u8]) -> String {
 }
 
 pub fn random_ascii(length: usize) -> String {
-    random_with_charset(length, b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#%^&|-_=+*")
+    random_with_charset(
+        length,
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#%^&|-_=+*",
+    )
 }
 
 pub fn random_alpha(length: usize) -> String {
-    random_with_charset(length, b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+    random_with_charset(
+        length,
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+    )
 }
 
 pub fn random_base32(length: usize) -> String {

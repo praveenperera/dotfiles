@@ -57,6 +57,6 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
             let tmux_flags = tmux::Tmux { subcommand };
             tmux::run_with_flags(&sh, tmux_flags)
         }
-        MainCmd::PrContext(args) => crate::pr_context::run_with_flags(&sh, args)
+        MainCmd::PrContext(args) => crate::pr_context::run_with_flags(&sh, args),
     }
 }
