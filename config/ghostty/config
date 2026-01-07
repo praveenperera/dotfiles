@@ -68,8 +68,8 @@ keybind = cmd+physical:eight=text:\x028
 keybind = cmd+physical:nine=text:\x029
 
 # rename window/tab
-keybind = cmd+comma=text:\x02,
-keybind = cmd+period=text:\x02$
+keybind = cmd+period=text:\x02,
+keybind = cmd+left_bracket=text:\x02$
 
 # delete by word
 keybind = alt+backspace=text:\x17
