@@ -49,7 +49,10 @@
       "Bash(tmux:*)",
       "Bash(cmd tmux clear-bell:*)",
       "Bash(brew search:*)",
-      "Bash(brew info:*)"
+      "Bash(brew info:*)",
+      "Bash(cargo search:*)",
+      "Bash(tree:*)",
+      "WebFetch(domain:rust-lang.github.io)"
     ],
     "deny": [],
     "ask": []
