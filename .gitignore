@@ -28,3 +28,5 @@ opencode/cache/
 
 claude/plans/
 claude/stats-cache.json
+/claude/paste-cache
+/claude/cache
