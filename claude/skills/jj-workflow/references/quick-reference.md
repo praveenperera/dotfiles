@@ -34,9 +34,9 @@
 
 | Command | Purpose |
 |---------|---------|
-| `jj rebase -r X -d Y` | Move commit X onto Y |
-| `jj rebase -s X -d Y` | Move X and descendants onto Y |
-| `jj rebase -d master@origin` | Rebase current work onto latest master |
+| `jj rebase -r X -o Y` | Move commit X onto Y |
+| `jj rebase -s X -o Y` | Move X and descendants onto Y |
+| `jj rebase -o master@origin` | Rebase current work onto latest master |
 
 ## Bookmarks
 
@@ -97,5 +97,5 @@ jj log -r 'master..@-'
 jj log -r 'master..@-' --no-graph -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
 
 # update and rebase in one go
-jj git fetch && jj rebase -d master@origin
+jj git fetch && jj rebase -o master@origin
 ```

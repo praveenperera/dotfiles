@@ -20,14 +20,14 @@ master ─── A ─── B ─── C
 
 ```bash
 jj git fetch
-jj rebase -d master@origin  # if needed
+jj rebase -o master@origin  # if needed
 ```
 
 ### 2. Split work if needed
 
 ```bash
 jj split "glob:src/feature-a/*"
-jj describe -r @- -m "feat: feature A"
+jj describe @- -m "feat: feature A"
 # repeat for each feature...
 ```
 

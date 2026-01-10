@@ -42,15 +42,15 @@ To split into 4 features:
 ```bash
 # extract feature A
 jj split "glob:src/feature-a/*"
-jj describe -r @- -m "feat: feature A"
+jj describe @- -m "feat: feature A"
 
 # extract feature B from remainder
 jj split "glob:src/feature-b/*"
-jj describe -r @- -m "feat: feature B"
+jj describe @- -m "feat: feature B"
 
 # extract feature C
 jj split "glob:src/feature-c/*"
-jj describe -r @- -m "feat: feature C"
+jj describe @- -m "feat: feature C"
 
 # remainder is feature D
 jj describe -m "feat: feature D"

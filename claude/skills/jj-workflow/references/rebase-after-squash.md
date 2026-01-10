@@ -21,7 +21,7 @@ jj doesn't care that A was squashed. It just moves B onto the new master:
 
 ```bash
 jj git fetch
-jj rebase -s <B> -d master@origin
+jj rebase -s <B> -o master@origin
 ```
 
 That's it. The original A commits are abandoned cleanly. B, C, D all rebase onto master with no confusion.
@@ -38,7 +38,7 @@ jj git fetch
 jj log -r 'master@origin..@'
 
 # 3. Rebase B and all descendants onto master
-jj rebase -s <B-change-id> -d master@origin
+jj rebase -s <B-change-id> -o master@origin
 
 # 4. Verify clean history
 jj log -r 'master@origin..@'
@@ -76,4 +76,4 @@ jj git push
 
 | Git | jj |
 |-----|-----|
-| Painful multi-step with conflicts | `jj rebase -s B -d master@origin` |
+| Painful multi-step with conflicts | `jj rebase -s B -o master@origin` |

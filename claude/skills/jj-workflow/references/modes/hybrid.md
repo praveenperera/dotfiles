@@ -27,13 +27,13 @@ Ask: does this commit depend on another's code?
 ### 3. Rebase independent commits onto master
 
 ```bash
-jj rebase -r <change-id-C> -d master
+jj rebase -r <change-id-C> -o master
 ```
 
 ### 4. Rebase dependent commits to correct parent
 
 ```bash
-jj rebase -r <change-id-D> -d <change-id-B>
+jj rebase -r <change-id-D> -o <change-id-B>
 ```
 
 ### 5. Create bookmarks and push

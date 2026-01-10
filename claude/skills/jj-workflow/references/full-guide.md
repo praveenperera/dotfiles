@@ -295,15 +295,15 @@ To split one big change into 4 feature commits:
 
 # First split: extract feature A
 jj split "glob:src/feature-a/*"
-jj describe -r @- -m "feat: implement feature A"
+jj describe @- -m "feat: implement feature A"
 
 # Second split: extract feature B from remainder
 jj split "glob:src/feature-b/*"
-jj describe -r @- -m "feat: implement feature B"
+jj describe @- -m "feat: implement feature B"
 
 # Third split: extract feature C
 jj split "glob:src/feature-c/*"
-jj describe -r @- -m "feat: implement feature C"
+jj describe @- -m "feat: implement feature C"
 
 # What remains is feature D
 jj describe -m "feat: implement feature D"
@@ -367,11 +367,11 @@ jj diff
 ```bash
 # Split out first feature
 jj split "glob:src/auth/*"
-jj describe -r @- -m "feat(auth): add login flow"
+jj describe @- -m "feat(auth): add login flow"
 
 # Split out second feature (builds on first)
 jj split "glob:src/api/*"
-jj describe -r @- -m "feat(api): add user endpoints"
+jj describe @- -m "feat(api): add user endpoints"
 
 # Remaining work is third feature
 jj describe -m "feat(ui): add dashboard"
@@ -445,7 +445,7 @@ jj git push
 jj git fetch
 
 # Rebase remaining stack onto new main
-jj rebase -s pr/api -d main
+jj rebase -s pr/api -o main
 
 # Update PR #2 to target main now
 # (manually update on GitHub or use gh CLI)
@@ -467,9 +467,9 @@ jj new main -m "feature work"
 # === WORK & SPLIT ===
 # ... make your changes ...
 jj split "glob:src/feature-a/*"
-jj describe -r @- -m "feat: feature A"
+jj describe @- -m "feat: feature A"
 jj split "glob:src/feature-b/*"
-jj describe -r @- -m "feat: feature B"
+jj describe @- -m "feat: feature B"
 jj describe -m "feat: feature C"
 
 # === BOOKMARK ===
@@ -505,9 +505,9 @@ jj new main -m "working"
 
 # Split into commits (same as stacked workflow)
 jj split "glob:src/auth/*"
-jj describe -r @- -m "feat: auth feature"
+jj describe @- -m "feat: auth feature"
 jj split "glob:src/api/*"
-jj describe -r @- -m "feat: api feature"
+jj describe @- -m "feat: api feature"
 jj describe -m "feat: ui feature"
 ```
 
@@ -525,10 +525,10 @@ The key operation is rebasing each commit directly onto main:
 jj log -r 'main..@-' --no-graph -T 'change_id ++ " " ++ description.first_line() ++ "\n"'
 
 # Rebase B onto main (breaking it from A)
-jj rebase -r B -d main
+jj rebase -r B -o main
 
 # Rebase C onto main (breaking it from B)
-jj rebase -r C -d main
+jj rebase -r C -o main
 ```
 
 **Resulting graph:**
@@ -608,8 +608,8 @@ jj resolve  # Opens merge tool
 jj git fetch
 jj new main -m "working"
 # ... make changes ...
-jj split "glob:src/auth/*" && jj describe -r @- -m "feat: auth"
-jj split "glob:src/api/*" && jj describe -r @- -m "feat: api"
+jj split "glob:src/auth/*" && jj describe @- -m "feat: auth"
+jj split "glob:src/api/*" && jj describe @- -m "feat: api"
 jj describe -m "feat: ui"
 
 # === MAKE INDEPENDENT ===
@@ -618,8 +618,8 @@ jj log -r 'main..@-' --no-graph
 # Assuming: main → A → B → C → @
 
 # Rebase B and C onto main independently
-jj rebase -r @-- -d main  # B onto main
-jj rebase -r @- -d main   # C onto main
+jj rebase -r @-- -o main  # B onto main
+jj rebase -r @- -o main   # C onto main
 
 # === BOOKMARK ===
 jj log  # find the change IDs
@@ -679,10 +679,10 @@ jj log -r 'main..@-' --no-graph -T 'change_id ++ " " ++ description.first_line()
 # def444 feat D
 
 # Step 2: Extract C to be independent (rebase onto main)
-jj rebase -r cde333 -d main
+jj rebase -r cde333 -o main
 
 # Step 3: Rebase D to follow B (skipping C)
-jj rebase -r def444 -d bcd222
+jj rebase -r def444 -o bcd222
 
 # Step 4: Verify structure
 jj log
@@ -769,10 +769,10 @@ jj log -r 'main@origin'
 
 ```bash
 # After fetch, main@origin has new commits
-jj rebase -d main@origin -s 'roots(main@origin..@)'
+jj rebase -o main@origin -s 'roots(main@origin..@)'
 
 # Or more simply, if you have one feature branch:
-jj rebase -d main@origin
+jj rebase -o main@origin
 ```
 
 ### What Happens to Your Commits
@@ -1004,8 +1004,8 @@ jj bookmark create pr/new-name -r @
 | `jj squash --into X` | Squash @ into X | Move changes to specific commit | Complex rebase |
 | `jj squash --from X` | Squash X into its parent | Combine older commits | `git rebase -i` (squash) |
 | **Reordering & Rebasing** |
-| `jj rebase -r X -d Y` | Move commit X onto Y | Reorder commits | `git rebase -i` (move) |
-| `jj rebase -s X -d Y` | Move X and descendants onto Y | Rebase branch | `git rebase Y X` |
+| `jj rebase -r X -o Y` | Move commit X onto Y | Reorder commits | `git rebase -i` (move) |
+| `jj rebase -s X -o Y` | Move X and descendants onto Y | Rebase branch | `git rebase Y X` |
 | `jj rebase -r X -A Y` | Insert X after Y | Insert in sequence | Complex rebase |
 | `jj rebase -r X -B Y` | Insert X before Y | Insert in sequence | Complex rebase |
 | **Bookmarks (Branches)** |

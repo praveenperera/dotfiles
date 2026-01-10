@@ -90,6 +90,9 @@ jj (Jujutsu) is a Git-compatible version control system with a simpler mental mo
 - You want comprehensive documentation or deep jj vs Git comparison
 - Other references don't answer your question
 
+**See `examples/` folder for:**
+- Complete copy-paste workflow scripts (stacked, independent, post-squash-merge)
+
 ---
 
 ## Quick Start Commands

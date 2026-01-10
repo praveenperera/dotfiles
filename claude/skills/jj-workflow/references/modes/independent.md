@@ -23,8 +23,8 @@ jj log -r 'master..@-' --no-graph -T 'change_id.short() ++ " " ++ description.fi
 ### 2. Rebase each onto master (except first which is already there)
 
 ```bash
-jj rebase -r <change-id-B> -d master
-jj rebase -r <change-id-C> -d master
+jj rebase -r <change-id-B> -o master
+jj rebase -r <change-id-C> -o master
 ```
 
 ### 3. Create bookmarks

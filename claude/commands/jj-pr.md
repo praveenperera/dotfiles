@@ -59,13 +59,13 @@ master ─── A ─── B ─── C
 1. **Ensure up-to-date with master:**
    ```bash
    jj git fetch
-   jj rebase -d master@origin  # If needed
+   jj rebase -o master@origin  # If needed
    ```
 
 2. **If work needs splitting, split first:**
    ```bash
    jj split "glob:src/feature-a/*"
-   jj describe -r @- -m "feat: feature A"
+   jj describe @- -m "feat: feature A"
    # Repeat for each feature...
    ```
 
@@ -116,8 +116,8 @@ master ────┼── B ──────── PR #2 (base: master)
 
 2. **Rebase each commit onto master (except first, which is already on master):**
    ```bash
-   jj rebase -r <change-id-B> -d master
-   jj rebase -r <change-id-C> -d master
+   jj rebase -r <change-id-B> -o master
+   jj rebase -r <change-id-C> -o master
    ```
 
 3. **Create bookmarks:**
@@ -166,12 +166,12 @@ master ────┤
 
 3. **Rebase independent commits onto master:**
    ```bash
-   jj rebase -r <change-id-C> -d master
+   jj rebase -r <change-id-C> -o master
    ```
 
 4. **Rebase dependent commits to correct parent (if needed):**
    ```bash
-   jj rebase -r <change-id-D> -d <change-id-B>
+   jj rebase -r <change-id-D> -o <change-id-B>
    ```
 
 5. **Create bookmarks and push:**
@@ -223,7 +223,7 @@ master ────┤
 
 4. **Describe the split-off commit:**
    ```bash
-   jj describe -r @- -m "feat: description of first feature"
+   jj describe @- -m "feat: description of first feature"
    ```
 
 5. **Repeat until all changes are logically separated**
@@ -290,7 +290,7 @@ master ────┤
 
 2. **Rebase remastering stack onto new master:**
    ```bash
-   jj rebase -d master@origin -s pr/<next-feature>
+   jj rebase -o master@origin -s pr/<next-feature>
    ```
 
 3. **Delete merged bookmark:**
@@ -317,12 +317,12 @@ master ────┤
 | `jj split` | Interactive split |
 | `jj split "glob:pattern"` | Split by file pattern |
 | `jj split -r X` | Split older commit |
-| `jj describe -r X -m "msg"` | Set commit message |
+| `jj describe X -m "msg"` | Set commit message |
 | `jj edit X` | Edit older commit |
 | `jj new` | Create new working copy |
 | `jj new A B C` | Create merge commit |
-| `jj rebase -r X -d Y` | Move X onto Y |
-| `jj rebase -s X -d Y` | Move X and descendants onto Y |
+| `jj rebase -r X -o Y` | Move X onto Y |
+| `jj rebase -s X -o Y` | Move X and descendants onto Y |
 | `jj bookmark create X -r Y` | Create bookmark |
 | `jj bookmark set X -r Y` | Move bookmark |
 | `jj bookmark delete X` | Delete bookmark |

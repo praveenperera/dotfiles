@@ -15,7 +15,7 @@ jj git fetch
 ### 2. Rebase remaining stack onto new master
 
 ```bash
-jj rebase -d master@origin -s pr/<next-feature>
+jj rebase -o master@origin -s pr/<next-feature>
 ```
 
 **Key:** Use `-s` (source) to bring descendants along, not `-r` (revision).
@@ -53,6 +53,6 @@ Regular sync workflow:
 ```bash
 jj git fetch
 jj log -r 'master@origin..@'  # see your commits
-jj rebase -d master@origin    # rebase onto latest
+jj rebase -o master@origin    # rebase onto latest
 jj git push                   # update PRs
 ```
