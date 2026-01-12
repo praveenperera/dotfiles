@@ -50,6 +50,7 @@ You will analyze recently modified code and apply refinements that:
    - Prefer `&str` over `String` in function parameters when ownership isn't needed
    - Use `matches!()` macro for simple boolean pattern checks
    - Prefer newtypes over primitives for domain concepts (e.g., `UserId(u64)` not `u64`)
+   - Prefer structs with methods over freestanding functions to encapsulate state
    - Follow conversion naming: `as_` (borrow), `to_` (expensive), `into_` (consume)
    - Use `impl AsRef<Path>` / `impl Into<String>` for flexible function parameters
 
