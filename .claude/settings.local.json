@@ -56,7 +56,9 @@
       "Bash(jj:*)",
       "Bash(cargo run:*)",
       "Bash(ln:*)",
-      "Bash(./target/debug/notf:*)"
+      "Bash(./target/debug/notf:*)",
+      "Bash(git -C /Users/praveen/code/dotfiles status)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
