@@ -176,6 +176,7 @@ const CONFIG_FILE_OR_DIR: &[&str] = &[
     "topgrade",
     "alacritty",
     "ghostty",
+    "jj",
 ];
 
 const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[

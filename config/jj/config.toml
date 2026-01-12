@@ -1,0 +1,10 @@
+#:schema https://docs.jj-vcs.dev/latest/config-schema.json
+
+[user]
+name = "Praveen Perera"
+email = "me@praveenperera.com"
+
+[signing]
+sign-all = true
+backend = "gpg"
+key = "E134BCAEA4B75DBE"
