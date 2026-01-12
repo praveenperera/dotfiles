@@ -9,6 +9,20 @@
       "Bash(git show:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(jj:*)",
+      "WebFetch(domain:doc.rust-lang.org)",
+      "WebFetch(domain:docs.rs)",
+      "Bash(cargo check:*)",
+      "Bash(awk:*)",
+      "Bash(cargo metadata:*)",
+      "Bash(tee:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo fix:*)",
+      "Bash(cargo doc:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(cargo build:*)",
       "Bash(gh pr list)",
       "Bash(gh pr diff:*)",
       "Bash(gh pr view:*)",
@@ -18,21 +32,7 @@
       "Bash(gh project list)",
       "Bash(find:*)",
       "Bash(cargo :*)",
-      "Bash(git checkout:*)",
-      "Bash(xcodebuild:*)",
-      "WebFetch(domain:doc.rust-lang.org)",
-      "WebFetch(domain:docs.rs)",
-      "Bash(cargo check:*)",
-      "Bash(awk:*)",
-      "Bash(cargo metadata:*)",
-      "Bash(tee:*)",
-      "Bash(cat:*)",
-      "Bash(cargo clippy:*)",
-      "Bash(cargo fix:*)",
-      "Bash(cargo doc:*)",
-      "WebSearch",
-      "WebFetch(domain:github.com)",
-      "Bash(cargo build:*)"
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
@@ -44,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd tmux notify bell,macos"
+            "command": "notf -T bell,macos -t Claude"
           }
         ]
       }

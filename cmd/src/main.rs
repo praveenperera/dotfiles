@@ -15,6 +15,7 @@ use xshell::Shell;
 pub type Tool = (&'static str, fn(&Shell, &[OsString]) -> Result<()>);
 pub const CMD_TOOLS: &[Tool] = &[
     ("cmd", cmd::run),
+    ("notf", cmd::tmux::notify_run),
     ("pr-context", pr_context::run),
     ("prc", pr_context::run),
     ("tf", terraform::run),

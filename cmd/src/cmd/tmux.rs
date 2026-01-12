@@ -1,5 +1,6 @@
-use clap::{Args, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use eyre::Result;
+use std::ffi::OsString;
 use xshell::{cmd, Shell};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -16,6 +17,22 @@ pub struct Tmux {
     pub subcommand: TmuxCmd,
 }
 
+#[derive(Debug, Clone, Parser)]
+#[command(name = "notf", about = "Send terminal notification (bell, macos, or both)", arg_required_else_help = true)]
+pub struct NotifyArgs {
+    /// Notification message (used with macos)
+    message: Option<String>,
+    /// Notification types (comma-separated: bell, macos)
+    #[arg(short = 'T', long = "type", value_delimiter = ',')]
+    kind: Vec<NotifyKind>,
+    /// Notification title (default: "{window_name} Notification")
+    #[arg(short, long)]
+    title: Option<String>,
+    /// Send even if window is active
+    #[arg(short, long)]
+    force: bool,
+}
+
 #[derive(Debug, Clone, Subcommand)]
 pub enum TmuxCmd {
     /// Move current window after specified position (0 = move to first)
@@ -26,17 +43,15 @@ pub enum TmuxCmd {
     /// Clear 🔔 prefix from current window name
     ClearBell,
     /// Send terminal notification (bell, macos, or both)
-    #[command(arg_required_else_help = true)]
     Notify {
-        /// Notification types (comma-separated)
-        #[arg(value_delimiter = ',')]
-        kind: Vec<NotifyKind>,
         /// Notification message (used with macos)
-        #[arg(short, long)]
         message: Option<String>,
-        /// Notification title (default: Claude)
-        #[arg(short, long, default_value = "Claude")]
-        title: String,
+        /// Notification types (comma-separated: bell, macos)
+        #[arg(short = 'T', long = "type", value_delimiter = ',')]
+        kind: Vec<NotifyKind>,
+        /// Notification title (default: "{window_name} Notification")
+        #[arg(short, long)]
+        title: Option<String>,
         /// Send even if window is active
         #[arg(short, long)]
         force: bool,
@@ -52,8 +67,13 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
             message,
             title,
             force,
-        } => notify(sh, &kind, message.as_deref(), &title, force),
+        } => notify(sh, &kind, message.as_deref(), title.as_deref(), force),
     }
+}
+
+pub fn notify_run(sh: &Shell, args: &[OsString]) -> Result<()> {
+    let flags = NotifyArgs::parse_from(args);
+    notify(sh, &flags.kind, flags.message.as_deref(), flags.title.as_deref(), flags.force)
 }
 
 fn move_after(sh: &Shell, position: u32) -> Result<()> {
@@ -84,7 +104,7 @@ fn notify(
     sh: &Shell,
     kinds: &[NotifyKind],
     message: Option<&str>,
-    title: &str,
+    title: Option<&str>,
     force: bool,
 ) -> Result<()> {
     // Get the pane ID where this command is running (not the active pane)
@@ -105,6 +125,15 @@ fn notify(
         .split_once(':')
         .map(|(i, n)| (i, n.trim_start_matches("🔔")))
         .unwrap_or(("", window_info));
+
+    let title = title.map(|t| t.to_string()).unwrap_or_else(|| {
+        let capitalized = window_name
+            .chars()
+            .next()
+            .map(|c| c.to_uppercase().to_string() + &window_name[c.len_utf8()..])
+            .unwrap_or_default();
+        format!("{capitalized} Notification")
+    });
 
     if !force {
         // Check if this pane's window is currently active

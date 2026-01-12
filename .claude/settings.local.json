@@ -53,7 +53,10 @@
       "Bash(cargo search:*)",
       "Bash(tree:*)",
       "WebFetch(domain:rust-lang.github.io)",
-      "Bash(jj:*)"
+      "Bash(jj:*)",
+      "Bash(cargo run:*)",
+      "Bash(ln:*)",
+      "Bash(./target/debug/notf:*)"
     ],
     "deny": [],
     "ask": []

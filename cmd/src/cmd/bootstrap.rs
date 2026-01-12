@@ -9,6 +9,31 @@ use xshell::{cmd, Shell};
 use crate::{command_exists, os::Os, util::has_tool, CMD_TOOLS};
 use colored::Colorize;
 
+fn create_hardlinks(sh: &Shell) -> Result<()> {
+    let home = std::env::var("HOME").expect("HOME env var not set");
+    let cmd = format!("{home}/.local/bin/cmd");
+
+    if !sh.path_exists(&cmd) {
+        return Ok(());
+    }
+
+    for (tool, _) in CMD_TOOLS {
+        if *tool == "cmd" {
+            continue;
+        }
+
+        let tool_path = format!("{home}/.local/bin/{tool}");
+
+        if sh.path_exists(&tool_path) {
+            sh.remove_path(&tool_path)?;
+        }
+
+        sh.hard_link(&cmd, &tool_path)?;
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, ValueEnum)]
 pub enum BootstrapMode {
     Minimal,
@@ -40,7 +65,6 @@ const MAC_ONLY_TOOLS: &[&str] = &[
 ];
 
 const BREW_CASKS: &[&str] = &[
-    "alacritty",
     "google-cloud-sdk",
     "visual-studio-code",
     "bettertouchtool",
@@ -52,7 +76,6 @@ const BREW_CASKS: &[&str] = &[
     "font-recursive-mono-nerd-font",
     "brave-browser",
     "appcleaner",
-    "iterm2",
     "swiftformat-for-xcode",
     "slack",
     "selfcontrol",
@@ -251,12 +274,13 @@ pub fn config(sh: &Shell) -> Result<()> {
     // setup dotfiles and config dirs
     setup_config_and_dotfiles(sh)?;
 
+    // create hardlinks for cmd tools
+    create_hardlinks(sh)?;
+
     Ok(())
 }
 
 pub fn release(sh: &Shell) -> Result<()> {
-    let home = std::env::var("HOME").expect("HOME env var not set");
-
     // check if this is a minimal install (no cargo or rust)
     if !has_tool(sh, "cargo") || !has_tool(sh, "rustc") {
         println!(
@@ -272,23 +296,7 @@ pub fn release(sh: &Shell) -> Result<()> {
             std::process::exit(1);
         }
 
-        // create hard links for all tools
-        let cmd = format!("{home}/.local/bin/cmd");
-
-        for (tool, _) in CMD_TOOLS {
-            if *tool == "cmd" {
-                continue;
-            }
-
-            let tool_path = format!("{home}/.local/bin/{tool}");
-
-            if sh.path_exists(&tool_path) {
-                sh.remove_path(&tool_path)?;
-            }
-
-            sh.hard_link(&cmd, tool_path)?;
-        }
-
+        create_hardlinks(sh)?;
         return Ok(());
     }
 
@@ -310,22 +318,7 @@ pub fn release(sh: &Shell) -> Result<()> {
         std::process::exit(1);
     }
 
-    let cmd = format!("{home}/.local/bin/cmd");
-
-    for (tool, _) in CMD_TOOLS {
-        if *tool == "cmd" {
-            continue;
-        }
-
-        let tool_path = format!("{home}/.local/bin/{tool}");
-
-        if sh.path_exists(&tool_path) {
-            sh.remove_path(&tool_path)?;
-        }
-
-        sh.hard_link(&cmd, tool_path)?;
-    }
-
+    create_hardlinks(sh)?;
     sh.remove_path(&current_exe_rename)?;
 
     Ok(())
