@@ -34,7 +34,8 @@
       "Bash(find:*)",
       "Bash(pr:*)",
       "Bash(cargo:*)",
-      "Bash(just:*)"
+      "Bash(just:*)",
+      "WebFetch(domain:*)"
     ],
     "deny": [],
     "ask": []
