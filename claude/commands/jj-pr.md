@@ -22,6 +22,25 @@ You are helping the user manage jj (Jujutsu) commits and GitHub PRs.
 
 ---
 
+## Branch Naming Convention
+
+**No slashes in branch names.** Use one of these patterns:
+
+- **With GitHub issue number**: `<issue-number>-<short-description>` (e.g., `123-add-auth`, `456-fix-login`)
+- **Without issue number**: `<short-description>` (e.g., `add-auth`, `fix-login-bug`)
+
+Keep descriptions short and hyphen-separated.
+
+---
+
+## Workflow Preference
+
+**Always use stacked PRs** — even for independent features. Stacking lets you test everything once instead of testing each feature separately. PRs can still be reviewed and merged independently.
+
+**Only use independent mode** for urgent hotfixes that need to merge immediately without waiting for other work. Or if explicitly requested.
+
+---
+
 ## Step 1: Assess Current State
 
 First, run these commands:
@@ -42,9 +61,9 @@ Check for:
 
 ## Step 2: Execute Based on Mode
 
-### MODE: "stacked" (or empty/default)
+### MODE: "stacked" (or empty/default) — RECOMMENDED
 
-**Stacked PRs** - commits depend on each other, PRs target previous PR's branch.
+**Stacked PRs** - commits depend on each other, PRs target previous PR's branch. Test all features together, review and merge independently.
 
 ```
 master ─── A ─── B ─── C
@@ -76,9 +95,9 @@ master ─── A ─── B ─── C
 
 4. **Create bookmarks at each commit:**
    ```bash
-   jj bookmark create pr/<feature-a> -r <change-id-A>
-   jj bookmark create pr/<feature-b> -r <change-id-B>
-   jj bookmark create pr/<feature-c> -r <change-id-C>
+   jj bookmark create feature-a -r <change-id-A>
+   jj bookmark create feature-b -r <change-id-B>
+   jj bookmark create feature-c -r <change-id-C>
    ```
 
 5. **Push all bookmarks:**
@@ -88,16 +107,16 @@ master ─── A ─── B ─── C
 
 6. **Create PRs with correct base targeting:**
    ```bash
-   gh pr create --head pr/<feature-a> --base master --title "<title A>"
-   gh pr create --head pr/<feature-b> --base pr/<feature-a> --title "<title B>"
-   gh pr create --head pr/<feature-c> --base pr/<feature-b> --title "<title C>"
+   gh pr create --head feature-a --base master --title "<title A>"
+   gh pr create --head feature-b --base feature-a --title "<title B>"
+   gh pr create --head feature-c --base feature-b --title "<title C>"
    ```
 
 ---
 
-### MODE: "independent"
+### MODE: "independent" — ONLY FOR URGENT HOTFIXES OR IF EXPLICITLY REQUESTED
 
-**Independent PRs** - each commit rebased onto master, PRs all target master.
+**Independent PRs** - each commit rebased onto master, PRs all target master. Use only when something must merge immediately without waiting for other work, or if the user explicitly requests independent PRs.
 
 ```
          ┌── A ──────── PR #1 (base: master)
@@ -122,22 +141,22 @@ master ────┼── B ──────── PR #2 (base: master)
 
 3. **Create bookmarks:**
    ```bash
-   jj bookmark create pr/<feature-a> -r <change-id-A>
-   jj bookmark create pr/<feature-b> -r <change-id-B>
-   jj bookmark create pr/<feature-c> -r <change-id-C>
+   jj bookmark create feature-a -r <change-id-A>
+   jj bookmark create feature-b -r <change-id-B>
+   jj bookmark create feature-c -r <change-id-C>
    ```
 
 4. **Push and create PRs (all target master):**
    ```bash
    jj git push
-   gh pr create --head pr/<feature-a> --base master --title "<title>"
-   gh pr create --head pr/<feature-b> --base master --title "<title>"
-   gh pr create --head pr/<feature-c> --base master --title "<title>"
+   gh pr create --head feature-a --base master --title "<title>"
+   gh pr create --head feature-b --base master --title "<title>"
+   gh pr create --head feature-c --base master --title "<title>"
    ```
 
 5. **Optional - create dev merge to work on all together:**
    ```bash
-   jj new pr/<feature-a> pr/<feature-b> pr/<feature-c> -m "dev: combined"
+   jj new feature-a feature-b feature-c -m "dev: combined"
    # Now @ contains all features merged for testing
    ```
 
@@ -176,19 +195,19 @@ master ────┤
 
 5. **Create bookmarks and push:**
    ```bash
-   jj bookmark create pr/feat-a -r <A>
-   jj bookmark create pr/feat-b -r <B>
-   jj bookmark create pr/feat-c -r <C>
-   jj bookmark create pr/feat-d -r <D>
+   jj bookmark create feat-a -r <A>
+   jj bookmark create feat-b -r <B>
+   jj bookmark create feat-c -r <C>
+   jj bookmark create feat-d -r <D>
    jj git push
    ```
 
 6. **Create PRs with correct bases:**
    ```bash
-   gh pr create --head pr/feat-a --base master --title "A"
-   gh pr create --head pr/feat-b --base pr/feat-a --title "B"
-   gh pr create --head pr/feat-c --base master --title "C (independent)"
-   gh pr create --head pr/feat-d --base pr/feat-b --title "D"
+   gh pr create --head feat-a --base master --title "A"
+   gh pr create --head feat-b --base feat-a --title "B"
+   gh pr create --head feat-c --base master --title "C (independent)"
+   gh pr create --head feat-d --base feat-b --title "D"
    ```
 
 ---
@@ -267,7 +286,7 @@ master ────┤
 
 6. **Update bookmarks if needed:**
    ```bash
-   jj bookmark set pr/feature -r <change-id>
+   jj bookmark set feature-branch -r <change-id>
    ```
 
 7. **Push updates (force-push automatic):**
@@ -290,12 +309,12 @@ master ────┤
 
 2. **Rebase remastering stack onto new master:**
    ```bash
-   jj rebase -o master@origin -s pr/<next-feature>
+   jj rebase -o master@origin -s <next-feature>
    ```
 
 3. **Delete merged bookmark:**
    ```bash
-   jj bookmark delete pr/<merged-feature>
+   jj bookmark delete <merged-feature>
    ```
 
 4. **Update PR base on GitHub** (if PR #2 was targeting PR #1, now target master)
