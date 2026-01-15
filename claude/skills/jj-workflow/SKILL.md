@@ -127,3 +127,9 @@ jj snapshots only when you run a command. Run `jj status` before risky work to c
 
 ### Detached HEAD in Git tools
 Normal in colocated mode. jj doesn't track "current branch". Use jj commands, not git checkout.
+
+### Interactive commands hang in automation
+Commands like `jj split` open an editor by default. Use `-m "message"` to skip:
+```bash
+jj split -m "feat: description" file1.ts file2.ts
+```

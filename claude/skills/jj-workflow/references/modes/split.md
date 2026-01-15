@@ -33,6 +33,19 @@ jj split "glob:src/auth/*"
 jj split path/to/file1.ts path/to/file2.ts
 ```
 
+### Non-Interactive (for scripts/automation)
+
+**Important:** Even when specifying files, `jj split` opens an editor for the commit description. Use `-m` to skip the editor entirely:
+
+```bash
+jj split -m "feat: description for first commit" path/to/file1.ts path/to/file2.ts
+```
+
+This is required for:
+- Claude Code and other non-interactive environments
+- CI/CD pipelines
+- Shell scripts
+
 ---
 
 ## Multi-Commit Split
@@ -40,17 +53,14 @@ jj split path/to/file1.ts path/to/file2.ts
 To split into 4 features:
 
 ```bash
-# extract feature A
-jj split "glob:src/feature-a/*"
-jj describe @- -m "feat: feature A"
+# extract feature A (use -m to skip editor)
+jj split -m "feat: feature A" "glob:src/feature-a/*"
 
 # extract feature B from remainder
-jj split "glob:src/feature-b/*"
-jj describe @- -m "feat: feature B"
+jj split -m "feat: feature B" "glob:src/feature-b/*"
 
 # extract feature C
-jj split "glob:src/feature-c/*"
-jj describe @- -m "feat: feature C"
+jj split -m "feat: feature C" "glob:src/feature-c/*"
 
 # remainder is feature D
 jj describe -m "feat: feature D"
