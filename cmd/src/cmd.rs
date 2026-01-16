@@ -63,5 +63,15 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
             jj::run_with_flags(&sh, jj_flags)
         }
         MainCmd::PrContext(args) => crate::pr_context::run_with_flags(&sh, args),
+        MainCmd::BetterContext(args) => {
+            let flags = crate::better_context::BetterContext {
+                repo: args.repo,
+                fresh: args.fresh,
+                r#ref: args.r#ref,
+                full: args.full,
+                quiet: args.quiet,
+            };
+            crate::better_context::run_with_flags(&sh, flags)
+        }
     }
 }

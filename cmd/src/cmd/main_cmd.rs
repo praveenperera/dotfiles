@@ -1,6 +1,28 @@
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Clone, Args)]
+pub struct BetterContextArgs {
+    /// Repository: owner/repo, URL, or local path
+    pub repo: String,
+
+    /// Force fresh clone
+    #[arg(short, long)]
+    pub fresh: bool,
+
+    /// Checkout specific git ref (branch, tag, or SHA)
+    #[arg(short, long)]
+    pub r#ref: Option<String>,
+
+    /// Clone complete history instead of single-branch
+    #[arg(long)]
+    pub full: bool,
+
+    /// Suppress progress logs
+    #[arg(short, long)]
+    pub quiet: bool,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct PrContextArgs {
     /// GitHub PR URL or repository in format "owner/repo"
     pub repo_or_url: String,
@@ -108,6 +130,10 @@ pub enum MainCmd {
     /// Fetch PR comments and their code references from GitHub
     #[command(visible_alias = "prc")]
     PrContext(#[command(flatten)] PrContextArgs),
+
+    /// Clone/update a repo for agent exploration
+    #[command(visible_aliases = ["agent", "bc"])]
+    BetterContext(#[command(flatten)] BetterContextArgs),
 }
 
 impl Cmd {
