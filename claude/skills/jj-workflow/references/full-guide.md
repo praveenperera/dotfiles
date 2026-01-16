@@ -854,7 +854,7 @@ jj diff -r teammate/their-feature@origin
 ```bash
 # Check if B works without A:
 jj new main -m "test B alone"
-jj squash --from B --into @  # Copy B's changes here
+jj squash --from B --into @ -u  # Copy B's changes here, keep @'s message
 # Run tests; if they fail, B depends on A
 ```
 

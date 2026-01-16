@@ -30,6 +30,7 @@
 | `jj split -r X` | Split older commit |
 | `jj squash` | Squash @ into parent |
 | `jj squash --into X` | Move @ changes into X |
+| `jj squash -u` | Squash, keep destination message (no editor) |
 
 ## Rebasing
 

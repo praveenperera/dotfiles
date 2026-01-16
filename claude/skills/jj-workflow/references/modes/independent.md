@@ -61,7 +61,7 @@ If B uses types/exports from A, they're not truly independent.
 **Test each in isolation:**
 ```bash
 jj new master -m "test B alone"
-jj squash --from <B> --into @
+jj squash --from <B> --into @ -u
 # run tests - if they fail, B depends on A
 ```
 
