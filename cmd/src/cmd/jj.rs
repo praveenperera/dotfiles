@@ -15,6 +15,10 @@ pub enum JjCmd {
     /// Sync the current stack with remote master
     #[command(visible_alias = "ss")]
     StackSync,
+
+    /// Display the current stack as a tree
+    #[command(visible_alias = "t")]
+    Tree,
 }
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
@@ -26,6 +30,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
     match flags.subcommand {
         JjCmd::StackSync => stack_sync(sh),
+        JjCmd::Tree => tree(sh),
     }
 }
 
@@ -34,9 +39,11 @@ fn stack_sync(sh: &Shell) -> Result<()> {
     cmd!(sh, "jj git fetch").run().wrap_err("failed to fetch")?;
 
     // find the first bookmark after master in the stack
+    let revset = "(master::@) & bookmarks()";
+    let template = r#"bookmarks ++ "\n""#;
     let output = cmd!(
         sh,
-        "jj log -r (master::@) & bookmarks() --reversed --no-graph -T bookmarks ++ \"\\n\" --limit 2"
+        "jj log -r {revset} --reversed --no-graph -T {template} --limit 2"
     )
     .read()
     .wrap_err("failed to get bookmarks in stack")?;
@@ -78,5 +85,18 @@ fn stack_sync(sh: &Shell) -> Result<()> {
         .wrap_err("failed to push")?;
 
     info!("Stack sync complete");
+    Ok(())
+}
+
+fn tree(sh: &Shell) -> Result<()> {
+    let output = cmd!(sh, "jj stack")
+        .read()
+        .wrap_err("failed to get stack")?;
+
+    for (i, line) in output.lines().filter(|l| !l.is_empty()).enumerate() {
+        let indent = "    ".repeat(i);
+        println!("{indent}└── {line}");
+    }
+
     Ok(())
 }
