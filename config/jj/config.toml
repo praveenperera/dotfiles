@@ -8,3 +8,6 @@ email = "me@praveenperera.com"
 sign-all = true
 backend = "gpg"
 key = "E134BCAEA4B75DBE"
+
+[aliases]
+stack = ["log", "-r", "(master::@) & (bookmarks() | @)", "--reversed", "-T", "if(bookmarks, bookmarks ++ \"\\n\", if(self.current_working_copy(), \"@ (working copy)\\n\", \"\"))", "--no-graph"]
