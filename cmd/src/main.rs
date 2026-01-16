@@ -1,3 +1,4 @@
+pub mod better_context;
 pub mod cmd;
 pub mod encrypt;
 pub mod github;
@@ -14,6 +15,7 @@ use xshell::Shell;
 
 pub type Tool = (&'static str, fn(&Shell, &[OsString]) -> Result<()>);
 pub const CMD_TOOLS: &[Tool] = &[
+    ("better-context", better_context::run),
     ("cmd", cmd::run),
     ("ju", jj::run),
     ("notf", cmd::tmux::notify_run),

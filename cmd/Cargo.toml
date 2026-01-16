@@ -54,6 +54,9 @@ textdistance = "1.1"
 # json
 serde_json = "1.0"
 
+# datetime
+chrono = { version = "0.4", features = ["serde"] }
+
 # http client
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
 tokio = { version = "1.0", features = ["full"] }
