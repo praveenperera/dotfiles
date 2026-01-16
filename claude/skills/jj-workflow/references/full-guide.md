@@ -14,7 +14,7 @@ A comprehensive, actionable guide for managing multiple features with jj, publis
 8. [Hybrid Workflow](#8-hybrid-workflow)
 9. [Interop and Collaboration](#9-interop-and-collaboration)
 10. [Pitfalls and Gotchas](#10-pitfalls-and-gotchas)
-11. [Quick Reference Table](#11-quick-reference-table)
+11. [Quick Reference Table](#12-quick-reference-table)
 
 ---
 
@@ -977,9 +977,32 @@ jj bookmark delete old-name
 jj bookmark create pr/new-name -r @
 ```
 
+### 11. Git-style `revision:path` Syntax Doesn't Work
+
+**Problem**: Using `jj show master:path/to/file.txt` fails with "Modifier 'master' doesn't exist".
+
+```bash
+# This is git syntax and DOES NOT work in jj:
+jj show master:src/main.rs  # ERROR!
+
+# The revision:path syntax is git-specific
+```
+
+**Solution**: Use `jj file show` with the `-r` flag:
+
+```bash
+# Correct jj syntax:
+jj file show src/main.rs -r master
+jj file show path/to/file.txt -r @-
+jj file show config.json -r abc123
+
+# To see what changed in a file (diff), use:
+jj diff -r master src/main.rs
+```
+
 ---
 
-## 11. Quick Reference Table
+## 12. Quick Reference Table
 
 | Command | What It Does | When to Use | Git Equivalent |
 |---------|--------------|-------------|----------------|
@@ -989,7 +1012,8 @@ jj bookmark create pr/new-name -r @
 | `jj log -r 'main..@'` | Show commits since main | See your work | `git log main..HEAD` |
 | `jj diff` | Show changes in @ | Review before committing | `git diff HEAD` |
 | `jj diff -r X` | Show changes in commit X | Review any commit | `git show X` |
-| `jj show X` | Show commit X details | Inspect specific commit | `git show X` |
+| `jj show X` | Show commit X metadata (message, author, etc) | Inspect commit info | `git show X --stat` |
+| `jj file show <path> -r X` | Show file contents at revision X | View file at specific commit | `git show X:<path>` |
 | **Creating & Editing Commits** |
 | `jj new` | Create new empty commit on @ | Start fresh work | `git commit` (sort of) |
 | `jj new X` | Create new commit on X | Start work based on X | `git checkout X && git commit` |

@@ -8,6 +8,7 @@
 | `jj diff` | Changes in working copy |
 | `jj log` | Commit graph |
 | `jj log -r 'master..@'` | Commits since master |
+| `jj file show <path> -r X` | Show file contents at revision X |
 
 ## Creating & Editing
 
