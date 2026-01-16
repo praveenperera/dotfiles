@@ -98,6 +98,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::tmux::TmuxCmd,
     },
 
+    /// Jj (jujutsu) utilities
+    #[command(arg_required_else_help = true)]
+    Jj {
+        #[command(subcommand)]
+        subcommand: crate::cmd::jj::JjCmd,
+    },
+
     /// Fetch PR comments and their code references from GitHub
     #[command(visible_alias = "prc")]
     PrContext(#[command(flatten)] PrContextArgs),

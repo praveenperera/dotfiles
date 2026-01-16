@@ -5,7 +5,7 @@ pub mod os;
 pub mod pr_context;
 pub mod util;
 
-use cmd::{terraform, vault};
+use cmd::{jj, terraform, vault};
 use eyre::{eyre, Result};
 use include_dir::{include_dir, Dir};
 use log::debug;
@@ -15,6 +15,7 @@ use xshell::Shell;
 pub type Tool = (&'static str, fn(&Shell, &[OsString]) -> Result<()>);
 pub const CMD_TOOLS: &[Tool] = &[
     ("cmd", cmd::run),
+    ("jju", jj::run),
     ("notf", cmd::tmux::notify_run),
     ("pr-context", pr_context::run),
     ("prc", pr_context::run),
