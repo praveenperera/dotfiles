@@ -207,19 +207,20 @@ To treat commits A→B→C as a unit, put a bookmark at the tip:
 # main → commit-a → commit-b → commit-c → @
 
 # Bookmark the tip of the group
-jj bookmark create pr/feature-x -r @-
+jj bookmark create feature-x -r @-
 
 # Or if @ is the last real commit:
-jj bookmark create pr/feature-x -r @
+jj bookmark create feature-x -r @
 ```
 
 ### Naming Conventions
 
+Use the issue number as a prefix when one exists. Otherwise use a descriptive name.
+
 ```bash
-# Recommended patterns:
-pr/feature-name         # For PR branches
-pr/123-fix-bug          # With issue number
-feature/short-name      # Feature branches
+# Examples:
+123-fix-login-bug       # With issue number (preferred when available)
+auth-refactor           # Without issue number
 user/experiment         # Personal experiments
 ```
 
@@ -227,13 +228,13 @@ user/experiment         # Personal experiments
 
 ```bash
 # Push specific bookmark
-jj git push --bookmark pr/feature-a
+jj git push --bookmark feature-a
 
 # Push all tracking bookmarks
 jj git push
 
 # Push bookmark to specific remote
-jj git push --remote origin --bookmark pr/feature-a
+jj git push --remote origin --bookmark feature-a
 
 # Generate bookmark name from change ID and push
 jj git push --change xyz123  # Creates push-xyzxyzxyz branch
@@ -389,16 +390,16 @@ main ─── A (auth) ─── B (api) ─── C (ui) ─── @ (empty wo
 
 ```bash
 # Bookmark each commit for its PR
-jj bookmark create pr/auth -r A      # or use change ID
-jj bookmark create pr/api -r B
-jj bookmark create pr/dashboard -r C
+jj bookmark create auth -r A      # or use change ID
+jj bookmark create api -r B
+jj bookmark create dashboard -r C
 
 # Using change IDs (more precise):
 jj log --no-graph -T 'change_id ++ "\n"' -r 'main..@-'
 # Copy the change IDs and use them:
-jj bookmark create pr/auth -r xyzabc
-jj bookmark create pr/api -r defghi
-jj bookmark create pr/dashboard -r jklmno
+jj bookmark create auth -r xyzabc
+jj bookmark create api -r defghi
+jj bookmark create dashboard -r jklmno
 ```
 
 ### Step 5: Push All Bookmarks
@@ -408,18 +409,18 @@ jj bookmark create pr/dashboard -r jklmno
 jj git push
 
 # Or push individually
-jj git push --bookmark pr/auth
-jj git push --bookmark pr/api
-jj git push --bookmark pr/dashboard
+jj git push --bookmark auth
+jj git push --bookmark api
+jj git push --bookmark dashboard
 ```
 
 ### Step 6: Create PRs on GitHub
 
 ```bash
 # Using gh CLI:
-gh pr create --head pr/auth --base main --title "feat(auth): add login flow"
-gh pr create --head pr/api --base pr/auth --title "feat(api): add user endpoints"
-gh pr create --head pr/dashboard --base pr/api --title "feat(ui): add dashboard"
+gh pr create --head auth --base main --title "feat(auth): add login flow"
+gh pr create --head api --base auth --title "feat(api): add user endpoints"
+gh pr create --head dashboard --base api --title "feat(ui): add dashboard"
 ```
 
 ### Step 7: Update After Review Feedback
@@ -445,13 +446,13 @@ jj git push
 jj git fetch
 
 # Rebase remaining stack onto new main
-jj rebase -s pr/api -o main
+jj rebase -s api -o main
 
 # Update PR #2 to target main now
 # (manually update on GitHub or use gh CLI)
 
 # Delete merged bookmark
-jj bookmark delete pr/auth
+jj bookmark delete auth
 
 # Push updated stack
 jj git push
@@ -473,17 +474,17 @@ jj describe @- -m "feat: feature B"
 jj describe -m "feat: feature C"
 
 # === BOOKMARK ===
-jj bookmark create pr/feature-a -r @--
-jj bookmark create pr/feature-b -r @-
-jj bookmark create pr/feature-c -r @
+jj bookmark create feature-a -r @--
+jj bookmark create feature-b -r @-
+jj bookmark create feature-c -r @
 
 # === PUSH ===
 jj git push
 
 # === CREATE PRs ===
-gh pr create --head pr/feature-a --base main --title "feat: feature A"
-gh pr create --head pr/feature-b --base pr/feature-a --title "feat: feature B"
-gh pr create --head pr/feature-c --base pr/feature-b --title "feat: feature C"
+gh pr create --head feature-a --base main --title "feat: feature A"
+gh pr create --head feature-b --base feature-a --title "feat: feature B"
+gh pr create --head feature-c --base feature-b --title "feat: feature C"
 ```
 
 ---
@@ -543,9 +544,9 @@ main ────┼── B (api)
 ### Step 3: Add Bookmarks
 
 ```bash
-jj bookmark create pr/auth -r A
-jj bookmark create pr/api -r B
-jj bookmark create pr/ui -r C
+jj bookmark create auth -r A
+jj bookmark create api -r B
+jj bookmark create ui -r C
 ```
 
 ### Step 4: Push and Create PRs
@@ -555,9 +556,9 @@ jj bookmark create pr/ui -r C
 jj git push
 
 # Create PRs - all target main
-gh pr create --head pr/auth --base main --title "feat: auth feature"
-gh pr create --head pr/api --base main --title "feat: api feature"
-gh pr create --head pr/ui --base main --title "feat: ui feature"
+gh pr create --head auth --base main --title "feat: auth feature"
+gh pr create --head api --base main --title "feat: api feature"
+gh pr create --head ui --base main --title "feat: ui feature"
 ```
 
 ### Step 5: Working on Multiple Independent Branches
@@ -566,7 +567,7 @@ To work on all features simultaneously (seeing combined changes):
 
 ```bash
 # Create a merge commit for development
-jj new pr/auth pr/api pr/ui -m "dev: combined work"
+jj new auth api ui -m "dev: combined work"
 
 # Now @ contains all three features merged
 # Work here; split changes back to appropriate branches
@@ -581,10 +582,10 @@ jj edit A  # or use change ID
 # Make changes...
 
 # Return to your dev merge
-jj new pr/auth pr/api pr/ui -m "dev: combined work"
+jj new auth api ui -m "dev: combined work"
 
 # Push update
-jj git push --bookmark pr/auth
+jj git push --bookmark auth
 ```
 
 ### Handling True Independence
@@ -593,7 +594,7 @@ If features are truly independent, conflicts should be rare. If you get conflict
 
 ```bash
 # jj allows conflicted commits
-jj new pr/auth pr/api pr/ui -m "dev: combined"
+jj new auth api ui -m "dev: combined"
 # If conflicts exist, they'll be in @
 
 # Resolve or work around:
@@ -623,20 +624,20 @@ jj rebase -r @- -o main   # C onto main
 
 # === BOOKMARK ===
 jj log  # find the change IDs
-jj bookmark create pr/auth -r <A-change-id>
-jj bookmark create pr/api -r <B-change-id>
-jj bookmark create pr/ui -r <C-change-id>
+jj bookmark create auth -r <A-change-id>
+jj bookmark create api -r <B-change-id>
+jj bookmark create ui -r <C-change-id>
 
 # === PUSH ===
 jj git push
 
 # === CREATE PRs ===
-gh pr create --head pr/auth --base main --title "feat: auth"
-gh pr create --head pr/api --base main --title "feat: api"
-gh pr create --head pr/ui --base main --title "feat: ui"
+gh pr create --head auth --base main --title "feat: auth"
+gh pr create --head api --base main --title "feat: api"
+gh pr create --head ui --base main --title "feat: ui"
 
 # === OPTIONAL: DEV MERGE ===
-jj new pr/auth pr/api pr/ui -m "dev merge"
+jj new auth api ui -m "dev merge"
 ```
 
 ---
@@ -700,28 +701,28 @@ main ────┤
 
 ```bash
 # Stacked PRs (A → B → D)
-jj bookmark create pr/feat-a -r abc111
-jj bookmark create pr/feat-b -r bcd222
-jj bookmark create pr/feat-d -r def444
+jj bookmark create feat-a -r abc111
+jj bookmark create feat-b -r bcd222
+jj bookmark create feat-d -r def444
 
 # Independent PR (C)
-jj bookmark create pr/feat-c -r cde333
+jj bookmark create feat-c -r cde333
 
 # Push all
 jj git push
 
 # Create PRs
-gh pr create --head pr/feat-a --base main --title "feat A"
-gh pr create --head pr/feat-b --base pr/feat-a --title "feat B"
-gh pr create --head pr/feat-d --base pr/feat-b --title "feat D"
-gh pr create --head pr/feat-c --base main --title "feat C (independent)"
+gh pr create --head feat-a --base main --title "feat A"
+gh pr create --head feat-b --base feat-a --title "feat B"
+gh pr create --head feat-d --base feat-b --title "feat D"
+gh pr create --head feat-c --base main --title "feat C (independent)"
 ```
 
 ### Working on the Hybrid Structure
 
 ```bash
 # Create a dev merge to see everything together
-jj new pr/feat-d pr/feat-c -m "dev: all features"
+jj new feat-d feat-c -m "dev: all features"
 
 # Work here; when you need to update a specific commit:
 jj edit abc111  # Edit A
@@ -787,7 +788,7 @@ When jj rebases:
 
 ```bash
 # jj git push automatically force-pushes when needed
-jj git push --bookmark pr/my-feature
+jj git push --bookmark my-feature
 
 # jj doesn't have --force-with-lease, but it's safe:
 # - If remote bookmark moved unexpectedly, push fails
@@ -798,17 +799,17 @@ jj git push --bookmark pr/my-feature
 
 ```bash
 # If remote changed unexpectedly:
-$ jj git push --bookmark pr/feature
+$ jj git push --bookmark feature
 Error: Refusing to push bookmark that unexpectedly moved on the remote.
 Hint: Try fetching from the remote, then make the bookmark
 point to where you want it to be, and push again.
 
 # Resolution:
-jj git fetch --branch pr/feature
-jj log -r 'pr/feature | pr/feature@origin'  # See divergence
+jj git fetch --branch feature
+jj log -r 'feature | feature@origin'  # See divergence
 # Decide: rebase yours onto theirs, or override
-jj bookmark set pr/feature -r <your-version>
-jj git push --bookmark pr/feature
+jj bookmark set feature -r <your-version>
+jj git push --bookmark feature
 ```
 
 ### Handling a Teammate's Branch
@@ -876,8 +877,8 @@ jj squash --from B --into @ -u  # Copy B's changes here, keep @'s message
 # jj bookmarks DON'T auto-move like Git branches!
 
 # After making changes:
-jj bookmark set pr/feature -r @  # Explicitly move it
-jj git push --bookmark pr/feature
+jj bookmark set feature -r @  # Explicitly move it
+jj git push --bookmark feature
 ```
 
 ### 4. Conflicts in Descendants
@@ -923,8 +924,8 @@ jj git push
 # 1. Reset local bookmark back
 # 2. Force push
 
-jj bookmark set pr/feature -r @~1  # Move back
-jj git push --bookmark pr/feature  # Force push old state
+jj bookmark set feature -r @~1  # Move back
+jj git push --bookmark feature  # Force push old state
 ```
 
 ### 7. Detached HEAD Confusion in Git Tools
@@ -974,7 +975,7 @@ jj new  # Now @ is a fresh commit
 # Error: bookmark already exists
 # Solution: use different name or delete existing:
 jj bookmark delete old-name
-jj bookmark create pr/new-name -r @
+jj bookmark create new-name -r @
 ```
 
 ### 11. Git-style `revision:path` Syntax Doesn't Work

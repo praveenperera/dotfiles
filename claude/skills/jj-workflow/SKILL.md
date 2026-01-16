@@ -114,7 +114,7 @@ Then read the appropriate reference above based on your goal.
 ## Common Pitfalls
 
 ### Bookmark didn't move
-jj bookmarks don't auto-move. After changes: `jj bookmark set pr/feature -r @`
+jj bookmarks don't auto-move. After changes: `jj bookmark set feature -r @`
 
 ### Can't push conflicted commit
 jj won't push conflicts. Resolve first: `jj edit <commit>`, fix files, `jj new`, then push.

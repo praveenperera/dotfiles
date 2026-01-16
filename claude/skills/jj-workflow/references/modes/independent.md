@@ -30,9 +30,9 @@ jj rebase -r <change-id-C> -o master
 ### 3. Create bookmarks
 
 ```bash
-jj bookmark create pr/<feature-a> -r <change-id-A>
-jj bookmark create pr/<feature-b> -r <change-id-B>
-jj bookmark create pr/<feature-c> -r <change-id-C>
+jj bookmark create <feature-a> -r <change-id-A>
+jj bookmark create <feature-b> -r <change-id-B>
+jj bookmark create <feature-c> -r <change-id-C>
 ```
 
 ### 4. Push and create PRs
@@ -40,15 +40,15 @@ jj bookmark create pr/<feature-c> -r <change-id-C>
 ```bash
 jj git push
 
-gh pr create --head pr/<feature-a> --base master --title "<title>"
-gh pr create --head pr/<feature-b> --base master --title "<title>"
-gh pr create --head pr/<feature-c> --base master --title "<title>"
+gh pr create --head <feature-a> --base master --title "<title>"
+gh pr create --head <feature-b> --base master --title "<title>"
+gh pr create --head <feature-c> --base master --title "<title>"
 ```
 
 ### 5. Optional: dev merge for combined testing
 
 ```bash
-jj new pr/<feature-a> pr/<feature-b> pr/<feature-c> -m "dev: combined"
+jj new <feature-a> <feature-b> <feature-c> -m "dev: combined"
 # now @ contains all features merged
 ```
 

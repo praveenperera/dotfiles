@@ -39,7 +39,7 @@ jj log -r 'master..@'
 ### 6. Update bookmarks if needed
 
 ```bash
-jj bookmark set pr/feature -r <change-id>
+jj bookmark set feature -r <change-id>
 ```
 
 ### 7. Push updates

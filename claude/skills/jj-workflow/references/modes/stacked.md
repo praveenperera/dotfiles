@@ -40,9 +40,9 @@ jj log -r 'master..@-' --no-graph -T 'change_id.short() ++ " " ++ description.fi
 ### 4. Create bookmarks
 
 ```bash
-jj bookmark create pr/<feature-a> -r <change-id-A>
-jj bookmark create pr/<feature-b> -r <change-id-B>
-jj bookmark create pr/<feature-c> -r <change-id-C>
+jj bookmark create <feature-a> -r <change-id-A>
+jj bookmark create <feature-b> -r <change-id-B>
+jj bookmark create <feature-c> -r <change-id-C>
 ```
 
 ### 5. Push
@@ -54,9 +54,9 @@ jj git push
 ### 6. Create PRs with correct bases
 
 ```bash
-gh pr create --head pr/<feature-a> --base master --title "<title A>"
-gh pr create --head pr/<feature-b> --base pr/<feature-a> --title "<title B>"
-gh pr create --head pr/<feature-c> --base pr/<feature-b> --title "<title C>"
+gh pr create --head <feature-a> --base master --title "<title A>"
+gh pr create --head <feature-b> --base <feature-a> --title "<title B>"
+gh pr create --head <feature-c> --base <feature-b> --title "<title C>"
 ```
 
 ---

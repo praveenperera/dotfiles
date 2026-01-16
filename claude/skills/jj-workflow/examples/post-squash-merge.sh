@@ -32,17 +32,17 @@ jj log -r 'master@origin..@'
 #   jj status              # verify resolved
 
 # === UPDATE BOOKMARKS ===
-jj bookmark set pr/feature-b -r <B-change-id>
-jj bookmark set pr/feature-c -r <C-change-id>
+jj bookmark set feature-b -r <B-change-id>
+jj bookmark set feature-c -r <C-change-id>
 
 # === DELETE MERGED BOOKMARK ===
-jj bookmark delete pr/feature-a
+jj bookmark delete feature-a
 
 # === PUSH (force-push happens automatically) ===
 jj git push
 
 # === UPDATE PR BASE ON GITHUB ===
-# PR #2 was targeting pr/feature-a, now should target master
+# PR #2 was targeting feature-a, now should target master
 # Do this manually on GitHub or:
 # gh pr edit <pr-number> --base master
 

@@ -39,20 +39,20 @@ jj rebase -r <change-id-D> -o <change-id-B>
 ### 5. Create bookmarks and push
 
 ```bash
-jj bookmark create pr/feat-a -r <A>
-jj bookmark create pr/feat-b -r <B>
-jj bookmark create pr/feat-c -r <C>
-jj bookmark create pr/feat-d -r <D>
+jj bookmark create feat-a -r <A>
+jj bookmark create feat-b -r <B>
+jj bookmark create feat-c -r <C>
+jj bookmark create feat-d -r <D>
 jj git push
 ```
 
 ### 6. Create PRs with correct bases
 
 ```bash
-gh pr create --head pr/feat-a --base master --title "A"
-gh pr create --head pr/feat-b --base pr/feat-a --title "B"
-gh pr create --head pr/feat-c --base master --title "C (independent)"
-gh pr create --head pr/feat-d --base pr/feat-b --title "D"
+gh pr create --head feat-a --base master --title "A"
+gh pr create --head feat-b --base feat-a --title "B"
+gh pr create --head feat-c --base master --title "C (independent)"
+gh pr create --head feat-d --base feat-b --title "D"
 ```
 
 ---
@@ -60,6 +60,6 @@ gh pr create --head pr/feat-d --base pr/feat-b --title "D"
 ## Dev Merge for Combined Work
 
 ```bash
-jj new pr/feat-d pr/feat-c -m "dev: all features"
+jj new feat-d feat-c -m "dev: all features"
 # work here; edits to specific commits via jj edit
 ```

@@ -34,16 +34,16 @@ jj log -r 'master..@-' --no-graph -T 'change_id.short() ++ " " ++ description.fi
 
 # === CREATE BOOKMARKS ===
 # Replace <change-id-X> with actual change IDs from above
-jj bookmark create pr/feature-a -r <change-id-A>
-jj bookmark create pr/feature-b -r <change-id-B>
-jj bookmark create pr/feature-c -r <change-id-C>
+jj bookmark create feature-a -r <change-id-A>
+jj bookmark create feature-b -r <change-id-B>
+jj bookmark create feature-c -r <change-id-C>
 
 # === PUSH ===
 jj git push
 
 # === CREATE PRs (stacked bases) ===
-gh pr create --head pr/feature-a --base master --title "feat: feature A"
-gh pr create --head pr/feature-b --base pr/feature-a --title "feat: feature B"
-gh pr create --head pr/feature-c --base pr/feature-b --title "feat: feature C"
+gh pr create --head feature-a --base master --title "feat: feature A"
+gh pr create --head feature-b --base feature-a --title "feat: feature B"
+gh pr create --head feature-c --base feature-b --title "feat: feature C"
 
 echo "=== Done! PRs created with stacked bases ==="

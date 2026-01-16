@@ -54,8 +54,8 @@ jj status              # verify resolved
 
 ```bash
 # 5. Update bookmarks to rebased commits
-jj bookmark set pr/feature-b -r <B>
-jj bookmark set pr/feature-c -r <C>
+jj bookmark set feature-b -r <B>
+jj bookmark set feature-c -r <C>
 
 # 6. Push (force-push happens automatically)
 jj git push

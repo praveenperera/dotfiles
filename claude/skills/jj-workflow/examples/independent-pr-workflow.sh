@@ -38,19 +38,19 @@ jj rebase -r <change-id-B> -o master
 jj rebase -r <change-id-C> -o master
 
 # === CREATE BOOKMARKS ===
-jj bookmark create pr/feature-a -r <change-id-A>
-jj bookmark create pr/feature-b -r <change-id-B>
-jj bookmark create pr/feature-c -r <change-id-C>
+jj bookmark create feature-a -r <change-id-A>
+jj bookmark create feature-b -r <change-id-B>
+jj bookmark create feature-c -r <change-id-C>
 
 # === PUSH ===
 jj git push
 
 # === CREATE PRs (all target master) ===
-gh pr create --head pr/feature-a --base master --title "feat: feature A"
-gh pr create --head pr/feature-b --base master --title "feat: feature B"
-gh pr create --head pr/feature-c --base master --title "feat: feature C"
+gh pr create --head feature-a --base master --title "feat: feature A"
+gh pr create --head feature-b --base master --title "feat: feature B"
+gh pr create --head feature-c --base master --title "feat: feature C"
 
 echo "=== Done! Independent PRs created ==="
 
 # === OPTIONAL: Dev merge to work on all together ===
-# jj new pr/feature-a pr/feature-b pr/feature-c -m "dev: combined"
+# jj new feature-a feature-b feature-c -m "dev: combined"

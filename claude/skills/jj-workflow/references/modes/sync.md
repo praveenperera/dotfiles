@@ -15,7 +15,7 @@ jj git fetch
 ### 2. Rebase remaining stack onto new master
 
 ```bash
-jj rebase -o master@origin -s pr/<next-feature>
+jj rebase -o master@origin -s <next-feature>
 ```
 
 **Key:** Use `-s` (source) to bring descendants along, not `-r` (revision).
@@ -23,7 +23,7 @@ jj rebase -o master@origin -s pr/<next-feature>
 ### 3. Delete merged bookmark
 
 ```bash
-jj bookmark delete pr/<merged-feature>
+jj bookmark delete <merged-feature>
 ```
 
 ### 4. Update PR base on GitHub
