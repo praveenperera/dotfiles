@@ -1,4 +1,3 @@
-pub mod better_context;
 pub mod cmd;
 pub mod encrypt;
 pub mod github;
@@ -6,7 +5,7 @@ pub mod os;
 pub mod pr_context;
 pub mod util;
 
-use cmd::{jj, terraform, vault};
+use cmd::{better_context, jj, terraform, vault};
 use eyre::{eyre, Result};
 use include_dir::{include_dir, Dir};
 use log::debug;

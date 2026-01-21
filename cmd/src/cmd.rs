@@ -1,3 +1,4 @@
+pub mod better_context;
 pub mod bootstrap;
 pub mod gcloud;
 pub mod generate;
@@ -64,14 +65,14 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
         }
         MainCmd::PrContext(args) => crate::pr_context::run_with_flags(&sh, args),
         MainCmd::BetterContext(args) => {
-            let flags = crate::better_context::BetterContext {
+            let flags = better_context::BetterContext {
                 repo: args.repo,
                 fresh: args.fresh,
                 r#ref: args.r#ref,
                 full: args.full,
                 quiet: args.quiet,
             };
-            crate::better_context::run_with_flags(&sh, flags)
+            better_context::run_with_flags(&sh, flags)
         }
     }
 }
