@@ -13,6 +13,10 @@ AFTER:  master ─── first (fileA) ─── second (fileB, fileC)
 
 ## Methods
 
+**⚠️ Syntax Warning:** Files are positional arguments, NOT flags. There is no `--paths` or `--files` flag.
+- ✓ `jj split file1.ts file2.ts`
+- ✗ `jj split --paths file1.ts file2.ts`
+
 ### Interactive TUI
 
 ```bash

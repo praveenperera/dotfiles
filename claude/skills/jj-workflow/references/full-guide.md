@@ -831,7 +831,7 @@ jj diff -r teammate/their-feature@origin
 2. **Rebase before push**: Keep your branches up-to-date with main
 3. **Don't rewrite shared history**: Once pushed and reviewed, minimize rewrites
 4. **Communicate about force pushes**: Let reviewers know if you force-push
-5. **Use descriptive bookmarks**: `user/feature` pattern helps identify ownership
+5. **Use descriptive bookmarks**: Use clear, descriptive names like `auth`, `api-refactor` (avoid path prefixes like `fix/` or `feat/`)
 
 **Sources**: [Working with GitHub - Jujutsu docs](https://jj-vcs.github.io/jj/latest/github/), [Syncing with remote changes](https://renerocks.ai/blog/jj-sync-remote/)
 

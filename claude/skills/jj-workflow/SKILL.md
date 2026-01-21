@@ -134,3 +134,11 @@ Commands like `jj split` and `jj squash` open an editor by default. Use flags to
 jj split -m "feat: description" file1.ts file2.ts
 jj squash --from X --into Y -u  # -u keeps destination message
 ```
+
+---
+
+## Branch Naming Preferences
+
+Use simple, descriptive names without path-style prefixes:
+- ✓ `auth`, `api-refactor`, `fix-login-bug`
+- ✗ `fix/login-bug`, `pr/auth`, `feat/api-refactor`
