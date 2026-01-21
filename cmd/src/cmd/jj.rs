@@ -109,7 +109,10 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
 }
 
 fn tree(sh: &Shell) -> Result<()> {
-    let output = cmd!(sh, "jj stack")
+    let revset = "descendants(roots(trunk()..@))";
+    let template = r#"change_id.shortest(4) ++ " " ++ if(description, description.first_line(), "(no description)")"#;
+
+    let output = cmd!(sh, "jj log -r {revset} --reversed --no-graph -T {template}")
         .read()
         .wrap_err("failed to get stack")?;
 
