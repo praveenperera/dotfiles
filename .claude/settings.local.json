@@ -58,7 +58,14 @@
       "Bash(ln:*)",
       "Bash(./target/debug/notf:*)",
       "Bash(git -C /Users/praveen/code/dotfiles status)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git -C /Users/praveen/.config/jj status)",
+      "Bash(git -C /Users/praveen/.config/jj diff)",
+      "Bash(git -C /Users/praveen/.config/jj log --oneline -5)",
+      "Bash(git -C /Users/praveen/.config/jj add:*)",
+      "Bash(git -C /Users/praveen/.config/jj commit -m \"$\\(cat <<''EOF''\nAdd auto-track-bookmarks for origin remote\nEOF\n\\)\")",
+      "Bash(/Users/praveen/code/dotfiles/cmd/target/debug/cmd jj t:*)",
+      "Bash(CLICOLOR_FORCE=1 /Users/praveen/code/dotfiles/cmd/target/debug/cmd jj t:*)"
     ],
     "deny": [],
     "ask": []
