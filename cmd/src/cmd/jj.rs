@@ -22,7 +22,11 @@ pub enum JjCmd {
 
     /// Display the current stack as a tree
     #[command(visible_alias = "t")]
-    Tree,
+    Tree {
+        /// Show all commits, including those without bookmarks
+        #[arg(short, long)]
+        full: bool,
+    },
 }
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
@@ -34,7 +38,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
     match flags.subcommand {
         JjCmd::StackSync { push } => stack_sync(sh, push),
-        JjCmd::Tree => tree(sh),
+        JjCmd::Tree { full } => tree(sh, full),
     }
 }
 
@@ -108,17 +112,62 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
     Ok(())
 }
 
-fn tree(sh: &Shell) -> Result<()> {
+fn tree(sh: &Shell, full: bool) -> Result<()> {
+    use colored::Colorize;
+
     let revset = "descendants(roots(trunk()..@))";
-    let template = r#"change_id.shortest(4) ++ " " ++ if(description, description.first_line(), "(no description)")"#;
+    // tab-separated: full_rev, is_working_copy, bookmarks, description
+    let template = r#"change_id.shortest(4) ++ "\t" ++ if(working_copies, "true", "false") ++ "\t" ++ bookmarks.join(" ") ++ "\t" ++ if(description, description.first_line(), "") ++ "\n""#;
 
     let output = cmd!(sh, "jj log -r {revset} --reversed --no-graph -T {template}")
         .read()
         .wrap_err("failed to get stack")?;
 
-    for (i, line) in output.lines().filter(|l| !l.is_empty()).enumerate() {
-        let indent = "    ".repeat(i);
-        println!("{indent}└── {line}");
+    let mut visible_index = 0;
+    for line in output.lines().filter(|l| !l.is_empty()) {
+        let parts: Vec<&str> = line.splitn(4, '\t').collect();
+        if parts.len() < 4 {
+            continue;
+        }
+
+        let full_rev = parts[0];
+        let is_working_copy = parts[1] == "true";
+        let bookmarks = parts[2];
+        let description = parts[3];
+
+        let has_bookmark = !bookmarks.is_empty();
+
+        // skip commits without bookmarks unless --full or working copy
+        if !full && !has_bookmark && !is_working_copy {
+            continue;
+        }
+
+        let (prefix, suffix) = full_rev.split_at(2.min(full_rev.len()));
+        let colored_rev = format!("{}{}", prefix.purple(), suffix.dimmed());
+
+        let name = if bookmarks.is_empty() {
+            if is_working_copy {
+                format!("{} ({})", "@".cyan(), colored_rev)
+            } else {
+                colored_rev
+            }
+        } else {
+            format!("{} ({})", bookmarks.cyan(), colored_rev)
+        };
+
+        let desc = if description.is_empty() {
+            if is_working_copy {
+                "(working copy)".dimmed().to_string()
+            } else {
+                "(no description)".dimmed().to_string()
+            }
+        } else {
+            description.dimmed().to_string()
+        };
+
+        let indent = "    ".repeat(visible_index);
+        println!("{indent}└── {name} -- {desc}");
+        visible_index += 1;
     }
 
     Ok(())
