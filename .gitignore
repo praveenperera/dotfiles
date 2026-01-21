@@ -31,3 +31,4 @@ claude/stats-cache.json
 /claude/paste-cache
 /claude/cache
 /claude/chrome
+/claude/telemetry
