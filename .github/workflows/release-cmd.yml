@@ -24,11 +24,12 @@ jobs:
       - name: Get next version
         id: tag
         run: |
-          # get the last tag or use v0.0.0 if no tags exist
-          REPO_OWNER="praveenperera"  
-          REPO_NAME="dotfiles"
-          LATEST_RELEASE_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
-          LAST_TAG=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name"' | sed -E 's/.*"tag_name": "([^"]+)".*/\1/')
+          # get the last tag from git (not releases API) to avoid tag collisions
+          LAST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          if [ -z "$LAST_TAG" ]; then
+            LAST_TAG="v0.0.0"
+          fi
+          echo "Latest tag: $LAST_TAG"
 
           # extract version number and increment patch version
           VERSION=$(echo $LAST_TAG | sed 's/v//')

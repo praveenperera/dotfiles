@@ -67,7 +67,8 @@
       "Bash(/Users/praveen/code/dotfiles/cmd/target/debug/cmd jj t:*)",
       "Bash(CLICOLOR_FORCE=1 /Users/praveen/code/dotfiles/cmd/target/debug/cmd jj t:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:jj-for-everyone.github.io)"
+      "WebFetch(domain:jj-for-everyone.github.io)",
+      "Bash(git show-ref:*)"
     ],
     "deny": [],
     "ask": []
