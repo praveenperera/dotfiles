@@ -49,6 +49,10 @@ pub enum JjCmd {
         #[arg(short, long)]
         full: bool,
     },
+
+    /// Clean up empty divergent commits
+    #[command(visible_alias = "c")]
+    Clean,
 }
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
@@ -61,6 +65,7 @@ pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
     match flags.subcommand {
         JjCmd::StackSync { push } => stack_sync(sh, push),
         JjCmd::Tree { full } => tree(sh, full),
+        JjCmd::Clean => clean(sh),
     }
 }
 
@@ -359,6 +364,49 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
         }
         let divergent_counts = calc_commit_counts(&divergent_commits, full);
         print_tree(&divergent_commits, &divergent_counts, full, 0);
+    }
+
+    Ok(())
+}
+
+fn clean(sh: &Shell) -> Result<()> {
+    let revset = "all() ~ root()";
+
+    // find non-empty divergent commits (need manual resolution)
+    let nonempty_template = r#"if(divergent && !empty, change_id.short() ++ " ", "")"#;
+    let nonempty = cmd!(sh, "jj log -r {revset} -T {nonempty_template} --no-graph")
+        .read()
+        .unwrap_or_default()
+        .split_whitespace()
+        .map(String::from)
+        .collect::<Vec<_>>();
+
+    if !nonempty.is_empty() {
+        info!(
+            "Warning: non-empty divergent commits need manual resolution: {}",
+            nonempty.join(" ")
+        );
+    }
+
+    // find empty divergent commits
+    let empty_template = r#"if(divergent && empty, change_id.short() ++ " ", "")"#;
+    let empty = cmd!(sh, "jj log -r {revset} -T {empty_template} --no-graph")
+        .read()
+        .unwrap_or_default()
+        .split_whitespace()
+        .map(String::from)
+        .collect::<Vec<_>>();
+
+    if empty.is_empty() {
+        if nonempty.is_empty() {
+            info!("No divergent commits found");
+        }
+        return Ok(());
+    }
+
+    info!("Abandoning empty divergent commits: {}", empty.join(" "));
+    for rev in &empty {
+        cmd!(sh, "jj abandon {rev}").run()?;
     }
 
     Ok(())
