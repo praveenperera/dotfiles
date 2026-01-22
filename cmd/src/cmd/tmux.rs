@@ -18,7 +18,11 @@ pub struct Tmux {
 }
 
 #[derive(Debug, Clone, Parser)]
-#[command(name = "notf", about = "Send terminal notification (bell, macos, or both)", arg_required_else_help = true)]
+#[command(
+    name = "notf",
+    about = "Send terminal notification (bell, macos, or both)",
+    arg_required_else_help = true
+)]
 pub struct NotifyArgs {
     /// Notification message (used with macos)
     message: Option<String>,
@@ -73,7 +77,13 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
 
 pub fn notify_run(sh: &Shell, args: &[OsString]) -> Result<()> {
     let flags = NotifyArgs::parse_from(args);
-    notify(sh, &flags.kind, flags.message.as_deref(), flags.title.as_deref(), flags.force)
+    notify(
+        sh,
+        &flags.kind,
+        flags.message.as_deref(),
+        flags.title.as_deref(),
+        flags.force,
+    )
 }
 
 fn move_after(sh: &Shell, position: u32) -> Result<()> {

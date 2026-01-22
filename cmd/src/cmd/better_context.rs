@@ -10,7 +10,10 @@ use std::time::Duration;
 use xshell::{cmd, Shell};
 
 #[derive(Debug, Clone, Parser)]
-#[command(name = "better-context", about = "Clone/update a repo for agent exploration")]
+#[command(
+    name = "better-context",
+    about = "Clone/update a repo for agent exploration"
+)]
 pub struct BetterContext {
     /// Repository: owner/repo, URL, or local path
     pub repo: String,
@@ -43,9 +46,19 @@ pub struct Output {
 }
 
 enum RepoSource {
-    GitHub { owner: String, repo: String },
-    Url { url: String, host: String, owner: String, repo: String },
-    Local { path: PathBuf },
+    GitHub {
+        owner: String,
+        repo: String,
+    },
+    Url {
+        url: String,
+        host: String,
+        owner: String,
+        repo: String,
+    },
+    Local {
+        path: PathBuf,
+    },
 }
 
 impl RepoSource {
@@ -102,7 +115,10 @@ pub fn run_with_flags(sh: &Shell, flags: BetterContext) -> Result<()> {
                 match checkout_ref(sh, &cache_path, git_ref) {
                     Ok(()) => git_ref.clone(),
                     Err(e) => {
-                        warn!("Could not checkout {}: {}. Using default branch.", git_ref, e);
+                        warn!(
+                            "Could not checkout {}: {}. Using default branch.",
+                            git_ref, e
+                        );
                         get_current_branch(sh, &cache_path)?
                     }
                 }
@@ -300,16 +316,16 @@ fn repo_cache_path(source: &RepoSource) -> Result<PathBuf> {
     let base = cache_dir()?;
     match source {
         RepoSource::GitHub { owner, repo } => Ok(base.join("github.com").join(owner).join(repo)),
-        RepoSource::Url { host, owner, repo, .. } => Ok(base.join(host).join(owner).join(repo)),
+        RepoSource::Url {
+            host, owner, repo, ..
+        } => Ok(base.join(host).join(owner).join(repo)),
         RepoSource::Local { path } => Ok(path.clone()),
     }
 }
 
 fn get_current_branch(sh: &Shell, path: &PathBuf) -> Result<String> {
     let _guard = sh.push_dir(path);
-    let branch = cmd!(sh, "git rev-parse --abbrev-ref HEAD")
-        .quiet()
-        .read()?;
+    let branch = cmd!(sh, "git rev-parse --abbrev-ref HEAD").quiet().read()?;
     Ok(branch.trim().to_string())
 }
 

@@ -125,15 +125,21 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
 
     // main stack: direct ancestry to @
     let main_revset = "trunk()..@";
-    let main_output = cmd!(sh, "jj log -r {main_revset} --reversed --no-graph -T {template}")
-        .read()
-        .wrap_err("failed to get main stack")?;
+    let main_output = cmd!(
+        sh,
+        "jj log -r {main_revset} --reversed --no-graph -T {template}"
+    )
+    .read()
+    .wrap_err("failed to get main stack")?;
 
     // divergent branches: descendants from stack root, excluding ancestors of @
     let divergent_revset = "descendants(roots(trunk()..@)) ~ ancestors(@)";
-    let divergent_output = cmd!(sh, "jj log -r {divergent_revset} --reversed --no-graph -T {template}")
-        .read()
-        .wrap_err("failed to get divergent branches")?;
+    let divergent_output = cmd!(
+        sh,
+        "jj log -r {divergent_revset} --reversed --no-graph -T {template}"
+    )
+    .read()
+    .wrap_err("failed to get divergent branches")?;
 
     #[derive(Clone)]
     struct Commit {
@@ -200,7 +206,9 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
     };
 
     let has_visible_commits = |commits: &[Commit], full: bool| -> bool {
-        commits.iter().any(|c| full || !c.bookmarks.is_empty() || c.is_working_copy)
+        commits
+            .iter()
+            .any(|c| full || !c.bookmarks.is_empty() || c.is_working_copy)
     };
 
     let print_tree = |commits: &[Commit], counts: &[usize], full: bool, base_indent: usize| {
@@ -230,7 +238,10 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
             let (name, show_rev_suffix) = if commit.bookmarks.is_empty() {
                 (format!("{at_marker}({}){count_str}", colored_rev), false)
             } else {
-                (format!("{at_marker}{}{count_str}", commit.bookmarks.cyan()), true)
+                (
+                    format!("{at_marker}{}{count_str}", commit.bookmarks.cyan()),
+                    true,
+                )
             };
 
             let desc = if commit.description.is_empty() {
@@ -262,8 +273,7 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
         // find where divergent branches split from main stack
         // get the divergent root's parent (exact branch point)
         let divergent_roots_revset = "roots(descendants(roots(trunk()..@)) ~ ancestors(@))";
-        let parent_template =
-            r#"self.parents().map(|p| p.change_id().shortest(4)).join(" ")"#;
+        let parent_template = r#"self.parents().map(|p| p.change_id().shortest(4)).join(" ")"#;
         let exact_parent = cmd!(
             sh,
             "jj log -r {divergent_roots_revset} --no-graph -T {parent_template} --limit 1"
