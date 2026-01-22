@@ -190,7 +190,7 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
                         counts[prev_idx] = current_count - 1;
                     }
                     last_visible_idx = Some(i);
-                    current_count = 1;
+                    current_count = 0;
                 }
             }
             // handle the last visible commit
