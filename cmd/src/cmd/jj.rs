@@ -1,8 +1,30 @@
 use clap::{Parser, Subcommand};
 use eyre::{Context as _, Result};
 use log::{debug, info};
+use std::collections::HashMap;
 use std::ffi::OsString;
 use xshell::{cmd, Shell};
+
+/// Calculate minimum unique prefix length for each revision
+fn calc_unique_prefix_lengths(revs: &[&str]) -> HashMap<String, usize> {
+    let mut result = HashMap::new();
+    for rev in revs {
+        let mut prefix_len = 1;
+        for other in revs {
+            if rev == other {
+                continue;
+            }
+            let common_len = rev
+                .chars()
+                .zip(other.chars())
+                .take_while(|(a, b)| a == b)
+                .count();
+            prefix_len = prefix_len.max(common_len + 1);
+        }
+        result.insert(rev.to_string(), prefix_len.min(rev.len()));
+    }
+    result
+}
 
 #[derive(Debug, Clone, Parser)]
 pub struct Jj {
@@ -172,37 +194,39 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
     let main_commits = parse_commits(&main_output, &working_copy_id);
     let divergent_commits = parse_commits(&divergent_output, &working_copy_id);
 
+    // calculate minimum unique prefix lengths for all revisions
+    let all_revs: Vec<&str> = main_commits
+        .iter()
+        .chain(divergent_commits.iter())
+        .map(|c| c.rev.as_str())
+        .collect();
+    let prefix_lengths = calc_unique_prefix_lengths(&all_revs);
+
     // calculate commit counts for filtered mode (commits until next bookmark/working copy)
     let calc_commit_counts = |commits: &[Commit], full: bool| -> Vec<usize> {
         if full {
             vec![1; commits.len()]
         } else {
             let mut counts = vec![0; commits.len()];
-            let mut current_count = 0;
-            let mut last_visible_idx: Option<usize> = None;
+            let mut hidden_count = 0;
 
             for (i, commit) in commits.iter().enumerate() {
                 let is_visible = !commit.bookmarks.is_empty() || commit.is_working_copy;
-                current_count += 1;
 
                 if is_visible {
-                    if let Some(prev_idx) = last_visible_idx {
-                        counts[prev_idx] = current_count - 1;
-                    }
-                    last_visible_idx = Some(i);
-                    current_count = 0;
+                    counts[i] = hidden_count;
+                    hidden_count = 0;
+                } else {
+                    hidden_count += 1;
                 }
-            }
-            // handle the last visible commit
-            if let Some(prev_idx) = last_visible_idx {
-                counts[prev_idx] = current_count;
             }
             counts
         }
     };
 
     let format_rev = |rev: &str| -> String {
-        let (prefix, suffix) = rev.split_at(2.min(rev.len()));
+        let len = prefix_lengths.get(rev).copied().unwrap_or(2);
+        let (prefix, suffix) = rev.split_at(len.min(rev.len()));
         format!("{}{}", prefix.purple(), suffix.dimmed())
     };
 
@@ -225,7 +249,7 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
             let colored_rev = format_rev(&commit.rev);
 
             let count = counts[i];
-            let count_str = if !full && count > 1 {
+            let count_str = if !full && count > 0 {
                 format!(" +{count}")
             } else {
                 String::new()
