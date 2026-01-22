@@ -46,7 +46,7 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
     info!("Fetching from remote...");
     cmd!(sh, "jj git fetch").run().wrap_err("failed to fetch")?;
 
-    // find the root(s) of the stack (first commit(s) after master)
+    // find the root(s) of the stack
     let roots_output = cmd!(
         sh,
         "jj log -r 'roots(master..@)' --no-graph -T 'change_id.short() ++ \"\\n\"'"
@@ -63,14 +63,15 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
     }
 
     // rebase from each root (usually just one)
+    // --skip-emptied handles merged commits by abandoning ones that became empty
     for root in &roots {
         info!("Rebasing stack from {root} onto master...");
-        cmd!(sh, "jj rebase -s {root} -d master")
+        cmd!(sh, "jj rebase -s {root} -d master --skip-emptied")
             .run()
             .wrap_err_with(|| format!("failed to rebase from {root}"))?;
     }
 
-    // delete local bookmarks that were deleted on origin (merged PRs)
+    // clean up bookmarks marked as deleted on remote (after rebase so --skip-emptied can work)
     let tracked = cmd!(sh, "jj bookmark list --tracked")
         .read()
         .wrap_err("failed to list tracked bookmarks")?;
