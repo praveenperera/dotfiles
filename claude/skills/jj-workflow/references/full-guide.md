@@ -98,7 +98,7 @@ tig                          # TUI log viewer
 |----------|-----|------------|
 | `git add / git commit` | Creates commits jj doesn't know about (until next jj cmd) | Use `jj` commands |
 | `git rebase -i` | Conflicts with jj's view | Use `jj rebase`, `jj squash` |
-| `git merge` | jj handles merges differently | Use `jj new -d A -d B` for merge |
+| `git merge` | jj handles merges differently | Use `jj new A B` for merge |
 | `git stash` | Unnecessary; working copy is a commit | Just `jj new` to start fresh work |
 | `git checkout branch` | Puts jj in confused state | Use `jj new branch-bookmark` |
 
