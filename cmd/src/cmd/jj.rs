@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
+use colored::Colorize;
 use eyre::{Context as _, Result};
-use log::{debug, info};
+use log::debug;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use xshell::{cmd, Shell};
@@ -70,7 +71,7 @@ pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
 }
 
 fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
-    info!("Fetching from remote...");
+    println!("{}", "Fetching from remote...".dimmed());
     cmd!(sh, "jj git fetch").run().wrap_err("failed to fetch")?;
 
     // find the root(s) of the stack
@@ -85,14 +86,14 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
     debug!("stack roots: {:?}", roots);
 
     if roots.is_empty() {
-        info!("No commits after master, nothing to rebase");
+        println!("{}", "No commits after master, nothing to rebase".dimmed());
         return Ok(());
     }
 
     // rebase from each root (usually just one)
     // --skip-emptied handles merged commits by abandoning ones that became empty
     for root in &roots {
-        info!("Rebasing stack from {root} onto master...");
+        println!("{}{}...", "Rebasing stack from ".dimmed(), root);
         cmd!(sh, "jj rebase -s {root} -d master --skip-emptied")
             .run()
             .wrap_err_with(|| format!("failed to rebase from {root}"))?;
@@ -106,7 +107,7 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
     for line in tracked.lines() {
         if line.contains("[deleted]") {
             if let Some(bookmark) = line.split_whitespace().next() {
-                info!("Deleting merged bookmark: {bookmark}");
+                println!("{}{}", "Deleting merged bookmark: ".dimmed(), bookmark);
                 cmd!(sh, "jj bookmark delete {bookmark}")
                     .run()
                     .wrap_err_with(|| format!("failed to delete bookmark {bookmark}"))?;
@@ -127,107 +128,99 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
 
         if let Some(bookmark) = output.lines().find(|l| !l.is_empty()) {
             let bookmark = bookmark.trim();
-            info!("Pushing {bookmark}...");
+            println!("{}{}...", "Pushing ".dimmed(), bookmark);
             cmd!(sh, "jj git push --bookmark {bookmark}")
                 .run()
                 .wrap_err("failed to push")?;
         } else {
-            info!("No bookmarks found to push");
+            println!("{}", "No bookmarks found to push".dimmed());
         }
     }
 
-    info!("Stack sync complete");
+    println!("{}", "Stack sync complete".green());
     Ok(())
 }
 
 fn tree(sh: &Shell, full: bool) -> Result<()> {
-    use colored::Colorize;
+    use std::collections::HashSet;
 
     // get the working copy change_id
     let working_copy_id = cmd!(sh, "jj log -r @ --no-graph -T change_id.shortest(4)")
         .read()
         .wrap_err("failed to get working copy")?;
 
-    // tab-separated: rev, bookmarks, description
-    let template = r#"change_id.shortest(4) ++ "\t" ++ bookmarks.join(" ") ++ "\t" ++ if(description, description.first_line(), "") ++ "\n""#;
+    // single revset for all commits: descendants of roots of trunk()..@
+    let revset = "descendants(roots(trunk()..@))";
 
-    // main stack: direct ancestry to @
-    let main_revset = "trunk()..@";
-    let main_output = cmd!(
-        sh,
-        "jj log -r {main_revset} --reversed --no-graph -T {template}"
-    )
-    .read()
-    .wrap_err("failed to get main stack")?;
+    // tab-separated: rev, bookmarks, description, parent_revs
+    let template = r#"change_id.shortest(4) ++ "\t" ++ bookmarks.join(" ") ++ "\t" ++ if(description, description.first_line(), "") ++ "\t" ++ self.parents().map(|p| p.change_id().shortest(4)).join(",") ++ "\n""#;
 
-    // divergent branches: descendants from stack root, excluding ancestors of @
-    let divergent_revset = "descendants(roots(trunk()..@)) ~ ancestors(@)";
-    let divergent_output = cmd!(
-        sh,
-        "jj log -r {divergent_revset} --reversed --no-graph -T {template}"
-    )
-    .read()
-    .wrap_err("failed to get divergent branches")?;
+    let output = cmd!(sh, "jj log -r {revset} --reversed --no-graph -T {template}")
+        .read()
+        .wrap_err("failed to get commits")?;
 
     #[derive(Clone)]
     struct Commit {
         rev: String,
         bookmarks: String,
         description: String,
+        parent_revs: Vec<String>,
         is_working_copy: bool,
     }
 
-    let parse_commits = |output: &str, working_copy_id: &str| -> Vec<Commit> {
-        output
-            .lines()
-            .filter(|l| !l.is_empty())
-            .filter_map(|line| {
-                let parts: Vec<&str> = line.splitn(3, '\t').collect();
-                if parts.len() < 3 {
-                    return None;
-                }
-                Some(Commit {
-                    rev: parts[0].to_string(),
-                    bookmarks: parts[1].to_string(),
-                    description: parts[2].to_string(),
-                    is_working_copy: parts[0] == working_copy_id,
-                })
-            })
-            .collect()
-    };
+    // parse commits into a map
+    let mut commit_map: HashMap<String, Commit> = HashMap::new();
+    for line in output.lines().filter(|l| !l.is_empty()) {
+        let parts: Vec<&str> = line.splitn(4, '\t').collect();
+        if parts.len() < 4 {
+            continue;
+        }
+        let rev = parts[0].to_string();
+        let parent_revs: Vec<String> = parts[3]
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .collect();
 
-    let main_commits = parse_commits(&main_output, &working_copy_id);
-    let divergent_commits = parse_commits(&divergent_output, &working_copy_id);
+        commit_map.insert(
+            rev.clone(),
+            Commit {
+                rev,
+                bookmarks: parts[1].to_string(),
+                description: parts[2].to_string(),
+                parent_revs,
+                is_working_copy: parts[0] == working_copy_id,
+            },
+        );
+    }
+
+    if commit_map.is_empty() {
+        return Ok(());
+    }
+
+    // build children map
+    let mut children_map: HashMap<String, Vec<String>> = HashMap::new();
+    for commit in commit_map.values() {
+        for parent in &commit.parent_revs {
+            children_map
+                .entry(parent.clone())
+                .or_default()
+                .push(commit.rev.clone());
+        }
+    }
+
+    // find roots (commits whose parents aren't in our set)
+    let revs_in_set: HashSet<&str> = commit_map.keys().map(|s| s.as_str()).collect();
+    let mut roots: Vec<String> = commit_map
+        .values()
+        .filter(|c| c.parent_revs.iter().all(|p| !revs_in_set.contains(p.as_str())))
+        .map(|c| c.rev.clone())
+        .collect();
+    roots.sort();
 
     // calculate minimum unique prefix lengths for all revisions
-    let all_revs: Vec<&str> = main_commits
-        .iter()
-        .chain(divergent_commits.iter())
-        .map(|c| c.rev.as_str())
-        .collect();
+    let all_revs: Vec<&str> = commit_map.keys().map(|s| s.as_str()).collect();
     let prefix_lengths = calc_unique_prefix_lengths(&all_revs);
-
-    // calculate commit counts for filtered mode (commits until next bookmark/working copy)
-    let calc_commit_counts = |commits: &[Commit], full: bool| -> Vec<usize> {
-        if full {
-            vec![1; commits.len()]
-        } else {
-            let mut counts = vec![0; commits.len()];
-            let mut hidden_count = 0;
-
-            for (i, commit) in commits.iter().enumerate() {
-                let is_visible = !commit.bookmarks.is_empty() || commit.is_working_copy;
-
-                if is_visible {
-                    counts[i] = hidden_count;
-                    hidden_count = 0;
-                } else {
-                    hidden_count += 1;
-                }
-            }
-            counts
-        }
-    };
 
     let format_rev = |rev: &str| -> String {
         let len = prefix_lengths.get(rev).copied().unwrap_or(2);
@@ -235,135 +228,225 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
         format!("{}{}", prefix.purple(), suffix.dimmed())
     };
 
-    let has_visible_commits = |commits: &[Commit], full: bool| -> bool {
-        commits
-            .iter()
-            .any(|c| full || !c.bookmarks.is_empty() || c.is_working_copy)
+    // determine visibility for filtered mode
+    let is_visible = |commit: &Commit| -> bool {
+        full || !commit.bookmarks.is_empty() || commit.is_working_copy
     };
 
-    let print_tree = |commits: &[Commit], counts: &[usize], full: bool, base_indent: usize| {
-        let mut visible_index = 0;
-        for (i, commit) in commits.iter().enumerate() {
-            let has_bookmark = !commit.bookmarks.is_empty();
+    // count hidden commits between visible ancestors and a commit
+    fn count_hidden_between(
+        commit_map: &HashMap<String, Commit>,
+        children_map: &HashMap<String, Vec<String>>,
+        from: &str,
+        to: &str,
+        is_visible_fn: &dyn Fn(&Commit) -> bool,
+    ) -> usize {
+        // BFS from `from` to `to`, counting non-visible commits in between
+        let mut count = 0;
+        let mut current = from.to_string();
 
-            // skip commits without bookmarks unless --full or working copy
-            if !full && !has_bookmark && !commit.is_working_copy {
-                continue;
-            }
-
-            let colored_rev = format_rev(&commit.rev);
-
-            let count = counts[i];
-            let count_str = if !full && count > 0 {
-                format!(" +{count}")
-            } else {
-                String::new()
+        loop {
+            let children = match children_map.get(&current) {
+                Some(c) => c,
+                None => break,
             };
 
-            // @ marker right before the name
-            let at_marker = if commit.is_working_copy { "@ " } else { "" };
-
-            // for commits with bookmarks: show name, desc, rev
-            // for commits without: show (rev), desc (no duplicate rev at end)
-            let (name, show_rev_suffix) = if commit.bookmarks.is_empty() {
-                (format!("{at_marker}({}){count_str}", colored_rev), false)
-            } else {
-                (
-                    format!("{at_marker}{}{count_str}", commit.bookmarks.cyan()),
-                    true,
-                )
-            };
-
-            let desc = if commit.description.is_empty() {
-                if commit.is_working_copy {
-                    "(working copy)".dimmed().to_string()
-                } else {
-                    "(no description)".dimmed().to_string()
+            // find the child that leads to `to`
+            let next = children.iter().find(|c| {
+                if *c == to {
+                    return true;
                 }
-            } else {
-                commit.description.dimmed().to_string()
-            };
+                // check if `to` is a descendant of this child
+                let mut stack = vec![c.as_str()];
+                let mut visited = HashSet::new();
+                while let Some(n) = stack.pop() {
+                    if n == to {
+                        return true;
+                    }
+                    if visited.insert(n) {
+                        if let Some(grandchildren) = children_map.get(n) {
+                            stack.extend(grandchildren.iter().map(|s| s.as_str()));
+                        }
+                    }
+                }
+                false
+            });
 
-            let tree_indent = "    ".repeat(base_indent + visible_index);
-            if show_rev_suffix {
-                println!("{tree_indent}└── {name}  {desc}  {colored_rev}");
-            } else {
-                println!("{tree_indent}└── {name}  {desc}");
+            match next {
+                Some(n) if n == to => break,
+                Some(n) => {
+                    if let Some(c) = commit_map.get(n) {
+                        if !is_visible_fn(c) {
+                            count += 1;
+                        }
+                    }
+                    current = n.clone();
+                }
+                None => break,
             }
-            visible_index += 1;
         }
-    };
+        count
+    }
 
-    // print main stack
-    let main_counts = calc_commit_counts(&main_commits, full);
-    print_tree(&main_commits, &main_counts, full, 0);
+    // recursive tree printing
+    fn print_subtree(
+        rev: &str,
+        commit_map: &HashMap<String, Commit>,
+        children_map: &HashMap<String, Vec<String>>,
+        prefix_lengths: &HashMap<String, usize>,
+        prefix: &str,
+        is_last: bool,
+        full: bool,
+        hidden_count: usize,
+        is_visible_fn: &dyn Fn(&Commit) -> bool,
+        format_rev_fn: &dyn Fn(&str) -> String,
+    ) {
+        let commit = match commit_map.get(rev) {
+            Some(c) => c,
+            None => return,
+        };
 
-    // print divergent branches if any visible commits
-    if has_visible_commits(&divergent_commits, full) {
-        // find where divergent branches split from main stack
-        // get the divergent root's parent (exact branch point)
-        let divergent_roots_revset = "roots(descendants(roots(trunk()..@)) ~ ancestors(@))";
-        let parent_template = r#"self.parents().map(|p| p.change_id().shortest(4)).join(" ")"#;
-        let exact_parent = cmd!(
-            sh,
-            "jj log -r {divergent_roots_revset} --no-graph -T {parent_template} --limit 1"
-        )
-        .read()
-        .ok()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty());
+        let visible = is_visible_fn(commit);
 
-        // find nearest bookmarked ancestor for context in filtered view
-        let bookmarked_ancestor = exact_parent.as_ref().and_then(|parent| {
-            let ancestor_revset = format!("ancestors({parent}) & bookmarks()");
-            let ancestor_template = r#"change_id.shortest(4) ++ "\t" ++ bookmarks.join(" ")"#;
-            cmd!(
-                sh,
-                "jj log -r {ancestor_revset} --no-graph -T {ancestor_template} --limit 1"
+        // get children
+        let children: Vec<&String> = children_map
+            .get(rev)
+            .map(|c| c.iter().collect())
+            .unwrap_or_default();
+
+        // if not visible, pass through to children with accumulated hidden count
+        if !visible {
+            for (i, child) in children.iter().enumerate() {
+                let is_last_child = i == children.len() - 1;
+                print_subtree(
+                    child,
+                    commit_map,
+                    children_map,
+                    prefix_lengths,
+                    prefix,
+                    is_last && is_last_child,
+                    full,
+                    hidden_count + 1,
+                    is_visible_fn,
+                    format_rev_fn,
+                );
+            }
+            return;
+        }
+
+        // print this commit
+        let connector = if is_last { "└── " } else { "├── " };
+        let colored_rev = format_rev_fn(rev);
+
+        let count_str = if !full && hidden_count > 0 {
+            format!(" +{hidden_count}")
+        } else {
+            String::new()
+        };
+
+        let at_marker = if commit.is_working_copy { "@ " } else { "" };
+
+        let (name, show_rev_suffix) = if commit.bookmarks.is_empty() {
+            (format!("{at_marker}({}){count_str}", colored_rev), false)
+        } else {
+            (
+                format!("{at_marker}{}{count_str}", commit.bookmarks.cyan()),
+                true,
             )
-            .read()
-            .ok()
-            .and_then(|s| {
-                let parts: Vec<&str> = s.trim().splitn(2, '\t').collect();
-                if parts.len() >= 2 && !parts[0].is_empty() && !parts[1].is_empty() {
-                    Some((parts[0].to_string(), parts[1].trim().to_string()))
-                } else {
-                    None
-                }
-            })
-        });
+        };
 
-        println!();
-        match (bookmarked_ancestor, exact_parent) {
-            (Some((bm_rev, bookmark)), Some(exact)) if bm_rev != exact => {
-                // branch point is different from bookmarked ancestor, show both
-                println!(
-                    "{} (after {} {}, from {})",
-                    "Divergent:".yellow(),
-                    bookmark.cyan(),
-                    format_rev(&bm_rev),
-                    format_rev(&exact)
-                );
+        let desc = if commit.description.is_empty() {
+            if commit.is_working_copy {
+                "(working copy)".dimmed().to_string()
+            } else {
+                "(no description)".dimmed().to_string()
             }
-            (Some((_, bookmark)), Some(exact)) => {
-                // branch point IS the bookmarked commit
-                println!(
-                    "{} (from {} {})",
-                    "Divergent:".yellow(),
-                    bookmark.cyan(),
-                    format_rev(&exact)
-                );
-            }
-            (None, Some(exact)) => {
-                // no bookmarked ancestor, just show exact
-                println!("{} (from {})", "Divergent:".yellow(), format_rev(&exact));
-            }
-            _ => {
-                println!("{}", "Divergent:".yellow());
-            }
+        } else {
+            commit.description.dimmed().to_string()
+        };
+
+        if show_rev_suffix {
+            println!("{prefix}{connector}{name}  {desc}  {colored_rev}");
+        } else {
+            println!("{prefix}{connector}{name}  {desc}");
         }
-        let divergent_counts = calc_commit_counts(&divergent_commits, full);
-        print_tree(&divergent_commits, &divergent_counts, full, 0);
+
+        // calculate new prefix for children
+        let child_prefix = if is_last {
+            format!("{prefix}    ")
+        } else {
+            format!("{prefix}│   ")
+        };
+
+        // find visible children (or children that have visible descendants)
+        fn has_visible_descendant(
+            rev: &str,
+            commit_map: &HashMap<String, Commit>,
+            children_map: &HashMap<String, Vec<String>>,
+            is_visible_fn: &dyn Fn(&Commit) -> bool,
+        ) -> bool {
+            if let Some(commit) = commit_map.get(rev) {
+                if is_visible_fn(commit) {
+                    return true;
+                }
+            }
+            if let Some(children) = children_map.get(rev) {
+                for child in children {
+                    if has_visible_descendant(child, commit_map, children_map, is_visible_fn) {
+                        return true;
+                    }
+                }
+            }
+            false
+        }
+
+        let visible_children: Vec<&String> = children
+            .iter()
+            .filter(|c| has_visible_descendant(c, commit_map, children_map, is_visible_fn))
+            .copied()
+            .collect();
+
+        // print children
+        for (i, child) in visible_children.iter().enumerate() {
+            let is_last_child = i == visible_children.len() - 1;
+
+            // count hidden commits between this visible commit and the child
+            let child_hidden = if full {
+                0
+            } else {
+                count_hidden_between(commit_map, children_map, rev, child, is_visible_fn)
+            };
+
+            print_subtree(
+                child,
+                commit_map,
+                children_map,
+                prefix_lengths,
+                &child_prefix,
+                is_last_child,
+                full,
+                child_hidden,
+                is_visible_fn,
+                format_rev_fn,
+            );
+        }
+    }
+
+    // print each root as a separate tree
+    for (i, root) in roots.iter().enumerate() {
+        let is_last_root = i == roots.len() - 1;
+        print_subtree(
+            root,
+            &commit_map,
+            &children_map,
+            &prefix_lengths,
+            "",
+            is_last_root,
+            full,
+            0,
+            &is_visible,
+            &format_rev,
+        );
     }
 
     Ok(())
@@ -382,8 +465,9 @@ fn clean(sh: &Shell) -> Result<()> {
         .collect::<Vec<_>>();
 
     if !nonempty.is_empty() {
-        info!(
-            "Warning: non-empty divergent commits need manual resolution: {}",
+        println!(
+            "{} non-empty divergent commits need manual resolution: {}",
+            "Warning:".yellow(),
             nonempty.join(" ")
         );
     }
@@ -399,12 +483,12 @@ fn clean(sh: &Shell) -> Result<()> {
 
     if empty.is_empty() {
         if nonempty.is_empty() {
-            info!("No divergent commits found");
+            println!("{}", "No divergent commits found".dimmed());
         }
         return Ok(());
     }
 
-    info!("Abandoning empty divergent commits: {}", empty.join(" "));
+    println!("{}{}", "Abandoning empty divergent commits: ".dimmed(), empty.join(" "));
     for rev in &empty {
         cmd!(sh, "jj abandon {rev}").run()?;
     }
