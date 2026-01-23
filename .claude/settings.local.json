@@ -68,7 +68,14 @@
       "Bash(CLICOLOR_FORCE=1 /Users/praveen/code/dotfiles/cmd/target/debug/cmd jj t:*)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:jj-for-everyone.github.io)",
-      "Bash(git show-ref:*)"
+      "Bash(git show-ref:*)",
+      "Bash(ju clean:*)",
+      "Bash(/Users/praveen/code/dotfiles/cmd/target/debug/cmd jj tree:*)",
+      "WebFetch(domain:jj-vcs.github.io)",
+      "WebFetch(domain:docs.jj-vcs.dev)",
+      "Bash(./cmd/target/debug/cmd jj tree:*)",
+      "Bash(/bin/bash -c \"cd /Users/praveen/code/dotfiles && pwd\")",
+      "Bash(/bin/echo:*)"
     ],
     "deny": [],
     "ask": []

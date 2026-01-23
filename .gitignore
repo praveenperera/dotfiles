@@ -33,3 +33,4 @@ claude/stats-cache.json
 /claude/chrome
 /claude/telemetry
 /claude/skills/skill-creator/scripts/__pycache__
+/claude/tasks

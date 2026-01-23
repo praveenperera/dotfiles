@@ -4,6 +4,7 @@ use eyre::{Context as _, Result};
 use log::debug;
 use std::collections::HashMap;
 use std::ffi::OsString;
+use std::io::Write;
 use xshell::{cmd, Shell};
 
 /// Calculate minimum unique prefix length for each revision
@@ -41,6 +42,10 @@ pub enum JjCmd {
         /// Push the first bookmark after syncing
         #[arg(short, long)]
         push: bool,
+
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        force: bool,
     },
 
     /// Display the current stack as a tree
@@ -64,7 +69,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 
 pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
     match flags.subcommand {
-        JjCmd::StackSync { push } => stack_sync(sh, push),
+        JjCmd::StackSync { push, force } => stack_sync(sh, push, force),
         JjCmd::Tree { full } => tree(sh, full),
         JjCmd::Clean => clean(sh),
     }
@@ -85,7 +90,7 @@ fn detect_trunk_branch(sh: &Shell) -> Result<String> {
     Ok(trunk)
 }
 
-fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
+fn stack_sync(sh: &Shell, push: bool, force: bool) -> Result<()> {
     println!("{}", "Fetching from remote...".dimmed());
     cmd!(sh, "jj git fetch").run().wrap_err("failed to fetch")?;
 
@@ -118,11 +123,34 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
         return Ok(());
     }
 
+    // show confirmation unless --force
+    if !force {
+        println!("Will rebase the following commits on top of {}:", trunk.cyan());
+        for root in &roots {
+            let desc = cmd!(sh, "jj log -r {root} --no-graph -T description.first_line()")
+                .read()
+                .unwrap_or_default();
+            println!("  {}  {}", root.purple(), desc.dimmed());
+            println!(
+                "  {}",
+                format!("jj rebase --source (-s) {root} --onto (-o) {trunk} --skip-emptied").dimmed()
+            );
+        }
+        print!("Continue? [y/N] ");
+        std::io::stdout().flush()?;
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        if !input.trim().eq_ignore_ascii_case("y") {
+            println!("{}", "Aborted".yellow());
+            return Ok(());
+        }
+    }
+
     // rebase from each root (usually just one)
     // --skip-emptied handles merged commits by abandoning ones that became empty
     for root in &roots {
         println!("{}{}...", "Rebasing stack from ".dimmed(), root);
-        cmd!(sh, "jj rebase -s {root} -d {trunk} --skip-emptied")
+        cmd!(sh, "jj rebase --source {root} --onto {trunk} --skip-emptied")
             .run()
             .wrap_err_with(|| format!("failed to rebase from {root}"))?;
     }

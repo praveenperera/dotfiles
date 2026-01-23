@@ -14,3 +14,6 @@ stack = ["log", "-r", "(master::@) & (bookmarks() | @)", "--reversed", "-T", "if
 
 [remotes.origin]
 auto-track-bookmarks = "*"
+
+[ui]
+merge-editor = "vscode"
