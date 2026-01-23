@@ -35,7 +35,7 @@ pub struct Jj {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum JjCmd {
-    /// Sync the current stack with remote master
+    /// Sync the current stack with remote trunk (master/main/trunk)
     #[command(visible_alias = "ss")]
     StackSync {
         /// Push the first bookmark after syncing
@@ -70,14 +70,37 @@ pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
     }
 }
 
+/// Detect the trunk branch name (master, main, or trunk)
+fn detect_trunk_branch(sh: &Shell) -> Result<String> {
+    let output = cmd!(sh, "jj log -r trunk() --no-graph -T local_bookmarks --limit 1")
+        .read()
+        .wrap_err("failed to detect trunk branch")?;
+
+    let trunk = output
+        .split_whitespace()
+        .next()
+        .unwrap_or("master")
+        .to_string();
+
+    Ok(trunk)
+}
+
 fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
     println!("{}", "Fetching from remote...".dimmed());
     cmd!(sh, "jj git fetch").run().wrap_err("failed to fetch")?;
 
+    // detect and sync trunk bookmark
+    let trunk = detect_trunk_branch(sh)?;
+    println!("{}{}", "Syncing ".dimmed(), trunk);
+    cmd!(sh, "jj bookmark set {trunk} -r {trunk}@origin")
+        .run()
+        .wrap_err("failed to sync trunk bookmark")?;
+
     // find the root(s) of the stack
+    let roots_revset = format!("roots({trunk}..@)");
     let roots_output = cmd!(
         sh,
-        "jj log -r 'roots(master..@)' --no-graph -T 'change_id.short() ++ \"\\n\"'"
+        "jj log -r {roots_revset} --no-graph -T 'change_id.short() ++ \"\\n\"'"
     )
     .read()
     .wrap_err("failed to find stack roots")?;
@@ -86,7 +109,12 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
     debug!("stack roots: {:?}", roots);
 
     if roots.is_empty() {
-        println!("{}", "No commits after master, nothing to rebase".dimmed());
+        println!(
+            "{}{}{}",
+            "No commits after ".dimmed(),
+            trunk,
+            ", nothing to rebase".dimmed()
+        );
         return Ok(());
     }
 
@@ -94,7 +122,7 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
     // --skip-emptied handles merged commits by abandoning ones that became empty
     for root in &roots {
         println!("{}{}...", "Rebasing stack from ".dimmed(), root);
-        cmd!(sh, "jj rebase -s {root} -d master --skip-emptied")
+        cmd!(sh, "jj rebase -s {root} -d {trunk} --skip-emptied")
             .run()
             .wrap_err_with(|| format!("failed to rebase from {root}"))?;
     }
@@ -117,7 +145,7 @@ fn stack_sync(sh: &Shell, push: bool) -> Result<()> {
 
     if push {
         // find and push the first bookmark in the rebased stack
-        let revset = "(master..@) & bookmarks()";
+        let revset = format!("({trunk}..@) & bookmarks()");
         let template = r#"bookmarks ++ "\n""#;
         let output = cmd!(
             sh,
@@ -245,12 +273,7 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
         let mut count = 0;
         let mut current = from.to_string();
 
-        loop {
-            let children = match children_map.get(&current) {
-                Some(c) => c,
-                None => break,
-            };
-
+        while let Some(children) = children_map.get(&current) {
             // find the child that leads to `to`
             let next = children.iter().find(|c| {
                 if *c == to {
@@ -288,12 +311,34 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
         count
     }
 
+    // check if a rev or any of its descendants are visible
+    fn has_visible_descendant(
+        rev: &str,
+        commit_map: &HashMap<String, Commit>,
+        children_map: &HashMap<String, Vec<String>>,
+        is_visible_fn: &dyn Fn(&Commit) -> bool,
+    ) -> bool {
+        if let Some(commit) = commit_map.get(rev) {
+            if is_visible_fn(commit) {
+                return true;
+            }
+        }
+        if let Some(children) = children_map.get(rev) {
+            for child in children {
+                if has_visible_descendant(child, commit_map, children_map, is_visible_fn) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     // recursive tree printing
+    #[allow(clippy::too_many_arguments)]
     fn print_subtree(
         rev: &str,
         commit_map: &HashMap<String, Commit>,
         children_map: &HashMap<String, Vec<String>>,
-        prefix_lengths: &HashMap<String, usize>,
         prefix: &str,
         is_last: bool,
         full: bool,
@@ -308,10 +353,16 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
 
         let visible = is_visible_fn(commit);
 
-        // get children
+        // get children with visible descendants
         let children: Vec<&String> = children_map
             .get(rev)
-            .map(|c| c.iter().collect())
+            .map(|c| {
+                c.iter()
+                    .filter(|child| {
+                        has_visible_descendant(child, commit_map, children_map, is_visible_fn)
+                    })
+                    .collect()
+            })
             .unwrap_or_default();
 
         // if not visible, pass through to children with accumulated hidden count
@@ -322,7 +373,6 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
                     child,
                     commit_map,
                     children_map,
-                    prefix_lengths,
                     prefix,
                     is_last && is_last_child,
                     full,
@@ -378,37 +428,9 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
             format!("{prefix}│   ")
         };
 
-        // find visible children (or children that have visible descendants)
-        fn has_visible_descendant(
-            rev: &str,
-            commit_map: &HashMap<String, Commit>,
-            children_map: &HashMap<String, Vec<String>>,
-            is_visible_fn: &dyn Fn(&Commit) -> bool,
-        ) -> bool {
-            if let Some(commit) = commit_map.get(rev) {
-                if is_visible_fn(commit) {
-                    return true;
-                }
-            }
-            if let Some(children) = children_map.get(rev) {
-                for child in children {
-                    if has_visible_descendant(child, commit_map, children_map, is_visible_fn) {
-                        return true;
-                    }
-                }
-            }
-            false
-        }
-
-        let visible_children: Vec<&String> = children
-            .iter()
-            .filter(|c| has_visible_descendant(c, commit_map, children_map, is_visible_fn))
-            .copied()
-            .collect();
-
         // print children
-        for (i, child) in visible_children.iter().enumerate() {
-            let is_last_child = i == visible_children.len() - 1;
+        for (i, child) in children.iter().enumerate() {
+            let is_last_child = i == children.len() - 1;
 
             // count hidden commits between this visible commit and the child
             let child_hidden = if full {
@@ -421,7 +443,6 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
                 child,
                 commit_map,
                 children_map,
-                prefix_lengths,
                 &child_prefix,
                 is_last_child,
                 full,
@@ -439,7 +460,6 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
             root,
             &commit_map,
             &children_map,
-            &prefix_lengths,
             "",
             is_last_root,
             full,
