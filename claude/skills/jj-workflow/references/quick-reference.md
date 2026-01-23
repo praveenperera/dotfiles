@@ -34,6 +34,8 @@
 
 ## Rebasing
 
+`-o` is short for `--onto` (NOT `--to`)
+
 | Command | Purpose |
 |---------|---------|
 | `jj rebase -r X -o Y` | Move commit X onto Y |
@@ -76,6 +78,8 @@
 
 ## Revset Expressions
 
+### Symbols
+
 | Expression | Meaning |
 |------------|---------|
 | `@` | Working copy commit |
@@ -83,9 +87,40 @@
 | `@--` | Grandparent |
 | `master` | Main bookmark |
 | `master@origin` | Remote master |
-| `master..@` | Commits since master |
+
+### Set Operators
+
+| Operator | Meaning | Example |
+|----------|---------|---------|
+| `x \| y` | Union (in x OR y) | `main \| feature` |
+| `x & y` | Intersection (in x AND y) | `author(me) & files(src)` |
+| `x ~ y` | Difference (in x but NOT y) | `master..@ ~ @` |
+| `~x` | Complement (NOT in x) | `~empty()` |
+
+### Range Operators
+
+| Operator | Meaning |
+|----------|---------|
+| `x..y` | Ancestors of y that aren't ancestors of x |
+| `::x` | All ancestors of x (including x) |
+| `x::` | All descendants of x (including x) |
+| `x-` | Parents of x |
+| `x+` | Children of x |
+
+### Functions
+
+| Function | Meaning |
+|----------|---------|
 | `roots(X)` | Root commits of set X |
 | `heads(X)` | Head commits of set X |
+| `ancestors(X)` | All ancestors including X |
+| `descendants(X)` | All descendants including X |
+| `author(pattern)` | Commits by author |
+| `description(pattern)` | Commits with message matching pattern |
+| `files(pattern)` | Commits touching files |
+| `conflicts()` | Commits with merge conflicts |
+| `empty()` | Empty commits |
+| `bookmarks()` | Commits with bookmarks |
 
 ---
 
