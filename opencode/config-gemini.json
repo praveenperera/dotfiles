@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "plan",
+  "agent": {
+    "plan": {
+      "model": "opencode/gemini-3-pro"
+    },
+    "build": {
+      "model": "opencode/gemini-3-pro"
+    }
+  }
+}

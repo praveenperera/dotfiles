@@ -65,6 +65,7 @@ alias clpo="claude --permission-mode plan --model opus"
 alias clps="claude --permission-mode plan --model sonnet"
 
 alias oc="opencode"
+alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"
 
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
@@ -217,6 +218,7 @@ export PATH=$GRADLE_HOME/bin:$PATH
 
 export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 export PATH=$HOME/go/bin:$PATH
+export PATH=/Users/praveen/.opencode/bin:$PATH
 
 # Enable history in iex through Erlang(OTP)
 export ERL_AFLAGS="-kernel shell_history enabled"
