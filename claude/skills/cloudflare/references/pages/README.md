@@ -1,5 +1,7 @@
 # Cloudflare Pages
 
+> **Note:** For new static sites, SPAs, and SSG projects, consider using [Workers Static Assets](../static-assets/) instead. Workers is now the recommended approach with broader feature access (Durable Objects, Cron Triggers, Queues) and active development. Pages remains supported for existing projects but won't receive many new features.
+
 JAMstack platform for full-stack apps on Cloudflare's global network.
 
 ## Key Features
