@@ -75,7 +75,10 @@
       "WebFetch(domain:docs.jj-vcs.dev)",
       "Bash(./cmd/target/debug/cmd jj tree:*)",
       "Bash(/bin/bash -c \"cd /Users/praveen/code/dotfiles && pwd\")",
-      "Bash(/bin/echo:*)"
+      "Bash(/bin/echo:*)",
+      "Bash(opencode --help:*)",
+      "Bash(/Users/praveen/.opencode/bin/opencode:*)",
+      "WebFetch(domain:models.dev)"
     ],
     "deny": [],
     "ask": []
