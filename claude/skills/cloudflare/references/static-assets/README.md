@@ -11,6 +11,13 @@ Cloudflare now recommends Workers static assets over Pages for new projects:
 - **Unified platform**: Same tooling for static and dynamic workloads
 - **Active development**: Workers receives new features; Pages is in maintenance mode
 
+## Pricing Note
+
+- **Pure static** (no `main` entry point): Static asset requests are **free**, not counted as Worker invocations
+- **With Worker code** (`main` + `run_worker_first`): Requests that invoke Worker code count against Workers pricing (free tier: 100k requests/day, then $0.30/million)
+
+If cost is a concern, use Workers without a `main` entry point for free static hosting.
+
 ## When to Use
 
 | Use Case | Approach |
