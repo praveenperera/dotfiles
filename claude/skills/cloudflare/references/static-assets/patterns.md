@@ -284,6 +284,101 @@ export default {
 };
 ```
 
+## Redirects with Terraform
+
+Use Cloudflare Bulk Redirects via Terraform for managing redirects without Worker code:
+
+```hcl
+# Create a redirect list
+resource "cloudflare_list" "redirects" {
+  account_id  = var.cloudflare_account_id
+  name        = "my_site_redirects"
+  kind        = "redirect"
+  description = "Redirects for my-site.com"
+
+  item {
+    value {
+      redirect {
+        source_url            = "my-site.com/old-page"
+        target_url            = "https://my-site.com/new-page"
+        status_code           = 301
+        include_subdomains    = "disabled"
+        subpath_matching      = "disabled"
+        preserve_query_string = "enabled"
+        preserve_path_suffix  = "disabled"
+      }
+    }
+  }
+
+  item {
+    value {
+      redirect {
+        source_url            = "my-site.com/blog/*"
+        target_url            = "https://my-site.com/articles/"
+        status_code           = 302
+        subpath_matching      = "enabled"
+        preserve_path_suffix  = "enabled"
+      }
+    }
+  }
+}
+
+# Enable the redirect list as a bulk redirect rule
+resource "cloudflare_ruleset" "redirects" {
+  account_id  = var.cloudflare_account_id
+  name        = "My Site Redirects"
+  kind        = "root"
+  phase       = "http_request_redirect"
+
+  rules {
+    action = "redirect"
+    action_parameters {
+      from_list {
+        name = cloudflare_list.redirects.name
+        key  = "http.request.full_uri"
+      }
+    }
+    expression  = "http.request.full_uri in $${cloudflare_list.redirects.name}"
+    description = "Apply bulk redirects"
+    enabled     = true
+  }
+}
+```
+
+For domain-level redirects (e.g., `www` to apex):
+
+```hcl
+resource "cloudflare_record" "www_redirect" {
+  zone_id = var.cloudflare_zone_id
+  name    = "www"
+  type    = "CNAME"
+  content = "my-site.com"
+  proxied = true
+}
+
+resource "cloudflare_ruleset" "www_to_apex" {
+  zone_id = var.cloudflare_zone_id
+  name    = "Redirect www to apex"
+  kind    = "zone"
+  phase   = "http_request_dynamic_redirect"
+
+  rules {
+    action = "redirect"
+    action_parameters {
+      from_value {
+        status_code = 301
+        target_url {
+          expression = "concat(\"https://my-site.com\", http.request.uri.path)"
+        }
+      }
+    }
+    expression  = "(http.host eq \"www.my-site.com\")"
+    description = "Redirect www to apex domain"
+    enabled     = true
+  }
+}
+```
+
 ## Serving Pre-compressed Assets
 
 If your build outputs `.br` or `.gz` files:
