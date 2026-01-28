@@ -79,7 +79,9 @@
       "Bash(opencode --help:*)",
       "Bash(/Users/praveen/.opencode/bin/opencode:*)",
       "WebFetch(domain:models.dev)",
-      "WebFetch(domain:developers.cloudflare.com)"
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:developers.openai.com)",
+      "WebFetch(domain:fossies.org)"
     ],
     "deny": [],
     "ask": []
