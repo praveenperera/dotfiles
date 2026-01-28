@@ -135,6 +135,14 @@ jj split -m "feat: description" file1.ts file2.ts
 jj squash --from X --into Y -u  # -u keeps destination message
 ```
 
+For hunk-level splitting (same file, different features), use `jju sh`:
+```bash
+jju sh --preview                      # see hunks with indices
+jju sh -m "feat A" --hunks 0,2        # split by index
+jju sh -m "feat B" --lines 50-100     # split by line range
+jju sh -m "logging" --pattern "log::" # split by pattern
+```
+
 ---
 
 ## Branch Naming Preferences

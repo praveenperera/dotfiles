@@ -81,7 +81,9 @@
       "WebFetch(domain:models.dev)",
       "WebFetch(domain:developers.cloudflare.com)",
       "WebFetch(domain:developers.openai.com)",
-      "WebFetch(domain:fossies.org)"
+      "WebFetch(domain:fossies.org)",
+      "Bash(curl:*)",
+      "Bash(better-context:*)"
     ],
     "deny": [],
     "ask": []

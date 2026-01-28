@@ -32,6 +32,18 @@
 | `jj squash --into X` | Move @ changes into X |
 | `jj squash -u` | Squash, keep destination message (no editor) |
 
+### Non-Interactive Hunk Selection (`jju sh`)
+
+| Command | Purpose |
+|---------|---------|
+| `jju sh --preview` | Show hunks with indices |
+| `jju sh --preview --file F` | Preview hunks in specific file |
+| `jju sh -m "msg" --hunks 0,2` | Split by hunk index |
+| `jju sh -m "msg" --lines 10-50` | Split by line range |
+| `jju sh -m "msg" --pattern "regex"` | Split by pattern match |
+| `jju sh -m "msg" --invert --hunks 0` | Exclude matched hunks |
+| `jju sh --dry-run -m "msg" --hunks 0` | Preview without committing |
+
 ## Rebasing
 
 `-o` is short for `--onto` (NOT `--to`)

@@ -1,7 +1,8 @@
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use eyre::{Context as _, Result};
+use eyre::{bail, Context as _, Result};
 use log::debug;
+use regex::Regex;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::io::Write;
@@ -59,6 +60,46 @@ pub enum JjCmd {
     /// Clean up empty divergent commits
     #[command(visible_alias = "c")]
     Clean,
+
+    /// Split hunks from a commit non-interactively
+    #[command(visible_alias = "sh")]
+    SplitHunk {
+        /// Commit message for the new commit (required unless --preview)
+        #[arg(short, long)]
+        message: Option<String>,
+
+        /// Revision to split (default: @)
+        #[arg(short, long, default_value = "@")]
+        revision: String,
+
+        /// File to select hunks from
+        #[arg(long)]
+        file: Option<String>,
+
+        /// Line ranges to select (e.g., "10-20,30-40")
+        #[arg(long)]
+        lines: Option<String>,
+
+        /// Hunk indices to select (e.g., "0,2,5")
+        #[arg(long)]
+        hunks: Option<String>,
+
+        /// Regex pattern to match hunk content
+        #[arg(long)]
+        pattern: Option<String>,
+
+        /// Preview hunks with indices (don't split)
+        #[arg(long)]
+        preview: bool,
+
+        /// Exclude matched hunks instead of including
+        #[arg(long)]
+        invert: bool,
+
+        /// Show what would be committed without committing
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
@@ -72,6 +113,19 @@ pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
         JjCmd::StackSync { push, force } => stack_sync(sh, push, force),
         JjCmd::Tree { full } => tree(sh, full),
         JjCmd::Clean => clean(sh),
+        JjCmd::SplitHunk {
+            message,
+            revision,
+            file,
+            lines,
+            hunks,
+            pattern,
+            preview,
+            invert,
+            dry_run,
+        } => split_hunk(
+            sh, message, &revision, file, lines, hunks, pattern, preview, invert, dry_run,
+        ),
     }
 }
 
@@ -541,5 +595,599 @@ fn clean(sh: &Shell) -> Result<()> {
         cmd!(sh, "jj abandon {rev}").run()?;
     }
 
+    Ok(())
+}
+
+// ============================================================================
+// Split Hunk Implementation
+// ============================================================================
+
+#[derive(Debug, Clone)]
+struct DiffHunk {
+    old_start: usize,
+    old_count: usize,
+    new_start: usize,
+    new_count: usize,
+    lines: Vec<DiffLine>,
+}
+
+#[derive(Debug, Clone)]
+struct DiffLine {
+    kind: DiffLineKind,
+    content: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum DiffLineKind {
+    Context,
+    Added,
+    Removed,
+}
+
+#[derive(Debug)]
+struct FileDiff {
+    path: String,
+    is_new: bool,
+    is_deleted: bool,
+    is_binary: bool,
+    hunks: Vec<DiffHunk>,
+}
+
+/// Parse git diff output into structured FileDiff objects
+fn parse_diff_output(output: &str) -> Vec<FileDiff> {
+    let mut files = Vec::new();
+    let mut current_file: Option<FileDiff> = None;
+    let mut current_hunk: Option<DiffHunk> = None;
+
+    let hunk_header_re = Regex::new(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@").unwrap();
+
+    for line in output.lines() {
+        // new file header
+        if line.starts_with("diff --git ") {
+            // save previous file
+            if let Some(mut file) = current_file.take() {
+                if let Some(hunk) = current_hunk.take() {
+                    file.hunks.push(hunk);
+                }
+                files.push(file);
+            }
+
+            // extract path from "diff --git a/path b/path"
+            let path = line
+                .strip_prefix("diff --git a/")
+                .and_then(|s| s.split(" b/").next())
+                .unwrap_or("")
+                .to_string();
+
+            current_file = Some(FileDiff {
+                path,
+                is_new: false,
+                is_deleted: false,
+                is_binary: false,
+                hunks: Vec::new(),
+            });
+            continue;
+        }
+
+        let Some(ref mut file) = current_file else {
+            continue;
+        };
+
+        // check for new/deleted/binary markers (only before hunk content starts)
+        if current_hunk.is_none() {
+            if line.starts_with("new file mode") {
+                file.is_new = true;
+                continue;
+            }
+            if line.starts_with("deleted file mode") {
+                file.is_deleted = true;
+                continue;
+            }
+            if line.starts_with("Binary files") || line.starts_with("GIT binary patch") {
+                file.is_binary = true;
+                continue;
+            }
+        }
+
+        // hunk header
+        if let Some(caps) = hunk_header_re.captures(line) {
+            // save previous hunk
+            if let Some(hunk) = current_hunk.take() {
+                file.hunks.push(hunk);
+            }
+
+            let old_start = caps.get(1).map_or(1, |m| m.as_str().parse().unwrap_or(1));
+            let old_count = caps.get(2).map_or(1, |m| m.as_str().parse().unwrap_or(1));
+            let new_start = caps.get(3).map_or(1, |m| m.as_str().parse().unwrap_or(1));
+            let new_count = caps.get(4).map_or(1, |m| m.as_str().parse().unwrap_or(1));
+
+            current_hunk = Some(DiffHunk {
+                old_start,
+                old_count,
+                new_start,
+                new_count,
+                lines: Vec::new(),
+            });
+            continue;
+        }
+
+        // diff content lines
+        if let Some(ref mut hunk) = current_hunk {
+            let (kind, content) = if let Some(rest) = line.strip_prefix('+') {
+                (DiffLineKind::Added, rest.to_string())
+            } else if let Some(rest) = line.strip_prefix('-') {
+                (DiffLineKind::Removed, rest.to_string())
+            } else if let Some(rest) = line.strip_prefix(' ') {
+                (DiffLineKind::Context, rest.to_string())
+            } else if line.starts_with('\\') {
+                // "\ No newline at end of file" - skip
+                continue;
+            } else {
+                continue;
+            };
+
+            hunk.lines.push(DiffLine { kind, content });
+        }
+    }
+
+    // save final file and hunk
+    if let Some(mut file) = current_file {
+        if let Some(hunk) = current_hunk {
+            file.hunks.push(hunk);
+        }
+        files.push(file);
+    }
+
+    files
+}
+
+/// Preview hunks with indices
+fn preview_hunks(sh: &Shell, revision: &str, file_filter: Option<&str>) -> Result<()> {
+    let diff_output = if let Some(file) = file_filter {
+        cmd!(sh, "jj diff -r {revision} --git {file}")
+            .read()
+            .wrap_err("failed to get diff")?
+    } else {
+        cmd!(sh, "jj diff -r {revision} --git")
+            .read()
+            .wrap_err("failed to get diff")?
+    };
+
+    if diff_output.trim().is_empty() {
+        println!("{}", "No changes in revision".dimmed());
+        return Ok(());
+    }
+
+    let files = parse_diff_output(&diff_output);
+    let mut global_index = 0;
+
+    for file in &files {
+        println!(
+            "\n{} {}",
+            "Hunks in".dimmed(),
+            file.path.cyan()
+        );
+
+        if file.is_binary {
+            println!("  {}", "[binary file]".yellow());
+            continue;
+        }
+
+        if file.is_new {
+            println!("  {}", "(new file)".green());
+        } else if file.is_deleted {
+            println!("  {}", "(deleted file)".red());
+        }
+
+        for hunk in &file.hunks {
+            let change_type = categorize_hunk(hunk);
+            println!(
+                "\n{}{}{}  {} (lines {}-{}):",
+                "[".dimmed(),
+                global_index.to_string().yellow(),
+                "]".dimmed(),
+                change_type,
+                hunk.new_start,
+                hunk.new_start + hunk.new_count.saturating_sub(1)
+            );
+
+            // show a few lines of context
+            let max_preview_lines = 6;
+            for (shown, line) in hunk.lines.iter().enumerate() {
+                if shown >= max_preview_lines {
+                    let remaining = hunk.lines.len() - shown;
+                    if remaining > 0 {
+                        println!("    {} more lines...", format!("+{remaining}").dimmed());
+                    }
+                    break;
+                }
+                let prefix = match line.kind {
+                    DiffLineKind::Added => "+".green(),
+                    DiffLineKind::Removed => "-".red(),
+                    DiffLineKind::Context => " ".normal(),
+                };
+                println!("    {}{}", prefix, line.content.dimmed());
+            }
+
+            global_index += 1;
+        }
+    }
+
+    let total_hunks: usize = files.iter().map(|f| f.hunks.len()).sum();
+    println!("\n{} {} hunks", "Total:".dimmed(), total_hunks);
+
+    Ok(())
+}
+
+fn categorize_hunk(hunk: &DiffHunk) -> colored::ColoredString {
+    let has_added = hunk.lines.iter().any(|l| l.kind == DiffLineKind::Added);
+    let has_removed = hunk.lines.iter().any(|l| l.kind == DiffLineKind::Removed);
+
+    match (has_added, has_removed) {
+        (true, true) => "modified".yellow(),
+        (true, false) => "added".green(),
+        (false, true) => "removed".red(),
+        (false, false) => "context".dimmed(),
+    }
+}
+
+/// Parse line ranges like "10-20,30-40" into Vec<(start, end)>
+fn parse_line_ranges(input: &str) -> Result<Vec<(usize, usize)>> {
+    let mut ranges = Vec::new();
+    for part in input.split(',') {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+        if let Some((start, end)) = part.split_once('-') {
+            let start: usize = start.trim().parse().wrap_err("invalid line range start")?;
+            let end: usize = end.trim().parse().wrap_err("invalid line range end")?;
+            ranges.push((start, end));
+        } else {
+            let line: usize = part.parse().wrap_err("invalid line number")?;
+            ranges.push((line, line));
+        }
+    }
+    Ok(ranges)
+}
+
+/// Parse hunk indices like "0,2,5" into Vec<usize>
+fn parse_hunk_indices(input: &str) -> Result<Vec<usize>> {
+    input
+        .split(',')
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().parse::<usize>().wrap_err("invalid hunk index"))
+        .collect()
+}
+
+/// Check if a hunk overlaps with any of the given line ranges
+fn hunk_overlaps_lines(hunk: &DiffHunk, ranges: &[(usize, usize)]) -> bool {
+    let hunk_start = hunk.new_start;
+    let hunk_end = hunk.new_start + hunk.new_count.saturating_sub(1);
+
+    ranges
+        .iter()
+        .any(|&(start, end)| hunk_start <= end && hunk_end >= start)
+}
+
+/// Check if a hunk matches the given pattern
+fn hunk_matches_pattern(hunk: &DiffHunk, pattern: &Regex) -> bool {
+    hunk.lines
+        .iter()
+        .any(|line| pattern.is_match(&line.content))
+}
+
+/// Select which hunks to include based on criteria
+fn select_hunks(
+    files: &[FileDiff],
+    hunk_indices: Option<&[usize]>,
+    line_ranges: Option<&[(usize, usize)]>,
+    pattern: Option<&Regex>,
+    invert: bool,
+) -> Vec<(usize, usize)> {
+    // (file_index, hunk_index)
+    let mut selected = Vec::new();
+    let mut global_index = 0;
+
+    for (file_idx, file) in files.iter().enumerate() {
+        if file.is_binary {
+            continue;
+        }
+
+        for (hunk_idx, hunk) in file.hunks.iter().enumerate() {
+            // if no criteria, select all
+            let mut matches =
+                hunk_indices.is_none() && line_ranges.is_none() && pattern.is_none();
+
+            if let Some(indices) = hunk_indices {
+                if indices.contains(&global_index) {
+                    matches = true;
+                }
+            }
+
+            if let Some(ranges) = line_ranges {
+                if hunk_overlaps_lines(hunk, ranges) {
+                    matches = true;
+                }
+            }
+
+            if let Some(pat) = pattern {
+                if hunk_matches_pattern(hunk, pat) {
+                    matches = true;
+                }
+            }
+
+            // apply invert
+            if invert {
+                matches = !matches;
+            }
+
+            if matches {
+                selected.push((file_idx, hunk_idx));
+            }
+
+            global_index += 1;
+        }
+    }
+
+    selected
+}
+
+/// Apply selected hunks to parent content to produce new content
+fn apply_selected_hunks(parent_content: &str, hunks: &[&DiffHunk]) -> String {
+    if hunks.is_empty() {
+        return parent_content.to_string();
+    }
+
+    let parent_lines: Vec<&str> = parent_content.lines().collect();
+    let mut result = Vec::new();
+    let mut parent_idx = 0;
+
+    for hunk in hunks {
+        // copy unchanged lines before this hunk
+        let hunk_start = hunk.old_start.saturating_sub(1);
+        while parent_idx < hunk_start && parent_idx < parent_lines.len() {
+            result.push(parent_lines[parent_idx].to_string());
+            parent_idx += 1;
+        }
+
+        // apply hunk: add context and added lines, skip removed lines
+        for line in &hunk.lines {
+            match line.kind {
+                DiffLineKind::Context | DiffLineKind::Added => {
+                    result.push(line.content.clone());
+                }
+                DiffLineKind::Removed => {
+                    // skip removed lines, but advance parent_idx for tracking
+                }
+            }
+        }
+
+        // skip over the old lines that this hunk replaced
+        parent_idx = hunk.old_start.saturating_sub(1) + hunk.old_count;
+    }
+
+    // copy remaining lines after last hunk
+    while parent_idx < parent_lines.len() {
+        result.push(parent_lines[parent_idx].to_string());
+        parent_idx += 1;
+    }
+
+    let mut output = result.join("\n");
+    // preserve trailing newline if parent had one
+    if parent_content.ends_with('\n') {
+        output.push('\n');
+    }
+    output
+}
+
+#[allow(clippy::too_many_arguments)]
+fn split_hunk(
+    sh: &Shell,
+    message: Option<String>,
+    revision: &str,
+    file_filter: Option<String>,
+    lines: Option<String>,
+    hunks: Option<String>,
+    pattern: Option<String>,
+    preview: bool,
+    invert: bool,
+    dry_run: bool,
+) -> Result<()> {
+    // preview mode
+    if preview {
+        return preview_hunks(sh, revision, file_filter.as_deref());
+    }
+
+    // require message unless preview
+    let message = match message {
+        Some(m) => m,
+        None => bail!("--message is required (use --preview to see hunks first)"),
+    };
+
+    // get diff
+    let diff_output = if let Some(ref file) = file_filter {
+        cmd!(sh, "jj diff -r {revision} --git {file}")
+            .read()
+            .wrap_err("failed to get diff")?
+    } else {
+        cmd!(sh, "jj diff -r {revision} --git")
+            .read()
+            .wrap_err("failed to get diff")?
+    };
+
+    if diff_output.trim().is_empty() {
+        bail!("no changes in revision {revision}");
+    }
+
+    let files = parse_diff_output(&diff_output);
+
+    // parse selection criteria
+    let hunk_indices = hunks.as_ref().map(|h| parse_hunk_indices(h)).transpose()?;
+    let line_ranges = lines.as_ref().map(|l| parse_line_ranges(l)).transpose()?;
+    let pattern_re = pattern
+        .as_ref()
+        .map(|p| Regex::new(p).wrap_err("invalid pattern regex"))
+        .transpose()?;
+
+    // select hunks
+    let selected = select_hunks(
+        &files,
+        hunk_indices.as_deref(),
+        line_ranges.as_deref(),
+        pattern_re.as_ref(),
+        invert,
+    );
+
+    if selected.is_empty() {
+        bail!("no hunks matched the selection criteria");
+    }
+
+    // group selected hunks by file
+    let mut hunks_by_file: HashMap<usize, Vec<usize>> = HashMap::new();
+    for (file_idx, hunk_idx) in &selected {
+        hunks_by_file.entry(*file_idx).or_default().push(*hunk_idx);
+    }
+
+    // show what will be committed
+    println!("{}", "Selected hunks:".dimmed());
+    for (file_idx, hunk_indices) in &hunks_by_file {
+        let file = &files[*file_idx];
+        println!("  {} (hunks: {:?})", file.path.cyan(), hunk_indices);
+    }
+
+    if dry_run {
+        println!("\n{}", "--dry-run: no changes made".yellow());
+        return Ok(());
+    }
+
+    // create new commit from parent of revision
+    let parent_rev = format!("{revision}-");
+
+    // create new empty commit from parent
+    println!("{}", "Creating new commit...".dimmed());
+    cmd!(sh, "jj new {parent_rev} -m {message}")
+        .run()
+        .wrap_err("failed to create new commit")?;
+
+    // for each file with selected hunks, apply them
+    for (file_idx, hunk_indices) in &hunks_by_file {
+        let file = &files[*file_idx];
+
+        if file.is_binary {
+            println!(
+                "{} skipping binary file: {}",
+                "Warning:".yellow(),
+                file.path
+            );
+            continue;
+        }
+
+        // get parent content
+        let file_path = &file.path;
+        let parent_content = if file.is_new {
+            String::new()
+        } else {
+            cmd!(sh, "jj file show -r {parent_rev} {file_path}")
+                .read()
+                .unwrap_or_default()
+        };
+
+        // get selected hunks for this file
+        let selected_hunks: Vec<&DiffHunk> = hunk_indices
+            .iter()
+            .filter_map(|&idx| file.hunks.get(idx))
+            .collect();
+
+        // apply hunks to get new content
+        let new_content = apply_selected_hunks(&parent_content, &selected_hunks);
+
+        // write the new content
+        if file.is_deleted && selected_hunks.len() == file.hunks.len() {
+            // all hunks selected for a deleted file = delete the file
+            // jj automatically handles this when we write empty content
+        }
+
+        // write to the file in the working copy
+        std::fs::write(&file.path, &new_content)
+            .wrap_err_with(|| format!("failed to write {}", file.path))?;
+    }
+
+    // squash the new commit into its working copy changes
+    println!("{}", "Squashing changes...".dimmed());
+    cmd!(sh, "jj squash")
+        .run()
+        .wrap_err("failed to squash changes")?;
+
+    // now edit the original revision to restore remaining changes
+    println!("{}", "Restoring remaining changes...".dimmed());
+    cmd!(sh, "jj edit {revision}")
+        .run()
+        .wrap_err("failed to edit original revision")?;
+
+    // for each file, restore the original content that wasn't selected
+    for (file_idx, selected_hunk_indices) in &hunks_by_file {
+        let file = &files[*file_idx];
+
+        if file.is_binary {
+            continue;
+        }
+
+        let file_path = &file.path;
+
+        // get the full new content (all hunks applied)
+        let _full_new_content = if file.is_new {
+            cmd!(sh, "jj file show -r {revision} {file_path}")
+                .read()
+                .unwrap_or_default()
+        } else if file.is_deleted {
+            String::new()
+        } else {
+            cmd!(sh, "jj file show -r {revision} {file_path}")
+                .read()
+                .unwrap_or_default()
+        };
+
+        // get parent content
+        let parent_content = if file.is_new {
+            String::new()
+        } else {
+            cmd!(sh, "jj file show -r {parent_rev} {file_path}")
+                .read()
+                .unwrap_or_default()
+        };
+
+        // get remaining (non-selected) hunks
+        let remaining_hunks: Vec<&DiffHunk> = file
+            .hunks
+            .iter()
+            .enumerate()
+            .filter(|(idx, _)| !selected_hunk_indices.contains(idx))
+            .map(|(_, h)| h)
+            .collect();
+
+        if remaining_hunks.is_empty() {
+            // all hunks were selected, restore to parent state
+            if file.is_new {
+                // new file fully selected = remove from original
+                let _ = std::fs::remove_file(&file.path);
+            } else {
+                std::fs::write(&file.path, &parent_content)
+                    .wrap_err_with(|| format!("failed to restore {}", file.path))?;
+            }
+        } else {
+            // apply only remaining hunks
+            let remaining_content = apply_selected_hunks(&parent_content, &remaining_hunks);
+            std::fs::write(&file.path, &remaining_content)
+                .wrap_err_with(|| format!("failed to write remaining changes to {}", file.path))?;
+        }
+    }
+
+    // squash the restored changes
+    cmd!(sh, "jj squash")
+        .run()
+        .wrap_err("failed to squash remaining changes")?;
+
+    println!("{}", "Split complete".green());
     Ok(())
 }
