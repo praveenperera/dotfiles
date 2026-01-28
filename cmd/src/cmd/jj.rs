@@ -350,6 +350,7 @@ fn tree(_sh: &Shell, full: bool) -> Result<()> {
         .collect();
     roots.sort();
 
+    // highlight the unique prefix (matches jj's disambiguation context)
     let format_rev = |commit: &TreeCommit| -> String {
         let (prefix, suffix) = commit.rev.split_at(commit.unique_len.min(commit.rev.len()));
         format!("{}{}", prefix.purple(), suffix.dimmed())

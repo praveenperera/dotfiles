@@ -91,29 +91,7 @@ impl JjRepo {
     /// Evaluate a revset string and return matching commits
     pub fn eval_revset(&self, revset_str: &str) -> Result<Vec<Commit>> {
         let mut diagnostics = RevsetDiagnostics::new();
-        let mut aliases_map = revset::RevsetAliasesMap::new();
-
-        // add default aliases that jj CLI provides
-        let default_aliases = [
-            ("trunk()", r#"latest(
-              remote_bookmarks(exact:"main", exact:"origin") |
-              remote_bookmarks(exact:"master", exact:"origin") |
-              remote_bookmarks(exact:"trunk", exact:"origin") |
-              remote_bookmarks(exact:"main", exact:"upstream") |
-              remote_bookmarks(exact:"master", exact:"upstream") |
-              remote_bookmarks(exact:"trunk", exact:"upstream") |
-              root()
-            )"#),
-            ("builtin_immutable_heads()", "trunk() | tags() | untracked_remote_bookmarks()"),
-            ("immutable_heads()", "builtin_immutable_heads()"),
-            ("immutable()", "::(immutable_heads() | root())"),
-            ("mutable()", "~immutable()"),
-        ];
-
-        for (name, def) in default_aliases {
-            let _ = aliases_map.insert(name, def);
-        }
-
+        let aliases_map = self.aliases_map();
         let extensions = Arc::new(revset::RevsetExtensions::default());
 
         let workspace_ctx = RevsetWorkspaceContext {
@@ -278,16 +256,68 @@ impl JjRepo {
         min_len: usize,
     ) -> Result<(String, usize)> {
         let extensions = Arc::new(revset::RevsetExtensions::default());
-        let id_prefix_context = IdPrefixContext::new(extensions);
+
+        // use the same disambiguation context as jj CLI (revsets.log default)
+        // this is: present(@) | ancestors(immutable_heads().., 2) | trunk()
+        let mut diagnostics = RevsetDiagnostics::new();
+        let context = RevsetParseContext {
+            aliases_map: &self.aliases_map(),
+            local_variables: HashMap::new(),
+            user_email: "",
+            date_pattern_context: chrono::Utc::now().fixed_offset().into(),
+            default_ignored_remote: Some(RemoteName::new("git")),
+            workspace: Some(RevsetWorkspaceContext {
+                path_converter: &jj_lib::repo_path::RepoPathUiConverter::Fs {
+                    cwd: self.workspace.workspace_root().to_path_buf(),
+                    base: self.workspace.workspace_root().to_path_buf(),
+                },
+                workspace_name: self.workspace.workspace_name(),
+            }),
+            extensions: &extensions,
+            use_glob_by_default: false,
+        };
+        let short_prefixes_revset =
+            "present(@) | ancestors(immutable_heads().., 2) | present(trunk())";
+        let disambiguate_expr = revset::parse(&mut diagnostics, short_prefixes_revset, &context)
+            .wrap_err("failed to parse short-prefixes revset")?;
+
+        let id_prefix_context =
+            IdPrefixContext::new(extensions.clone()).disambiguate_within(disambiguate_expr);
         let index = id_prefix_context
             .populate(self.repo.as_ref())
-            .unwrap_or_else(|_| jj_lib::id_prefix::IdPrefixIndex::empty());
+            .wrap_err("failed to populate id prefix index")?;
         let unique_prefix_len = index
             .shortest_change_prefix_len(self.repo.as_ref(), commit.change_id())
             .wrap_err("failed to get shortest prefix length")?;
         let full_id = commit.change_id().reverse_hex();
         let display_len = unique_prefix_len.max(min_len).min(full_id.len());
         Ok((full_id[..display_len].to_string(), unique_prefix_len))
+    }
+
+    /// Get the revset aliases map with jj's default aliases
+    fn aliases_map(&self) -> revset::RevsetAliasesMap {
+        let mut aliases_map = revset::RevsetAliasesMap::new();
+
+        let default_aliases = [
+            ("trunk()", r#"latest(
+              remote_bookmarks(exact:"main", exact:"origin") |
+              remote_bookmarks(exact:"master", exact:"origin") |
+              remote_bookmarks(exact:"trunk", exact:"origin") |
+              remote_bookmarks(exact:"main", exact:"upstream") |
+              remote_bookmarks(exact:"master", exact:"upstream") |
+              remote_bookmarks(exact:"trunk", exact:"upstream") |
+              root()
+            )"#),
+            ("builtin_immutable_heads()", "trunk() | tags() | untracked_remote_bookmarks()"),
+            ("immutable_heads()", "builtin_immutable_heads()"),
+            ("immutable()", "::(immutable_heads() | root())"),
+            ("mutable()", "~immutable()"),
+        ];
+
+        for (name, def) in default_aliases {
+            let _ = aliases_map.insert(name, def);
+        }
+        aliases_map
     }
 
     /// Get parent commits for a commit
