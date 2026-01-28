@@ -1,3 +1,4 @@
+use crate::jj_lib_helpers::JjRepo;
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 use eyre::{bail, Context as _, Result};
@@ -251,26 +252,20 @@ fn stack_sync(sh: &Shell, push: bool, force: bool) -> Result<()> {
     Ok(())
 }
 
-fn tree(sh: &Shell, full: bool) -> Result<()> {
+fn tree(_sh: &Shell, full: bool) -> Result<()> {
     use std::collections::HashSet;
 
+    let jj_repo = JjRepo::load(None)?;
+
     // get the working copy change_id
-    let working_copy_id = cmd!(sh, "jj log -r @ --no-graph -T change_id.shortest(4)")
-        .read()
-        .wrap_err("failed to get working copy")?;
+    let working_copy = jj_repo.working_copy_commit()?;
+    let working_copy_id = jj_repo.shortest_change_id(&working_copy, 4)?;
 
-    // single revset for all commits: descendants of roots of trunk()..@
-    let revset = "descendants(roots(trunk()..@))";
-
-    // tab-separated: rev, bookmarks, description, parent_revs
-    let template = r#"change_id.shortest(4) ++ "\t" ++ bookmarks.join(" ") ++ "\t" ++ if(description, description.first_line(), "") ++ "\t" ++ self.parents().map(|p| p.change_id().shortest(4)).join(",") ++ "\n""#;
-
-    let output = cmd!(sh, "jj log -r {revset} --reversed --no-graph -T {template}")
-        .read()
-        .wrap_err("failed to get commits")?;
+    // get all commits in descendants(roots(trunk()..@))
+    let commits = jj_repo.eval_revset("descendants(roots(trunk()..@))")?;
 
     #[derive(Clone)]
-    struct Commit {
+    struct TreeCommit {
         rev: String,
         bookmarks: String,
         description: String,
@@ -278,28 +273,31 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
         is_working_copy: bool,
     }
 
-    // parse commits into a map
-    let mut commit_map: HashMap<String, Commit> = HashMap::new();
-    for line in output.lines().filter(|l| !l.is_empty()) {
-        let parts: Vec<&str> = line.splitn(4, '\t').collect();
-        if parts.len() < 4 {
-            continue;
-        }
-        let rev = parts[0].to_string();
-        let parent_revs: Vec<String> = parts[3]
-            .split(',')
-            .filter(|s| !s.is_empty())
-            .map(String::from)
+    // build commit map with shortest change IDs
+    let mut commit_map: HashMap<String, TreeCommit> = HashMap::new();
+
+    for commit in &commits {
+        let rev = jj_repo.shortest_change_id(commit, 4)?;
+        let bookmarks = jj_repo.bookmarks_at(commit).join(" ");
+        let description = JjRepo::description_first_line(commit);
+
+        // get parent change IDs
+        let parents = jj_repo.parent_commits(commit)?;
+        let parent_revs: Vec<String> = parents
+            .iter()
+            .filter_map(|p| jj_repo.shortest_change_id(p, 4).ok())
             .collect();
+
+        let is_working_copy = rev == working_copy_id;
 
         commit_map.insert(
             rev.clone(),
-            Commit {
+            TreeCommit {
                 rev,
-                bookmarks: parts[1].to_string(),
-                description: parts[2].to_string(),
+                bookmarks,
+                description,
                 parent_revs,
-                is_working_copy: parts[0] == working_copy_id,
+                is_working_copy,
             },
         );
     }
@@ -339,17 +337,17 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
     };
 
     // determine visibility for filtered mode
-    let is_visible = |commit: &Commit| -> bool {
+    let is_visible = |commit: &TreeCommit| -> bool {
         full || !commit.bookmarks.is_empty() || commit.is_working_copy
     };
 
     // count hidden commits between visible ancestors and a commit
     fn count_hidden_between(
-        commit_map: &HashMap<String, Commit>,
+        commit_map: &HashMap<String, TreeCommit>,
         children_map: &HashMap<String, Vec<String>>,
         from: &str,
         to: &str,
-        is_visible_fn: &dyn Fn(&Commit) -> bool,
+        is_visible_fn: &dyn Fn(&TreeCommit) -> bool,
     ) -> usize {
         // BFS from `from` to `to`, counting non-visible commits in between
         let mut count = 0;
@@ -396,9 +394,9 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
     // check if a rev or any of its descendants are visible
     fn has_visible_descendant(
         rev: &str,
-        commit_map: &HashMap<String, Commit>,
+        commit_map: &HashMap<String, TreeCommit>,
         children_map: &HashMap<String, Vec<String>>,
-        is_visible_fn: &dyn Fn(&Commit) -> bool,
+        is_visible_fn: &dyn Fn(&TreeCommit) -> bool,
     ) -> bool {
         if let Some(commit) = commit_map.get(rev) {
             if is_visible_fn(commit) {
@@ -419,13 +417,13 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
     #[allow(clippy::too_many_arguments)]
     fn print_subtree(
         rev: &str,
-        commit_map: &HashMap<String, Commit>,
+        commit_map: &HashMap<String, TreeCommit>,
         children_map: &HashMap<String, Vec<String>>,
         prefix: &str,
         is_last: bool,
         full: bool,
         hidden_count: usize,
-        is_visible_fn: &dyn Fn(&Commit) -> bool,
+        is_visible_fn: &dyn Fn(&TreeCommit) -> bool,
         format_rev_fn: &dyn Fn(&str) -> String,
     ) {
         let commit = match commit_map.get(rev) {
@@ -554,45 +552,58 @@ fn tree(sh: &Shell, full: bool) -> Result<()> {
     Ok(())
 }
 
-fn clean(sh: &Shell) -> Result<()> {
-    let revset = "all() ~ root()";
+fn clean(_sh: &Shell) -> Result<()> {
+    let jj_repo = JjRepo::load(None)?;
 
-    // find non-empty divergent commits (need manual resolution)
-    let nonempty_template = r#"if(divergent && !empty, change_id.short() ++ " ", "")"#;
-    let nonempty = cmd!(sh, "jj log -r {revset} -T {nonempty_template} --no-graph")
-        .read()
-        .unwrap_or_default()
-        .split_whitespace()
-        .map(String::from)
-        .collect::<Vec<_>>();
+    // get all commits except root
+    let commits = jj_repo.eval_revset("all() ~ root()")?;
 
-    if !nonempty.is_empty() {
+    let mut nonempty_divergent = Vec::new();
+    let mut empty_divergent = Vec::new();
+
+    for commit in &commits {
+        // check if divergent by looking for multiple commits with same change_id
+        let change_id_hex = commit.change_id().reverse_hex();
+        let divergent_revset = format!("{}+", &change_id_hex[..12]);
+        let same_change_commits = jj_repo.eval_revset(&divergent_revset).unwrap_or_default();
+        let is_divergent = same_change_commits.len() > 1;
+
+        if is_divergent {
+            let is_empty = jj_repo.is_commit_empty(commit).unwrap_or(false);
+            let short_id = jj_repo.shortest_change_id(commit, 8)?;
+
+            if is_empty {
+                empty_divergent.push((short_id, commit.clone()));
+            } else {
+                nonempty_divergent.push(short_id);
+            }
+        }
+    }
+
+    if !nonempty_divergent.is_empty() {
         println!(
             "{} non-empty divergent commits need manual resolution: {}",
             "Warning:".yellow(),
-            nonempty.join(" ")
+            nonempty_divergent.join(" ")
         );
     }
 
-    // find empty divergent commits
-    let empty_template = r#"if(divergent && empty, change_id.short() ++ " ", "")"#;
-    let empty = cmd!(sh, "jj log -r {revset} -T {empty_template} --no-graph")
-        .read()
-        .unwrap_or_default()
-        .split_whitespace()
-        .map(String::from)
-        .collect::<Vec<_>>();
-
-    if empty.is_empty() {
-        if nonempty.is_empty() {
+    if empty_divergent.is_empty() {
+        if nonempty_divergent.is_empty() {
             println!("{}", "No divergent commits found".dimmed());
         }
         return Ok(());
     }
 
-    println!("{}{}", "Abandoning empty divergent commits: ".dimmed(), empty.join(" "));
-    for rev in &empty {
-        cmd!(sh, "jj abandon {rev}").run()?;
+    let ids: Vec<_> = empty_divergent.iter().map(|(id, _)| id.as_str()).collect();
+    println!(
+        "{}{}",
+        "Abandoning empty divergent commits: ".dimmed(),
+        ids.join(" ")
+    );
+
+    for (_, commit) in &empty_divergent {
+        jj_repo.abandon(commit)?;
     }
 
     Ok(())

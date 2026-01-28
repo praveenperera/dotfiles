@@ -1,6 +1,7 @@
 pub mod cmd;
 pub mod crates_io;
 pub mod encrypt;
+pub mod jj_lib_helpers;
 pub mod github;
 pub mod os;
 pub mod pr_context;
