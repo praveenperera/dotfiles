@@ -59,11 +59,6 @@
       "Bash(./target/debug/notf:*)",
       "Bash(git -C /Users/praveen/code/dotfiles status)",
       "Bash(git commit:*)",
-      "Bash(git -C /Users/praveen/.config/jj status)",
-      "Bash(git -C /Users/praveen/.config/jj diff)",
-      "Bash(git -C /Users/praveen/.config/jj log --oneline -5)",
-      "Bash(git -C /Users/praveen/.config/jj add:*)",
-      "Bash(git -C /Users/praveen/.config/jj commit -m \"$\\(cat <<''EOF''\nAdd auto-track-bookmarks for origin remote\nEOF\n\\)\")",
       "Bash(/Users/praveen/code/dotfiles/cmd/target/debug/cmd jj t:*)",
       "Bash(CLICOLOR_FORCE=1 /Users/praveen/code/dotfiles/cmd/target/debug/cmd jj t:*)",
       "WebFetch(domain:github.com)",
@@ -83,7 +78,9 @@
       "WebFetch(domain:developers.openai.com)",
       "WebFetch(domain:fossies.org)",
       "Bash(curl:*)",
-      "Bash(better-context:*)"
+      "Bash(better-context:*)",
+      "Bash(/Users/praveen/code/dotfiles/cmd/target/release/cmd*)",
+      "Bash(./cmd/target/release/cmd:*)"
     ],
     "deny": [],
     "ask": []
