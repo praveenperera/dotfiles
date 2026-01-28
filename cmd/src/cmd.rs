@@ -1,5 +1,6 @@
 pub mod better_context;
 pub mod bootstrap;
+pub mod crate_versions;
 pub mod gcloud;
 pub mod generate;
 pub mod jj;
@@ -74,5 +75,8 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
             };
             better_context::run_with_flags(&sh, flags)
         }
+        MainCmd::Crate { subcommand } => match subcommand {
+            main_cmd::CrateCmd::Versions(flags) => crate_versions::run_with_flags(&sh, flags),
+        },
     }
 }

@@ -134,6 +134,19 @@ pub enum MainCmd {
     /// Clone/update a repo for agent exploration
     #[command(visible_aliases = ["agent", "bc"])]
     BetterContext(#[command(flatten)] BetterContextArgs),
+
+    /// Crate operations (crates.io)
+    #[command(arg_required_else_help = true)]
+    Crate {
+        #[command(subcommand)]
+        subcommand: CrateCmd,
+    },
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum CrateCmd {
+    /// Fetch latest versions for crates from crates.io
+    Versions(#[command(flatten)] crate::cmd::crate_versions::CrateVersions),
 }
 
 impl Cmd {
