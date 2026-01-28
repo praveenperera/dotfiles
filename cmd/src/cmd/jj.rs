@@ -62,6 +62,14 @@ pub enum JjCmd {
     #[command(visible_alias = "c")]
     Clean,
 
+    /// Rebase a revision onto trunk (auto-detected master/main/trunk)
+    #[command(visible_aliases = ["ro", "up"])]
+    RebaseOnto {
+        /// Source revision to rebase (default: @)
+        #[arg(default_value = "@")]
+        revision: String,
+    },
+
     /// Split hunks from a commit non-interactively
     #[command(visible_alias = "sh")]
     SplitHunk {
@@ -114,6 +122,7 @@ pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
         JjCmd::StackSync { push, force } => stack_sync(sh, push, force),
         JjCmd::Tree { full } => tree(sh, full),
         JjCmd::Clean => clean(sh),
+        JjCmd::RebaseOnto { revision } => rebase_onto(sh, &revision),
         JjCmd::SplitHunk {
             message,
             revision,
@@ -143,6 +152,22 @@ fn detect_trunk_branch(sh: &Shell) -> Result<String> {
         .to_string();
 
     Ok(trunk)
+}
+
+fn rebase_onto(sh: &Shell, revision: &str) -> Result<()> {
+    let trunk = detect_trunk_branch(sh)?;
+    println!(
+        "{}{}{}{}",
+        "Rebasing ".dimmed(),
+        revision.cyan(),
+        " onto ".dimmed(),
+        trunk.cyan()
+    );
+    cmd!(sh, "jj rebase --source {revision} -o {trunk} --skip-emptied")
+        .run()
+        .wrap_err("rebase failed")?;
+    println!("{}", "Done".green());
+    Ok(())
 }
 
 fn stack_sync(sh: &Shell, push: bool, force: bool) -> Result<()> {
