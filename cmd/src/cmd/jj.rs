@@ -68,6 +68,10 @@ pub enum JjCmd {
         /// Source revision to rebase (default: @)
         #[arg(default_value = "@")]
         revision: String,
+
+        /// Also move the trunk bookmark to the rebased revision
+        #[arg(short, long)]
+        update: bool,
     },
 
     /// Split hunks from a commit non-interactively
@@ -122,7 +126,7 @@ pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
         JjCmd::StackSync { push, force } => stack_sync(sh, push, force),
         JjCmd::Tree { full } => tree(sh, full),
         JjCmd::Clean => clean(sh),
-        JjCmd::RebaseOnto { revision } => rebase_onto(sh, &revision),
+        JjCmd::RebaseOnto { revision, update } => rebase_onto(sh, &revision, update),
         JjCmd::SplitHunk {
             message,
             revision,
@@ -154,7 +158,7 @@ fn detect_trunk_branch(sh: &Shell) -> Result<String> {
     Ok(trunk)
 }
 
-fn rebase_onto(sh: &Shell, revision: &str) -> Result<()> {
+fn rebase_onto(sh: &Shell, revision: &str, update: bool) -> Result<()> {
     let trunk = detect_trunk_branch(sh)?;
     println!(
         "{}{}{}{}",
@@ -166,6 +170,20 @@ fn rebase_onto(sh: &Shell, revision: &str) -> Result<()> {
     cmd!(sh, "jj rebase --source {revision} -o {trunk} --skip-emptied")
         .run()
         .wrap_err("rebase failed")?;
+
+    if update {
+        println!(
+            "{}{}{}{}",
+            "Setting ".dimmed(),
+            trunk.cyan(),
+            " to ".dimmed(),
+            revision.cyan()
+        );
+        cmd!(sh, "jj bookmark set {trunk} -r {revision}")
+            .run()
+            .wrap_err("failed to set bookmark")?;
+    }
+
     println!("{}", "Done".green());
     Ok(())
 }
