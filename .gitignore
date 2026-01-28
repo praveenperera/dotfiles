@@ -34,3 +34,4 @@ claude/stats-cache.json
 /claude/telemetry
 /claude/skills/skill-creator/scripts/__pycache__
 /claude/tasks
+/claude/image-cache/
