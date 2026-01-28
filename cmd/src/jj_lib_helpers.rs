@@ -264,17 +264,30 @@ impl JjRepo {
 
     /// Get the shortest unique change_id prefix for a commit (minimum `min_len` chars)
     pub fn shortest_change_id(&self, commit: &Commit, min_len: usize) -> Result<String> {
+        let (display, _) = self.change_id_with_prefix_len(commit, min_len)?;
+        Ok(display)
+    }
+
+    /// Get change_id display string and the actual unique prefix length from the repository index
+    ///
+    /// Returns (display_string, unique_prefix_len) where display_string is at least `min_len` chars
+    /// and unique_prefix_len is the minimum length needed to uniquely identify this commit
+    pub fn change_id_with_prefix_len(
+        &self,
+        commit: &Commit,
+        min_len: usize,
+    ) -> Result<(String, usize)> {
         let extensions = Arc::new(revset::RevsetExtensions::default());
         let id_prefix_context = IdPrefixContext::new(extensions);
         let index = id_prefix_context
             .populate(self.repo.as_ref())
             .unwrap_or_else(|_| jj_lib::id_prefix::IdPrefixIndex::empty());
-        let prefix_len = index
+        let unique_prefix_len = index
             .shortest_change_prefix_len(self.repo.as_ref(), commit.change_id())
             .wrap_err("failed to get shortest prefix length")?;
         let full_id = commit.change_id().reverse_hex();
-        let len = prefix_len.max(min_len).min(full_id.len());
-        Ok(full_id[..len].to_string())
+        let display_len = unique_prefix_len.max(min_len).min(full_id.len());
+        Ok((full_id[..display_len].to_string(), unique_prefix_len))
     }
 
     /// Get parent commits for a commit

@@ -9,27 +9,6 @@ use std::ffi::OsString;
 use std::io::Write;
 use xshell::{cmd, Shell};
 
-/// Calculate minimum unique prefix length for each revision
-fn calc_unique_prefix_lengths(revs: &[&str]) -> HashMap<String, usize> {
-    let mut result = HashMap::new();
-    for rev in revs {
-        let mut prefix_len = 1;
-        for other in revs {
-            if rev == other {
-                continue;
-            }
-            let common_len = rev
-                .chars()
-                .zip(other.chars())
-                .take_while(|(a, b)| a == b)
-                .count();
-            prefix_len = prefix_len.max(common_len + 1);
-        }
-        result.insert(rev.to_string(), prefix_len.min(rev.len()));
-    }
-    result
-}
-
 #[derive(Debug, Clone, Parser)]
 pub struct Jj {
     #[command(subcommand)]
@@ -310,6 +289,7 @@ fn tree(_sh: &Shell, full: bool) -> Result<()> {
     #[derive(Clone)]
     struct TreeCommit {
         rev: String,
+        unique_len: usize, // actual unique prefix length from jj-lib
         bookmarks: String,
         description: String,
         parent_revs: Vec<String>,
@@ -320,7 +300,7 @@ fn tree(_sh: &Shell, full: bool) -> Result<()> {
     let mut commit_map: HashMap<String, TreeCommit> = HashMap::new();
 
     for commit in &commits {
-        let rev = jj_repo.shortest_change_id(commit, 4)?;
+        let (rev, unique_len) = jj_repo.change_id_with_prefix_len(commit, 4)?;
         let bookmarks = jj_repo.bookmarks_at(commit).join(" ");
         let description = JjRepo::description_first_line(commit);
 
@@ -337,6 +317,7 @@ fn tree(_sh: &Shell, full: bool) -> Result<()> {
             rev.clone(),
             TreeCommit {
                 rev,
+                unique_len,
                 bookmarks,
                 description,
                 parent_revs,
@@ -369,13 +350,8 @@ fn tree(_sh: &Shell, full: bool) -> Result<()> {
         .collect();
     roots.sort();
 
-    // calculate minimum unique prefix lengths for all revisions
-    let all_revs: Vec<&str> = commit_map.keys().map(|s| s.as_str()).collect();
-    let prefix_lengths = calc_unique_prefix_lengths(&all_revs);
-
-    let format_rev = |rev: &str| -> String {
-        let len = prefix_lengths.get(rev).copied().unwrap_or(2);
-        let (prefix, suffix) = rev.split_at(len.min(rev.len()));
+    let format_rev = |commit: &TreeCommit| -> String {
+        let (prefix, suffix) = commit.rev.split_at(commit.unique_len.min(commit.rev.len()));
         format!("{}{}", prefix.purple(), suffix.dimmed())
     };
 
@@ -467,7 +443,7 @@ fn tree(_sh: &Shell, full: bool) -> Result<()> {
         full: bool,
         hidden_count: usize,
         is_visible_fn: &dyn Fn(&TreeCommit) -> bool,
-        format_rev_fn: &dyn Fn(&str) -> String,
+        format_rev_fn: &dyn Fn(&TreeCommit) -> String,
     ) {
         let commit = match commit_map.get(rev) {
             Some(c) => c,
@@ -509,7 +485,7 @@ fn tree(_sh: &Shell, full: bool) -> Result<()> {
 
         // print this commit
         let connector = if is_last { "└── " } else { "├── " };
-        let colored_rev = format_rev_fn(rev);
+        let colored_rev = format_rev_fn(commit);
 
         let count_str = if !full && hidden_count > 0 {
             format!(" +{hidden_count}")
