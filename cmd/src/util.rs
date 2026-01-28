@@ -41,6 +41,14 @@ pub fn random_alpha_numeric(length: usize) -> String {
     Alphanumeric.sample_string(&mut rand::rng(), length)
 }
 
+pub fn random_alpha_lower(length: usize) -> String {
+    random_with_charset(length, b"abcdefghijklmnopqrstuvwxyz")
+}
+
+pub fn random_alpha_numeric_lower(length: usize) -> String {
+    random_with_charset(length, b"abcdefghijklmnopqrstuvwxyz0123456789")
+}
+
 pub fn pass_edit(
     sh: &xshell::Shell,
     secret_name: &str,

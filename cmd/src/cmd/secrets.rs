@@ -26,6 +26,14 @@ pub enum SecretsCmd {
         /// Generate without symbols (alphanumeric only)
         #[arg(long, short = 'n')]
         no_symbols: bool,
+
+        /// Generate lowercase only
+        #[arg(long, short = 'L')]
+        lowercase: bool,
+
+        /// Generate letters only (no numbers)
+        #[arg(long, short = 'a')]
+        letters_only: bool,
     },
 
     /// Get a secret from vault
@@ -60,8 +68,13 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 
 pub fn run_with_flags(sh: &Shell, flags: Secrets) -> Result<()> {
     match flags.subcommand {
-        SecretsCmd::Gen { length, no_symbols } => {
-            gen(sh, length, no_symbols)?;
+        SecretsCmd::Gen {
+            length,
+            no_symbols,
+            lowercase,
+            letters_only,
+        } => {
+            gen(sh, length, no_symbols, lowercase, letters_only)?;
         }
         SecretsCmd::Get {
             secret,
@@ -80,16 +93,25 @@ pub fn run_with_flags(sh: &Shell, flags: Secrets) -> Result<()> {
     Ok(())
 }
 
-pub fn gen(_sh: &Shell, length: Option<usize>, no_symbols: bool) -> Result<()> {
+pub fn gen(
+    _sh: &Shell,
+    length: Option<usize>,
+    no_symbols: bool,
+    lowercase: bool,
+    letters_only: bool,
+) -> Result<()> {
     let length = length.unwrap_or(32);
 
-    let string = if no_symbols {
-        util::random_alpha_numeric(length)
-    } else {
-        util::random_ascii(length)
+    let string = match (letters_only, no_symbols, lowercase) {
+        (true, _, true) => util::random_alpha_lower(length),
+        (true, _, false) => util::random_alpha(length),
+        (false, true, true) => util::random_alpha_numeric_lower(length),
+        (false, true, false) => util::random_alpha_numeric(length),
+        (false, false, true) => util::random_ascii(length).to_lowercase(),
+        (false, false, false) => util::random_ascii(length),
     };
 
-    println!("{string}");
+    print!("{string}");
 
     Ok(())
 }
