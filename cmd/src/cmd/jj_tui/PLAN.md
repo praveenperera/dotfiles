@@ -319,12 +319,14 @@ All keybindings in one place. Edit this section to change bindings.
 
 ### 1.1 Project Structure
 
+Using `module_name.rs` pattern (no `mod.rs` files):
+
 ```
 cmd/src/
 ├── cmd/
 │   ├── jj.rs              # Existing (keep CLI commands)
-│   └── jj_tui/            # New TUI module
-│       ├── mod.rs         # Module entry, App struct
+│   ├── jj_tui.rs          # Module entry point (declares submodules)
+│   └── jj_tui/            # Submodules directory
 │       ├── app.rs         # Application state & event loop
 │       ├── ui.rs          # Ratatui rendering
 │       ├── tree.rs        # Tree data model
@@ -332,12 +334,28 @@ cmd/src/
 │       ├── preview.rs     # Preview state management
 │       ├── conflict.rs    # Conflict resolution flow
 │       ├── keybindings.rs # Key handling
-│       └── widgets/       # Custom ratatui widgets
+│       ├── widgets.rs     # Widgets module entry point
+│       └── widgets/       # Widget submodules
 │           ├── tree_view.rs
 │           ├── diff_view.rs
 │           ├── preview_panel.rs
 │           └── help_dialog.rs
 └── jj_lib_helpers.rs      # Extend with new operations
+```
+
+**Module declaration example (`jj_tui.rs`):**
+```rust
+mod app;
+mod ui;
+mod tree;
+mod actions;
+mod preview;
+mod conflict;
+mod keybindings;
+mod widgets;
+
+pub use app::App;
+// re-export public API
 ```
 
 ### 1.2 Dependencies to Add
@@ -1474,7 +1492,7 @@ impl JjRepo {
 |------|--------|-------------|
 | `cmd/Cargo.toml` | Modify | Add ratatui, crossterm, etc. |
 | `cmd/src/cmd/jj.rs` | Modify | Add `Tui` subcommand |
-| `cmd/src/cmd/jj_tui/mod.rs` | Create | Module entry point |
+| `cmd/src/cmd/jj_tui.rs` | Create | Module entry point (declares submodules) |
 | `cmd/src/cmd/jj_tui/app.rs` | Create | Main app state & event loop |
 | `cmd/src/cmd/jj_tui/ui.rs` | Create | Ratatui rendering |
 | `cmd/src/cmd/jj_tui/tree.rs` | Create | Tree data structures |
@@ -1482,4 +1500,6 @@ impl JjRepo {
 | `cmd/src/cmd/jj_tui/preview.rs` | Create | Preview simulation |
 | `cmd/src/cmd/jj_tui/conflict.rs` | Create | Conflict resolution |
 | `cmd/src/cmd/jj_tui/keybindings.rs` | Create | Key event handling |
+| `cmd/src/cmd/jj_tui/widgets.rs` | Create | Widgets module entry point |
+| `cmd/src/cmd/jj_tui/widgets/*.rs` | Create | Individual widget files |
 | `cmd/src/jj_lib_helpers.rs` | Modify | Add new helper methods |
