@@ -10,6 +10,40 @@ Building a ratatui-based TUI for jj that extends the existing `jj tree` command 
 
 All keybindings in one place. Edit this section to change bindings.
 
+> **Architecture Note:** Keybindings should be defined in a single data structure
+> (`Keymap`) that can be serialized/deserialized. This enables future config file
+> customization (e.g., `~/.config/jj-tui/keymap.toml`). The implementation should:
+> 1. Define all defaults in one place (see `keybindings.rs` below)
+> 2. Use a `Keymap` struct that maps `(Mode, KeyEvent) -> Action`
+> 3. Load user overrides from config file at startup
+> 4. Never hardcode key checks scattered throughout the codebase
+>
+> ```rust
+> // keybindings.rs - Single source of truth
+> #[derive(Serialize, Deserialize)]
+> pub struct Keymap {
+>     pub global: HashMap<KeyEvent, Action>,
+>     pub normal: HashMap<KeyEvent, Action>,
+>     pub rebase: HashMap<KeyEvent, Action>,
+>     pub diff_view: HashMap<KeyEvent, Action>,
+>     // ... other modes
+> }
+>
+> impl Default for Keymap {
+>     fn default() -> Self {
+>         Self {
+>             normal: hashmap! {
+>                 key!('j') => Action::MoveDown,
+>                 key!('k') => Action::MoveUp,
+>                 key!(Enter) => Action::OpenActionMenu,
+>                 // ... defined from tables below
+>             },
+>             // ...
+>         }
+>     }
+> }
+> ```
+
 ### Global (All Modes)
 
 | Key | Action |
