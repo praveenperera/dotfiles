@@ -16,7 +16,8 @@
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:pacak.github.io)",
       "WebFetch(domain:)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(wc:*)"
     ],
     "deny": []
   }

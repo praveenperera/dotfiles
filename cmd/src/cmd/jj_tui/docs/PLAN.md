@@ -880,7 +880,7 @@ fn handle_verify_mismatch(app: &mut App, state: &VerifyMismatchState, key: KeyCo
     match key {
         KeyCode::Char('u') => {
             // Undo to the snapshot taken before the move started
-            cmd!(app.shell, "jj undo --to {}", state.op_before).run()?;
+            cmd!(app.shell, "jj op restore {}", state.op_before).run()?;
             refresh_tree(app)?;
             app.message = Some(("Undone to before the move".into(), MessageType::Info));
             app.mode = Mode::Normal;
@@ -1137,7 +1137,7 @@ fn handle_conflict(app: &mut App) -> Result<()> {
 ```rust
 fn undo_to_before(app: &mut App) -> Result<()> {
     if let Some(op_id) = app.undo_stack.pop() {
-        cmd!(app.shell, "jj undo --to {op_id}").run()?;
+        cmd!(app.shell, "jj op restore {op_id}").run()?;
         refresh_tree(app)?;
         app.message = Some(("Operation undone".into(), MessageType::Info));
     }
@@ -1250,7 +1250,7 @@ fn show_operation_log(app: &mut App) -> Result<()> {
 }
 
 fn undo_to_operation(app: &mut App, op_id: &str) -> Result<()> {
-    cmd!(app.shell, "jj undo --to {op_id}").run()?;
+    cmd!(app.shell, "jj op restore {op_id}").run()?;
     refresh_tree(app)?;
     app.message = Some(("Restored to previous state".into(), MessageType::Success));
 }
@@ -1406,40 +1406,246 @@ fn create_bookmark(app: &mut App) -> Result<()> {
 
 ## Phase 7: Implementation Order
 
-### Sprint 1: Skeleton
-1. Add ratatui/crossterm dependencies
-2. Create basic TUI app structure with event loop
-3. Port tree data loading from existing `tree()` function
-4. Render static tree with navigation (j/k)
-5. Add trunk as base, handle full tree query
+### Sprint 1: Skeleton ✅ COMPLETE
+- [x] Add ratatui/crossterm dependencies
+- [x] Create basic TUI app structure with event loop
+- [x] Port tree data loading from existing `tree()` function
+- [x] Render static tree with navigation (j/k)
+- [x] Add trunk as base, handle full tree query
+- [x] Visual depth computation for non-full mode
+- [x] Help dialog (? key)
+- [x] Status bar with keybinding hints
 
-### Sprint 2: View Operations
-1. Implement diff viewing (`d` key)
-2. Add help dialog (`?` key)
-3. Implement status bar messages
-4. Add scroll support for long trees
+**Note:** Keybindings are hardcoded in `app.rs::handle_normal_key()`. The `keybindings.rs` file is a stub for future configurable keymaps.
 
-### Sprint 3: Edit Operations
-1. Implement description editing (`e` key)
-2. Add multi-select mode (`Space`, `v`)
-3. Implement abandon with preview (`a` key)
+### Sprint 2: View Operations 🔲 IN PROGRESS
 
-### Sprint 4: Rebase Operations
-1. Implement move up/down (`J`/`K`)
-2. Build preview system (side-by-side before/after)
-3. Add confirmation flow
+#### Diff Viewing (D key)
+- [ ] Add syntect dependency to Cargo.toml
+  ```toml
+  syntect = { version = "5.3", default-features = false, features = ["default-fancy"] }
+  ```
+- [ ] Define DiffState struct and DiffLine types
+- [ ] Add `Mode::ViewingDiff(DiffState)` to Mode enum
+- [ ] Implement `enter_diff_view()` - fetch via `jj diff -r {rev}`
+- [ ] Implement `handle_diff_key()` for j/k scroll, Esc close
+- [ ] Add `render_diff()` in ui.rs with syntax highlighting
 
-### Sprint 5: Squash & Conflicts
-1. Implement squash operations (`s`/`S`)
-2. Build conflict detection
-3. Implement automatic new → resolve → squash flow
-4. Add undo capability
+#### Commit Details (Space key)
+- [ ] Add `expanded: bool` field to track expanded state
+- [ ] Toggle expansion on Space press
+- [ ] Render expanded details below selected commit (no overlay)
+- [ ] Show: full SHA, author, date, files changed
 
-### Sprint 6: Polish
-1. Add bookmark operations
-2. Verify preview matches actual result
-3. Error handling & edge cases
-4. Testing with various repo states
+#### Scroll Support (Ctrl+u/d)
+- [ ] Track KeyModifiers in key handling
+- [ ] Add Ctrl+u handler for half-page up
+- [ ] Add Ctrl+d handler for half-page down
+- [ ] Implement `page_up(amount)` and `page_down(amount)` on TreeState
+
+#### Multi-pane Layout (\\ key)
+- [ ] Add `split_view: bool` to App struct
+- [ ] Toggle with backslash key
+- [ ] Split layout horizontally when enabled
+- [ ] Auto-update right pane diff when cursor moves
+- [ ] Tab to switch keyboard focus between panes
+
+### Sprint 3: Edit Operations 🔲 NOT STARTED
+- [ ] Implement description editing (`d` key) with tui-textarea
+- [ ] Add multi-select mode (`x` to mark, `v` for visual)
+- [ ] Implement abandon with preview (`a` key)
+- [ ] Edit working copy (`e` key) - `jj edit`
+- [ ] New commit (`n` key) - `jj new`
+- [ ] Commit changes (`c` key) - `jj commit`
+
+### Sprint 4: Rebase Operations 🔲 NOT STARTED
+- [ ] Rebase mode entry (`r` for single, `s` for source+descendants)
+- [ ] Branch mode toggle (`b` in rebase mode)
+- [ ] Quick rebase onto trunk (`t`/`T` keys)
+- [ ] Preview system (side-by-side before/after)
+- [ ] Verify result matches preview, offer undo if not
+
+### Sprint 5: Squash & Conflicts 🔲 NOT STARTED
+- [ ] Squash into parent (`q` key)
+- [ ] Squash into target (`Q` key)
+- [ ] Conflict detection after operations
+- [ ] Automatic new → resolve → squash flow
+- [ ] Operation-based undo (`u` key)
+- [ ] Operation log view (`O` key)
+
+### Sprint 6: Polish 🔲 NOT STARTED
+- [ ] Bookmark operations (`m` move, `b` create, `B` delete)
+- [ ] Remote operations (`F` fetch, `p` push, `P` push all)
+- [ ] Clipboard (`y` yank SHA, `Y` yank change id)
+- [ ] Action menu popup (Enter key)
+- [ ] Status indicators (conflicts ⚠, dirty ●, ahead/behind ↑↓)
+- [ ] Configurable keybindings via keymap file (wire up keybindings.rs)
+
+---
+
+## Sprint 2 Implementation Guide
+
+### Adding ViewingDiff Mode - Step by Step
+
+**1. Add syntect to Cargo.toml:**
+```toml
+syntect = { version = "5.3", default-features = false, features = ["default-fancy"] }
+```
+
+**2. Define types in app.rs:**
+```rust
+pub struct DiffState {
+    pub lines: Vec<DiffLine>,
+    pub scroll_offset: usize,
+    pub rev: String,
+}
+
+pub struct DiffLine {
+    pub content: String,
+    pub style: DiffLineStyle,
+}
+
+#[derive(Clone, Copy)]
+pub enum DiffLineStyle {
+    Header,      // @@ ... @@
+    Added,       // + lines (green)
+    Removed,     // - lines (red)
+    Context,     // unchanged lines
+    FileHeader,  // diff --git a/... b/...
+}
+
+pub enum Mode {
+    Normal,
+    Help,
+    ViewingDiff(DiffState),  // ADD THIS
+}
+```
+
+**3. Update handle_key in app.rs:**
+```rust
+fn handle_key(&mut self, code: KeyCode) {
+    match self.mode {
+        Mode::Normal => self.handle_normal_key(code),
+        Mode::Help => self.handle_help_key(code),
+        Mode::ViewingDiff(_) => self.handle_diff_key(code),  // ADD THIS
+    }
+}
+
+fn handle_normal_key(&mut self, code: KeyCode) {
+    match code {
+        // ... existing handlers ...
+        KeyCode::Char('D') => {
+            if let Err(e) = self.enter_diff_view() {
+                // handle error - maybe set a message
+            }
+        }
+        _ => {}
+    }
+}
+
+fn handle_diff_key(&mut self, code: KeyCode) {
+    match code {
+        KeyCode::Char('j') | KeyCode::Down => {
+            if let Mode::ViewingDiff(ref mut state) = self.mode {
+                state.scroll_offset = state.scroll_offset.saturating_add(1);
+            }
+        }
+        KeyCode::Char('k') | KeyCode::Up => {
+            if let Mode::ViewingDiff(ref mut state) = self.mode {
+                state.scroll_offset = state.scroll_offset.saturating_sub(1);
+            }
+        }
+        KeyCode::Esc | KeyCode::Char('q') => {
+            self.mode = Mode::Normal;
+        }
+        _ => {}
+    }
+}
+
+fn enter_diff_view(&mut self) -> Result<()> {
+    let rev = self.current_rev();
+    let diff_output = cmd!(self.sh, "jj diff -r {rev}").read()?;
+    let lines = parse_diff(&diff_output);
+    self.mode = Mode::ViewingDiff(DiffState {
+        lines,
+        scroll_offset: 0,
+        rev: rev.to_string(),
+    });
+    Ok(())
+}
+
+fn current_rev(&self) -> &str {
+    &self.tree.visible_entries()[self.tree.cursor].node(&self.tree).change_id
+}
+```
+
+**4. Add diff parsing (could go in a new diff.rs file):**
+```rust
+fn parse_diff(output: &str) -> Vec<DiffLine> {
+    output.lines().map(|line| {
+        let style = if line.starts_with("@@") {
+            DiffLineStyle::Header
+        } else if line.starts_with('+') {
+            DiffLineStyle::Added
+        } else if line.starts_with('-') {
+            DiffLineStyle::Removed
+        } else if line.starts_with("diff --git") {
+            DiffLineStyle::FileHeader
+        } else {
+            DiffLineStyle::Context
+        };
+        DiffLine {
+            content: line.to_string(),
+            style,
+        }
+    }).collect()
+}
+```
+
+**5. Add render_diff in ui.rs:**
+```rust
+pub fn render(frame: &mut Frame, app: &App) {
+    // ... existing layout code ...
+
+    match &app.mode {
+        Mode::ViewingDiff(state) => render_diff(frame, state, main_area),
+        Mode::Help => {
+            render_tree(frame, app, main_area);
+            render_help(frame);
+        }
+        Mode::Normal => render_tree(frame, app, main_area),
+    }
+
+    render_status_bar(frame, app, status_area);
+}
+
+fn render_diff(frame: &mut Frame, state: &DiffState, area: Rect) {
+    use ratatui::style::{Color, Style};
+    use ratatui::widgets::{Block, Borders, Paragraph};
+
+    let lines: Vec<Line> = state.lines
+        .iter()
+        .skip(state.scroll_offset)
+        .map(|dl| {
+            let style = match dl.style {
+                DiffLineStyle::Added => Style::default().fg(Color::Green),
+                DiffLineStyle::Removed => Style::default().fg(Color::Red),
+                DiffLineStyle::Header => Style::default().fg(Color::Cyan),
+                DiffLineStyle::FileHeader => Style::default().fg(Color::Yellow),
+                DiffLineStyle::Context => Style::default(),
+            };
+            Line::styled(&dl.content, style)
+        })
+        .collect();
+
+    let block = Block::default()
+        .title(format!(" Diff: {} ", state.rev))
+        .borders(Borders::ALL);
+
+    let paragraph = Paragraph::new(lines).block(block);
+    frame.render_widget(paragraph, area);
+}
+```
 
 ---
 

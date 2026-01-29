@@ -535,13 +535,11 @@ fn tree(_sh: &Shell, full: bool, from: Option<String>) -> Result<()> {
 
         let at_marker = if commit.is_working_copy { "@ " } else { "" };
 
-        let (name, show_rev_suffix) = if commit.bookmarks.is_empty() {
-            (format!("{at_marker}({}){count_str}", colored_rev), false)
+        // always show revision first, then bookmark
+        let name = if commit.bookmarks.is_empty() {
+            format!("{at_marker}({}){count_str}", colored_rev)
         } else {
-            (
-                format!("{at_marker}{}{count_str}", commit.bookmarks.cyan()),
-                true,
-            )
+            format!("{at_marker}({}) {}{count_str}", colored_rev, commit.bookmarks.cyan())
         };
 
         let desc = if commit.description.is_empty() {
@@ -554,11 +552,7 @@ fn tree(_sh: &Shell, full: bool, from: Option<String>) -> Result<()> {
             commit.description.dimmed().to_string()
         };
 
-        if show_rev_suffix {
-            println!("{prefix}{connector}{name}  {desc}  {colored_rev}");
-        } else {
-            println!("{prefix}{connector}{name}  {desc}");
-        }
+        println!("{prefix}{connector}{name}  {desc}");
 
         // calculate new prefix for children
         let child_prefix = if is_last {
