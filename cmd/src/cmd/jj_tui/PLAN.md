@@ -142,11 +142,13 @@ The TUI has several modes, each with different key behaviors:
 | **Normal** | (default) | - | Navigate tree, trigger actions |
 | **Rebase** | `r` or `s` | `Esc` or `Enter` | Move revisions anywhere in tree |
 | **Bookmark Move** | `m` | `Esc` or `Enter` | Move bookmark to different revision |
-| **Editing** | `e` | `Esc` or `Enter` | Edit commit message |
+| **Editing Desc** | `d` | `Esc` or `Enter` | Edit commit message |
 | **Diff View** | `Enter` | `Esc` | View diff (scrollable) |
 | **Operation Log** | `O` | `Esc` | Browse/restore previous states |
 | **Preview** | (after actions) | `Esc` or `Enter` | Confirm/cancel pending operation |
 | **Help Menu** | `?` | `?` or `Esc` | View keybindings pane |
+
+**Quit:** Press `Ctrl+c` twice to exit the TUI.
 
 ### 3.1 Navigation & View (Normal Mode)
 
@@ -162,6 +164,9 @@ The TUI has several modes, each with different key behaviors:
 | `Space` | **Show details** | Expand revision info (full SHA, author, date, files changed) |
 | `Enter` | **View diff** | Show diff for current revision (scrollable) |
 | `f` | Toggle full mode | Show/hide commits without bookmarks |
+| `e` | **Edit working copy** | Make this revision the working copy (`jj edit`) |
+| `y` | **Yank git SHA** | Copy full git commit SHA to clipboard |
+| `Y` | **Yank change id** | Copy jj change id (rev) to clipboard |
 
 ### 3.2 View Details & Diff (Action 1)
 
@@ -194,12 +199,22 @@ fn view_diff(app: &App, rev: &str) -> Result<()> {
 }
 ```
 
-### 3.3 Rename/Edit Commit Message (Action 2)
+### 3.3 Edit Description / Working Copy (Action 2)
 
 | Key | Action |
 |-----|--------|
-| `e` | Edit commit message |
-| `E` | Edit in $EDITOR |
+| `d` | Edit commit description (inline) |
+| `D` | Edit description in $EDITOR |
+| `e` | Edit working copy - make this revision @ (`jj edit`) |
+
+**Edit Working Copy (`e`):**
+```rust
+fn edit_working_copy(app: &mut App, rev: &str) -> Result<()> {
+    cmd!(app.shell, "jj edit {rev}").run()?;
+    refresh_tree(app)?;
+    app.message = Some((format!("Now editing {}", rev), MessageType::Success));
+}
+```
 
 **Implementation:**
 ```rust
@@ -235,24 +250,35 @@ Enter a modal interface to move revisions anywhere in the tree.
 | `j` / `k` | Navigate to destination (any revision in tree) |
 | `h` / `l` | Move between stacks |
 | `Enter` | Confirm rebase to current cursor position |
-| `a` | Set position: **after/inline** (`-A`, default) - insert into stack |
-| `b` | Set position: **before** (`-B`) - insert as parent of destination |
-| `o` | Set position: **onto** (`-o`) - just reparent (may create offshoot) |
+| `a` | Position: **after** destination (insert inline) |
+| `b` | Position: **before** destination (insert as parent) |
+| `o` | **Toggle offshoot mode** (default: OFF for clean stacks) |
 | `Esc` | Cancel and return to Normal Mode |
 
-**Position Flags Explained:**
-```
-Stack:  A → B → C → D       Moving X to after B:
+**Offshoot Mode (toggle with `o`):**
 
--A (after/inline):          -o (onto):
-A → B → X → C → D           A → B → C → D
-    (X inserted inline)          └── X  (offshoot!)
+| Mode | Behavior | jj command |
+|------|----------|------------|
+| **OFF** (default) | Clean inline insertion | `-A dest -B next` (both flags) |
+| **ON** | May create branches | `-A dest` or `-B dest` alone |
 
--B (before):
-A → X → B → C → D
-    (X becomes B's parent)
 ```
-**Default is `-A`** because it keeps stacks linear. Use `-o` only when you want to create a branch.
+Offshoot OFF (default):         Offshoot ON:
+Moving X after B:               Moving X after B:
+
+A → B → X → C → D               A → B → C → D
+    (X inserted inline)              └── X  (offshoot!)
+
+Command: jj rebase -r X         Command: jj rebase -r X
+         -A B -B C                       -A B
+```
+
+**Why `-A` AND `-B` together?**
+Using both flags guarantees inline insertion by explicitly specifying:
+- `-A B` = X comes after B
+- `-B C` = X comes before C (C is B's child)
+
+This prevents accidental branch creation when B has multiple children.
 
 **Single Revision (`-r`) vs Source + Descendants (`-s`):**
 
@@ -272,18 +298,18 @@ Stack before:          -r (single)           -s (with descendants)
 ```
 ┌─ REBASE MODE ─────────────────────────────────────────┐
 │ Source: "fix login" (abc123)  [mode: -r single]       │
-│ Position: -A (after/inline)                           │
+│ Position: after   Offshoots: OFF                      │
 │                                                        │
 │ ○ master                                              │
 │ ├── feature-auth                                      │
 │ │   └── [SOURCE] fix login  ← moving this            │
 │ ├──►feature-api             ← destination (cursor)   │
-│ │   └── add endpoints                                 │
+│ │   └── add endpoints       ← will stay as child     │
 │ └── feature-ui                                        │
 │                                                        │
-│ Command: jj rebase -r abc123 -A feature-api           │
+│ Command: jj rebase -r abc123 -A feature-api -B add-endpoints│
 │                                                        │
-│ [Enter] Confirm   [a/b/o] Position   [Esc] Cancel     │
+│ [Enter] Confirm  [a/b] Position  [o] Toggle offshoot  [Esc] Cancel │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -295,9 +321,8 @@ pub enum RebaseMode {
 }
 
 pub enum RebasePosition {
-    After,  // -A: insert as child of destination
-    Before, // -B: insert as parent of destination
-    Onto,   // -o: destination becomes parent (default)
+    After,  // -A: insert after destination
+    Before, // -B: insert before destination
 }
 
 pub struct RebaseModeState {
@@ -305,6 +330,7 @@ pub struct RebaseModeState {
     pub mode: RebaseMode,
     pub position: RebasePosition,
     pub destination_cursor: usize,
+    pub allow_offshoots: bool,  // default: false
 }
 
 fn enter_rebase_mode(app: &mut App, mode: RebaseMode) {
@@ -312,8 +338,9 @@ fn enter_rebase_mode(app: &mut App, mode: RebaseMode) {
     app.mode = Mode::Rebasing(RebaseModeState {
         source_rev: source,
         mode,
-        position: RebasePosition::After,  // default: inline insertion
+        position: RebasePosition::After,
         destination_cursor: app.tree.cursor,
+        allow_offshoots: false,  // default: clean stacks
     });
 }
 
@@ -322,13 +349,31 @@ fn confirm_rebase(state: &RebaseModeState, sh: &Shell) -> Result<()> {
         RebaseMode::SingleRevision => "-r",
         RebaseMode::SourceWithDescendants => "-s",
     };
-    let pos_flag = match state.position {
-        RebasePosition::After => "-A",
-        RebasePosition::Before => "-B",
-        RebasePosition::Onto => "-o",
-    };
+
     let dest = get_rev_at_cursor(state.destination_cursor);
-    cmd!(sh, "jj rebase {mode_flag} {source_rev} {pos_flag} {dest}").run()?;
+
+    if state.allow_offshoots {
+        // Simple: just use -A or -B alone
+        let pos_flag = match state.position {
+            RebasePosition::After => "-A",
+            RebasePosition::Before => "-B",
+        };
+        cmd!(sh, "jj rebase {mode_flag} {source_rev} {pos_flag} {dest}").run()?;
+    } else {
+        // Clean inline: use both -A and -B to ensure no offshoots
+        let next = get_first_child_of(dest)?;
+        match state.position {
+            RebasePosition::After => {
+                // Insert after dest, before dest's child
+                cmd!(sh, "jj rebase {mode_flag} {source_rev} -A {dest} -B {next}").run()?;
+            }
+            RebasePosition::Before => {
+                // Insert before dest (as parent)
+                let parent = get_parent_of(dest)?;
+                cmd!(sh, "jj rebase {mode_flag} {source_rev} -A {parent} -B {dest}").run()?;
+            }
+        }
+    }
 }
 ```
 
@@ -599,14 +644,19 @@ A dedicated pane showing all keybindings, organized by category.
 │                            │   Enter   View diff             │
 │                            │   f       Toggle full mode      │
 │                            │                                 │
-│                            │ REBASE MODE                     │
+│                            │ EDIT / YANK                     │
+│                            │   e       Edit working copy (@) │
+│                            │   d       Edit description      │
+│                            │   y       Yank git SHA          │
+│                            │   Y       Yank change id        │
+│                            │                                 │
+│                            │ REBASE MODE (r/s to enter)      │
 │                            │   r       Rebase single (-r)    │
 │                            │   s       Rebase + desc (-s)    │
 │                            │   t/T     Rebase onto trunk     │
-│                            │   (in mode: a/b/o for position) │
+│                            │   (in mode: a/b pos, o offshoot)│
 │                            │                                 │
 │                            │ ACTIONS                         │
-│                            │   e       Edit message          │
 │                            │   q       Squash into parent    │
 │                            │   x       Mark for action       │
 │                            │   a       Abandon marked        │
@@ -622,6 +672,7 @@ A dedicated pane showing all keybindings, organized by category.
 │                            │ LAYOUT                          │
 │                            │   \       Toggle multi-pane     │
 │                            │   Tab     Switch pane focus     │
+│                            │   Ctrl+c  Quit (press twice)    │
 ├────────────────────────────┴─────────────────────────────────┤
 │ [?] Close help                                               │
 └──────────────────────────────────────────────────────────────┘
@@ -715,10 +766,13 @@ When in multi-pane mode:
 ```rust
 fn render_contextual_help(mode: &Mode) -> String {
     match mode {
-        Mode::Normal => "[j/k] Nav  [Enter] Diff  [r/s] Rebase  [e] Edit  [?] Help",
-        Mode::Rebasing(_) => "[j/k] Select dest  [a/b/o] Position  [Enter] Confirm  [Esc] Cancel",
+        Mode::Normal => "[j/k] Nav  [Enter] Diff  [r/s] Rebase  [e] Edit @  [d] Desc  [?] Help",
+        Mode::Rebasing(s) => {
+            let offshoot = if s.allow_offshoots { "ON" } else { "OFF" };
+            format!("[j/k] Dest  [a/b] Pos  [o] Offshoot:{}  [Enter] OK  [Esc] Cancel", offshoot)
+        },
         Mode::MovingBookmark(_) => "[j/k] Select dest  [Enter] Drop here  [Esc] Cancel",
-        Mode::Editing(_) => "[Enter] Save  [Esc] Cancel",
+        Mode::EditingDesc(_) => "[Enter] Save  [Esc] Cancel",
         Mode::ViewingDiff(_) => "[j/k] Scroll  [Esc] Close",
         Mode::OperationLog(_) => "[j/k] Select  [u] Undo to here  [Esc] Close",
         Mode::Help => "[?] or [Esc] Close",
