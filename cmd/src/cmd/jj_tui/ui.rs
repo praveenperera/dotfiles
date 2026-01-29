@@ -1,4 +1,4 @@
-use super::app::{App, BookmarkInputState, ConfirmState, DiffLineKind, DiffStats, EditingState, MessageKind, Mode, RebaseType, StatusMessage};
+use super::app::{App, BookmarkInputState, ConfirmState, DiffLineKind, DiffStats, MessageKind, Mode, RebaseType, StatusMessage};
 use super::tree::TreeNode;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -29,7 +29,7 @@ pub fn render(frame: &mut Frame, app: &App) {
                 render_diff(frame, state, chunks[0]);
             }
         }
-        Mode::Normal | Mode::Help | Mode::Selecting | Mode::Editing | Mode::Confirming
+        Mode::Normal | Mode::Help | Mode::Selecting | Mode::Confirming
         | Mode::Rebasing | Mode::MovingBookmark | Mode::BookmarkInput | Mode::Squashing => {
             if app.split_view {
                 let split = Layout::default()
@@ -49,12 +49,6 @@ pub fn render(frame: &mut Frame, app: &App) {
     // render overlays
     if matches!(app.mode, Mode::Help) {
         render_help(frame);
-    }
-
-    if let Some(ref state) = app.editing_state {
-        if matches!(app.mode, Mode::Editing) {
-            render_editing(frame, state);
-        }
     }
 
     if let Some(ref state) = app.confirm_state {
@@ -508,7 +502,6 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         Mode::Normal => "NORMAL",
         Mode::Help => "HELP",
         Mode::ViewingDiff => "DIFF",
-        Mode::Editing => "EDIT",
         Mode::Confirming => "CONFIRM",
         Mode::Selecting => "SELECT",
         Mode::Rebasing => {
@@ -608,7 +601,6 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         }
         Mode::Help => "q/Esc:close",
         Mode::ViewingDiff => "j/k:scroll  d/u:page  g/G:top/bottom  q/Esc:close",
-        Mode::Editing => "Ctrl+Enter:save  Esc:cancel",
         Mode::Confirming => "y/Enter:yes  n/Esc:no",
         Mode::Selecting => "j/k:extend  a:abandon  Esc:exit",
         Mode::Rebasing => {
@@ -739,73 +731,6 @@ fn render_help(frame: &mut Frame) {
         .style(Style::default().bg(Color::Rgb(20, 20, 30)));
 
     frame.render_widget(help, popup_area);
-}
-
-fn render_editing(frame: &mut Frame, state: &EditingState) {
-    let area = frame.area();
-    let popup_width = 70u16.min(area.width.saturating_sub(4));
-    let popup_height = 14u16.min(area.height.saturating_sub(4));
-
-    let popup_area = Rect {
-        x: (area.width.saturating_sub(popup_width)) / 2,
-        y: (area.height.saturating_sub(popup_height)) / 2,
-        width: popup_width,
-        height: popup_height,
-    };
-
-    frame.render_widget(Clear, popup_area);
-
-    let block = Block::default()
-        .title(format!(" Edit: {} ", state.target_rev))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Yellow));
-
-    let inner = block.inner(popup_area);
-    frame.render_widget(block.style(Style::default().bg(Color::Rgb(20, 20, 30))), popup_area);
-
-    // split text into lines and find which line has the cursor
-    let text_before_cursor = &state.text[..state.cursor];
-    let cursor_line_idx = text_before_cursor.matches('\n').count();
-    let cursor_col = text_before_cursor.rfind('\n').map(|i| state.cursor - i - 1).unwrap_or(state.cursor);
-
-    let text_lines: Vec<&str> = state.text.split('\n').collect();
-
-    let mut lines: Vec<Line> = Vec::new();
-
-    for (line_idx, line_text) in text_lines.iter().enumerate() {
-        if line_idx == cursor_line_idx {
-            // this line has the cursor
-            let before = &line_text[..cursor_col.min(line_text.len())];
-            let cursor_char = line_text.get(cursor_col..).and_then(|s| s.chars().next());
-            let after = if let Some(c) = cursor_char {
-                &line_text[cursor_col + c.len_utf8()..]
-            } else {
-                ""
-            };
-            let cursor_display = cursor_char.unwrap_or(' ');
-
-            lines.push(Line::from(vec![
-                Span::raw(before.to_string()),
-                Span::styled(
-                    cursor_display.to_string(),
-                    Style::default().bg(Color::White).fg(Color::Black),
-                ),
-                Span::raw(after.to_string()),
-            ]));
-        } else {
-            lines.push(Line::from(line_text.to_string()));
-        }
-    }
-
-    // add help text at bottom
-    lines.push(Line::from(""));
-    lines.push(Line::from(Span::styled(
-        "Ctrl+Enter: save  |  Esc: cancel  |  Enter: newline",
-        Style::default().fg(Color::DarkGray),
-    )));
-
-    let paragraph = Paragraph::new(lines);
-    frame.render_widget(paragraph, inner);
 }
 
 fn render_confirmation(frame: &mut Frame, state: &ConfirmState) {

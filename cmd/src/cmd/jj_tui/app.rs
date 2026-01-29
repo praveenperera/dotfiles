@@ -42,7 +42,6 @@ pub enum Mode {
     Normal,
     Help,
     ViewingDiff,
-    Editing,
     Confirming,
     Selecting,
     Rebasing,
@@ -81,12 +80,6 @@ pub struct StatusMessage {
     pub expires: Instant,
 }
 
-pub struct EditingState {
-    pub text: String,
-    pub cursor: usize,
-    pub target_rev: String,
-    pub original_desc: String,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConfirmAction {
@@ -144,7 +137,7 @@ pub struct App {
     pub diff_state: Option<DiffState>,
     pub diff_stats_cache: std::collections::HashMap<String, DiffStats>,
     pub status_message: Option<StatusMessage>,
-    pub editing_state: Option<EditingState>,
+    pub pending_editor: Option<String>,
     pub confirm_state: Option<ConfirmState>,
     pub rebase_state: Option<RebaseState>,
     pub moving_bookmark_state: Option<MovingBookmarkState>,
@@ -167,7 +160,7 @@ impl App {
             diff_state: None,
             diff_stats_cache: std::collections::HashMap::new(),
             status_message: None,
-            editing_state: None,
+            pending_editor: None,
             confirm_state: None,
             rebase_state: None,
             moving_bookmark_state: None,
@@ -187,6 +180,25 @@ impl App {
 
     fn run_loop(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.should_quit {
+            // handle pending editor launch
+            if let Some(rev) = self.pending_editor.take() {
+                ratatui::restore();
+                let status = std::process::Command::new("jj")
+                    .args(["describe", "-r", &rev])
+                    .status();
+                *terminal = ratatui::init();
+
+                match status {
+                    Ok(s) if s.success() => {
+                        self.set_status("Description updated", MessageKind::Success);
+                        let _ = self.refresh_tree();
+                    }
+                    Ok(_) => self.set_status("Editor cancelled", MessageKind::Warning),
+                    Err(e) => self.set_status(&format!("Failed to launch editor: {e}"), MessageKind::Error),
+                }
+                continue;
+            }
+
             let viewport_height = terminal.size()?.height.saturating_sub(3) as usize;
             self.tree.update_scroll(viewport_height);
 
@@ -219,7 +231,6 @@ impl App {
             Mode::Normal => self.handle_normal_key(key, viewport_height),
             Mode::Help => self.handle_help_key(key.code),
             Mode::ViewingDiff => self.handle_diff_key(key.code),
-            Mode::Editing => self.handle_editing_key(key),
             Mode::Confirming => self.handle_confirm_key(key.code),
             Mode::Selecting => self.handle_selecting_key(key, viewport_height),
             Mode::Rebasing => self.handle_rebasing_key(key.code),
@@ -271,9 +282,7 @@ impl App {
             KeyCode::Char('\\') => self.split_view = !self.split_view,
 
             // edit operations
-            KeyCode::Char('d') => {
-                let _ = self.enter_edit_description();
-            }
+            KeyCode::Char('d') => self.enter_edit_description(),
             KeyCode::Char('e') => {
                 let _ = self.edit_working_copy();
             }
@@ -673,136 +682,8 @@ impl App {
 
     // Description editing
 
-    fn enter_edit_description(&mut self) -> Result<()> {
-        let rev = self.current_rev();
-        let desc = cmd!(self.sh, "jj log -r {rev} -T description --no-graph").quiet().ignore_stderr().read()?;
-
-        self.editing_state = Some(EditingState {
-            text: desc.clone(),
-            cursor: desc.len(),
-            target_rev: rev,
-            original_desc: desc,
-        });
-        self.mode = Mode::Editing;
-        Ok(())
-    }
-
-    fn handle_editing_key(&mut self, key: event::KeyEvent) {
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-
-        if let Some(ref mut state) = self.editing_state {
-            match key.code {
-                KeyCode::Enter if ctrl => self.save_description(),
-                KeyCode::Esc => self.cancel_editing(),
-                KeyCode::Char(c) => {
-                    state.text.insert(state.cursor, c);
-                    state.cursor += c.len_utf8();
-                }
-                KeyCode::Backspace => {
-                    if state.cursor > 0 {
-                        let prev_char_boundary = state.text[..state.cursor]
-                            .char_indices()
-                            .last()
-                            .map(|(i, _)| i)
-                            .unwrap_or(0);
-                        state.text.remove(prev_char_boundary);
-                        state.cursor = prev_char_boundary;
-                    }
-                }
-                KeyCode::Delete => {
-                    if state.cursor < state.text.len() {
-                        state.text.remove(state.cursor);
-                    }
-                }
-                KeyCode::Left => {
-                    if state.cursor > 0 {
-                        state.cursor = state.text[..state.cursor]
-                            .char_indices()
-                            .last()
-                            .map(|(i, _)| i)
-                            .unwrap_or(0);
-                    }
-                }
-                KeyCode::Right => {
-                    if state.cursor < state.text.len() {
-                        state.cursor = state.text[state.cursor..]
-                            .char_indices()
-                            .nth(1)
-                            .map(|(i, _)| state.cursor + i)
-                            .unwrap_or(state.text.len());
-                    }
-                }
-                KeyCode::Home => {
-                    // move to start of current line
-                    state.cursor = state.text[..state.cursor]
-                        .rfind('\n')
-                        .map(|i| i + 1)
-                        .unwrap_or(0);
-                }
-                KeyCode::End => {
-                    // move to end of current line
-                    state.cursor = state.text[state.cursor..]
-                        .find('\n')
-                        .map(|i| state.cursor + i)
-                        .unwrap_or(state.text.len());
-                }
-                KeyCode::Up => {
-                    // move to previous line, same column
-                    let text_before = &state.text[..state.cursor];
-                    let current_line_start = text_before.rfind('\n').map(|i| i + 1).unwrap_or(0);
-                    let col = state.cursor - current_line_start;
-
-                    if current_line_start > 0 {
-                        let prev_line_end = current_line_start - 1;
-                        let prev_line_start = state.text[..prev_line_end].rfind('\n').map(|i| i + 1).unwrap_or(0);
-                        let prev_line_len = prev_line_end - prev_line_start;
-                        state.cursor = prev_line_start + col.min(prev_line_len);
-                    }
-                }
-                KeyCode::Down => {
-                    // move to next line, same column
-                    let text_before = &state.text[..state.cursor];
-                    let current_line_start = text_before.rfind('\n').map(|i| i + 1).unwrap_or(0);
-                    let col = state.cursor - current_line_start;
-
-                    if let Some(next_newline) = state.text[state.cursor..].find('\n') {
-                        let next_line_start = state.cursor + next_newline + 1;
-                        let next_line_end = state.text[next_line_start..].find('\n')
-                            .map(|i| next_line_start + i)
-                            .unwrap_or(state.text.len());
-                        let next_line_len = next_line_end - next_line_start;
-                        state.cursor = next_line_start + col.min(next_line_len);
-                    }
-                }
-                KeyCode::Enter => {
-                    state.text.insert(state.cursor, '\n');
-                    state.cursor += 1;
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn save_description(&mut self) {
-        if let Some(state) = self.editing_state.take() {
-            let new_desc = &state.text;
-            if *new_desc != state.original_desc {
-                let rev = &state.target_rev;
-                match cmd!(self.sh, "jj desc -r {rev} -m {new_desc}").quiet().ignore_stdout().ignore_stderr().run() {
-                    Ok(_) => {
-                        self.set_status("Description updated", MessageKind::Success);
-                        let _ = self.refresh_tree();
-                    }
-                    Err(e) => self.set_status(&format!("Failed: {e}"), MessageKind::Error),
-                }
-            }
-            self.mode = Mode::Normal;
-        }
-    }
-
-    fn cancel_editing(&mut self) {
-        self.editing_state = None;
-        self.mode = Mode::Normal;
+    fn enter_edit_description(&mut self) {
+        self.pending_editor = Some(self.current_rev());
     }
 
     // Rebase operations
