@@ -249,22 +249,22 @@ Enter a modal interface to move revisions anywhere in the tree.
 |-----|--------|
 | `j` / `k` | Navigate to destination (any revision in tree) |
 | `h` / `l` | Move between stacks |
-| `Enter` | Confirm rebase to current cursor position |
-| `a` | Position: **after** destination (insert inline) |
-| `b` | Position: **before** destination (insert as parent) |
-| `o` | **Toggle offshoot mode** (default: OFF for clean stacks) |
+| `Enter` | Confirm - insert after destination (inline by default) |
+| `b` | **Toggle branch/offshoot mode** (default: OFF) |
 | `Esc` | Cancel and return to Normal Mode |
 
-**Offshoot Mode (toggle with `o`):**
+Position is **implied** by where you navigate - no need to specify "after" or "before" explicitly.
+
+**Branch Mode (toggle with `b`):**
 
 | Mode | Behavior | jj command |
 |------|----------|------------|
 | **OFF** (default) | Clean inline insertion | `-A dest -B next` (both flags) |
-| **ON** | May create branches | `-A dest` or `-B dest` alone |
+| **ON** | May create branches | `-A dest` alone |
 
 ```
-Offshoot OFF (default):         Offshoot ON:
-Moving X after B:               Moving X after B:
+Branch OFF (default):           Branch ON:
+Moving X to after B:            Moving X to after B:
 
 A → B → X → C → D               A → B → C → D
     (X inserted inline)              └── X  (offshoot!)
@@ -273,12 +273,12 @@ Command: jj rebase -r X         Command: jj rebase -r X
          -A B -B C                       -A B
 ```
 
-**Why `-A` AND `-B` together?**
-Using both flags guarantees inline insertion by explicitly specifying:
+**Why `-A` AND `-B` together by default?**
+Using both flags guarantees inline insertion:
 - `-A B` = X comes after B
-- `-B C` = X comes before C (C is B's child)
+- `-B C` = X comes before C (B's child)
 
-This prevents accidental branch creation when B has multiple children.
+This prevents accidental branches when B has multiple children.
 
 **Single Revision (`-r`) vs Source + Descendants (`-s`):**
 
@@ -298,7 +298,7 @@ Stack before:          -r (single)           -s (with descendants)
 ```
 ┌─ REBASE MODE ─────────────────────────────────────────┐
 │ Source: "fix login" (abc123)  [mode: -r single]       │
-│ Position: after   Offshoots: OFF                      │
+│ Branch mode: OFF (inline insertion)                   │
 │                                                        │
 │ ○ master                                              │
 │ ├── feature-auth                                      │
@@ -309,7 +309,7 @@ Stack before:          -r (single)           -s (with descendants)
 │                                                        │
 │ Command: jj rebase -r abc123 -A feature-api -B add-endpoints│
 │                                                        │
-│ [Enter] Confirm  [a/b] Position  [o] Toggle offshoot  [Esc] Cancel │
+│ [Enter] Confirm   [b] Toggle branch   [Esc] Cancel    │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -320,17 +320,11 @@ pub enum RebaseMode {
     SourceWithDescendants, // -s: this commit + all descendants
 }
 
-pub enum RebasePosition {
-    After,  // -A: insert after destination
-    Before, // -B: insert before destination
-}
-
 pub struct RebaseModeState {
     pub source_rev: String,
     pub mode: RebaseMode,
-    pub position: RebasePosition,
     pub destination_cursor: usize,
-    pub allow_offshoots: bool,  // default: false
+    pub allow_branches: bool,  // default: false (clean inline insertion)
 }
 
 fn enter_rebase_mode(app: &mut App, mode: RebaseMode) {
@@ -338,9 +332,8 @@ fn enter_rebase_mode(app: &mut App, mode: RebaseMode) {
     app.mode = Mode::Rebasing(RebaseModeState {
         source_rev: source,
         mode,
-        position: RebasePosition::After,
         destination_cursor: app.tree.cursor,
-        allow_offshoots: false,  // default: clean stacks
+        allow_branches: false,  // default: clean stacks
     });
 }
 
@@ -352,26 +345,17 @@ fn confirm_rebase(state: &RebaseModeState, sh: &Shell) -> Result<()> {
 
     let dest = get_rev_at_cursor(state.destination_cursor);
 
-    if state.allow_offshoots {
-        // Simple: just use -A or -B alone
-        let pos_flag = match state.position {
-            RebasePosition::After => "-A",
-            RebasePosition::Before => "-B",
-        };
-        cmd!(sh, "jj rebase {mode_flag} {source_rev} {pos_flag} {dest}").run()?;
+    if state.allow_branches {
+        // Simple: just use -A, may create branch if dest has multiple children
+        cmd!(sh, "jj rebase {mode_flag} {source_rev} -A {dest}").run()?;
     } else {
-        // Clean inline: use both -A and -B to ensure no offshoots
-        let next = get_first_child_of(dest)?;
-        match state.position {
-            RebasePosition::After => {
-                // Insert after dest, before dest's child
-                cmd!(sh, "jj rebase {mode_flag} {source_rev} -A {dest} -B {next}").run()?;
-            }
-            RebasePosition::Before => {
-                // Insert before dest (as parent)
-                let parent = get_parent_of(dest)?;
-                cmd!(sh, "jj rebase {mode_flag} {source_rev} -A {parent} -B {dest}").run()?;
-            }
+        // Clean inline: use both -A and -B to ensure no branches
+        if let Some(next) = get_first_child_of(dest)? {
+            // Insert between dest and its child
+            cmd!(sh, "jj rebase {mode_flag} {source_rev} -A {dest} -B {next}").run()?;
+        } else {
+            // dest has no children, just -A is fine
+            cmd!(sh, "jj rebase {mode_flag} {source_rev} -A {dest}").run()?;
         }
     }
 }
@@ -654,7 +638,7 @@ A dedicated pane showing all keybindings, organized by category.
 │                            │   r       Rebase single (-r)    │
 │                            │   s       Rebase + desc (-s)    │
 │                            │   t/T     Rebase onto trunk     │
-│                            │   (in mode: a/b pos, o offshoot)│
+│                            │   (in mode: b = branch toggle)  │
 │                            │                                 │
 │                            │ ACTIONS                         │
 │                            │   q       Squash into parent    │
@@ -768,8 +752,8 @@ fn render_contextual_help(mode: &Mode) -> String {
     match mode {
         Mode::Normal => "[j/k] Nav  [Enter] Diff  [r/s] Rebase  [e] Edit @  [d] Desc  [?] Help",
         Mode::Rebasing(s) => {
-            let offshoot = if s.allow_offshoots { "ON" } else { "OFF" };
-            format!("[j/k] Dest  [a/b] Pos  [o] Offshoot:{}  [Enter] OK  [Esc] Cancel", offshoot)
+            let branch = if s.allow_branches { "ON" } else { "OFF" };
+            format!("[j/k] Dest  [b] Branch:{}  [Enter] Confirm  [Esc] Cancel", branch)
         },
         Mode::MovingBookmark(_) => "[j/k] Select dest  [Enter] Drop here  [Esc] Cancel",
         Mode::EditingDesc(_) => "[Enter] Save  [Esc] Cancel",
