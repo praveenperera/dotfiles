@@ -96,13 +96,28 @@ All keybindings in one place. Edit this section to change bindings.
 > **Multi-key sequences** (like vim's `g g`, `d d`, or `<leader>x`):
 >
 > ```rust
-> /// A key sequence can be 1-3 keys
+> /// A key sequence of any length (typically 1-3 keys)
 > #[derive(Hash, Eq, PartialEq, Clone, Serialize, Deserialize)]
-> pub enum KeySeq {
->     Single(Key),
->     Double(Key, Key),      // e.g., "g g", "d d"
->     Triple(Key, Key, Key), // e.g., "g t a"
+> pub struct KeySeq(pub Vec<Key>);
+>
+> impl KeySeq {
+>     pub fn single(k: Key) -> Self { Self(vec![k]) }
+>     pub fn multi(keys: impl IntoIterator<Item = Key>) -> Self {
+>         Self(keys.into_iter().collect())
+>     }
 > }
+>
+> // Convenience macro for defining sequences
+> macro_rules! seq {
+>     ($($key:tt),+) => {
+>         KeySeq(vec![$(key!($key)),+])
+>     };
+> }
+>
+> // Usage:
+> // seq!('g', 'g')      -> "g g"
+> // seq!('g', 'b')      -> "g b"
+> // seq!(Ctrl+'x', 's') -> "ctrl+x s"
 >
 > pub struct Keymap {
 >     pub normal: HashMap<KeySeq, Action>,
