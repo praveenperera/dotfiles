@@ -782,31 +782,35 @@ impl App {
             op_before,
         });
 
-        // start dest_cursor at current position, user can navigate from there
+        // find source's parent so initial preview shows source at its original position
         let moving = self.compute_moving_indices();
         let max = self.tree.visible_count();
         let current = self.tree.cursor;
 
-        // find first non-moving entry (prefer staying near current position)
-        let mut initial_cursor = current;
-        if moving.contains(&initial_cursor) {
-            // search forward first
-            initial_cursor = current + 1;
+        // get source's structural depth
+        let source_struct_depth = self.tree.visible_entries
+            .get(current)
+            .map(|e| self.tree.nodes[e.node_index].depth)
+            .unwrap_or(0);
+
+        // find source's parent: closest entry above with smaller structural depth
+        let mut initial_cursor = current.saturating_sub(1);
+        while initial_cursor > 0 {
+            let entry = &self.tree.visible_entries[initial_cursor];
+            let node = &self.tree.nodes[entry.node_index];
+            if node.depth < source_struct_depth && !moving.contains(&initial_cursor) {
+                break;
+            }
+            initial_cursor -= 1;
+        }
+
+        // verify we found a valid non-moving entry
+        if moving.contains(&initial_cursor) || initial_cursor >= max {
+            // fallback: search forward for any non-moving entry
+            initial_cursor = 0;
             while initial_cursor < max && moving.contains(&initial_cursor) {
                 initial_cursor += 1;
             }
-            // if not found, search backward
-            if initial_cursor >= max {
-                initial_cursor = current.saturating_sub(1);
-                while initial_cursor > 0 && moving.contains(&initial_cursor) {
-                    initial_cursor -= 1;
-                }
-            }
-        }
-
-        // final fallback to 0
-        if initial_cursor >= max || moving.contains(&initial_cursor) {
-            initial_cursor = 0;
         }
 
         if let Some(ref mut state) = self.rebase_state {
@@ -1306,7 +1310,9 @@ impl App {
             .unwrap_or(false)
     }
 
-    /// Compute indices of entries that will move during rebase (source + descendants for -s mode)
+    /// Compute indices of entries that will move during rebase
+    /// For 's' mode: source + all descendants
+    /// For 'r' mode: only source
     pub fn compute_moving_indices(&self) -> HashSet<usize> {
         let Some(ref state) = self.rebase_state else {
             return HashSet::new();
@@ -1314,7 +1320,7 @@ impl App {
 
         let mut indices = HashSet::new();
         let mut in_source_tree = false;
-        let mut source_depth = 0usize;
+        let mut source_struct_depth = 0usize;
 
         for (idx, entry) in self.tree.visible_entries.iter().enumerate() {
             let node = &self.tree.nodes[entry.node_index];
@@ -1323,10 +1329,10 @@ impl App {
                 indices.insert(idx);
                 if state.rebase_type == RebaseType::WithDescendants {
                     in_source_tree = true;
-                    source_depth = entry.visual_depth;
+                    source_struct_depth = node.depth;
                 }
             } else if in_source_tree {
-                if entry.visual_depth > source_depth {
+                if node.depth > source_struct_depth {
                     indices.insert(idx);
                 } else {
                     break;

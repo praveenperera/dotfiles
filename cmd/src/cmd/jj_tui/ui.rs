@@ -240,23 +240,79 @@ fn render_tree_line_bookmark_move(
 fn build_rebase_preview(app: &App, dest_cursor: usize, source_rev: &str, rebase_type: RebaseType) -> Vec<PreviewEntry> {
     let mut preview = Vec::new();
 
-    // find source index and compute moving indices
+    // find source index
     let mut source_idx = None;
-    let mut source_depth = 0usize;
+    let mut source_struct_depth = 0usize;
+    let mut source_visual_depth = 0usize;
+
+    for (idx, entry) in app.tree.visible_entries.iter().enumerate() {
+        let node = &app.tree.nodes[entry.node_index];
+        if node.change_id == source_rev {
+            source_idx = Some(idx);
+            source_struct_depth = node.depth;
+            source_visual_depth = entry.visual_depth;
+            break;
+        }
+    }
+
+    // get destination visual depth
+    let dest_visual_depth = app.tree.visible_entries
+        .get(dest_cursor)
+        .map(|e| e.visual_depth)
+        .unwrap_or(0);
+
+    // for 'r' mode: source moves to after dest, entries between them shift down
+    if rebase_type == RebaseType::Single {
+        let source_index = source_idx.unwrap_or(0);
+
+        for (idx, entry) in app.tree.visible_entries.iter().enumerate() {
+            // skip source at its original position - it will be inserted after dest
+            if idx == source_index {
+                continue;
+            }
+
+            let is_dest = idx == dest_cursor;
+
+            // entries between dest (exclusive) and source (exclusive) shift down by 1 depth
+            let depth = if idx > dest_cursor && idx < source_index {
+                entry.visual_depth + 1
+            } else {
+                entry.visual_depth
+            };
+
+            preview.push(PreviewEntry {
+                original_index: idx,
+                visual_depth: depth,
+                is_source: false,
+                is_moving: false,
+                is_dest,
+            });
+
+            // insert source right after dest
+            if is_dest {
+                preview.push(PreviewEntry {
+                    original_index: source_index,
+                    visual_depth: dest_visual_depth + 1,
+                    is_source: true,
+                    is_moving: true,
+                    is_dest: false,
+                });
+            }
+        }
+        return preview;
+    }
+
+    // for 's' mode: source + descendants move together after dest
     let mut moving_indices = std::collections::HashSet::new();
     let mut in_source_tree = false;
 
     for (idx, entry) in app.tree.visible_entries.iter().enumerate() {
         let node = &app.tree.nodes[entry.node_index];
         if node.change_id == source_rev {
-            source_idx = Some(idx);
-            source_depth = entry.visual_depth;
             moving_indices.insert(idx);
-            if rebase_type == RebaseType::WithDescendants {
-                in_source_tree = true;
-            }
+            in_source_tree = true;
         } else if in_source_tree {
-            if entry.visual_depth > source_depth {
+            if node.depth > source_struct_depth {
                 moving_indices.insert(idx);
             } else {
                 break;
@@ -264,13 +320,6 @@ fn build_rebase_preview(app: &App, dest_cursor: usize, source_rev: &str, rebase_
         }
     }
 
-    // get destination depth
-    let dest_depth = app.tree.visible_entries
-        .get(dest_cursor)
-        .map(|e| e.visual_depth)
-        .unwrap_or(0);
-
-    // collect moving entries in order with their original depths
     let moving_entries: Vec<(usize, usize)> = app.tree.visible_entries
         .iter()
         .enumerate()
@@ -278,9 +327,7 @@ fn build_rebase_preview(app: &App, dest_cursor: usize, source_rev: &str, rebase_
         .map(|(idx, entry)| (idx, entry.visual_depth))
         .collect();
 
-    // build preview: non-moving entries in order, insert moving entries after destination
     for (idx, entry) in app.tree.visible_entries.iter().enumerate() {
-        // skip moving entries - they'll be inserted after dest
         if moving_indices.contains(&idx) {
             continue;
         }
@@ -295,13 +342,12 @@ fn build_rebase_preview(app: &App, dest_cursor: usize, source_rev: &str, rebase_
             is_dest,
         });
 
-        // after destination, insert all moving entries with adjusted depths
+        // after destination, insert moving entries with adjusted visual depths
         if is_dest {
-            for (mov_idx, mov_original_depth) in &moving_entries {
+            for (mov_idx, mov_visual_depth) in &moving_entries {
                 let is_source_entry = source_idx == Some(*mov_idx);
-                // source becomes child of dest (dest_depth + 1)
-                // descendants keep their relative depth from source
-                let new_depth = dest_depth + 1 + mov_original_depth.saturating_sub(source_depth);
+                // source becomes child of dest, descendants keep relative depth
+                let new_depth = dest_visual_depth + 1 + mov_visual_depth.saturating_sub(source_visual_depth);
 
                 preview.push(PreviewEntry {
                     original_index: *mov_idx,
