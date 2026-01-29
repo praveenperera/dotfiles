@@ -46,17 +46,20 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
         .enumerate()
         .skip(scroll_offset)
         .take(viewport_height)
-        .map(|(visible_idx, (_, node))| render_tree_line(node, visible_idx == app.tree.cursor))
+        .map(|(visible_idx, entry)| {
+            let node = app.tree.get_node(entry);
+            render_tree_line(node, entry.visual_depth, visible_idx == app.tree.cursor)
+        })
         .collect();
 
     let paragraph = Paragraph::new(lines);
     frame.render_widget(paragraph, inner);
 }
 
-fn render_tree_line(node: &TreeNode, is_selected: bool) -> Line<'static> {
-    let indent = "  ".repeat(node.depth);
+fn render_tree_line(node: &TreeNode, visual_depth: usize, is_selected: bool) -> Line<'static> {
+    let indent = "  ".repeat(visual_depth);
 
-    let connector = if node.depth > 0 { "├── " } else { "" };
+    let connector = if visual_depth > 0 { "├── " } else { "" };
 
     let at_marker = if node.is_working_copy { "@ " } else { "" };
 

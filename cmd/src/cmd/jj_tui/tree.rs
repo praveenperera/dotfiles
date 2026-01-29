@@ -28,13 +28,18 @@ impl TreeNode {
     }
 }
 
+pub struct VisibleEntry {
+    pub node_index: usize,
+    pub visual_depth: usize,
+}
+
 pub struct TreeState {
     pub nodes: Vec<TreeNode>,
     pub cursor: usize,
     pub scroll_offset: usize,
     pub full_mode: bool,
     children_map: HashMap<String, Vec<String>>,
-    visible_indices: Vec<usize>,
+    visible_entries: Vec<VisibleEntry>,
 }
 
 impl TreeState {
@@ -42,7 +47,8 @@ impl TreeState {
         let working_copy = jj_repo.working_copy_commit()?;
         let working_copy_id = jj_repo.shortest_change_id(&working_copy, 4)?;
 
-        let commits = jj_repo.eval_revset("descendants(roots(trunk()..@))")?;
+        // same revset as CLI: base | descendants(roots(base..@)) | @::
+        let commits = jj_repo.eval_revset("trunk() | descendants(roots(trunk()..@)) | @::")?;
 
         let mut commit_map: HashMap<String, TreeNode> = HashMap::new();
         let mut children_map: HashMap<String, Vec<String>> = HashMap::new();
@@ -85,16 +91,29 @@ impl TreeState {
                 nodes: Vec::new(),
                 cursor: 0,
                 scroll_offset: 0,
-                full_mode: false,
+                full_mode: true,
                 children_map: HashMap::new(),
-                visible_indices: Vec::new(),
+                visible_entries: Vec::new(),
             });
         }
 
+        // get trunk change_id for root detection
+        let trunk_id = jj_repo
+            .eval_revset_single("trunk()")
+            .ok()
+            .and_then(|c| jj_repo.shortest_change_id(&c, 4).ok());
+
+        // find roots (commits whose parents aren't in our set, OR trunk itself)
         let revs_in_set: HashSet<&str> = commit_map.keys().map(|s| s.as_str()).collect();
         let mut roots: Vec<String> = commit_map
             .values()
             .filter(|c| {
+                // always include trunk as root
+                if let Some(ref tid) = trunk_id {
+                    if c.change_id == *tid {
+                        return true;
+                    }
+                }
                 c.parent_ids
                     .iter()
                     .all(|p| !revs_in_set.contains(p.as_str()))
@@ -145,39 +164,77 @@ impl TreeState {
             );
         }
 
-        let visible_indices = Self::compute_visible_indices(&nodes, false);
+        let visible_entries = Self::compute_visible_entries(&nodes, true);
 
         Ok(Self {
             nodes,
             cursor: 0,
             scroll_offset: 0,
-            full_mode: false,
+            full_mode: true,
             children_map,
-            visible_indices,
+            visible_entries,
         })
     }
 
-    fn compute_visible_indices(nodes: &[TreeNode], full_mode: bool) -> Vec<usize> {
-        nodes
-            .iter()
-            .enumerate()
-            .filter(|(_, n)| n.is_visible(full_mode))
-            .map(|(i, _)| i)
-            .collect()
+    fn compute_visible_entries(nodes: &[TreeNode], full_mode: bool) -> Vec<VisibleEntry> {
+        if full_mode {
+            // in full mode, use structural depth
+            nodes
+                .iter()
+                .enumerate()
+                .map(|(i, n)| VisibleEntry {
+                    node_index: i,
+                    visual_depth: n.depth,
+                })
+                .collect()
+        } else {
+            // in non-full mode, compute visual depth based on visible ancestors
+            let mut entries = Vec::new();
+            let mut depth_stack: Vec<usize> = Vec::new(); // stack of structural depths
+
+            for (i, node) in nodes.iter().enumerate() {
+                if !node.is_visible(full_mode) {
+                    continue;
+                }
+
+                // pop stack until we find an ancestor (node with smaller structural depth)
+                while let Some(&parent_depth) = depth_stack.last() {
+                    if parent_depth < node.depth {
+                        break;
+                    }
+                    depth_stack.pop();
+                }
+
+                let visual_depth = depth_stack.len();
+                depth_stack.push(node.depth);
+
+                entries.push(VisibleEntry {
+                    node_index: i,
+                    visual_depth,
+                });
+            }
+            entries
+        }
     }
 
-    pub fn visible_nodes(&self) -> impl Iterator<Item = (usize, &TreeNode)> {
-        self.visible_indices.iter().map(|&i| (i, &self.nodes[i]))
+    pub fn visible_nodes(&self) -> impl Iterator<Item = &VisibleEntry> {
+        self.visible_entries.iter()
+    }
+
+    pub fn get_node(&self, entry: &VisibleEntry) -> &TreeNode {
+        &self.nodes[entry.node_index]
     }
 
     pub fn visible_count(&self) -> usize {
-        self.visible_indices.len()
+        self.visible_entries.len()
+    }
+
+    pub fn current_entry(&self) -> Option<&VisibleEntry> {
+        self.visible_entries.get(self.cursor)
     }
 
     pub fn current_node(&self) -> Option<&TreeNode> {
-        self.visible_indices
-            .get(self.cursor)
-            .and_then(|&i| self.nodes.get(i))
+        self.current_entry().map(|e| &self.nodes[e.node_index])
     }
 
     pub fn move_cursor_up(&mut self) {
@@ -205,8 +262,8 @@ impl TreeState {
     }
 
     pub fn jump_to_working_copy(&mut self) {
-        for (i, &node_idx) in self.visible_indices.iter().enumerate() {
-            if self.nodes[node_idx].is_working_copy {
+        for (i, entry) in self.visible_entries.iter().enumerate() {
+            if self.nodes[entry.node_index].is_working_copy {
                 self.cursor = i;
                 return;
             }
@@ -215,7 +272,7 @@ impl TreeState {
 
     pub fn toggle_full_mode(&mut self) {
         self.full_mode = !self.full_mode;
-        self.visible_indices = Self::compute_visible_indices(&self.nodes, self.full_mode);
+        self.visible_entries = Self::compute_visible_entries(&self.nodes, self.full_mode);
 
         if self.cursor >= self.visible_count() {
             self.cursor = self.visible_count().saturating_sub(1);
