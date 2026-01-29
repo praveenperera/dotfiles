@@ -91,6 +91,7 @@ pub struct EditingState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConfirmAction {
     Abandon,
+    RebaseOntoTrunk(RebaseType),
 }
 
 pub struct ConfirmState {
@@ -625,6 +626,40 @@ impl App {
                         }
                     }
                 }
+                ConfirmAction::RebaseOntoTrunk(rebase_type) => {
+                    let source = self.current_rev();
+                    let op_before = self.get_current_operation_id().unwrap_or_default();
+
+                    let mode_flag = match rebase_type {
+                        RebaseType::Single => "-r",
+                        RebaseType::WithDescendants => "-s",
+                    };
+
+                    match cmd!(self.sh, "jj rebase {mode_flag} {source} -d trunk() --skip-emptied")
+                        .quiet()
+                        .ignore_stdout()
+                        .ignore_stderr()
+                        .run()
+                    {
+                        Ok(_) => {
+                            self.last_op = Some(op_before);
+                            let has_conflicts = self.check_conflicts();
+                            let _ = self.refresh_tree();
+
+                            if has_conflicts {
+                                self.set_status(
+                                    "Rebased onto trunk (conflicts detected, u to undo)",
+                                    MessageKind::Warning,
+                                );
+                            } else {
+                                self.set_status("Rebased onto trunk", MessageKind::Success);
+                            }
+                        }
+                        Err(e) => {
+                            self.set_status(&format!("Rebase failed: {e}"), MessageKind::Error);
+                        }
+                    }
+                }
             }
             self.tree.clear_selection();
             self.mode = Mode::Normal;
@@ -1015,42 +1050,23 @@ impl App {
             return Ok(());
         }
 
-        // capture operation ID for undo
-        let op_before = self.get_current_operation_id().unwrap_or_default();
-
-        let mode_flag = match rebase_type {
-            RebaseType::Single => "-r",
-            RebaseType::WithDescendants => "-s",
+        let short_rev = &source[..8.min(source.len())];
+        let (mode_flag, message) = match rebase_type {
+            RebaseType::Single => ("-r", format!("Rebase {} onto trunk?", short_rev)),
+            RebaseType::WithDescendants => (
+                "-s",
+                format!("Rebase {} and descendants onto trunk?", short_rev),
+            ),
         };
 
-        match cmd!(self.sh, "jj rebase {mode_flag} {source} -d trunk()")
-            .quiet()
-            .ignore_stdout()
-            .ignore_stderr()
-            .run()
-        {
-            Ok(_) => {
-                self.last_op = Some(op_before);
-                let has_conflicts = self.check_conflicts();
-                let _ = self.refresh_tree();
+        let cmd_preview = format!("jj rebase {} {} -d trunk() --skip-emptied", mode_flag, short_rev);
 
-                if has_conflicts {
-                    self.set_status(
-                        "Rebased onto trunk but conflicts exist. Press u to undo",
-                        MessageKind::Warning,
-                    );
-                } else {
-                    let msg = match rebase_type {
-                        RebaseType::Single => "Rebased revision onto trunk",
-                        RebaseType::WithDescendants => "Rebased tree onto trunk",
-                    };
-                    self.set_status(msg, MessageKind::Success);
-                }
-            }
-            Err(e) => {
-                self.set_status(&format!("Rebase failed: {e}"), MessageKind::Error);
-            }
-        }
+        self.confirm_state = Some(ConfirmState {
+            action: ConfirmAction::RebaseOntoTrunk(rebase_type),
+            message,
+            revs: vec![cmd_preview],
+        });
+        self.mode = Mode::Confirming;
         Ok(())
     }
 
