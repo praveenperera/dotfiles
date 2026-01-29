@@ -205,6 +205,50 @@ fn move_up(app: &mut App, rev: &str) -> Result<()> {
 }
 ```
 
+### 3.4.1 Handling `--skip-emptied`
+
+The `--skip-emptied` flag abandons commits that **become empty** as a result of the rebase
+(e.g., their changes already exist in the destination). It does NOT abandon commits that
+were already empty before the rebase.
+
+**When to use:**
+
+| Operation | `--skip-emptied`? | Reasoning |
+|-----------|-------------------|-----------|
+| Move up/down in stack | **Ask/Toggle** | Reordering usually doesn't create empty commits, but user should decide |
+| Rebase onto trunk (`R` to trunk) | **Yes (default)** | Merged changes on trunk → commits become empty → abandon them |
+
+**Implementation - Toggle in Preview:**
+```rust
+pub struct PreviewState {
+    pub action: PreviewAction,
+    pub skip_emptied: bool,  // Toggle with 's' key in preview mode
+    // ... other fields
+}
+```
+
+**Preview UI with Toggle:**
+```
+┌─ Rebase Preview ──────────────────────────────────────┐
+│ Moving "fix login" down in stack                      │
+│                                                        │
+│ Command: jj rebase -r abc -B def                      │
+│                                                        │
+│ [x] Skip commits that become empty (--skip-emptied)   │
+│                                                        │
+│ [Enter] Confirm   [s] Toggle skip   [Esc] Cancel      │
+└────────────────────────────────────────────────────────┘
+```
+
+**Smart Detection (future enhancement):**
+```rust
+fn detect_would_become_empty(rev: &str, destination: &str) -> Result<bool> {
+    // Compare the tree of rev with the tree at destination
+    // If rev's changes already exist at destination, it would become empty
+    // Show warning in preview if true
+}
+```
+
 ### 3.5 Multi-Select for Abandon (Action 4)
 
 | Key | Action |
