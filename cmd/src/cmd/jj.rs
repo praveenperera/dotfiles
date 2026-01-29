@@ -524,7 +524,13 @@ fn tree(_sh: &Shell, full: bool, from: Option<String>) -> Result<()> {
         }
 
         // print this commit
-        let connector = if is_last { "└── " } else { "├── " };
+        let connector = if prefix.is_empty() {
+            ""
+        } else if is_last {
+            "└── "
+        } else {
+            "├── "
+        };
         let colored_rev = format_rev_fn(commit);
 
         let count_str = if !full && hidden_count > 0 {
