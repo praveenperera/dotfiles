@@ -367,6 +367,7 @@ In rebase mode, the tree shows a **preview** of the final state. The behavior di
 **'s' mode (rebase with descendants):**
 - Source AND all descendants move together after dest
 - Source gets `dest_depth + 1`, descendants keep relative depth from source
+- Entries between dest and source shift down by the size of the moving stack (so they slot in after the descendants)
 - Uses structural depth (node.depth) for descendant detection, not visual_depth
 - This fixes depth calculation in non-full mode where visual_depth is compressed
 
