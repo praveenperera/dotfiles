@@ -327,6 +327,10 @@ fn build_rebase_preview(app: &App, dest_cursor: usize, source_rev: &str, rebase_
         .map(|(idx, entry)| (idx, entry.visual_depth))
         .collect();
 
+    // find the first moving index (source) for determining entries that need shifting
+    let first_moving_idx = moving_indices.iter().min().copied().unwrap_or(0);
+    let num_moving = moving_indices.len();
+
     for (idx, entry) in app.tree.visible_entries.iter().enumerate() {
         if moving_indices.contains(&idx) {
             continue;
@@ -334,9 +338,16 @@ fn build_rebase_preview(app: &App, dest_cursor: usize, source_rev: &str, rebase_
 
         let is_dest = idx == dest_cursor;
 
+        // entries between dest and source shift down by the size of the moving stack
+        let depth = if idx > dest_cursor && idx < first_moving_idx {
+            entry.visual_depth + num_moving
+        } else {
+            entry.visual_depth
+        };
+
         preview.push(PreviewEntry {
             original_index: idx,
-            visual_depth: entry.visual_depth,
+            visual_depth: depth,
             is_source: false,
             is_moving: false,
             is_dest,
