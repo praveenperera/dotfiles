@@ -75,6 +75,7 @@ itertools = "0.14"
 # TUI
 ratatui = { version = "0.30", features = ["crossterm"] }
 tui-tree-widget = "0.22"
+tui-popup = "0.7"
 unicode-width = "0.2"
 smallvec = { version = "1.13", features = ["serde"] }
 syntect = { version = "5.3", default-features = false, features = ["default-fancy"] }
