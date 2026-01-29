@@ -143,8 +143,10 @@ The TUI has several modes, each with different key behaviors:
 | **Rebase** | `r` or `s` | `Esc` or `Enter` | Move revisions anywhere in tree |
 | **Bookmark Move** | `m` | `Esc` or `Enter` | Move bookmark to different revision |
 | **Editing** | `e` | `Esc` or `Enter` | Edit commit message |
+| **Diff View** | `Enter` | `Esc` | View diff (scrollable) |
+| **Operation Log** | `O` | `Esc` | Browse/restore previous states |
 | **Preview** | (after actions) | `Esc` or `Enter` | Confirm/cancel pending operation |
-| **Help** | `?` | `?` or `Esc` | View keybindings |
+| **Help Menu** | `?` | `?` or `Esc` | View keybindings pane |
 
 ### 3.1 Navigation & View (Normal Mode)
 
@@ -233,10 +235,24 @@ Enter a modal interface to move revisions anywhere in the tree.
 | `j` / `k` | Navigate to destination (any revision in tree) |
 | `h` / `l` | Move between stacks |
 | `Enter` | Confirm rebase to current cursor position |
-| `a` | Set position: **after** destination (`-A`) |
-| `b` | Set position: **before** destination (`-B`) |
-| `d` | Set position: **onto** destination (`-d`, default) |
+| `a` | Set position: **after/inline** (`-A`, default) - insert into stack |
+| `b` | Set position: **before** (`-B`) - insert as parent of destination |
+| `o` | Set position: **onto** (`-o`) - just reparent (may create offshoot) |
 | `Esc` | Cancel and return to Normal Mode |
+
+**Position Flags Explained:**
+```
+Stack:  A → B → C → D       Moving X to after B:
+
+-A (after/inline):          -o (onto):
+A → B → X → C → D           A → B → C → D
+    (X inserted inline)          └── X  (offshoot!)
+
+-B (before):
+A → X → B → C → D
+    (X becomes B's parent)
+```
+**Default is `-A`** because it keeps stacks linear. Use `-o` only when you want to create a branch.
 
 **Single Revision (`-r`) vs Source + Descendants (`-s`):**
 
@@ -256,7 +272,7 @@ Stack before:          -r (single)           -s (with descendants)
 ```
 ┌─ REBASE MODE ─────────────────────────────────────────┐
 │ Source: "fix login" (abc123)  [mode: -r single]       │
-│ Position: -d (onto destination)                       │
+│ Position: -A (after/inline)                           │
 │                                                        │
 │ ○ master                                              │
 │ ├── feature-auth                                      │
@@ -265,9 +281,9 @@ Stack before:          -r (single)           -s (with descendants)
 │ │   └── add endpoints                                 │
 │ └── feature-ui                                        │
 │                                                        │
-│ Command: jj rebase -r abc123 -d feature-api           │
+│ Command: jj rebase -r abc123 -A feature-api           │
 │                                                        │
-│ [Enter] Confirm   [a/b/d] Position   [Esc] Cancel     │
+│ [Enter] Confirm   [a/b/o] Position   [Esc] Cancel     │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -281,7 +297,7 @@ pub enum RebaseMode {
 pub enum RebasePosition {
     After,  // -A: insert as child of destination
     Before, // -B: insert as parent of destination
-    Onto,   // -d: destination becomes parent (default)
+    Onto,   // -o: destination becomes parent (default)
 }
 
 pub struct RebaseModeState {
@@ -296,7 +312,7 @@ fn enter_rebase_mode(app: &mut App, mode: RebaseMode) {
     app.mode = Mode::Rebasing(RebaseModeState {
         source_rev: source,
         mode,
-        position: RebasePosition::Onto,  // default
+        position: RebasePosition::After,  // default: inline insertion
         destination_cursor: app.tree.cursor,
     });
 }
@@ -309,7 +325,7 @@ fn confirm_rebase(state: &RebaseModeState, sh: &Shell) -> Result<()> {
     let pos_flag = match state.position {
         RebasePosition::After => "-A",
         RebasePosition::Before => "-B",
-        RebasePosition::Onto => "-d",
+        RebasePosition::Onto => "-o",
     };
     let dest = get_rev_at_cursor(state.destination_cursor);
     cmd!(sh, "jj rebase {mode_flag} {source_rev} {pos_flag} {dest}").run()?;
@@ -420,8 +436,8 @@ For common patterns without entering full Rebase Mode:
 
 | Key | Action |
 |-----|--------|
-| `t` | Rebase current onto trunk (`jj rebase -r @ -d trunk()`) |
-| `T` | Rebase current + descendants onto trunk (`jj rebase -s @ -d trunk()`) |
+| `t` | Rebase current onto trunk (`jj rebase -r @ -o trunk()`) |
+| `T` | Rebase current + descendants onto trunk (`jj rebase -s @ -o trunk()`) |
 
 ---
 
@@ -568,44 +584,152 @@ fn undo_to_before(app: &mut App) -> Result<()> {
 
 ## Phase 6: Additional Features
 
-### 6.1 Help Dialog
+### 6.1 Help Menu Pane (`?` key)
 
-```rust
-fn show_help(app: &mut App) {
-    app.mode = Mode::Help;
-}
+A dedicated pane showing all keybindings, organized by category.
 
-// Rendered as overlay:
-// ┌─ Help ─────────────────────────┐
-// │ Navigation                     │
-// │   j/k     Up/Down in stack     │
-// │   h/l     Left/Right stacks    │
-// │   g/G     Top/Bottom           │
-// │   @       Go to working copy   │
-// │   Space   Show commit details  │
-// │   Enter   View diff            │
-// │                                │
-// │ Rebase Mode (r/s to enter)     │
-// │   r       Rebase single (-r)   │
-// │   s       Rebase + desc (-s)   │
-// │   t/T     Rebase onto trunk    │
-// │                                │
-// │ Actions                        │
-// │   e       Edit message         │
-// │   q       Squash into parent   │
-// │   x       Mark for action      │
-// │   a       Abandon marked       │
-// │                                │
-// │ Bookmarks                      │
-// │   m       Move bookmark        │
-// │   b       New bookmark         │
-// │   p       Push bookmark        │
-// │                                │
-// │ [?] Close help                 │
-// └────────────────────────────────┘
+```
+┌─ Tree ─────────────────────┬─ Help ──────────────────────────┐
+│ ○ master                   │ NAVIGATION                      │
+│ ├── feature-auth           │   j/k     Up/Down in stack      │
+│ │   └──►fix login          │   h/l     Left/Right stacks     │
+│ │       └── @ wip          │   g/G     Top/Bottom            │
+│ └── feature-api            │   @       Go to working copy    │
+│     └── add endpoints      │   Space   Show commit details   │
+│                            │   Enter   View diff             │
+│                            │   f       Toggle full mode      │
+│                            │                                 │
+│                            │ REBASE MODE                     │
+│                            │   r       Rebase single (-r)    │
+│                            │   s       Rebase + desc (-s)    │
+│                            │   t/T     Rebase onto trunk     │
+│                            │   (in mode: a/b/o for position) │
+│                            │                                 │
+│                            │ ACTIONS                         │
+│                            │   e       Edit message          │
+│                            │   q       Squash into parent    │
+│                            │   x       Mark for action       │
+│                            │   a       Abandon marked        │
+│                            │   u       Undo last operation   │
+│                            │   O       Operation log         │
+│                            │                                 │
+│                            │ BOOKMARKS                       │
+│                            │   m       Move bookmark         │
+│                            │   b       New bookmark          │
+│                            │   B       Delete bookmark       │
+│                            │   p       Push bookmark         │
+│                            │                                 │
+│                            │ LAYOUT                          │
+│                            │   \       Toggle multi-pane     │
+│                            │   Tab     Switch pane focus     │
+├────────────────────────────┴─────────────────────────────────┤
+│ [?] Close help                                               │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Status Bar Messages
+The help menu opens as a **side pane** (not overlay), so you can still see the tree while reading keybindings.
+
+```rust
+fn toggle_help(app: &mut App) {
+    match app.mode {
+        Mode::Help => app.mode = Mode::Normal,
+        _ => app.mode = Mode::Help,
+    }
+}
+```
+
+### 6.2 Operation Log View (`O` key)
+
+jj's unique feature - browse and restore previous repository states.
+
+| Key | Action |
+|-----|--------|
+| `O` | Open Operation Log panel |
+| `u` | Undo to selected operation |
+| `Esc` | Close panel |
+
+**Operation Log Panel:**
+```
+┌─ Operation Log ───────────────────────────────────────┐
+│ Operations (newest first):                            │
+│                                                        │
+│ > 3m ago   rebase -r abc -A def                       │
+│   15m ago  commit -m "fix login"                      │
+│   1h ago   squash                                     │
+│   2h ago   new                                        │
+│   3h ago   fetch origin                               │
+│                                                        │
+│ [Enter] View details   [u] Undo to here   [Esc] Close │
+└────────────────────────────────────────────────────────┘
+```
+
+```rust
+fn show_operation_log(app: &mut App) -> Result<()> {
+    let ops = cmd!(app.shell, "jj op log --limit 20").read()?;
+    app.mode = Mode::OperationLog(OperationLogState {
+        operations: parse_op_log(&ops),
+        selected: 0,
+    });
+}
+
+fn undo_to_operation(app: &mut App, op_id: &str) -> Result<()> {
+    cmd!(app.shell, "jj undo --to {op_id}").run()?;
+    refresh_tree(app)?;
+    app.message = Some(("Restored to previous state".into(), MessageType::Success));
+}
+```
+
+### 6.3 Multi-Pane Layout
+
+Optional side-by-side layout showing tree and diff simultaneously.
+
+| Key | Action |
+|-----|--------|
+| `\` | Toggle multi-pane layout |
+| `Tab` | Switch focus between panes |
+
+**Multi-Pane Layout:**
+```
+┌─ Tree ─────────────────────┬─ Diff ──────────────────────────┐
+│ ○ master                   │ src/auth.rs                     │
+│ ├── feature-auth           │ @@ -10,6 +10,8 @@               │
+│ │   └──►fix login          │  fn authenticate() {            │
+│ │       └── @ wip          │ +    let token = get_token();   │
+│ └── feature-api            │ +    validate(token)?;          │
+│     └── add endpoints      │      Ok(())                     │
+│                            │  }                              │
+├────────────────────────────┴─────────────────────────────────┤
+│ [j/k] Nav  [Tab] Switch pane  [\] Toggle layout  [?] Help    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+When in multi-pane mode:
+- Left pane: tree navigation (j/k/h/l)
+- Right pane: auto-updates to show diff of selected revision
+- `Tab` switches keyboard focus for scrolling the diff
+
+### 6.4 Contextual Help Bar
+
+**Always visible** at the bottom, showing relevant keys for current mode.
+
+```rust
+fn render_contextual_help(mode: &Mode) -> String {
+    match mode {
+        Mode::Normal => "[j/k] Nav  [Enter] Diff  [r/s] Rebase  [e] Edit  [?] Help",
+        Mode::Rebasing(_) => "[j/k] Select dest  [a/b/o] Position  [Enter] Confirm  [Esc] Cancel",
+        Mode::MovingBookmark(_) => "[j/k] Select dest  [Enter] Drop here  [Esc] Cancel",
+        Mode::Editing(_) => "[Enter] Save  [Esc] Cancel",
+        Mode::ViewingDiff(_) => "[j/k] Scroll  [Esc] Close",
+        Mode::OperationLog(_) => "[j/k] Select  [u] Undo to here  [Esc] Close",
+        Mode::Help => "[?] or [Esc] Close",
+        _ => "",
+    }
+}
+```
+
+This ensures users **always know what keys are available** without needing to open help.
+
+### 6.5 Status Bar Messages
 
 ```rust
 pub enum MessageType {
@@ -621,7 +745,7 @@ fn show_message(app: &mut App, msg: &str, msg_type: MessageType) {
 }
 ```
 
-### 6.3 Bookmarks Quick Actions
+### 6.6 Bookmarks Quick Actions
 
 | Key | Action |
 |-----|--------|
