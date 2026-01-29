@@ -30,7 +30,7 @@ pub fn render(frame: &mut Frame, app: &App) {
             }
         }
         Mode::Normal | Mode::Help | Mode::Selecting | Mode::Editing | Mode::Confirming
-        | Mode::Rebasing | Mode::MovingBookmark | Mode::BookmarkInput => {
+        | Mode::Rebasing | Mode::MovingBookmark | Mode::BookmarkInput | Mode::Squashing => {
             if app.split_view {
                 let split = Layout::default()
                     .direction(Direction::Horizontal)
@@ -100,7 +100,7 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
         let preview = build_rebase_preview(app, state.dest_cursor, &state.source_rev, state.rebase_type);
         render_tree_with_preview(frame, app, inner, viewport_height, scroll_offset, &preview);
     } else {
-        // normal rendering (including MovingBookmark mode)
+        // normal rendering (including MovingBookmark and Squashing modes)
         render_tree_normal(frame, app, inner, viewport_height, scroll_offset);
     }
 }
@@ -117,6 +117,13 @@ fn render_tree_normal(frame: &mut Frame, app: &App, area: Rect, viewport_height:
         None
     };
 
+    // get squash info if in that mode
+    let squash_info = if let (Mode::Squashing, Some(ref state)) = (&app.mode, &app.squash_state) {
+        Some((state.source_rev.clone(), state.dest_cursor))
+    } else {
+        None
+    };
+
     for (visible_idx, entry) in app.tree.visible_nodes().enumerate().skip(scroll_offset) {
         if line_count >= viewport_height {
             break;
@@ -124,9 +131,13 @@ fn render_tree_normal(frame: &mut Frame, app: &App, area: Rect, viewport_height:
 
         let node = app.tree.get_node(entry);
 
-        // determine cursor and bookmark move markers
-        let (is_cursor, is_bm_source, is_bm_dest) = if let Some((ref bm_name, dest_cursor)) = bm_move_info {
+        // determine cursor and markers based on mode
+        let (is_cursor, is_source, is_dest) = if let Some((ref bm_name, dest_cursor)) = bm_move_info {
             let is_source = node.bookmarks.contains(bm_name);
+            let is_dest = visible_idx == dest_cursor && !is_source;
+            (visible_idx == dest_cursor, is_source, is_dest)
+        } else if let Some((ref source_rev, dest_cursor)) = squash_info {
+            let is_source = node.change_id == *source_rev;
             let is_dest = visible_idx == dest_cursor && !is_source;
             (visible_idx == dest_cursor, is_source, is_dest)
         } else {
@@ -134,13 +145,14 @@ fn render_tree_normal(frame: &mut Frame, app: &App, area: Rect, viewport_height:
         };
         let is_multi_selected = app.tree.selected.contains(&visible_idx);
 
-        lines.push(render_tree_line_bookmark_move(
+        lines.push(render_tree_line_with_markers(
             node,
             entry.visual_depth,
             is_cursor,
             is_multi_selected,
-            is_bm_source,
-            is_bm_dest,
+            is_source,
+            is_dest,
+            squash_info.is_some(),
         ));
         line_count += 1;
 
@@ -162,14 +174,15 @@ fn render_tree_normal(frame: &mut Frame, app: &App, area: Rect, viewport_height:
     frame.render_widget(paragraph, area);
 }
 
-/// Render a tree line with bookmark move markers
-fn render_tree_line_bookmark_move(
+/// Render a tree line with source/dest markers (for bookmark move and squash modes)
+fn render_tree_line_with_markers(
     node: &TreeNode,
     visual_depth: usize,
     is_cursor: bool,
     is_multi_selected: bool,
-    is_bm_source: bool,
-    is_bm_dest: bool,
+    is_source: bool,
+    is_dest: bool,
+    is_squash_mode: bool,
 ) -> Line<'static> {
     let indent = "  ".repeat(visual_depth);
     let connector = if visual_depth > 0 { "├── " } else { "" };
@@ -182,15 +195,8 @@ fn render_tree_line_bookmark_move(
 
     let mut spans = Vec::new();
 
-    // add bookmark move markers
-    if is_bm_source {
-        spans.push(Span::styled("[BM] ", Style::default().fg(Color::Cyan)));
-    } else if is_bm_dest {
-        spans.push(Span::styled("► ", Style::default().fg(Color::Green)));
-    }
-
-    // change_id color: cyan for source, normal magenta otherwise
-    let prefix_color = if is_bm_source { Color::Cyan } else { Color::Magenta };
+    // change_id color: yellow for source, normal magenta otherwise
+    let prefix_color = if is_source { Color::Yellow } else { Color::Magenta };
 
     spans.extend([
         Span::raw(format!("{indent}{connector}{selection_marker}{at_marker}(")),
@@ -202,7 +208,7 @@ fn render_tree_line_bookmark_move(
     if !node.bookmarks.is_empty() {
         let bookmark_str = node.bookmarks.join(" ");
         spans.push(Span::raw(" "));
-        let bm_color = if is_bm_source { Color::Yellow } else { Color::Cyan };
+        let bm_color = if is_source { Color::Yellow } else { Color::Cyan };
         spans.push(Span::styled(bookmark_str, Style::default().fg(bm_color)));
     }
 
@@ -217,6 +223,14 @@ fn render_tree_line_bookmark_move(
     };
     spans.push(Span::styled(format!("  {desc}"), Style::default().fg(Color::DarkGray)));
 
+    // add source/dest markers on the right
+    if is_source {
+        let marker = if is_squash_mode { "  ← src" } else { "  ← bm" };
+        spans.push(Span::styled(marker, Style::default().fg(Color::Yellow)));
+    } else if is_dest {
+        spans.push(Span::styled("  ← dest", Style::default().fg(Color::Green)));
+    }
+
     let mut line = Line::from(spans);
 
     // apply styling based on state
@@ -226,9 +240,9 @@ fn render_tree_line_bookmark_move(
                 .bg(Color::Rgb(40, 40, 60))
                 .add_modifier(Modifier::BOLD),
         );
-    } else if is_bm_source {
-        // highlight source entry with bookmark being moved
-        line = line.style(Style::default().bg(Color::Rgb(30, 50, 50)));
+    } else if is_source {
+        // highlight source entry
+        line = line.style(Style::default().bg(Color::Rgb(50, 50, 30)));
     } else if is_multi_selected {
         line = line.style(Style::default().bg(Color::Rgb(40, 50, 40)));
     }
@@ -510,6 +524,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         }
         Mode::MovingBookmark => "MOVE BOOKMARK",
         Mode::BookmarkInput => "BOOKMARK",
+        Mode::Squashing => "SQUASH",
     };
 
     let full_indicator = if app.tree.full_mode { " [FULL]" } else { "" };
@@ -551,6 +566,22 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
             .unwrap_or_else(|| "?".to_string());
         let bm_name: String = state.bookmark_name.chars().take(12).collect();
         format!(" | {bm_name}→{dest_name}")
+    } else if let (Mode::Squashing, Some(ref state)) = (&app.mode, &app.squash_state) {
+        let dest_name = app
+            .tree
+            .visible_entries
+            .get(state.dest_cursor)
+            .map(|e| {
+                let node = &app.tree.nodes[e.node_index];
+                if node.bookmarks.is_empty() {
+                    node.change_id.chars().take(8).collect::<String>()
+                } else {
+                    node.bookmarks.join(" ")
+                }
+            })
+            .unwrap_or_else(|| "?".to_string());
+        let src_short: String = state.source_rev.chars().take(8).collect();
+        format!(" | {src_short}→{dest_name}")
     } else {
         app.tree
             .current_node()
@@ -570,9 +601,9 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
             if !app.tree.selected.is_empty() {
                 "a:abandon  x:toggle  Esc:clear"
             } else if app.current_has_bookmark() {
-                "m:move-bm b:new-bm B:del-bm r:rebase ?:help q:quit"
+                "m:move-bm b:new-bm B:del-bm r:rebase q:squash ?:help Q:quit"
             } else {
-                "b:new-bm r/s:rebase t:trunk d:desc e:edit n:new ?:help q:quit"
+                "b:new-bm r/s:rebase q:squash t:trunk d:desc e:edit n:new ?:help Q:quit"
             }
         }
         Mode::Help => "q/Esc:close",
@@ -593,6 +624,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         }
         Mode::MovingBookmark => "j/k:dest  Enter:run  Esc:cancel",
         Mode::BookmarkInput => "Enter:confirm  Esc:cancel",
+        Mode::Squashing => "j/k:dest  Enter:run  Esc:cancel",
     };
 
     let left = format!(" {mode_indicator}{full_indicator}{split_indicator}{selection_indicator}{current_info}");
@@ -618,7 +650,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
 fn render_help(frame: &mut Frame) {
     let area = frame.area();
     let popup_width = 56u16.min(area.width.saturating_sub(4));
-    let popup_height = 45u16.min(area.height.saturating_sub(4));
+    let popup_height = 47u16.min(area.height.saturating_sub(4));
 
     let popup_area = Rect {
         x: (area.width.saturating_sub(popup_width)) / 2,
@@ -677,6 +709,7 @@ fn render_help(frame: &mut Frame) {
         Line::from("  s         Rebase + descendants (-s)"),
         Line::from("  t         Quick rebase onto trunk"),
         Line::from("  T         Quick rebase tree onto trunk"),
+        Line::from("  q         Squash into target"),
         Line::from("  u         Undo last operation"),
         Line::from(""),
         Line::from(Span::styled(
@@ -692,7 +725,8 @@ fn render_help(frame: &mut Frame) {
             Style::default().add_modifier(Modifier::BOLD),
         )),
         Line::from("  ?         Toggle help"),
-        Line::from("  q/Esc     Quit (or close)"),
+        Line::from("  Q         Quit"),
+        Line::from("  Esc       Quit (or close popup)"),
     ];
 
     let help = Paragraph::new(help_text)

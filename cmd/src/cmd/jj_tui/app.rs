@@ -48,6 +48,7 @@ pub enum Mode {
     Rebasing,
     MovingBookmark,
     BookmarkInput,
+    Squashing,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -127,6 +128,13 @@ pub struct BookmarkInputState {
     pub deleting: bool,
 }
 
+#[derive(Clone)]
+pub struct SquashState {
+    pub source_rev: String,
+    pub dest_cursor: usize,
+    pub op_before: String,
+}
+
 pub struct App {
     pub tree: TreeState,
     pub mode: Mode,
@@ -140,6 +148,7 @@ pub struct App {
     pub rebase_state: Option<RebaseState>,
     pub moving_bookmark_state: Option<MovingBookmarkState>,
     pub bookmark_input_state: Option<BookmarkInputState>,
+    pub squash_state: Option<SquashState>,
     pub last_op: Option<String>,
     sh: Shell,
 }
@@ -162,6 +171,7 @@ impl App {
             rebase_state: None,
             moving_bookmark_state: None,
             bookmark_input_state: None,
+            squash_state: None,
             last_op: None,
             sh: sh.clone(),
         })
@@ -214,6 +224,7 @@ impl App {
             Mode::Rebasing => self.handle_rebasing_key(key.code),
             Mode::MovingBookmark => self.handle_moving_bookmark_key(key.code),
             Mode::BookmarkInput => self.handle_bookmark_input_key(key),
+            Mode::Squashing => self.handle_squashing_key(key.code),
         }
     }
 
@@ -222,7 +233,10 @@ impl App {
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
 
         match code {
-            KeyCode::Char('q') => self.should_quit = true,
+            KeyCode::Char('Q') => self.should_quit = true,
+            KeyCode::Char('q') => {
+                let _ = self.enter_squash_mode();
+            }
             KeyCode::Esc => {
                 if !self.tree.selected.is_empty() {
                     self.tree.clear_selection();
@@ -1308,6 +1322,127 @@ impl App {
             .current_node()
             .map(|n| !n.bookmarks.is_empty())
             .unwrap_or(false)
+    }
+
+    // Squash operations
+
+    fn enter_squash_mode(&mut self) -> Result<()> {
+        let source_rev = self.current_rev();
+        if source_rev.is_empty() {
+            self.set_status("No revision selected", MessageKind::Error);
+            return Ok(());
+        }
+
+        let op_before = self.get_current_operation_id().unwrap_or_default();
+
+        // start with cursor at parent (same logic as rebase mode)
+        let current = self.tree.cursor;
+        let source_struct_depth = self.tree.visible_entries
+            .get(current)
+            .map(|e| self.tree.nodes[e.node_index].depth)
+            .unwrap_or(0);
+
+        // find source's parent: closest entry above with smaller structural depth
+        let mut initial_cursor = current.saturating_sub(1);
+        while initial_cursor > 0 {
+            let entry = &self.tree.visible_entries[initial_cursor];
+            let node = &self.tree.nodes[entry.node_index];
+            if node.depth < source_struct_depth {
+                break;
+            }
+            initial_cursor -= 1;
+        }
+
+        self.squash_state = Some(SquashState {
+            source_rev,
+            dest_cursor: initial_cursor,
+            op_before,
+        });
+        self.mode = Mode::Squashing;
+        Ok(())
+    }
+
+    fn handle_squashing_key(&mut self, code: KeyCode) {
+        let state = match self.squash_state.as_ref() {
+            Some(s) => s.clone(),
+            None => {
+                self.mode = Mode::Normal;
+                return;
+            }
+        };
+
+        match code {
+            KeyCode::Char('j') | KeyCode::Down => self.move_squash_dest_down(),
+            KeyCode::Char('k') | KeyCode::Up => self.move_squash_dest_up(),
+            KeyCode::Enter => {
+                let _ = self.execute_squash(&state);
+            }
+            KeyCode::Esc => self.cancel_squash(),
+            _ => {}
+        }
+    }
+
+    fn move_squash_dest_up(&mut self) {
+        if let Some(ref mut state) = self.squash_state {
+            if state.dest_cursor > 0 {
+                state.dest_cursor -= 1;
+            }
+        }
+    }
+
+    fn move_squash_dest_down(&mut self) {
+        if let Some(ref mut state) = self.squash_state {
+            let max = self.tree.visible_count().saturating_sub(1);
+            if state.dest_cursor < max {
+                state.dest_cursor += 1;
+            }
+        }
+    }
+
+    fn execute_squash(&mut self, state: &SquashState) -> Result<()> {
+        let source = &state.source_rev;
+        let target = match self.get_rev_at_cursor(state.dest_cursor) {
+            Some(t) => t,
+            None => {
+                self.set_status("Invalid target", MessageKind::Error);
+                return Ok(());
+            }
+        };
+
+        if *source == target {
+            self.set_status("Cannot squash into self", MessageKind::Error);
+            return Ok(());
+        }
+
+        match cmd!(self.sh, "jj squash -t {target} -f {source}")
+            .quiet()
+            .ignore_stdout()
+            .ignore_stderr()
+            .run()
+        {
+            Ok(_) => {
+                self.last_op = Some(state.op_before.clone());
+                let has_conflicts = self.check_conflicts();
+                self.squash_state = None;
+                self.mode = Mode::Normal;
+                let _ = self.refresh_tree();
+
+                if has_conflicts {
+                    self.set_status("Squash created conflicts. Press u to undo", MessageKind::Warning);
+                } else {
+                    self.set_status("Squash complete", MessageKind::Success);
+                }
+            }
+            Err(e) => {
+                self.set_status(&format!("Squash failed: {e}"), MessageKind::Error);
+            }
+        }
+        Ok(())
+    }
+
+    fn cancel_squash(&mut self) {
+        self.squash_state = None;
+        self.mode = Mode::Normal;
     }
 
     /// Compute indices of entries that will move during rebase
