@@ -12,7 +12,7 @@ use xshell::{cmd, Shell};
 #[derive(Debug, Clone, Parser)]
 pub struct Jj {
     #[command(subcommand)]
-    pub subcommand: JjCmd,
+    pub subcommand: Option<JjCmd>,
 }
 
 #[derive(Debug, Clone, Subcommand)]
@@ -35,6 +35,10 @@ pub enum JjCmd {
         /// Show all commits, including those without bookmarks
         #[arg(short, long)]
         full: bool,
+
+        /// Base revision to start the tree from (default: trunk())
+        #[arg(long)]
+        from: Option<String>,
     },
 
     /// Clean up empty divergent commits
@@ -102,11 +106,12 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 
 pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
     match flags.subcommand {
-        JjCmd::StackSync { push, force } => stack_sync(sh, push, force),
-        JjCmd::Tree { full } => tree(sh, full),
-        JjCmd::Clean => clean(sh),
-        JjCmd::RebaseOnto { revision, update } => rebase_onto(sh, &revision, update),
-        JjCmd::SplitHunk {
+        None => crate::cmd::jj_tui::run(sh),
+        Some(JjCmd::StackSync { push, force }) => stack_sync(sh, push, force),
+        Some(JjCmd::Tree { full, from }) => tree(sh, full, from),
+        Some(JjCmd::Clean) => clean(sh),
+        Some(JjCmd::RebaseOnto { revision, update }) => rebase_onto(sh, &revision, update),
+        Some(JjCmd::SplitHunk {
             message,
             revision,
             file,
@@ -116,7 +121,7 @@ pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
             preview,
             invert,
             dry_run,
-        } => split_hunk(
+        }) => split_hunk(
             sh, message, &revision, file, lines, hunks, pattern, preview, invert, dry_run,
         ),
     }
@@ -124,9 +129,12 @@ pub fn run_with_flags(sh: &Shell, flags: Jj) -> Result<()> {
 
 /// Detect the trunk branch name (master, main, or trunk)
 fn detect_trunk_branch(sh: &Shell) -> Result<String> {
-    let output = cmd!(sh, "jj log -r trunk() --no-graph -T local_bookmarks --limit 1")
-        .read()
-        .wrap_err("failed to detect trunk branch")?;
+    let output = cmd!(
+        sh,
+        "jj log -r trunk() --no-graph -T local_bookmarks --limit 1"
+    )
+    .read()
+    .wrap_err("failed to detect trunk branch")?;
 
     let trunk = output
         .split_whitespace()
@@ -146,9 +154,12 @@ fn rebase_onto(sh: &Shell, revision: &str, update: bool) -> Result<()> {
         " onto ".dimmed(),
         trunk.cyan()
     );
-    cmd!(sh, "jj rebase --source {revision} -o {trunk} --skip-emptied")
-        .run()
-        .wrap_err("rebase failed")?;
+    cmd!(
+        sh,
+        "jj rebase --source {revision} -o {trunk} --skip-emptied"
+    )
+    .run()
+    .wrap_err("rebase failed")?;
 
     if update {
         println!(
@@ -202,15 +213,22 @@ fn stack_sync(sh: &Shell, push: bool, force: bool) -> Result<()> {
 
     // show confirmation unless --force
     if !force {
-        println!("Will rebase the following commits on top of {}:", trunk.cyan());
+        println!(
+            "Will rebase the following commits on top of {}:",
+            trunk.cyan()
+        );
         for root in &roots {
-            let desc = cmd!(sh, "jj log -r {root} --no-graph -T description.first_line()")
-                .read()
-                .unwrap_or_default();
+            let desc = cmd!(
+                sh,
+                "jj log -r {root} --no-graph -T description.first_line()"
+            )
+            .read()
+            .unwrap_or_default();
             println!("  {}  {}", root.purple(), desc.dimmed());
             println!(
                 "  {}",
-                format!("jj rebase --source (-s) {root} --onto (-o) {trunk} --skip-emptied").dimmed()
+                format!("jj rebase --source (-s) {root} --onto (-o) {trunk} --skip-emptied")
+                    .dimmed()
             );
         }
         print!("Continue? [y/N] ");
@@ -227,9 +245,12 @@ fn stack_sync(sh: &Shell, push: bool, force: bool) -> Result<()> {
     // --skip-emptied handles merged commits by abandoning ones that became empty
     for root in &roots {
         println!("{}{}...", "Rebasing stack from ".dimmed(), root);
-        cmd!(sh, "jj rebase --source {root} --onto {trunk} --skip-emptied")
-            .run()
-            .wrap_err_with(|| format!("failed to rebase from {root}"))?;
+        cmd!(
+            sh,
+            "jj rebase --source {root} --onto {trunk} --skip-emptied"
+        )
+        .run()
+        .wrap_err_with(|| format!("failed to rebase from {root}"))?;
     }
 
     // clean up bookmarks marked as deleted on remote (after rebase so --skip-emptied can work)
@@ -274,7 +295,7 @@ fn stack_sync(sh: &Shell, push: bool, force: bool) -> Result<()> {
     Ok(())
 }
 
-fn tree(_sh: &Shell, full: bool) -> Result<()> {
+fn tree(_sh: &Shell, full: bool, from: Option<String>) -> Result<()> {
     use std::collections::HashSet;
 
     let jj_repo = JjRepo::load(None)?;
@@ -283,8 +304,10 @@ fn tree(_sh: &Shell, full: bool) -> Result<()> {
     let working_copy = jj_repo.working_copy_commit()?;
     let working_copy_id = jj_repo.shortest_change_id(&working_copy, 4)?;
 
-    // get all commits in descendants(roots(trunk()..@))
-    let commits = jj_repo.eval_revset("descendants(roots(trunk()..@))")?;
+    // build revset: base | descendants(roots(base..@)) | @::
+    let base = from.as_deref().unwrap_or("trunk()");
+    let revset = format!("{base} | descendants(roots({base}..@)) | @::");
+    let commits = jj_repo.eval_revset(&revset)?;
 
     #[derive(Clone)]
     struct TreeCommit {
@@ -341,11 +364,27 @@ fn tree(_sh: &Shell, full: bool) -> Result<()> {
         }
     }
 
-    // find roots (commits whose parents aren't in our set)
+    // get base change_id for root detection
+    let base_id = jj_repo
+        .eval_revset_single(base)
+        .ok()
+        .and_then(|c| jj_repo.shortest_change_id(&c, 4).ok());
+
+    // find roots (commits whose parents aren't in our set, OR the base)
     let revs_in_set: HashSet<&str> = commit_map.keys().map(|s| s.as_str()).collect();
     let mut roots: Vec<String> = commit_map
         .values()
-        .filter(|c| c.parent_revs.iter().all(|p| !revs_in_set.contains(p.as_str())))
+        .filter(|c| {
+            // always include base as root
+            if let Some(ref bid) = base_id {
+                if c.rev == *bid {
+                    return true;
+                }
+            }
+            c.parent_revs
+                .iter()
+                .all(|p| !revs_in_set.contains(p.as_str()))
+        })
         .map(|c| c.rev.clone())
         .collect();
     roots.sort();
@@ -793,11 +832,7 @@ fn preview_hunks(sh: &Shell, revision: &str, file_filter: Option<&str>) -> Resul
     let mut global_index = 0;
 
     for file in &files {
-        println!(
-            "\n{} {}",
-            "Hunks in".dimmed(),
-            file.path.cyan()
-        );
+        println!("\n{} {}", "Hunks in".dimmed(), file.path.cyan());
 
         if file.is_binary {
             println!("  {}", "[binary file]".yellow());
@@ -927,8 +962,7 @@ fn select_hunks(
 
         for (hunk_idx, hunk) in file.hunks.iter().enumerate() {
             // if no criteria, select all
-            let mut matches =
-                hunk_indices.is_none() && line_ranges.is_none() && pattern.is_none();
+            let mut matches = hunk_indices.is_none() && line_ranges.is_none() && pattern.is_none();
 
             if let Some(indices) = hunk_indices {
                 if indices.contains(&global_index) {
