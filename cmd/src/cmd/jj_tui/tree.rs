@@ -11,6 +11,9 @@ pub struct TreeNode {
     pub is_working_copy: bool,
     pub parent_ids: Vec<String>,
     pub depth: usize,
+    pub author_name: String,
+    pub author_email: String,
+    pub timestamp: String,
 }
 
 impl TreeNode {
@@ -38,8 +41,11 @@ pub struct TreeState {
     pub cursor: usize,
     pub scroll_offset: usize,
     pub full_mode: bool,
+    pub expanded_entry: Option<usize>,
     children_map: HashMap<String, Vec<String>>,
-    visible_entries: Vec<VisibleEntry>,
+    pub visible_entries: Vec<VisibleEntry>,
+    pub selected: HashSet<usize>,
+    pub selection_anchor: Option<usize>,
 }
 
 impl TreeState {
@@ -66,6 +72,10 @@ impl TreeState {
 
             let is_working_copy = change_id == working_copy_id;
 
+            let author_name = JjRepo::author_name(commit);
+            let author_email = JjRepo::author_email(commit);
+            let timestamp = JjRepo::author_timestamp_relative(commit);
+
             let node = TreeNode {
                 change_id: change_id.clone(),
                 unique_prefix_len,
@@ -74,6 +84,9 @@ impl TreeState {
                 is_working_copy,
                 parent_ids: parent_ids.clone(),
                 depth: 0,
+                author_name,
+                author_email,
+                timestamp,
             };
 
             commit_map.insert(change_id.clone(), node);
@@ -92,8 +105,11 @@ impl TreeState {
                 cursor: 0,
                 scroll_offset: 0,
                 full_mode: true,
+                expanded_entry: None,
                 children_map: HashMap::new(),
                 visible_entries: Vec::new(),
+                selected: HashSet::new(),
+                selection_anchor: None,
             });
         }
 
@@ -171,8 +187,11 @@ impl TreeState {
             cursor: 0,
             scroll_offset: 0,
             full_mode: true,
+            expanded_entry: None,
             children_map,
             visible_entries,
+            selected: HashSet::new(),
+            selection_anchor: None,
         })
     }
 
@@ -299,5 +318,46 @@ impl TreeState {
                     .any(|n| n.change_id == *c && n.is_visible(self.full_mode))
             })
         })
+    }
+
+    pub fn page_up(&mut self, amount: usize) {
+        self.cursor = self.cursor.saturating_sub(amount);
+    }
+
+    pub fn page_down(&mut self, amount: usize) {
+        let max = self.visible_count().saturating_sub(1);
+        self.cursor = (self.cursor + amount).min(max);
+    }
+
+    pub fn toggle_expanded(&mut self) {
+        if self.expanded_entry == Some(self.cursor) {
+            self.expanded_entry = None;
+        } else {
+            self.expanded_entry = Some(self.cursor);
+        }
+    }
+
+    pub fn is_expanded(&self, visible_idx: usize) -> bool {
+        self.expanded_entry == Some(visible_idx)
+    }
+
+    pub fn toggle_selected(&mut self, idx: usize) {
+        if self.selected.contains(&idx) {
+            self.selected.remove(&idx);
+        } else {
+            self.selected.insert(idx);
+        }
+    }
+
+    pub fn select_range(&mut self, from: usize, to: usize) {
+        let (start, end) = if from <= to { (from, to) } else { (to, from) };
+        for i in start..=end {
+            self.selected.insert(i);
+        }
+    }
+
+    pub fn clear_selection(&mut self) {
+        self.selected.clear();
+        self.selection_anchor = None;
     }
 }
