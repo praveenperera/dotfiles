@@ -20,28 +20,75 @@ All keybindings in one place. Edit this section to change bindings.
 >
 > ```rust
 > // keybindings.rs - Single source of truth
+> use crossterm::event::{KeyCode, KeyModifiers, KeyEvent};
+>
+> /// Wrapper for KeyEvent that's easy to construct and serialize
+> #[derive(Hash, Eq, PartialEq, Clone, Serialize, Deserialize)]
+> pub struct Key {
+>     pub code: KeyCode,
+>     pub modifiers: KeyModifiers,
+> }
+>
+> impl Key {
+>     pub fn new(code: KeyCode) -> Self {
+>         Self { code, modifiers: KeyModifiers::NONE }
+>     }
+>     pub fn ctrl(code: KeyCode) -> Self {
+>         Self { code, modifiers: KeyModifiers::CONTROL }
+>     }
+>     pub fn shift(code: KeyCode) -> Self {
+>         Self { code, modifiers: KeyModifiers::SHIFT }
+>     }
+>     pub fn alt(code: KeyCode) -> Self {
+>         Self { code, modifiers: KeyModifiers::ALT }
+>     }
+> }
+>
+> // Convenience macros
+> macro_rules! key {
+>     (Ctrl+$c:literal) => { Key::ctrl(KeyCode::Char($c)) };
+>     (Ctrl+$k:ident) => { Key::ctrl(KeyCode::$k) };
+>     (Shift+$c:literal) => { Key::shift(KeyCode::Char($c)) };
+>     (Alt+$c:literal) => { Key::alt(KeyCode::Char($c)) };
+>     ($c:literal) => { Key::new(KeyCode::Char($c)) };
+>     ($k:ident) => { Key::new(KeyCode::$k) };
+> }
+>
 > #[derive(Serialize, Deserialize)]
 > pub struct Keymap {
->     pub global: HashMap<KeyEvent, Action>,
->     pub normal: HashMap<KeyEvent, Action>,
->     pub rebase: HashMap<KeyEvent, Action>,
->     pub diff_view: HashMap<KeyEvent, Action>,
+>     pub global: HashMap<Key, Action>,
+>     pub normal: HashMap<Key, Action>,
+>     pub rebase: HashMap<Key, Action>,
+>     pub diff_view: HashMap<Key, Action>,
 >     // ... other modes
 > }
 >
 > impl Default for Keymap {
 >     fn default() -> Self {
 >         Self {
+>             global: hashmap! {
+>                 key!(Ctrl+'c') => Action::Quit,
+>                 key!('?') => Action::ToggleHelp,
+>                 key!(Esc) => Action::Cancel,
+>             },
 >             normal: hashmap! {
 >                 key!('j') => Action::MoveDown,
 >                 key!('k') => Action::MoveUp,
 >                 key!(Enter) => Action::OpenActionMenu,
+>                 key!('D') => Action::ViewDiff,  // Shift+d
+>                 key!(Ctrl+'r') => Action::Refresh,
 >                 // ... defined from tables below
 >             },
 >             // ...
 >         }
 >     }
 > }
+>
+> // Config file format (keymap.toml):
+> // [normal]
+> // "j" = "MoveDown"
+> // "ctrl+c" = "Quit"
+> // "ctrl+r" = "Refresh"
 > ```
 
 ### Global (All Modes)
