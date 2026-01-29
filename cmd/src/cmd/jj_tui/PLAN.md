@@ -96,12 +96,15 @@ All keybindings in one place. Edit this section to change bindings.
 > **Multi-key sequences** (like vim's `g g`, `d d`, or `<leader>x`):
 >
 > ```rust
-> /// A key sequence of any length (typically 1-3 keys)
+> use smallvec::SmallVec;
+>
+> /// A key sequence - typically 1-2 keys, but can be longer
+> /// SmallVec avoids heap allocation for common single/double key bindings
 > #[derive(Hash, Eq, PartialEq, Clone, Serialize, Deserialize)]
-> pub struct KeySeq(pub Vec<Key>);
+> pub struct KeySeq(pub SmallVec<[Key; 2]>);
 >
 > impl KeySeq {
->     pub fn single(k: Key) -> Self { Self(vec![k]) }
+>     pub fn single(k: Key) -> Self { Self(smallvec![k]) }
 >     pub fn multi(keys: impl IntoIterator<Item = Key>) -> Self {
 >         Self(keys.into_iter().collect())
 >     }
@@ -109,13 +112,15 @@ All keybindings in one place. Edit this section to change bindings.
 >
 > // Convenience macro for defining sequences
 > macro_rules! seq {
+>     ($key:tt) => { KeySeq::single(key!($key)) };
 >     ($($key:tt),+) => {
->         KeySeq(vec![$(key!($key)),+])
+>         KeySeq(smallvec![$(key!($key)),+])
 >     };
 > }
 >
 > // Usage:
-> // seq!('g', 'g')      -> "g g"
+> // seq!('j')           -> single key (no allocation)
+> // seq!('g', 'g')      -> "g g" (no allocation, fits in SmallVec)
 > // seq!('g', 'b')      -> "g b"
 > // seq!(Ctrl+'x', 's') -> "ctrl+x s"
 >
@@ -356,6 +361,7 @@ syntect = { version = "5.3", default-features = false, features = ["default-fanc
 
 # Utilities
 unicode-width = "0.2"       # Text width calculations for CJK support
+smallvec = { version = "1.13", features = ["serde"] }  # Stack-allocated small vectors
 
 # Error handling
 color-eyre = "0.6"          # Rich error context (already in project)
