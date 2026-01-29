@@ -157,19 +157,36 @@ The TUI has several modes, each with different key behaviors:
 | `g` | Go to top | Jump to trunk |
 | `G` | Go to bottom | Jump to last commit |
 | `@` | Go to working copy | Jump to @ |
+| `Space` | **Show details** | Expand revision info (full SHA, author, date, files changed) |
+| `Enter` | **View diff** | Show diff for current revision (scrollable) |
 | `f` | Toggle full mode | Show/hide commits without bookmarks |
 
-### 3.2 View Diff (Action 1)
+### 3.2 View Details & Diff (Action 1)
 
 | Key | Action |
 |-----|--------|
-| `d` | View diff of selected revision |
+| `Space` | Toggle detail panel (SHA, author, date, files changed) |
+| `Enter` | View full diff (scrollable, `j/k` to scroll, `Esc` to close) |
 | `D` | View diff in external tool (delta/difftastic) |
 
-**Implementation:**
+**Detail Panel (`Space`):**
+```
+┌─ JJ Tree ──────────────────────────────────────────────┐
+│ ○ master  origin sync point                  kp3x     │
+│ ├── feature-a  Add user auth                 mn7y     │
+│ │   ┌──────────────────────────────────────────────┐  │
+│ │   │ Commit: mn7y8z9a0b1c2d3e4f5g6h7i8j9k0l1m2n  │  │
+│ │   │ Author: alice@example.com                    │  │
+│ │   │ Date:   2024-01-15 14:30:00                  │  │
+│ │   │ Files:  +3 -1 (src/auth.rs, src/lib.rs)      │  │
+│ │   └──────────────────────────────────────────────┘  │
+│ │   └── @ (working copy)                     qr9z     │
+└────────────────────────────────────────────────────────┘
+```
+
+**Diff View (`Enter`):**
 ```rust
 fn view_diff(app: &App, rev: &str) -> Result<()> {
-    // Show diff in a scrollable panel or spawn pager
     let diff = cmd!(app.shell, "jj diff -r {rev} --color=always").read()?;
     app.mode = Mode::ViewingDiff(DiffState { content: diff, scroll: 0 });
 }
@@ -353,10 +370,12 @@ fn detect_would_become_empty(rev: &str, destination: &str) -> Result<bool> {
 
 | Key | Action |
 |-----|--------|
-| `Space` | Toggle selection on current commit |
-| `v` | Enter visual/multi-select mode |
+| `x` | Toggle selection on current commit (mark for action) |
+| `v` | Enter visual/multi-select mode (select range with `j/k`) |
 | `a` | Abandon selected (or current if none selected) |
 | `Esc` | Clear selection |
+
+Note: `x` marks commits like "X marks the spot" - quick toggle for individual commits.
 
 **Implementation:**
 ```rust
@@ -563,21 +582,22 @@ fn show_help(app: &mut App) {
 // │   h/l     Left/Right stacks    │
 // │   g/G     Top/Bottom           │
 // │   @       Go to working copy   │
+// │   Space   Show commit details  │
+// │   Enter   View diff            │
 // │                                │
-// │ Rebase Mode                    │
+// │ Rebase Mode (r/s to enter)     │
 // │   r       Rebase single (-r)   │
 // │   s       Rebase + desc (-s)   │
 // │   t/T     Rebase onto trunk    │
 // │                                │
 // │ Actions                        │
-// │   d       View diff            │
 // │   e       Edit message         │
 // │   q       Squash into parent   │
-// │   Space   Toggle select        │
-// │   a       Abandon selected     │
+// │   x       Mark for action      │
+// │   a       Abandon marked       │
 // │                                │
 // │ Bookmarks                      │
-// │   m       Move bookmark here   │
+// │   m       Move bookmark        │
 // │   b       New bookmark         │
 // │   p       Push bookmark        │
 // │                                │
