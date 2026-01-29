@@ -34,12 +34,20 @@ cmd/src/
 ### 1.2 Dependencies to Add
 
 ```toml
-# Cargo.toml additions
+# Cargo.toml additions - Core TUI
 ratatui = { version = "0.30", features = ["crossterm"] }
 crossterm = { version = "0.29", features = ["event-stream"] }
-tui-textarea = "0.7"        # For commit message editing
 better-panic = "0.3"        # Panic handler for TUI cleanup
 unicode-width = "0.2"       # Text width calculations
+
+# Community widgets & utilities
+tui-textarea = "0.7"        # For commit message editing (multi-line)
+tui-tree-widget = "0.22"    # For tree rendering (collapsible nodes)
+tui-scrollview = "0.6"      # For scrollable content areas
+arboard = "3.4"             # Cross-platform clipboard (yank SHA/change-id)
+
+# Syntax highlighting for diff view
+syntect = "5.2"             # Syntax highlighting engine
 ```
 
 **Why Crossterm?** (vs Termion/Termwiz)
@@ -65,6 +73,15 @@ pub struct TreeNode {
     pub children: Vec<usize>,   // Indices into flat vec
     pub depth: usize,           // Indentation level
     pub is_trunk: bool,         // Is this master/main/trunk?
+
+    // Status indicators
+    pub has_conflicts: bool,    // ⚠ symbol - commit has unresolved conflicts
+    pub is_dirty: bool,         // ● symbol - working copy has uncommitted changes (only for @)
+    pub files_changed: Option<u32>,  // +N files changed count
+
+    // Remote tracking (for bookmarked commits)
+    pub ahead_of_remote: Option<u32>,   // ↑N commits ahead
+    pub behind_remote: Option<u32>,     // ↓N commits behind
 }
 
 pub struct TreeState {
@@ -78,11 +95,22 @@ pub struct TreeState {
 // app.rs
 pub enum Mode {
     Normal,
+    ActionMenu(ActionMenuState),  // Enter key - popup with all actions
+    ViewingDiff(DiffState),       // D key - syntax highlighted diff
     Preview(PreviewState),
     Editing(EditingState),
     Confirming(ConfirmState),
     Resolving(ConflictState),
+    Rebasing(RebaseModeState),
+    MovingBookmark(MovingBookmarkState),
+    OperationLog(OperationLogState),
+    VerifyMismatch(VerifyMismatchState),  // Result != preview, offer undo
     Help,
+}
+
+pub struct VerifyMismatchState {
+    pub op_before: OperationId,  // Snapshot to undo to
+    pub message: String,
 }
 
 pub struct App {
@@ -118,16 +146,27 @@ fn comprehensive_tree_revset() -> &'static str {
 
 ```
 ┌─ JJ Tree ──────────────────────────────────────────────┐
-│ ○ master  origin sync point                  kp3x     │
-│ ├── feature-a  Add user auth        +2       mn7y     │
-│ │   └── @ (working copy)                     qr9z     │
-│ │       └── (wip branch)            +1       st4w     │
-│ ├── feature-b  Fix login bug                 uv6x     │  <- sibling
-│ └── experiment  Try new API                  ab2c     │  <- sibling
+│ ○ master  origin sync point              ↑2↓1 kp3x    │  <- remote tracking
+│ ├── feature-a  Add user auth        +2        mn7y    │
+│ │   └── @● (working copy)                     qr9z    │  <- ● = has changes
+│ │       └── ⚠ (conflict!)           +1        st4w    │  <- ⚠ = conflicts
+│ ├── feature-b  Fix login bug                  uv6x    │  <- sibling
+│ └── experiment  Try new API                   ab2c    │  <- sibling
 ├────────────────────────────────────────────────────────┤
-│ [j/k] Navigate  [d] Diff  [e] Edit  [r] Rebase  [?] Help│
+│ [j/k] Nav  [Enter] Actions  [D] Diff  [r] Rebase  [?] Help│
 └────────────────────────────────────────────────────────┘
 ```
+
+**Visual Indicators:**
+
+| Symbol | Meaning | Color |
+|--------|---------|-------|
+| `@` | Working copy | Cyan |
+| `●` | Has uncommitted changes (dirty) | Yellow |
+| `⚠` | Has conflicts | Red |
+| `↑N` | Commits ahead of remote | Green |
+| `↓N` | Commits behind remote | Red |
+| `+N` | Files changed | Dim |
 
 ---
 
@@ -140,10 +179,11 @@ The TUI has several modes, each with different key behaviors:
 | Mode | Enter With | Exit With | Purpose |
 |------|------------|-----------|---------|
 | **Normal** | (default) | - | Navigate tree, trigger actions |
+| **Action Menu** | `Enter` | `Esc` or select action | Popup with all available actions for revision |
 | **Rebase** | `r` or `s` | `Esc` or `Enter` | Move revisions anywhere in tree |
 | **Bookmark Move** | `m` | `Esc` or `Enter` | Move bookmark to different revision |
 | **Editing Desc** | `d` | `Esc` or `Enter` | Edit commit message |
-| **Diff View** | `Enter` | `Esc` | View diff (scrollable) |
+| **Diff View** | `D` | `Esc` | View diff (scrollable, syntax highlighted) |
 | **Operation Log** | `O` | `Esc` | Browse/restore previous states |
 | **Preview** | (after actions) | `Esc` or `Enter` | Confirm/cancel pending operation |
 | **Help Menu** | `?` | `?` or `Esc` | View keybindings pane |
@@ -162,19 +202,84 @@ The TUI has several modes, each with different key behaviors:
 | `G` | Go to bottom | Jump to last commit |
 | `@` | Go to working copy | Jump to @ |
 | `Space` | **Show details** | Expand revision info (full SHA, author, date, files changed) |
-| `Enter` | **View diff** | Show diff for current revision (scrollable) |
+| `Enter` | **Action menu** | Open popup with all available actions for this revision |
+| `D` | **View diff** | Show diff for current revision (scrollable, syntax highlighted) |
 | `f` | Toggle full mode | Show/hide commits without bookmarks |
 | `e` | **Edit working copy** | Make this revision the working copy (`jj edit`) |
 | `y` | **Yank git SHA** | Copy full git commit SHA to clipboard |
 | `Y` | **Yank change id** | Copy jj change id (rev) to clipboard |
 
-### 3.2 View Details & Diff (Action 1)
+### 3.1.1 New Commit Operations
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `n` | **New commit** | Create new commit on top of current (`jj new`) |
+| `c` | **Commit** | Commit working copy changes (`jj commit`) - only if @ has changes |
+| `F` | **Fetch** | Fetch from remote (`jj git fetch`) |
+
+### 3.2 Action Menu Popup (`Enter`)
+
+When pressing `Enter` on a revision, show a popup menu with all available actions:
+
+```
+┌─ Actions for "fix login" (mn7y) ──────────────────────┐
+│                                                        │
+│   D  View diff                                         │
+│   d  Edit description                                  │
+│   e  Edit working copy (jj edit)                       │
+│   ─────────────────────────────────────                │
+│   r  Rebase (single revision)                          │
+│   s  Rebase (with descendants)                         │
+│   q  Squash into parent                                │
+│   ─────────────────────────────────────                │
+│   n  New commit on top                                 │
+│   a  Abandon this revision                             │
+│   ─────────────────────────────────────                │
+│   m  Move bookmark (if present)                        │
+│   b  Create bookmark here                              │
+│   ─────────────────────────────────────                │
+│   y  Copy git SHA                                      │
+│   Y  Copy change id                                    │
+│                                                        │
+│   [Esc] Close                                          │
+└────────────────────────────────────────────────────────┘
+```
+
+**Implementation:**
+```rust
+pub struct ActionMenuState {
+    pub target_rev: String,
+    pub selected_index: usize,
+    pub actions: Vec<ActionItem>,
+}
+
+pub struct ActionItem {
+    pub key: char,
+    pub label: String,
+    pub enabled: bool,  // Gray out unavailable actions
+}
+
+fn build_action_menu(app: &App, rev: &str) -> Vec<ActionItem> {
+    let has_bookmark = has_bookmark_at(rev);
+    let is_working_copy = is_working_copy(rev);
+    let has_changes = has_uncommitted_changes();
+
+    vec![
+        ActionItem { key: 'D', label: "View diff".into(), enabled: true },
+        ActionItem { key: 'd', label: "Edit description".into(), enabled: true },
+        ActionItem { key: 'e', label: "Edit working copy".into(), enabled: !is_working_copy },
+        // ... etc
+        ActionItem { key: 'm', label: "Move bookmark".into(), enabled: has_bookmark },
+    ]
+}
+```
+
+### 3.3 View Details & Diff
 
 | Key | Action |
 |-----|--------|
 | `Space` | Toggle detail panel (SHA, author, date, files changed) |
-| `Enter` | View full diff (scrollable, `j/k` to scroll, `Esc` to close) |
-| `D` | View diff in external tool (delta/difftastic) |
+| `D` | View full diff (scrollable, syntax highlighted, `j/k` to scroll, `Esc` to close) |
 
 **Detail Panel (`Space`):**
 ```
@@ -191,11 +296,27 @@ The TUI has several modes, each with different key behaviors:
 └────────────────────────────────────────────────────────┘
 ```
 
-**Diff View (`Enter`):**
+**Diff View with Syntax Highlighting (`D`):**
 ```rust
-fn view_diff(app: &App, rev: &str) -> Result<()> {
-    let diff = cmd!(app.shell, "jj diff -r {rev} --color=always").read()?;
-    app.mode = Mode::ViewingDiff(DiffState { content: diff, scroll: 0 });
+use syntect::easy::HighlightLines;
+use syntect::parsing::SyntaxSet;
+use syntect::highlighting::ThemeSet;
+
+fn view_diff(app: &mut App, rev: &str) -> Result<()> {
+    let diff = cmd!(app.shell, "jj diff -r {rev}").read()?;
+    let highlighted = highlight_diff(&diff)?;
+    app.mode = Mode::ViewingDiff(DiffState {
+        content: highlighted,
+        scroll: 0,
+        syntax_set: SyntaxSet::load_defaults_newlines(),
+        theme: ThemeSet::load_defaults().themes["base16-ocean.dark"].clone(),
+    });
+}
+
+fn highlight_diff(diff: &str) -> Vec<HighlightedLine> {
+    // Parse diff, detect file types from headers
+    // Apply syntax highlighting per-file section
+    // Color + lines green, - lines red
 }
 ```
 
@@ -325,19 +446,27 @@ pub struct RebaseModeState {
     pub mode: RebaseMode,
     pub destination_cursor: usize,
     pub allow_branches: bool,  // default: false (clean inline insertion)
+    pub op_before: OperationId, // Snapshot for undo if result doesn't match preview
 }
 
-fn enter_rebase_mode(app: &mut App, mode: RebaseMode) {
+fn enter_rebase_mode(app: &mut App, mode: RebaseMode) -> Result<()> {
+    // IMPORTANT: Capture operation ID BEFORE starting rebase
+    // This allows undo back to exactly this point if result != preview
+    let op_before = get_current_operation_id(&app.shell)?;
+
     let source = app.current_rev().clone();
     app.mode = Mode::Rebasing(RebaseModeState {
         source_rev: source,
         mode,
         destination_cursor: app.tree.cursor,
         allow_branches: false,  // default: clean stacks
+        op_before,
     });
+    Ok(())
 }
 
-fn confirm_rebase(state: &RebaseModeState, sh: &Shell) -> Result<()> {
+fn confirm_rebase(app: &mut App, state: &RebaseModeState) -> Result<()> {
+    let sh = &app.shell;
     let mode_flag = match state.mode {
         RebaseMode::SingleRevision => "-r",
         RebaseMode::SourceWithDescendants => "-s",
@@ -358,6 +487,67 @@ fn confirm_rebase(state: &RebaseModeState, sh: &Shell) -> Result<()> {
             cmd!(sh, "jj rebase {mode_flag} {source_rev} -A {dest}").run()?;
         }
     }
+
+    // VERIFY: Compare actual result to preview
+    // If mismatch, offer immediate undo
+    let actual_tree = refresh_and_get_tree(app)?;
+    if !matches_preview(&actual_tree, &state.expected_preview) {
+        app.mode = Mode::VerifyMismatch(VerifyMismatchState {
+            op_before: state.op_before.clone(),
+            message: "Result doesn't match preview. Undo?".into(),
+        });
+    } else {
+        app.mode = Mode::Normal;
+        app.message = Some(("Rebase completed".into(), MessageType::Success));
+    }
+    Ok(())
+}
+
+/// Check if actual tree topology matches what we previewed
+fn matches_preview(actual: &TreeState, expected: &TreeState) -> bool {
+    // Compare parent-child relationships for affected nodes
+    // Ignore metadata like timestamps, only check structure
+    actual.nodes.iter().zip(expected.nodes.iter()).all(|(a, e)| {
+        a.change_id == e.change_id && a.parent_ids == e.parent_ids
+    })
+}
+```
+
+**Verify Mismatch Dialog:**
+```
+┌─ Preview Mismatch ─────────────────────────────────────┐
+│                                                        │
+│ ⚠ The result doesn't match the preview!               │
+│                                                        │
+│ This can happen when:                                  │
+│   • Another commit had the same parent                 │
+│   • A conflict occurred                                │
+│   • The commit was already in the target location      │
+│                                                        │
+│ [u] Undo to before the move                            │
+│ [k] Keep the result anyway                             │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+```
+
+```rust
+fn handle_verify_mismatch(app: &mut App, state: &VerifyMismatchState, key: KeyCode) -> Result<()> {
+    match key {
+        KeyCode::Char('u') => {
+            // Undo to the snapshot taken before the move started
+            cmd!(app.shell, "jj undo --to {}", state.op_before).run()?;
+            refresh_tree(app)?;
+            app.message = Some(("Undone to before the move".into(), MessageType::Info));
+            app.mode = Mode::Normal;
+        }
+        KeyCode::Char('k') | KeyCode::Esc => {
+            // Keep the result
+            app.message = Some(("Kept the result".into(), MessageType::Info));
+            app.mode = Mode::Normal;
+        }
+        _ => {}
+    }
+    Ok(())
 }
 ```
 
@@ -619,16 +809,19 @@ A dedicated pane showing all keybindings, organized by category.
 
 ```
 ┌─ Tree ─────────────────────┬─ Help ──────────────────────────┐
-│ ○ master                   │ NAVIGATION                      │
+│ ○ master          ↑2↓1     │ NAVIGATION                      │
 │ ├── feature-auth           │   j/k     Up/Down in stack      │
 │ │   └──►fix login          │   h/l     Left/Right stacks     │
-│ │       └── @ wip          │   g/G     Top/Bottom            │
-│ └── feature-api            │   @       Go to working copy    │
-│     └── add endpoints      │   Space   Show commit details   │
-│                            │   Enter   View diff             │
+│ │       └── @● wip         │   g/G     Top/Bottom            │
+│ │           └── ⚠ conflict │   @       Go to working copy    │
+│ └── feature-api            │   Space   Show commit details   │
+│     └── add endpoints      │   Enter   Action menu           │
+│                            │   D       View diff             │
 │                            │   f       Toggle full mode      │
 │                            │                                 │
-│                            │ EDIT / YANK                     │
+│                            │ CREATE / EDIT                   │
+│                            │   n       New commit (jj new)   │
+│                            │   c       Commit (jj commit)    │
 │                            │   e       Edit working copy (@) │
 │                            │   d       Edit description      │
 │                            │   y       Yank git SHA          │
@@ -647,11 +840,15 @@ A dedicated pane showing all keybindings, organized by category.
 │                            │   u       Undo last operation   │
 │                            │   O       Operation log         │
 │                            │                                 │
+│                            │ REMOTE                          │
+│                            │   F       Fetch (jj git fetch)  │
+│                            │   p       Push bookmark         │
+│                            │   P       Push all bookmarks    │
+│                            │                                 │
 │                            │ BOOKMARKS                       │
 │                            │   m       Move bookmark         │
 │                            │   b       New bookmark          │
 │                            │   B       Delete bookmark       │
-│                            │   p       Push bookmark         │
 │                            │                                 │
 │                            │ LAYOUT                          │
 │                            │   \       Toggle multi-pane     │
@@ -750,7 +947,8 @@ When in multi-pane mode:
 ```rust
 fn render_contextual_help(mode: &Mode) -> String {
     match mode {
-        Mode::Normal => "[j/k] Nav  [Enter] Diff  [r/s] Rebase  [e] Edit @  [d] Desc  [?] Help",
+        Mode::Normal => "[j/k] Nav  [Enter] Actions  [D] Diff  [n] New  [r/s] Rebase  [?] Help",
+        Mode::ActionMenu(_) => "[j/k] Select  [Enter] Execute  [Esc] Close",
         Mode::Rebasing(s) => {
             let branch = if s.allow_branches { "ON" } else { "OFF" };
             format!("[j/k] Dest  [b] Branch:{}  [Enter] Confirm  [Esc] Cancel", branch)
@@ -759,6 +957,7 @@ fn render_contextual_help(mode: &Mode) -> String {
         Mode::EditingDesc(_) => "[Enter] Save  [Esc] Cancel",
         Mode::ViewingDiff(_) => "[j/k] Scroll  [Esc] Close",
         Mode::OperationLog(_) => "[j/k] Select  [u] Undo to here  [Esc] Close",
+        Mode::VerifyMismatch(_) => "[u] Undo to before move  [k] Keep result",
         Mode::Help => "[?] or [Esc] Close",
         _ => "",
     }
