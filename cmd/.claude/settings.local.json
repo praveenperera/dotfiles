@@ -17,7 +17,9 @@
       "WebFetch(domain:pacak.github.io)",
       "WebFetch(domain:)",
       "Bash(grep:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
