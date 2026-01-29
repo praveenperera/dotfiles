@@ -17,9 +17,4 @@ stack = ["log", "-r", "(master::@) & (bookmarks() | @)", "--reversed", "-T", "if
 auto-track-bookmarks = "*"
 
 [ui]
-merge-editor = "nvim-conflict"
-
-[merge-tools.nvim-conflict]
-program = "nvim"
-merge-args = ["$output"]
-merge-tool-edits-conflict-markers = true
+merge-editor = "vscode"
