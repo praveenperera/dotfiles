@@ -6,6 +6,157 @@ Building a ratatui-based TUI for jj that extends the existing `jj tree` command 
 
 ---
 
+## Keybindings Reference
+
+All keybindings in one place. Edit this section to change bindings.
+
+### Global (All Modes)
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+c` | Quit (press twice) |
+| `?` | Toggle help pane |
+| `Esc` | Cancel / close / back to Normal |
+
+### Normal Mode
+
+**Navigation:**
+| Key | Action | Command |
+|-----|--------|---------|
+| `j` / `↓` | Move down | - |
+| `k` / `↑` | Move up | - |
+| `h` | Jump to left sibling stack | - |
+| `l` | Jump to right sibling stack | - |
+| `g` | Go to top (trunk) | - |
+| `G` | Go to bottom | - |
+| `@` | Go to working copy | - |
+| `f` | Toggle full mode (show/hide non-bookmarked) | - |
+
+**View:**
+| Key | Action | Command |
+|-----|--------|---------|
+| `Space` | Show/hide commit details | - |
+| `Enter` | Open action menu | - |
+| `D` | View diff (syntax highlighted) | `jj diff -r {rev}` |
+
+**Create:**
+| Key | Action | Command |
+|-----|--------|---------|
+| `n` | New commit | `jj new` |
+| `c` | Commit changes | `jj commit` |
+
+**Edit:**
+| Key | Action | Command |
+|-----|--------|---------|
+| `e` | Edit working copy | `jj edit {rev}` |
+| `d` | Edit description (inline) | `jj desc -r {rev}` |
+
+**Rebase (enter mode):**
+| Key | Action | Command |
+|-----|--------|---------|
+| `r` | Rebase single revision | `jj rebase -r` |
+| `s` | Rebase with descendants | `jj rebase -s` |
+| `t` | Quick rebase onto trunk | `jj rebase -r @ -o trunk()` |
+| `T` | Quick rebase tree onto trunk | `jj rebase -s @ -o trunk()` |
+
+**Actions:**
+| Key | Action | Command |
+|-----|--------|---------|
+| `q` | Squash into parent | `jj squash` |
+| `x` | Mark/unmark for action | - |
+| `a` | Abandon marked (or current) | `jj abandon {rev}` |
+| `u` | Undo last operation | `jj undo` |
+| `O` | Open operation log | `jj op log` |
+
+**Bookmarks:**
+| Key | Action | Command |
+|-----|--------|---------|
+| `m` | Move bookmark (if present) | `jj bookmark set` |
+| `b` | Create new bookmark | `jj bookmark create` |
+| `B` | Delete bookmark | `jj bookmark delete` |
+
+**Remote:**
+| Key | Action | Command |
+|-----|--------|---------|
+| `F` | Fetch from remote | `jj git fetch` |
+| `p` | Push bookmark | `jj git push -b` |
+| `P` | Push all bookmarks | `jj git push --all` |
+
+**Clipboard:**
+| Key | Action |
+|-----|--------|
+| `y` | Yank git SHA |
+| `Y` | Yank change id |
+
+**Layout:**
+| Key | Action |
+|-----|--------|
+| `\` | Toggle multi-pane layout |
+| `Tab` | Switch pane focus |
+
+### Rebase Mode (after `r` or `s`)
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Navigate to destination |
+| `h` / `l` | Move between stacks |
+| `b` | Toggle branch mode (default: OFF for clean inline) |
+| `Enter` | Confirm rebase |
+| `Esc` | Cancel |
+
+### Bookmark Move Mode (after `m`)
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Navigate to destination |
+| `h` / `l` | Move between stacks |
+| `Enter` | Drop bookmark here |
+| `Esc` | Cancel |
+
+### Action Menu Mode (after `Enter`)
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Select action |
+| `Enter` | Execute selected action |
+| Any key | Execute action directly |
+| `Esc` | Close menu |
+
+### Diff View Mode (after `D`)
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Scroll down/up |
+| `d` / `u` | Page down/up |
+| `g` / `G` | Top/bottom |
+| `Esc` | Close |
+
+### Operation Log Mode (after `O`)
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Select operation |
+| `Enter` | View operation details |
+| `u` | Undo to selected operation |
+| `Esc` | Close |
+
+### Editing Description Mode (after `d`)
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Save description |
+| `Esc` | Cancel |
+| (text input) | Edit text |
+
+### Verify Mismatch Mode (after rebase if result ≠ preview)
+
+| Key | Action |
+|-----|--------|
+| `u` | Undo to before the move |
+| `k` | Keep the result anyway |
+
+---
+
 ## Phase 1: Foundation & Core Architecture
 
 ### 1.1 Project Structure
@@ -34,28 +185,45 @@ cmd/src/
 ### 1.2 Dependencies to Add
 
 ```toml
-# Cargo.toml additions - Core TUI
+# Cargo.toml additions
+
+# Core TUI - ratatui 0.30.0 (Dec 2025) includes automatic panic hooks
 ratatui = { version = "0.30", features = ["crossterm"] }
-crossterm = { version = "0.29", features = ["event-stream"] }
-better-panic = "0.3"        # Panic handler for TUI cleanup
-unicode-width = "0.2"       # Text width calculations
 
-# Community widgets & utilities
-tui-textarea = "0.7"        # For commit message editing (multi-line)
-tui-tree-widget = "0.22"    # For tree rendering (collapsible nodes)
-tui-scrollview = "0.6"      # For scrollable content areas
-arboard = "3.4"             # Cross-platform clipboard (yank SHA/change-id)
+# Widgets - all actively maintained (Jan 2026)
+tui-textarea = "0.7"        # Multi-line text editing
+tui-tree-widget = "0.22"    # Tree rendering with collapse/expand
+tui-widgets = "0.5"         # Scrollview, scrollbar (by ratatui maintainer)
 
-# Syntax highlighting for diff view
-syntect = "5.2"             # Syntax highlighting engine
+# Clipboard - maintained by 1Password, enable Wayland support
+arboard = { version = "3.5", features = ["wayland-data-control"] }
+
+# Syntax highlighting - pure Rust regex engine
+syntect = { version = "5.3", default-features = false, features = ["default-fancy"] }
+
+# Utilities
+unicode-width = "0.2"       # Text width calculations for CJK support
+
+# Error handling
+color-eyre = "0.6"          # Rich error context (already in project)
 ```
 
-**Why Crossterm?** (vs Termion/Termwiz)
-- Cross-platform: Linux/Mac/Windows (Termion is Unix-only)
-- Most popular backend in ratatui ecosystem
-- Supports underline colors (Termion doesn't)
-- Default in ratatui, best documentation/examples
-- ratatui 0.30+ has `crossterm_0_29` feature flag for version flexibility
+**Dependency Rationale:**
+
+| Crate | Version | Maintained By | Notes |
+|-------|---------|---------------|-------|
+| ratatui | 0.30.0 | ratatui org | Major Dec 2025 release, built-in panic hooks |
+| crossterm | 0.29.0 | crossterm-rs | Bundled with ratatui, best cross-platform |
+| tui-textarea | 0.7.0 | rhysd | Standard for multi-line editing |
+| tui-tree-widget | 0.22 | EdJoPaTo | Best tree widget for ratatui |
+| tui-widgets | 0.5.0 | Joshka (ratatui) | Includes scrollview, maintained by core team |
+| arboard | 3.5.0 | 1Password | Best clipboard crate, Wayland support critical |
+| syntect | 5.3.0 | trishume | Mature, pure-Rust with `default-fancy` |
+
+**Why NOT:**
+- `better-panic` → ratatui 0.30 has built-in panic hooks via `ratatui::init()`
+- `tree-sitter-highlight` → grammar version compatibility issues
+- `termion` → Unix-only, no Windows support
 
 ### 1.3 Core Data Structures
 
