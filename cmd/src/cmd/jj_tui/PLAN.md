@@ -89,7 +89,64 @@ All keybindings in one place. Edit this section to change bindings.
 > // "j" = "MoveDown"
 > // "ctrl+c" = "Quit"
 > // "ctrl+r" = "Refresh"
+> // "g g" = "GoToTop"        # multi-key sequence
+> // "g b" = "GoToBookmark"   # another sequence starting with g
 > ```
+>
+> **Multi-key sequences** (like vim's `g g`, `d d`, or `<leader>x`):
+>
+> ```rust
+> /// A key sequence can be 1-3 keys
+> #[derive(Hash, Eq, PartialEq, Clone, Serialize, Deserialize)]
+> pub enum KeySeq {
+>     Single(Key),
+>     Double(Key, Key),      // e.g., "g g", "d d"
+>     Triple(Key, Key, Key), // e.g., "g t a"
+> }
+>
+> pub struct Keymap {
+>     pub normal: HashMap<KeySeq, Action>,
+>     // ...
+> }
+>
+> /// Track pending keys for multi-key sequences
+> pub struct KeyState {
+>     pub pending: Vec<Key>,      // Keys pressed so far
+>     pub timeout: Option<Instant>, // Clear after 1s of no input
+> }
+>
+> impl KeyState {
+>     pub fn handle_key(&mut self, key: Key, keymap: &Keymap, mode: &Mode) -> KeyResult {
+>         self.pending.push(key);
+>
+>         // Check for exact match
+>         if let Some(action) = keymap.lookup(&self.pending, mode) {
+>             self.pending.clear();
+>             return KeyResult::Action(action);
+>         }
+>
+>         // Check if any sequence starts with these keys (prefix match)
+>         if keymap.has_prefix(&self.pending, mode) {
+>             self.timeout = Some(Instant::now() + Duration::from_secs(1));
+>             return KeyResult::Pending; // Show "g-" in status bar
+>         }
+>
+>         // No match and no prefix - invalid sequence
+>         self.pending.clear();
+>         KeyResult::None
+>     }
+> }
+>
+> // Example sequences:
+> // "g g" -> GoToTop
+> // "g G" -> GoToBottom
+> // "g @" -> GoToWorkingCopy
+> // "g b" -> GoToBookmark (prompt for name)
+> // "d d" -> DeleteLine (abandon current)
+> // "z z" -> CenterCursor
+> ```
+>
+> When a prefix is pending, show it in the status bar: `g-` waiting for next key.
 
 ### Global (All Modes)
 
