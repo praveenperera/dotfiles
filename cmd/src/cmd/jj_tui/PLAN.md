@@ -133,16 +133,30 @@ fn comprehensive_tree_revset() -> &'static str {
 
 ## Phase 3: Key Bindings & Actions
 
-### 3.1 Navigation & View
+### Mode Overview
+
+The TUI has several modes, each with different key behaviors:
+
+| Mode | Enter With | Exit With | Purpose |
+|------|------------|-----------|---------|
+| **Normal** | (default) | - | Navigate tree, trigger actions |
+| **Rebase** | `r` or `s` | `Esc` or `Enter` | Move revisions anywhere in tree |
+| **Bookmark Move** | `m` | `Esc` or `Enter` | Move bookmark to different revision |
+| **Editing** | `e` | `Esc` or `Enter` | Edit commit message |
+| **Preview** | (after actions) | `Esc` or `Enter` | Confirm/cancel pending operation |
+| **Help** | `?` | `?` or `Esc` | View keybindings |
+
+### 3.1 Navigation & View (Normal Mode)
 
 | Key | Action | Description |
 |-----|--------|-------------|
-| `j` / `↓` | Move down | Navigate to next commit |
-| `k` / `↑` | Move up | Navigate to previous commit |
+| `j` / `↓` | Move down | Navigate to next commit in current stack |
+| `k` / `↑` | Move up | Navigate to previous commit in current stack |
+| `h` | Move left | Jump to sibling stack (left) |
+| `l` | Move right | Jump to sibling stack (right) |
 | `g` | Go to top | Jump to trunk |
 | `G` | Go to bottom | Jump to last commit |
 | `@` | Go to working copy | Jump to @ |
-| `Enter` | Toggle expand | Expand/collapse children (optional) |
 | `f` | Toggle full mode | Show/hide commits without bookmarks |
 
 ### 3.2 View Diff (Action 1)
@@ -184,71 +198,112 @@ fn apply_description(app: &mut App, new_desc: &str) -> Result<()> {
 }
 ```
 
-### 3.4 Move Revision Up/Down (Action 3)
+### 3.4 Rebase Mode (Action 3)
+
+Enter a modal interface to move revisions anywhere in the tree.
+
+**Normal Mode → Rebase Mode:**
 
 | Key | Action |
 |-----|--------|
-| `J` (Shift+J) | Move single revision down (`rebase -r ... -B`) |
-| `K` (Shift+K) | Move single revision up (`rebase -r ... -A`) |
-| `Ctrl+J` | Move revision + descendants down (`rebase -s ... -B`) |
-| `Ctrl+K` | Move revision + descendants up (`rebase -s ... -A`) |
-| `R` | Rebase onto... (prompt for target, choose -r or -s) |
+| `r` | Enter Rebase Mode - move **single revision** (`-r`) |
+| `s` | Enter Rebase Mode - move **revision + descendants** (`-s`) |
+
+**Inside Rebase Mode:**
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Navigate to destination (any revision in tree) |
+| `h` / `l` | Move between stacks |
+| `Enter` | Confirm rebase to current cursor position |
+| `a` | Set position: **after** destination (`-A`) |
+| `b` | Set position: **before** destination (`-B`) |
+| `d` | Set position: **onto** destination (`-d`, default) |
+| `Esc` | Cancel and return to Normal Mode |
 
 **Single Revision (`-r`) vs Source + Descendants (`-s`):**
 
 ```
 Stack before:          -r (single)           -s (with descendants)
 ○ A                    ○ A                   ○ A
-├── B ← move down      ├── C                 ├── C
+├── B ← move this      ├── C                 ├── C
 │   └── C              ├── B (moved alone)   │   └── D
 │       └── D          │   └── D (orphaned)  └── B (moved with C, D)
 └── E                  └── E                     └── E
 ```
 
-- **`-r` (single)**: Only moves the selected commit; its children get reparented
-- **`-s` (source)**: Moves the commit AND all its descendants together
+- **`r` → `-r` (single)**: Only moves the selected commit; its children get reparented to its parent
+- **`s` → `-s` (source)**: Moves the commit AND all its descendants together
+
+**Rebase Mode UI:**
+```
+┌─ REBASE MODE ─────────────────────────────────────────┐
+│ Source: "fix login" (abc123)  [mode: -r single]       │
+│ Position: -d (onto destination)                       │
+│                                                        │
+│ ○ master                                              │
+│ ├── feature-auth                                      │
+│ │   └── [SOURCE] fix login  ← moving this            │
+│ ├──►feature-api             ← destination (cursor)   │
+│ │   └── add endpoints                                 │
+│ └── feature-ui                                        │
+│                                                        │
+│ Command: jj rebase -r abc123 -d feature-api           │
+│                                                        │
+│ [Enter] Confirm   [a/b/d] Position   [Esc] Cancel     │
+└────────────────────────────────────────────────────────┘
+```
 
 **Implementation:**
 ```rust
 pub enum RebaseMode {
-    SingleRevision,      // -r: just this commit
+    SingleRevision,        // -r: just this commit
     SourceWithDescendants, // -s: this commit + all descendants
 }
 
-fn move_down(app: &mut App, rev: &str, mode: RebaseMode) -> Result<()> {
-    let flag = match mode {
-        RebaseMode::SingleRevision => "-r",
-        RebaseMode::SourceWithDescendants => "-s",
-    };
-    // jj rebase {flag} REV -B NEXT_SIBLING
-    let next = find_next_sibling(rev)?;
-    show_preview(app, PreviewAction::Rebase {
-        rev, target: next, mode, direction: Direction::Before
+pub enum RebasePosition {
+    After,  // -A: insert as child of destination
+    Before, // -B: insert as parent of destination
+    Onto,   // -d: destination becomes parent (default)
+}
+
+pub struct RebaseModeState {
+    pub source_rev: String,
+    pub mode: RebaseMode,
+    pub position: RebasePosition,
+    pub destination_cursor: usize,
+}
+
+fn enter_rebase_mode(app: &mut App, mode: RebaseMode) {
+    let source = app.current_rev().clone();
+    app.mode = Mode::Rebasing(RebaseModeState {
+        source_rev: source,
+        mode,
+        position: RebasePosition::Onto,  // default
+        destination_cursor: app.tree.cursor,
     });
 }
 
-fn move_up(app: &mut App, rev: &str, mode: RebaseMode) -> Result<()> {
-    let flag = match mode {
+fn confirm_rebase(state: &RebaseModeState, sh: &Shell) -> Result<()> {
+    let mode_flag = match state.mode {
         RebaseMode::SingleRevision => "-r",
         RebaseMode::SourceWithDescendants => "-s",
     };
-    // jj rebase {flag} REV -A PREV
-    let prev = find_previous_commit(rev)?;
-    show_preview(app, PreviewAction::Rebase {
-        rev, target: prev, mode, direction: Direction::After
-    });
+    let pos_flag = match state.position {
+        RebasePosition::After => "-A",
+        RebasePosition::Before => "-B",
+        RebasePosition::Onto => "-d",
+    };
+    let dest = get_rev_at_cursor(state.destination_cursor);
+    cmd!(sh, "jj rebase {mode_flag} {source_rev} {pos_flag} {dest}").run()?;
 }
 ```
 
-**Preview shows which mode:**
-```
-┌─ Rebase Preview ──────────────────────────────────────┐
-│ Moving "fix login" + 2 descendants down              │
-│ Mode: -s (source with descendants)                    │
-│                                                        │
-│ Command: jj rebase -s abc -B def                      │
-└────────────────────────────────────────────────────────┘
-```
+**Visual Feedback in Rebase Mode:**
+- Source revision: highlighted in **yellow** with `[SOURCE]` marker
+- Cursor/destination: highlighted with `►` marker
+- Invalid destinations (ancestors when using -s): **dimmed/grayed**
+- Status bar shows current command that will be executed
 
 ### 3.4.1 Handling `--skip-emptied`
 
@@ -323,107 +378,31 @@ fn abandon_selected(app: &mut App) -> Result<()> {
 
 | Key | Action |
 |-----|--------|
-| `s` | Squash into parent |
-| `S` | Squash into... (select target) |
+| `q` | Squash into parent |
+| `Q` | Squash into... (select target via navigation) |
+
+Note: `s` is reserved for entering Rebase Mode with `-s` (source + descendants).
 
 **Implementation:**
 ```rust
-fn squash_into(app: &mut App, source: &str, target: &str) -> Result<()> {
+fn squash_into_parent(app: &mut App) -> Result<()> {
+    let source = app.current_rev();
+    show_preview(app, PreviewAction::Squash { source, into: "parent" });
+}
+
+fn squash_into_target(app: &mut App, source: &str, target: &str) -> Result<()> {
     show_preview(app, PreviewAction::Squash { source, into: target });
 }
 ```
 
-### 3.7 Cross-Stack Movement (Rebase Mode)
+### 3.7 Quick Rebase Shortcuts
 
-Moving revisions between different stacks (not just up/down within the same stack).
-
-| Key | Action |
-|-----|--------|
-| `r` | Enter **Rebase Mode** - select destination for current revision |
-| `Esc` | Exit Rebase Mode |
-
-**Rebase Mode:**
-
-When you press `r`, the TUI enters a special mode where:
-1. Current revision is highlighted as "source"
-2. Navigate with `j/k` to any revision in the tree (including other stacks)
-3. Press `Enter` to rebase source onto the selected destination
-4. Press `a` for "after" (`-A`), `b` for "before" (`-B`), `d` for "destination" (`-d`)
-
-```
-┌─ Rebase Mode ─────────────────────────────────────────┐
-│ Moving: "fix login" (abc123)                          │
-│                                                        │
-│ ○ master                                              │
-│ ├── feature-auth                                      │
-│ │   └── [SOURCE] fix login  ← you are moving this    │
-│ ├── feature-api             ← cursor here            │
-│ │   └── add endpoints                                 │
-│ └── feature-ui                                        │
-│                                                        │
-│ [a] Insert after   [b] Insert before   [d] As child   │
-│ [s] Toggle -s mode   [Esc] Cancel                     │
-└────────────────────────────────────────────────────────┘
-```
-
-**Implementation:**
-```rust
-pub struct RebaseModeState {
-    pub source_rev: String,
-    pub source_mode: RebaseMode,  // -r or -s
-    pub destination_cursor: usize,
-}
-
-pub enum RebasePosition {
-    After,   // -A: insert as child of destination
-    Before,  // -B: insert as parent of destination
-    Onto,    // -d: destination becomes parent (standard rebase)
-}
-
-fn enter_rebase_mode(app: &mut App) {
-    let source = app.current_rev().clone();
-    app.mode = Mode::Rebasing(RebaseModeState {
-        source_rev: source,
-        source_mode: RebaseMode::SingleRevision,
-        destination_cursor: app.tree.cursor,
-    });
-}
-
-fn execute_cross_stack_rebase(
-    source: &str,
-    dest: &str,
-    mode: RebaseMode,
-    position: RebasePosition
-) -> Result<()> {
-    let flag = match mode {
-        RebaseMode::SingleRevision => "-r",
-        RebaseMode::SourceWithDescendants => "-s",
-    };
-    let pos_flag = match position {
-        RebasePosition::After => "-A",
-        RebasePosition::Before => "-B",
-        RebasePosition::Onto => "-d",
-    };
-    cmd!(sh, "jj rebase {flag} {source} {pos_flag} {dest}").run()?;
-}
-```
-
-**Visual Feedback:**
-
-When in Rebase Mode, the tree view changes:
-- Source revision: highlighted in yellow with `[SOURCE]` marker
-- Valid destinations: normal color
-- Invalid destinations (ancestors of source when using -s): dimmed/grayed out
-- Cursor position: highlighted with different color
-
-**Quick Cross-Stack Shortcuts:**
-
-For common patterns, provide shortcuts without entering full Rebase Mode:
+For common patterns without entering full Rebase Mode:
 
 | Key | Action |
 |-----|--------|
-| `t` | Rebase current onto trunk (like `jj ro` but for single rev) |
-| `T` | Rebase current + descendants onto trunk |
+| `t` | Rebase current onto trunk (`jj rebase -r @ -d trunk()`) |
+| `T` | Rebase current + descendants onto trunk (`jj rebase -s @ -d trunk()`) |
 
 ---
 
@@ -580,19 +559,29 @@ fn show_help(app: &mut App) {
 // Rendered as overlay:
 // ┌─ Help ─────────────────────────┐
 // │ Navigation                     │
-// │   j/k     Up/Down              │
+// │   j/k     Up/Down in stack     │
+// │   h/l     Left/Right stacks    │
 // │   g/G     Top/Bottom           │
 // │   @       Go to working copy   │
+// │                                │
+// │ Rebase Mode                    │
+// │   r       Rebase single (-r)   │
+// │   s       Rebase + desc (-s)   │
+// │   t/T     Rebase onto trunk    │
 // │                                │
 // │ Actions                        │
 // │   d       View diff            │
 // │   e       Edit message         │
-// │   J/K     Move down/up         │
-// │   s       Squash into parent   │
+// │   q       Squash into parent   │
 // │   Space   Toggle select        │
 // │   a       Abandon selected     │
 // │                                │
-// │ [q] Close                      │
+// │ Bookmarks                      │
+// │   m       Move bookmark here   │
+// │   b       New bookmark         │
+// │   p       Push bookmark        │
+// │                                │
+// │ [?] Close help                 │
 // └────────────────────────────────┘
 ```
 
@@ -616,62 +605,74 @@ fn show_message(app: &mut App, msg: &str, msg_type: MessageType) {
 
 | Key | Action |
 |-----|--------|
+| `m` | **Move bookmark from current revision** (if one exists) - enter Bookmark Move Mode |
 | `b` | Create new bookmark on current revision |
 | `B` | Delete bookmark (select from list if multiple) |
-| `m` | **Move bookmark to current revision** |
-| `p` | Push current bookmark to remote |
+| `p` | Push bookmark at current revision to remote |
 | `P` | Push all bookmarks |
 
 **Move Bookmark Flow (`m` key):**
 
-This is a common operation - moving an existing bookmark to a different revision.
+If the current revision has a bookmark, pressing `m` enters Bookmark Move Mode:
+1. The bookmark is "picked up" from the current revision
+2. Navigate with `j/k/h/l` to the destination revision
+3. Press `Enter` to drop the bookmark at the new location
+4. Press `Esc` to cancel
 
 ```rust
 fn move_bookmark(app: &mut App) -> Result<()> {
-    // 1. Show list of all bookmarks
-    // 2. User selects which bookmark to move
-    // 3. Bookmark is set to current cursor position
-    let bookmarks = get_all_bookmarks()?;
-    app.mode = Mode::SelectingBookmark(SelectBookmarkState {
-        bookmarks,
-        selected: 0,
-        action: BookmarkAction::MoveToCurrent,
+    let current = app.current_rev();
+    let bookmarks_here = get_bookmarks_at(current)?;
+
+    if bookmarks_here.is_empty() {
+        app.message = Some(("No bookmark at current revision".into(), MessageType::Warning));
+        return Ok(());
+    }
+
+    // If multiple bookmarks, let user select which one
+    let bookmark = if bookmarks_here.len() == 1 {
+        bookmarks_here[0].clone()
+    } else {
+        // Show selection dialog
+        select_bookmark(&bookmarks_here)?
+    };
+
+    app.mode = Mode::MovingBookmark(MovingBookmarkState {
+        bookmark,
+        source_rev: current.clone(),
+        destination_cursor: app.tree.cursor,
     });
 }
 
-// After selection:
+// After navigation and Enter:
 fn apply_bookmark_move(bookmark: &str, target_rev: &str) -> Result<()> {
     cmd!(sh, "jj bookmark set {bookmark} -r {target_rev}").run()?;
 }
 ```
 
-**UI for Bookmark Selection:**
+**Bookmark Move Mode UI:**
 ```
-┌─ Move Bookmark ───────────────────────────────────────┐
-│ Select bookmark to move to "fix login" (abc123):      │
+┌─ BOOKMARK MOVE MODE ──────────────────────────────────┐
+│ Moving bookmark: "feature-auth"                       │
 │                                                        │
-│ > feature-auth     (currently on def456)              │
-│   feature-api      (currently on ghi789)              │
-│   wip-refactor     (currently on jkl012)              │
+│ ○ master                                              │
+│ ├── [feature-auth] fix login  ← moving FROM here     │
+│ ├──►feature-api               ← destination (cursor) │
+│ │   └── add endpoints                                 │
+│ └── feature-ui                                        │
 │                                                        │
-│ [Enter] Move   [Esc] Cancel   [n] New bookmark        │
+│ [Enter] Drop bookmark here   [Esc] Cancel             │
 └────────────────────────────────────────────────────────┘
 ```
 
-**Alternative: Mark and Move Pattern**
-
-For power users who want to move bookmarks without a dialog:
-
-| Key | Action |
-|-----|--------|
-| `'` (quote) | Mark current revision |
-| `m` then `'` | Move bookmark from marked to cursor |
-
+**Create New Bookmark (`b` key):**
 ```rust
-// Mark a revision for later reference
-fn mark_revision(app: &mut App) {
-    app.marked_revision = Some(app.current_rev().clone());
-    app.message = Some(("Marked revision".into(), MessageType::Info));
+fn create_bookmark(app: &mut App) -> Result<()> {
+    // Prompt for bookmark name (inline text input)
+    app.mode = Mode::CreatingBookmark(CreatingBookmarkState {
+        name_input: String::new(),
+        target_rev: app.current_rev().clone(),
+    });
 }
 ```
 
