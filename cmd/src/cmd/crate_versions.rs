@@ -36,10 +36,7 @@ pub fn run_with_flags(_sh: &Shell, flags: CrateVersions) -> Result<()> {
 async fn run_async(flags: CrateVersions) -> Result<()> {
     let client = CratesIoClient::new()?;
 
-    let futures = flags
-        .crates
-        .iter()
-        .map(|name| fetch_version(&client, name));
+    let futures = flags.crates.iter().map(|name| fetch_version(&client, name));
 
     let results: Vec<_> = join_all(futures).await;
 

@@ -21,9 +21,7 @@ pub struct CratesIoClient {
 
 impl CratesIoClient {
     pub fn new() -> Result<Self> {
-        let client = reqwest::Client::builder()
-            .user_agent(USER_AGENT)
-            .build()?;
+        let client = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
 
         Ok(Self { client })
     }

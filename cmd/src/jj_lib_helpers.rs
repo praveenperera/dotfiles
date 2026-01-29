@@ -3,7 +3,7 @@
 /// Note: jj-lib is designed primarily for the jj CLI, so some operations
 /// (especially git fetch/push) are easier to do via the CLI. This module
 /// provides helpers for read operations and simple mutations.
-use eyre::{Context, Result, bail};
+use eyre::{bail, Context, Result};
 use itertools::Itertools;
 use jj_lib::backend::CommitId;
 use jj_lib::commit::Commit;
@@ -16,7 +16,7 @@ use jj_lib::revset::{
     SymbolResolver,
 };
 use jj_lib::settings::UserSettings;
-use jj_lib::workspace::{Workspace, default_working_copy_factories};
+use jj_lib::workspace::{default_working_copy_factories, Workspace};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -117,8 +117,9 @@ impl JjRepo {
             .wrap_err_with(|| format!("failed to parse revset: {revset_str}"))?;
 
         let id_prefix_context = IdPrefixContext::default();
-        let symbol_resolver = SymbolResolver::new(self.repo.as_ref(), extensions.symbol_resolvers())
-            .with_id_prefix_context(&id_prefix_context);
+        let symbol_resolver =
+            SymbolResolver::new(self.repo.as_ref(), extensions.symbol_resolvers())
+                .with_id_prefix_context(&id_prefix_context);
 
         let resolved = expression
             .resolve_user_expression(self.repo.as_ref(), &symbol_resolver)
@@ -299,7 +300,9 @@ impl JjRepo {
         let mut aliases_map = revset::RevsetAliasesMap::new();
 
         let default_aliases = [
-            ("trunk()", r#"latest(
+            (
+                "trunk()",
+                r#"latest(
               remote_bookmarks(exact:"main", exact:"origin") |
               remote_bookmarks(exact:"master", exact:"origin") |
               remote_bookmarks(exact:"trunk", exact:"origin") |
@@ -307,8 +310,12 @@ impl JjRepo {
               remote_bookmarks(exact:"master", exact:"upstream") |
               remote_bookmarks(exact:"trunk", exact:"upstream") |
               root()
-            )"#),
-            ("builtin_immutable_heads()", "trunk() | tags() | untracked_remote_bookmarks()"),
+            )"#,
+            ),
+            (
+                "builtin_immutable_heads()",
+                "trunk() | tags() | untracked_remote_bookmarks()",
+            ),
             ("immutable_heads()", "builtin_immutable_heads()"),
             ("immutable()", "::(immutable_heads() | root())"),
             ("mutable()", "~immutable()"),

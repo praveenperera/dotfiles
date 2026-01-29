@@ -4,6 +4,7 @@ pub mod crate_versions;
 pub mod gcloud;
 pub mod generate;
 pub mod jj;
+pub mod jj_tui;
 pub mod main_cmd;
 pub mod secrets;
 pub mod terraform;
@@ -60,10 +61,15 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
             let tmux_flags = tmux::Tmux { subcommand };
             tmux::run_with_flags(&sh, tmux_flags)
         }
-        MainCmd::Jj { subcommand } => {
-            let jj_flags = jj::Jj { subcommand };
-            jj::run_with_flags(&sh, jj_flags)
-        }
+        MainCmd::Jj { subcommand } => match subcommand {
+            None => jj_tui::run(&sh),
+            Some(cmd) => {
+                let jj_flags = jj::Jj {
+                    subcommand: Some(cmd),
+                };
+                jj::run_with_flags(&sh, jj_flags)
+            }
+        },
         MainCmd::PrContext(args) => crate::pr_context::run_with_flags(&sh, args),
         MainCmd::BetterContext(args) => {
             let flags = better_context::BetterContext {

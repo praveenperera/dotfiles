@@ -121,10 +121,9 @@ pub enum MainCmd {
     },
 
     /// Jj (jujutsu) utilities
-    #[command(arg_required_else_help = true)]
     Jj {
         #[command(subcommand)]
-        subcommand: crate::cmd::jj::JjCmd,
+        subcommand: Option<crate::cmd::jj::JjCmd>,
     },
 
     /// Fetch PR comments and their code references from GitHub
