@@ -161,12 +161,16 @@ pub struct App {
     pub squash_state: Option<SquashState>,
     pub last_op: Option<String>,
     sh: Shell,
+    syntax_set: SyntaxSet,
+    theme_set: ThemeSet,
 }
 
 impl App {
     pub fn new(sh: &Shell) -> Result<Self> {
         let jj_repo = JjRepo::load(None)?;
         let tree = TreeState::load(&jj_repo)?;
+        let syntax_set = SyntaxSet::load_defaults_newlines();
+        let theme_set = ThemeSet::load_defaults();
 
         Ok(Self {
             tree,
@@ -185,6 +189,8 @@ impl App {
             squash_state: None,
             last_op: None,
             sh: sh.clone(),
+            syntax_set,
+            theme_set,
         })
     }
 
@@ -394,7 +400,7 @@ impl App {
     fn enter_diff_view(&mut self) -> Result<()> {
         let rev = self.current_rev();
         let diff_output = cmd!(self.sh, "jj diff --git -r {rev}").quiet().ignore_stderr().read()?;
-        let lines = parse_diff(&diff_output);
+        let lines = parse_diff(&diff_output, &self.syntax_set, &self.theme_set);
         self.diff_state = Some(DiffState {
             lines,
             scroll_offset: 0,
@@ -1484,133 +1490,11 @@ fn syntect_to_ratatui_color(style: SyntectStyle) -> Color {
     Color::Rgb(style.foreground.r, style.foreground.g, style.foreground.b)
 }
 
-/// Parse ANSI escape codes into styled spans (for bat fallback)
-fn parse_ansi_line(line: &str) -> Vec<StyledSpan> {
-    let mut spans = Vec::new();
-    let mut current_color = Color::White;
-    let mut current_text = String::new();
-    let mut chars = line.chars().peekable();
-
-    while let Some(c) = chars.next() {
-        if c == '\x1b' && chars.peek() == Some(&'[') {
-            if !current_text.is_empty() {
-                spans.push(StyledSpan {
-                    text: std::mem::take(&mut current_text),
-                    fg: current_color,
-                });
-            }
-
-            chars.next(); // consume '['
-
-            let mut seq = String::new();
-            while let Some(&sc) = chars.peek() {
-                if sc.is_ascii_alphabetic() {
-                    chars.next();
-                    break;
-                }
-                seq.push(chars.next().unwrap());
-            }
-
-            // parse color codes
-            for code in seq.split(';') {
-                match code {
-                    "0" => current_color = Color::White,
-                    "30" => current_color = Color::Black,
-                    "31" => current_color = Color::Red,
-                    "32" => current_color = Color::Green,
-                    "33" => current_color = Color::Yellow,
-                    "34" => current_color = Color::Blue,
-                    "35" => current_color = Color::Magenta,
-                    "36" => current_color = Color::Cyan,
-                    "37" => current_color = Color::White,
-                    "90" => current_color = Color::DarkGray,
-                    "91" => current_color = Color::LightRed,
-                    "92" => current_color = Color::LightGreen,
-                    "93" => current_color = Color::LightYellow,
-                    "94" => current_color = Color::LightBlue,
-                    "95" => current_color = Color::LightMagenta,
-                    "96" => current_color = Color::LightCyan,
-                    "97" => current_color = Color::White,
-                    s if s.starts_with("38;5;") => {
-                        if let Ok(n) = s[5..].parse::<u8>() {
-                            current_color = Color::Indexed(n);
-                        }
-                    }
-                    s if s.starts_with("38;2;") => {
-                        let parts: Vec<&str> = s[5..].split(';').collect();
-                        if parts.len() >= 3 {
-                            if let (Ok(r), Ok(g), Ok(b)) = (
-                                parts[0].parse::<u8>(),
-                                parts[1].parse::<u8>(),
-                                parts[2].parse::<u8>(),
-                            ) {
-                                current_color = Color::Rgb(r, g, b);
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        } else {
-            current_text.push(c);
-        }
-    }
-
-    if !current_text.is_empty() {
-        spans.push(StyledSpan {
-            text: current_text,
-            fg: current_color,
-        });
-    }
-
-    if spans.is_empty() {
-        spans.push(StyledSpan {
-            text: String::new(),
-            fg: Color::White,
-        });
-    }
-
-    spans
-}
-
-/// Try to highlight code using bat (fallback for unsupported syntect languages)
-fn highlight_with_bat(code: &str, extension: &str) -> Option<Vec<StyledSpan>> {
-    use std::io::Write;
-    use std::process::{Command, Stdio};
-
-    let mut child = Command::new("bat")
-        .args([
-            "--color=always",
-            "--style=plain",
-            "--paging=never",
-            &format!("--language={extension}"),
-        ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .ok()?;
-
-    child.stdin.take()?.write_all(code.as_bytes()).ok()?;
-    let output = child.wait_with_output().ok()?;
-
-    if !output.status.success() {
-        return None;
-    }
-
-    let highlighted = String::from_utf8_lossy(&output.stdout);
-    let line = highlighted.trim_end_matches('\n');
-    Some(parse_ansi_line(line))
-}
-
-fn parse_diff(output: &str) -> Vec<DiffLine> {
-    let ss = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
+fn parse_diff(output: &str, ss: &SyntaxSet, ts: &ThemeSet) -> Vec<DiffLine> {
     let theme = &ts.themes["base16-eighties.dark"];
     let plain_text = ss.find_syntax_plain_text();
 
     let mut current_file: Option<String> = None;
-    let mut current_ext: Option<String> = None;
     let mut lines = Vec::new();
 
     for line in output.lines() {
@@ -1618,10 +1502,6 @@ fn parse_diff(output: &str) -> Vec<DiffLine> {
             // extract filename from "diff --git a/path/file.rs b/path/file.rs"
             if let Some(b_path) = line.split(" b/").nth(1) {
                 current_file = Some(b_path.to_string());
-                current_ext = std::path::Path::new(b_path)
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .map(|s| s.to_string());
             }
             (DiffLineKind::FileHeader, None)
         } else if line.starts_with("+++") || line.starts_with("---") {
@@ -1652,7 +1532,7 @@ fn parse_diff(output: &str) -> Vec<DiffLine> {
                 _ => Color::DarkGray,
             };
 
-            // try syntect first
+            // try syntect highlighting
             let syntax = current_file.as_ref().and_then(|f| {
                 std::path::Path::new(f)
                     .extension()
@@ -1661,9 +1541,8 @@ fn parse_diff(output: &str) -> Vec<DiffLine> {
             });
 
             let code_spans = if let Some(syn) = syntax {
-                // syntect supports this language
                 let mut highlighter = syntect::easy::HighlightLines::new(syn, theme);
-                highlighter.highlight_line(code, &ss).ok().map(|ranges| {
+                highlighter.highlight_line(code, ss).ok().map(|ranges| {
                     ranges
                         .into_iter()
                         .map(|(style, text)| StyledSpan {
@@ -1672,18 +1551,15 @@ fn parse_diff(output: &str) -> Vec<DiffLine> {
                         })
                         .collect::<Vec<_>>()
                 })
-            } else if let Some(ref ext) = current_ext {
-                // try bat for unsupported extensions
-                highlight_with_bat(code, ext)
             } else {
                 None
             };
 
-            // fall back to plain text coloring
+            // fall back to plain text
             let code_spans = code_spans.unwrap_or_else(|| {
                 let mut highlighter = syntect::easy::HighlightLines::new(plain_text, theme);
                 highlighter
-                    .highlight_line(code, &ss)
+                    .highlight_line(code, ss)
                     .map(|ranges| {
                         ranges
                             .into_iter()
