@@ -111,7 +111,7 @@ pub struct TreeRelations {
 #[derive(Clone, Debug)]
 pub enum Placement {
     /// Become a child of target
-    /// jj: rebase -d {target}
+    /// jj: rebase -o {target}
     ChildOf(NodeId),
 
     /// Become sibling after target (creates fork)
@@ -259,15 +259,15 @@ impl TreeRelations {
 |------|---------|-------------|
 | `-r` | Revision selection | Rebase single revision(s), descendants auto-fill gap |
 | `-s` | Source + descendants | Rebase revision and all its descendants as a unit |
-| `-d` | Destination | Target to rebase onto (standard rebase) |
+| `-o` | Destination | Target to rebase onto (standard rebase) |
 | `-A` | Insert after | Position flag: insert after target (becomes sibling) |
 | `-B` | Insert before | Position flag: insert before target (becomes parent of target) |
 
 ### Flag Combinations and Effects
 
-#### Standard Rebase (`-d` only)
+#### Standard Rebase (`-o` only)
 ```
-Before:               After (jj rebase -r C -d A):
+Before:               After (jj rebase -r C -o A):
 A                     A
 ├── B                 ├── B
 │   └── C ← source    └── C ← moved
@@ -309,7 +309,7 @@ Source inserts **between** target and its children. Clean linearization.
 
 | jj Command | Placement |
 |------------|-----------|
-| `rebase -d X` | `ChildOf(X)` |
+| `rebase -o X` | `ChildOf(X)` |
 | `rebase -A X` | `SiblingAfter(X)` |
 | `rebase -B X` | `InsertAbove(X)` |
 | `rebase -A X -B Y` | `InlineAfter(X)` |
