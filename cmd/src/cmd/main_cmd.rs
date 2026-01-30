@@ -71,8 +71,11 @@ pub enum MainCmd {
         mode: crate::cmd::bootstrap::BootstrapMode,
     },
 
-    /// Release/update cmd binary
-    Release,
+    /// Release/update cmd binary, or release a local project
+    Release {
+        /// Local project name (e.g., "jju")
+        project: Option<String>,
+    },
 
     /// Configure dotfiles
     #[command(visible_alias = "cfg")]
@@ -118,13 +121,6 @@ pub enum MainCmd {
     Tmux {
         #[command(subcommand)]
         subcommand: crate::cmd::tmux::TmuxCmd,
-    },
-
-    /// Jj (jujutsu) utilities
-    #[command(arg_required_else_help = true)]
-    Jj {
-        #[command(subcommand)]
-        subcommand: crate::cmd::jj::JjCmd,
     },
 
     /// Fetch PR comments and their code references from GitHub

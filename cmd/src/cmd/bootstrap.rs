@@ -281,7 +281,69 @@ pub fn config(sh: &Shell) -> Result<()> {
     Ok(())
 }
 
-pub fn release(sh: &Shell) -> Result<()> {
+struct LocalProject {
+    name: &'static str,
+    path: Option<&'static str>,
+    command: Option<&'static str>,
+}
+
+macro_rules! project {
+    ($name:literal) => {
+        LocalProject {
+            name: $name,
+            path: None,
+            command: None,
+        }
+    };
+    ($name:literal, $path:literal) => {
+        LocalProject {
+            name: $name,
+            path: Some($path),
+            command: None,
+        }
+    };
+    ($name:literal, $path:literal, $cmd:literal) => {
+        LocalProject {
+            name: $name,
+            path: Some($path),
+            command: Some($cmd),
+        }
+    };
+}
+
+const LOCAL_PROJECTS: &[LocalProject] = &[project!("jju")];
+
+pub fn release(sh: &Shell, project: Option<String>) -> Result<()> {
+    match project {
+        None => release_cmd(sh),
+        Some(name) => release_local(sh, &name),
+    }
+}
+
+fn release_local(sh: &Shell, name: &str) -> Result<()> {
+    let project = LOCAL_PROJECTS
+        .iter()
+        .find(|p| p.name == name)
+        .ok_or_else(|| eyre::eyre!("unknown project: {name}"))?;
+
+    let home = std::env::var("HOME")?;
+    let path = project
+        .path
+        .map(|p| p.replace("~", &home))
+        .unwrap_or_else(|| format!("{home}/code/{name}"));
+
+    if !sh.path_exists(&path) {
+        eyre::bail!("project path does not exist: {path}");
+    }
+
+    let command = project.command.unwrap_or("just release local");
+
+    sh.change_dir(&path);
+    cmd!(sh, "sh -c {command}").run()?;
+    Ok(())
+}
+
+fn release_cmd(sh: &Shell) -> Result<()> {
     // check if this is a minimal install (no cargo or rust)
     if !has_tool(sh, "cargo") || !has_tool(sh, "rustc") {
         println!(

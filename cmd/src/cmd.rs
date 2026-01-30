@@ -3,7 +3,6 @@ pub mod bootstrap;
 pub mod crate_versions;
 pub mod gcloud;
 pub mod generate;
-pub mod jj;
 pub mod main_cmd;
 pub mod secrets;
 pub mod terraform;
@@ -28,7 +27,7 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
 
     let sh = Shell::new()?;
     match flags.subcommand {
-        MainCmd::Release => bootstrap::release(&sh),
+        MainCmd::Release { project } => bootstrap::release(&sh, project),
         MainCmd::Config => bootstrap::config(&sh),
 
         MainCmd::Bootstrap { mode } => {
@@ -59,10 +58,6 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::Tmux { subcommand } => {
             let tmux_flags = tmux::Tmux { subcommand };
             tmux::run_with_flags(&sh, tmux_flags)
-        }
-        MainCmd::Jj { subcommand } => {
-            let jj_flags = jj::Jj { subcommand };
-            jj::run_with_flags(&sh, jj_flags)
         }
         MainCmd::PrContext(args) => crate::pr_context::run_with_flags(&sh, args),
         MainCmd::BetterContext(args) => {

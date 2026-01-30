@@ -1,13 +1,12 @@
 pub mod cmd;
 pub mod crates_io;
 pub mod encrypt;
-pub mod jj_lib_helpers;
 pub mod github;
 pub mod os;
 pub mod pr_context;
 pub mod util;
 
-use cmd::{better_context, jj, terraform, vault};
+use cmd::{better_context, terraform, vault};
 use eyre::{eyre, Result};
 use include_dir::{include_dir, Dir};
 use log::debug;
@@ -18,7 +17,6 @@ pub type Tool = (&'static str, fn(&Shell, &[OsString]) -> Result<()>);
 pub const CMD_TOOLS: &[Tool] = &[
     ("better-context", better_context::run),
     ("cmd", cmd::run),
-    ("ju", jj::run),
     ("notf", cmd::tmux::notify_run),
     ("pr-context", pr_context::run),
     ("prc", pr_context::run),
