@@ -160,6 +160,7 @@ pub struct App {
     pub bookmark_select_state: Option<BookmarkSelectState>,
     pub squash_state: Option<SquashState>,
     pub last_op: Option<String>,
+    pub pending_key: Option<char>,
     sh: Shell,
     syntax_set: SyntaxSet,
     theme_set: ThemeSet,
@@ -188,6 +189,7 @@ impl App {
             bookmark_select_state: None,
             squash_state: None,
             last_op: None,
+            pending_key: None,
             sh: sh.clone(),
             syntax_set,
             theme_set,
@@ -253,7 +255,7 @@ impl App {
         match self.mode {
             Mode::Normal => self.handle_normal_key(key, viewport_height),
             Mode::Help => self.handle_help_key(key.code),
-            Mode::ViewingDiff => self.handle_diff_key(key.code),
+            Mode::ViewingDiff => self.handle_diff_key(key),
             Mode::Confirming => self.handle_confirm_key(key.code),
             Mode::Selecting => self.handle_selecting_key(key, viewport_height),
             Mode::Rebasing => self.handle_rebasing_key(key.code),
@@ -268,25 +270,45 @@ impl App {
         let code = key.code;
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
 
+        // handle pending key sequences
+        if let Some(pending) = self.pending_key.take() {
+            match (pending, code) {
+                // 'g' prefix - git operations
+                ('g', KeyCode::Char('i')) => {
+                    let _ = self.git_import();
+                }
+                ('g', KeyCode::Char('e')) => {
+                    let _ = self.git_export();
+                }
+                // 'z' prefix - navigation
+                ('z', KeyCode::Char('t')) => self.tree.move_cursor_top(),
+                ('z', KeyCode::Char('b')) => self.tree.move_cursor_bottom(),
+                ('z', KeyCode::Char('z')) => self.center_cursor_in_view(viewport_height),
+                // any other key after prefix - ignore
+                _ => {}
+            }
+            return;
+        }
+
         match code {
-            KeyCode::Char('Q') => self.should_quit = true,
-            KeyCode::Char('q') => {
+            KeyCode::Char('q') => self.should_quit = true,
+            KeyCode::Char('Q') => {
                 let _ = self.enter_squash_mode();
             }
             KeyCode::Esc => {
                 if !self.tree.selected.is_empty() {
                     self.tree.clear_selection();
-                } else {
-                    self.should_quit = true;
                 }
             }
             KeyCode::Char('?') => self.mode = Mode::Help,
 
             KeyCode::Char('j') | KeyCode::Down => self.tree.move_cursor_down(),
             KeyCode::Char('k') | KeyCode::Up => self.tree.move_cursor_up(),
-            KeyCode::Char('g') => self.tree.move_cursor_top(),
-            KeyCode::Char('G') => self.tree.move_cursor_bottom(),
             KeyCode::Char('@') => self.tree.jump_to_working_copy(),
+
+            // multi-key sequence prefixes
+            KeyCode::Char('g') => self.pending_key = Some('g'),
+            KeyCode::Char('z') => self.pending_key = Some('z'),
 
             KeyCode::Char('f') => self.tree.toggle_full_mode(),
 
@@ -296,7 +318,7 @@ impl App {
             }
 
             // details toggle
-            KeyCode::Char(' ') => self.tree.toggle_expanded(),
+            KeyCode::Tab => self.tree.toggle_expanded(),
 
             // page scrolling
             KeyCode::Char('u') if ctrl => self.tree.page_up(viewport_height / 2),
@@ -341,6 +363,11 @@ impl App {
                 let _ = self.undo_last_operation();
             }
 
+            // git push
+            KeyCode::Char('p') => {
+                let _ = self.git_push();
+            }
+
             // bookmark operations
             KeyCode::Char('m') => {
                 let _ = self.enter_move_bookmark_mode();
@@ -356,6 +383,69 @@ impl App {
         }
     }
 
+    fn center_cursor_in_view(&mut self, viewport_height: usize) {
+        if viewport_height == 0 {
+            return;
+        }
+        let half = viewport_height / 2;
+        self.tree.scroll_offset = self.tree.cursor.saturating_sub(half);
+    }
+
+    fn git_push(&mut self) -> Result<()> {
+        let node = match self.tree.current_node() {
+            Some(n) => n,
+            None => {
+                self.set_status("No revision selected", MessageKind::Error);
+                return Ok(());
+            }
+        };
+
+        if node.bookmarks.is_empty() {
+            self.set_status("No bookmark on this revision to push", MessageKind::Warning);
+            return Ok(());
+        }
+
+        // push all bookmarks on this revision
+        let bookmark_names = node.bookmark_names();
+        let name = &bookmark_names[0];
+        match cmd!(self.sh, "jj git push --bookmark {name}").quiet().ignore_stdout().ignore_stderr().run() {
+            Ok(_) => {
+                let _ = self.refresh_tree();
+                self.set_status(&format!("Pushed bookmark '{name}'"), MessageKind::Success);
+            }
+            Err(e) => {
+                self.set_status(&format!("Push failed: {e}"), MessageKind::Error);
+            }
+        }
+        Ok(())
+    }
+
+    fn git_import(&mut self) -> Result<()> {
+        match cmd!(self.sh, "jj git import").quiet().ignore_stdout().ignore_stderr().run() {
+            Ok(_) => {
+                let _ = self.refresh_tree();
+                self.set_status("Git import complete", MessageKind::Success);
+            }
+            Err(e) => {
+                self.set_status(&format!("Git import failed: {e}"), MessageKind::Error);
+            }
+        }
+        Ok(())
+    }
+
+    fn git_export(&mut self) -> Result<()> {
+        match cmd!(self.sh, "jj git export").quiet().ignore_stdout().ignore_stderr().run() {
+            Ok(_) => {
+                let _ = self.refresh_tree();
+                self.set_status("Git export complete", MessageKind::Success);
+            }
+            Err(e) => {
+                self.set_status(&format!("Git export failed: {e}"), MessageKind::Error);
+            }
+        }
+        Ok(())
+    }
+
     fn handle_help_key(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('q') | KeyCode::Esc | KeyCode::Char('?') => {
@@ -365,7 +455,21 @@ impl App {
         }
     }
 
-    fn handle_diff_key(&mut self, code: KeyCode) {
+    fn handle_diff_key(&mut self, key: event::KeyEvent) {
+        let code = key.code;
+
+        // handle pending key sequences in diff view
+        if let Some(pending) = self.pending_key.take() {
+            if let Some(ref mut state) = self.diff_state {
+                match (pending, code) {
+                    ('z', KeyCode::Char('t')) => state.scroll_offset = 0,
+                    ('z', KeyCode::Char('b')) => state.scroll_offset = state.lines.len().saturating_sub(1),
+                    _ => {}
+                }
+            }
+            return;
+        }
+
         if let Some(ref mut state) = self.diff_state {
             match code {
                 KeyCode::Char('j') | KeyCode::Down => {
@@ -380,11 +484,8 @@ impl App {
                 KeyCode::Char('u') => {
                     state.scroll_offset = state.scroll_offset.saturating_sub(20);
                 }
-                KeyCode::Char('g') => {
-                    state.scroll_offset = 0;
-                }
-                KeyCode::Char('G') => {
-                    state.scroll_offset = state.lines.len().saturating_sub(1);
+                KeyCode::Char('z') => {
+                    self.pending_key = Some('z');
                 }
                 KeyCode::Esc | KeyCode::Char('q') => {
                     self.mode = Mode::Normal;
@@ -1013,7 +1114,7 @@ impl App {
         // if multiple bookmarks, show selection dialog
         if node.bookmarks.len() > 1 {
             self.bookmark_select_state = Some(BookmarkSelectState {
-                bookmarks: node.bookmarks.clone(),
+                bookmarks: node.bookmark_names(),
                 selected_index: 0,
                 target_rev: node.change_id.clone(),
                 action: BookmarkSelectAction::Move,
@@ -1022,7 +1123,7 @@ impl App {
             return Ok(());
         }
 
-        let bookmark_name = node.bookmarks[0].clone();
+        let bookmark_name = node.bookmarks[0].name.clone();
         let op_before = self.get_current_operation_id().unwrap_or_default();
 
         self.moving_bookmark_state = Some(MovingBookmarkState {
@@ -1121,23 +1222,23 @@ impl App {
 
     fn delete_bookmark(&mut self) -> Result<()> {
         // extract data we need before taking any mutable borrows
-        let (bookmarks, change_id) = match self.tree.current_node() {
-            Some(n) => (n.bookmarks.clone(), n.change_id.clone()),
+        let (bookmark_names, change_id) = match self.tree.current_node() {
+            Some(n) => (n.bookmark_names(), n.change_id.clone()),
             None => {
                 self.set_status("No revision selected", MessageKind::Error);
                 return Ok(());
             }
         };
 
-        if bookmarks.is_empty() {
+        if bookmark_names.is_empty() {
             self.set_status("No bookmarks on this revision", MessageKind::Warning);
             return Ok(());
         }
 
         // if multiple bookmarks, show selection dialog
-        if bookmarks.len() > 1 {
+        if bookmark_names.len() > 1 {
             self.bookmark_select_state = Some(BookmarkSelectState {
-                bookmarks,
+                bookmarks: bookmark_names,
                 selected_index: 0,
                 target_rev: change_id,
                 action: BookmarkSelectAction::Delete,
@@ -1146,7 +1247,7 @@ impl App {
             return Ok(());
         }
 
-        let name = &bookmarks[0];
+        let name = &bookmark_names[0];
         let op_before = self.get_current_operation_id().unwrap_or_default();
 
         match cmd!(self.sh, "jj bookmark delete {name}").quiet().ignore_stdout().ignore_stderr().run() {

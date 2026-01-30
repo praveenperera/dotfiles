@@ -3,11 +3,17 @@ use eyre::Result;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug)]
+pub struct BookmarkInfo {
+    pub name: String,
+    pub is_diverged: bool,
+}
+
+#[derive(Clone, Debug)]
 pub struct TreeNode {
     pub change_id: String,
     pub unique_prefix_len: usize,
     pub description: String,
-    pub bookmarks: Vec<String>,
+    pub bookmarks: Vec<BookmarkInfo>,
     pub is_working_copy: bool,
     pub parent_ids: Vec<String>,
     pub depth: usize,
@@ -22,12 +28,22 @@ impl TreeNode {
         if self.bookmarks.is_empty() {
             format!("({})", self.change_id)
         } else {
-            self.bookmarks.join(" ")
+            self.bookmarks.iter().map(|b| b.name.as_str()).collect::<Vec<_>>().join(" ")
         }
     }
 
     pub fn is_visible(&self, full_mode: bool) -> bool {
         full_mode || !self.bookmarks.is_empty() || self.is_working_copy
+    }
+
+    /// Get bookmark names as strings (for compatibility)
+    pub fn bookmark_names(&self) -> Vec<String> {
+        self.bookmarks.iter().map(|b| b.name.clone()).collect()
+    }
+
+    /// Check if any bookmark has the given name
+    pub fn has_bookmark(&self, name: &str) -> bool {
+        self.bookmarks.iter().any(|b| b.name == name)
     }
 }
 
@@ -61,7 +77,11 @@ impl TreeState {
 
         for commit in &commits {
             let (change_id, unique_prefix_len) = jj_repo.change_id_with_prefix_len(commit, 4)?;
-            let bookmarks = jj_repo.bookmarks_at(commit);
+            let bookmarks: Vec<BookmarkInfo> = jj_repo
+                .bookmarks_with_state(commit)
+                .into_iter()
+                .map(|(name, is_diverged)| BookmarkInfo { name, is_diverged })
+                .collect();
             let description = JjRepo::description_first_line(commit);
 
             let parents = jj_repo.parent_commits(commit)?;

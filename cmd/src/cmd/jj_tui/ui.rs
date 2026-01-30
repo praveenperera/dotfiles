@@ -1,5 +1,5 @@
 use super::app::{App, BookmarkInputState, BookmarkSelectAction, BookmarkSelectState, ConfirmState, DiffLineKind, DiffStats, MessageKind, Mode, RebaseType, StatusMessage};
-use super::tree::TreeNode;
+use super::tree::{BookmarkInfo, TreeNode};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -18,23 +18,34 @@ struct PreviewEntry {
 }
 
 /// Format bookmarks to fit within max_width, showing "+N" for overflow
-fn format_bookmarks_truncated(bookmarks: &[String], max_width: usize) -> String {
+/// Diverged bookmarks are marked with * suffix
+fn format_bookmarks_truncated(bookmarks: &[BookmarkInfo], max_width: usize) -> String {
     if bookmarks.is_empty() {
         return String::new();
     }
+
+    let format_bookmark = |b: &BookmarkInfo| {
+        if b.is_diverged {
+            format!("{}*", b.name)
+        } else {
+            b.name.clone()
+        }
+    };
+
     if bookmarks.len() == 1 {
-        return bookmarks[0].clone();
+        return format_bookmark(&bookmarks[0]);
     }
 
     let mut result = String::new();
 
     for (i, bm) in bookmarks.iter().enumerate() {
+        let bm_display = format_bookmark(bm);
         let remaining = bookmarks.len() - i - 1;
         let suffix = if remaining > 0 { format!(" +{}", remaining) } else { String::new() };
         let candidate = if result.is_empty() {
-            format!("{}{}", bm, suffix)
+            format!("{}{}", bm_display, suffix)
         } else {
-            format!("{} {}{}", result, bm, suffix)
+            format!("{} {}{}", result, bm_display, suffix)
         };
 
         if candidate.len() <= max_width {
@@ -43,16 +54,16 @@ fn format_bookmarks_truncated(bookmarks: &[String], max_width: usize) -> String 
             } else {
                 // add this bookmark, continue to next
                 if result.is_empty() {
-                    result = bm.clone();
+                    result = bm_display;
                 } else {
-                    result = format!("{} {}", result, bm);
+                    result = format!("{} {}", result, bm_display);
                 }
             }
         } else {
             // doesn't fit, stop here and add +N
             let overflow = bookmarks.len() - i;
             if result.is_empty() {
-                return format!("{} +{}", bookmarks[0], overflow - 1);
+                return format!("{} +{}", format_bookmark(&bookmarks[0]), overflow - 1);
             }
             return format!("{} +{}", result, overflow);
         }
@@ -176,7 +187,7 @@ fn render_tree_normal(frame: &mut Frame, app: &App, area: Rect, viewport_height:
 
         // determine cursor and markers based on mode
         let (is_cursor, is_source, is_dest) = if let Some((ref bm_name, dest_cursor)) = bm_move_info {
-            let is_source = node.bookmarks.contains(bm_name);
+            let is_source = node.has_bookmark(bm_name);
             let is_dest = visible_idx == dest_cursor && !is_source;
             (visible_idx == dest_cursor, is_source, is_dest)
         } else if let Some((ref source_rev, dest_cursor)) = squash_info {
@@ -573,6 +584,13 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
     let full_indicator = if app.tree.full_mode { " [FULL]" } else { "" };
     let split_indicator = if app.split_view { " [SPLIT]" } else { "" };
 
+    // show pending key when waiting for second key in sequence
+    let pending_indicator = match app.pending_key {
+        Some('g') => " g-",
+        Some('z') => " z-",
+        _ => "",
+    };
+
     // show selection count when there are selected items
     let selection_indicator = if !app.tree.selected.is_empty() {
         format!(" [{}sel]", app.tree.selected.len())
@@ -591,7 +609,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
                 if node.bookmarks.is_empty() {
                     node.change_id.chars().take(8).collect::<String>()
                 } else {
-                    node.bookmarks.join(" ")
+                    node.bookmark_names().join(" ")
                 }
             })
             .unwrap_or_else(|| "?".to_string());
@@ -619,7 +637,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
                 if node.bookmarks.is_empty() {
                     node.change_id.chars().take(8).collect::<String>()
                 } else {
-                    node.bookmarks.join(" ")
+                    node.bookmark_names().join(" ")
                 }
             })
             .unwrap_or_else(|| "?".to_string());
@@ -632,7 +650,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
                 let name = if n.bookmarks.is_empty() {
                     n.change_id.clone()
                 } else {
-                    n.bookmarks.join(" ")
+                    n.bookmark_names().join(" ")
                 };
                 format!(" | {name}")
             })
@@ -644,13 +662,13 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
             if !app.tree.selected.is_empty() {
                 "a:abandon  x:toggle  Esc:clear"
             } else if app.current_has_bookmark() {
-                "m:move-bm b:new-bm B:del-bm r:rebase q:squash ?:help Q:quit"
+                "p:push m:move-bm B:del-bm r:rebase ?:help q:quit"
             } else {
-                "b:new-bm r/s:rebase q:squash t:trunk d:desc e:edit n:new ?:help Q:quit"
+                "b:new-bm r/s:rebase t:trunk d:desc gi:import ge:export ?:help q:quit"
             }
         }
         Mode::Help => "q/Esc:close",
-        Mode::ViewingDiff => "j/k:scroll  d/u:page  g/G:top/bottom  q/Esc:close",
+        Mode::ViewingDiff => "j/k:scroll  d/u:page  zt/zb:top/bottom  q/Esc:close",
         Mode::Confirming => "y/Enter:yes  n/Esc:no",
         Mode::Selecting => "j/k:extend  a:abandon  Esc:exit",
         Mode::Rebasing => {
@@ -670,7 +688,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         Mode::Squashing => "j/k:dest  Enter:run  Esc:cancel",
     };
 
-    let left = format!(" {mode_indicator}{full_indicator}{split_indicator}{selection_indicator}{current_info}");
+    let left = format!(" {mode_indicator}{full_indicator}{split_indicator}{pending_indicator}{selection_indicator}{current_info}");
     let right = format!("{hints} ");
 
     let available = area.width as usize;
@@ -693,7 +711,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
 fn render_help(frame: &mut Frame) {
     let area = frame.area();
     let popup_width = 56u16.min(area.width.saturating_sub(4));
-    let popup_height = 47u16.min(area.height.saturating_sub(4));
+    let popup_height = 50u16.min(area.height.saturating_sub(4));
 
     let popup_area = Rect {
         x: (area.width.saturating_sub(popup_width)) / 2,
@@ -713,8 +731,9 @@ fn render_help(frame: &mut Frame) {
         Line::from("  k/↑       Move cursor up"),
         Line::from("  Ctrl+d    Page down"),
         Line::from("  Ctrl+u    Page up"),
-        Line::from("  g         Jump to top"),
-        Line::from("  G         Jump to bottom"),
+        Line::from("  z t       Jump to top"),
+        Line::from("  z b       Jump to bottom"),
+        Line::from("  z z       Center current line"),
         Line::from("  @         Jump to working copy"),
         Line::from(""),
         Line::from(Span::styled(
@@ -722,7 +741,7 @@ fn render_help(frame: &mut Frame) {
             Style::default().add_modifier(Modifier::BOLD),
         )),
         Line::from("  D         View diff"),
-        Line::from("  Space     Toggle commit details"),
+        Line::from("  Tab       Toggle commit details"),
         Line::from("  \\         Toggle split view"),
         Line::from("  f         Toggle full mode"),
         Line::from(""),
@@ -752,24 +771,26 @@ fn render_help(frame: &mut Frame) {
         Line::from("  s         Rebase + descendants (-s)"),
         Line::from("  t         Quick rebase onto trunk"),
         Line::from("  T         Quick rebase tree onto trunk"),
-        Line::from("  q         Squash into target"),
+        Line::from("  Q         Squash into target"),
         Line::from("  u         Undo last operation"),
         Line::from(""),
         Line::from(Span::styled(
-            "Bookmarks",
+            "Bookmarks & Git",
             Style::default().add_modifier(Modifier::BOLD),
         )),
+        Line::from("  p         Push current bookmark"),
         Line::from("  m         Move bookmark"),
         Line::from("  b         Create bookmark"),
         Line::from("  B         Delete bookmark"),
+        Line::from("  g i       Git import"),
+        Line::from("  g e       Git export"),
         Line::from(""),
         Line::from(Span::styled(
             "General",
             Style::default().add_modifier(Modifier::BOLD),
         )),
         Line::from("  ?         Toggle help"),
-        Line::from("  Q         Quit"),
-        Line::from("  Esc       Quit (or close popup)"),
+        Line::from("  q         Quit"),
     ];
 
     let help = Paragraph::new(help_text)

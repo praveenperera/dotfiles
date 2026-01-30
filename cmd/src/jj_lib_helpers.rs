@@ -9,7 +9,7 @@ use jj_lib::backend::CommitId;
 use jj_lib::commit::Commit;
 use jj_lib::config::{ConfigLayer, ConfigSource, StackedConfig};
 use jj_lib::id_prefix::IdPrefixContext;
-use jj_lib::ref_name::{RefName, RefNameBuf, RemoteName};
+use jj_lib::ref_name::{RefName, RefNameBuf, RemoteName, RemoteRefSymbol};
 use jj_lib::repo::{ReadonlyRepo, Repo, StoreFactories};
 use jj_lib::revset::{
     self, RevsetDiagnostics, RevsetIteratorExt, RevsetParseContext, RevsetWorkspaceContext,
@@ -175,6 +175,37 @@ impl JjRepo {
                 let resolved = target.as_resolved().and_then(|opt| opt.as_ref());
                 if resolved == Some(commit.id()) {
                     Some(name.as_str().to_string())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Get local bookmarks on a specific commit with divergence status
+    /// A bookmark is diverged if local differs from origin
+    pub fn bookmarks_with_state(&self, commit: &Commit) -> Vec<(String, bool)> {
+        let origin = RemoteName::new("origin");
+        self.repo
+            .view()
+            .local_bookmarks()
+            .filter_map(|(name, target)| {
+                let resolved = target.as_resolved().and_then(|opt| opt.as_ref());
+                if resolved == Some(commit.id()) {
+                    let local_id = commit.id();
+
+                    // check if origin remote bookmark exists and differs
+                    let symbol = RemoteRefSymbol { name, remote: origin };
+                    let is_diverged = self.repo
+                        .view()
+                        .get_remote_bookmark(symbol)
+                        .target
+                        .as_resolved()
+                        .and_then(|opt| opt.as_ref())
+                        .map(|remote_id| remote_id != local_id)
+                        .unwrap_or(false);
+
+                    Some((name.as_str().to_string(), is_diverged))
                 } else {
                     None
                 }
