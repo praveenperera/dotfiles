@@ -324,7 +324,12 @@ fn tree(_sh: &Shell, full: bool, from: Option<String>) -> Result<()> {
 
     for commit in &commits {
         let (rev, unique_len) = jj_repo.change_id_with_prefix_len(commit, 4)?;
-        let bookmarks = jj_repo.bookmarks_at(commit).join(" ");
+        let bookmarks_vec = jj_repo.bookmarks_at(commit);
+        let bookmarks = if bookmarks_vec.len() <= 1 {
+            bookmarks_vec.join("")
+        } else {
+            format!("{} +{}", bookmarks_vec[0], bookmarks_vec.len() - 1)
+        };
         let description = JjRepo::description_first_line(commit);
 
         // get parent change IDs

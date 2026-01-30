@@ -47,6 +47,7 @@ pub enum Mode {
     Rebasing,
     MovingBookmark,
     BookmarkInput,
+    BookmarkSelect,
     Squashing,
 }
 
@@ -122,6 +123,20 @@ pub struct BookmarkInputState {
     pub deleting: bool,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum BookmarkSelectAction {
+    Move,
+    Delete,
+}
+
+#[derive(Clone)]
+pub struct BookmarkSelectState {
+    pub bookmarks: Vec<String>,
+    pub selected_index: usize,
+    pub target_rev: String,
+    pub action: BookmarkSelectAction,
+}
+
 #[derive(Clone)]
 pub struct SquashState {
     pub source_rev: String,
@@ -142,6 +157,7 @@ pub struct App {
     pub rebase_state: Option<RebaseState>,
     pub moving_bookmark_state: Option<MovingBookmarkState>,
     pub bookmark_input_state: Option<BookmarkInputState>,
+    pub bookmark_select_state: Option<BookmarkSelectState>,
     pub squash_state: Option<SquashState>,
     pub last_op: Option<String>,
     sh: Shell,
@@ -165,6 +181,7 @@ impl App {
             rebase_state: None,
             moving_bookmark_state: None,
             bookmark_input_state: None,
+            bookmark_select_state: None,
             squash_state: None,
             last_op: None,
             sh: sh.clone(),
@@ -236,6 +253,7 @@ impl App {
             Mode::Rebasing => self.handle_rebasing_key(key.code),
             Mode::MovingBookmark => self.handle_moving_bookmark_key(key.code),
             Mode::BookmarkInput => self.handle_bookmark_input_key(key),
+            Mode::BookmarkSelect => self.handle_bookmark_select_key(key.code),
             Mode::Squashing => self.handle_squashing_key(key.code),
         }
     }
@@ -826,6 +844,8 @@ impl App {
             self.sh,
             "jj log -r children({rev}) -T change_id --no-graph --limit 1"
         )
+        .quiet()
+        .ignore_stderr()
         .read()?;
         let trimmed = output.trim();
         if trimmed.is_empty() {
@@ -984,7 +1004,18 @@ impl App {
             return Ok(());
         }
 
-        // if multiple bookmarks, use the first one
+        // if multiple bookmarks, show selection dialog
+        if node.bookmarks.len() > 1 {
+            self.bookmark_select_state = Some(BookmarkSelectState {
+                bookmarks: node.bookmarks.clone(),
+                selected_index: 0,
+                target_rev: node.change_id.clone(),
+                action: BookmarkSelectAction::Move,
+            });
+            self.mode = Mode::BookmarkSelect;
+            return Ok(());
+        }
+
         let bookmark_name = node.bookmarks[0].clone();
         let op_before = self.get_current_operation_id().unwrap_or_default();
 
@@ -1097,30 +1128,30 @@ impl App {
             return Ok(());
         }
 
-        // if multiple bookmarks, enter selection mode; otherwise delete directly
-        if bookmarks.len() == 1 {
-            let name = &bookmarks[0];
-            let op_before = self.get_current_operation_id().unwrap_or_default();
-
-            match cmd!(self.sh, "jj bookmark delete {name}").quiet().ignore_stdout().ignore_stderr().run() {
-                Ok(_) => {
-                    self.last_op = Some(op_before);
-                    let _ = self.refresh_tree();
-                    self.set_status(&format!("Deleted bookmark '{name}'"), MessageKind::Success);
-                }
-                Err(e) => {
-                    self.set_status(&format!("Delete bookmark failed: {e}"), MessageKind::Error);
-                }
-            }
-        } else {
-            // multiple bookmarks - show input with first bookmark name for selection
-            self.bookmark_input_state = Some(BookmarkInputState {
-                name: bookmarks[0].clone(),
-                cursor: bookmarks[0].len(),
+        // if multiple bookmarks, show selection dialog
+        if bookmarks.len() > 1 {
+            self.bookmark_select_state = Some(BookmarkSelectState {
+                bookmarks,
+                selected_index: 0,
                 target_rev: change_id,
-                deleting: true,
+                action: BookmarkSelectAction::Delete,
             });
-            self.mode = Mode::BookmarkInput;
+            self.mode = Mode::BookmarkSelect;
+            return Ok(());
+        }
+
+        let name = &bookmarks[0];
+        let op_before = self.get_current_operation_id().unwrap_or_default();
+
+        match cmd!(self.sh, "jj bookmark delete {name}").quiet().ignore_stdout().ignore_stderr().run() {
+            Ok(_) => {
+                self.last_op = Some(op_before);
+                let _ = self.refresh_tree();
+                self.set_status(&format!("Deleted bookmark '{name}'"), MessageKind::Success);
+            }
+            Err(e) => {
+                self.set_status(&format!("Delete bookmark failed: {e}"), MessageKind::Error);
+            }
         }
         Ok(())
     }
@@ -1212,6 +1243,79 @@ impl App {
 
         self.bookmark_input_state = None;
         self.mode = Mode::Normal;
+    }
+
+    fn handle_bookmark_select_key(&mut self, code: KeyCode) {
+        let state = match self.bookmark_select_state.as_ref() {
+            Some(s) => s.clone(),
+            None => {
+                self.mode = Mode::Normal;
+                return;
+            }
+        };
+
+        match code {
+            KeyCode::Char('j') | KeyCode::Down => {
+                if let Some(ref mut s) = self.bookmark_select_state {
+                    if s.selected_index < s.bookmarks.len().saturating_sub(1) {
+                        s.selected_index += 1;
+                    }
+                }
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                if let Some(ref mut s) = self.bookmark_select_state {
+                    if s.selected_index > 0 {
+                        s.selected_index -= 1;
+                    }
+                }
+            }
+            KeyCode::Enter => {
+                let bookmark = state.bookmarks[state.selected_index].clone();
+                self.bookmark_select_state = None;
+
+                match state.action {
+                    BookmarkSelectAction::Move => {
+                        let op_before = self.get_current_operation_id().unwrap_or_default();
+                        self.moving_bookmark_state = Some(MovingBookmarkState {
+                            bookmark_name: bookmark,
+                            dest_cursor: self.tree.cursor,
+                            op_before,
+                        });
+                        self.mode = Mode::MovingBookmark;
+                    }
+                    BookmarkSelectAction::Delete => {
+                        let op_before = self.get_current_operation_id().unwrap_or_default();
+                        match cmd!(self.sh, "jj bookmark delete {bookmark}")
+                            .quiet()
+                            .ignore_stdout()
+                            .ignore_stderr()
+                            .run()
+                        {
+                            Ok(_) => {
+                                self.last_op = Some(op_before);
+                                let _ = self.refresh_tree();
+                                self.set_status(
+                                    &format!("Deleted bookmark '{bookmark}'"),
+                                    MessageKind::Success,
+                                );
+                            }
+                            Err(e) => {
+                                self.set_status(
+                                    &format!("Delete bookmark failed: {e}"),
+                                    MessageKind::Error,
+                                );
+                            }
+                        }
+                        self.mode = Mode::Normal;
+                    }
+                }
+            }
+            KeyCode::Esc => {
+                self.bookmark_select_state = None;
+                self.mode = Mode::Normal;
+            }
+            _ => {}
+        }
     }
 
     pub fn current_has_bookmark(&self) -> bool {

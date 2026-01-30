@@ -1,4 +1,4 @@
-use super::app::{App, BookmarkInputState, ConfirmState, DiffLineKind, DiffStats, MessageKind, Mode, RebaseType, StatusMessage};
+use super::app::{App, BookmarkInputState, BookmarkSelectAction, BookmarkSelectState, ConfirmState, DiffLineKind, DiffStats, MessageKind, Mode, RebaseType, StatusMessage};
 use super::tree::TreeNode;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -17,6 +17,49 @@ struct PreviewEntry {
     is_dest: bool,
 }
 
+/// Format bookmarks to fit within max_width, showing "+N" for overflow
+fn format_bookmarks_truncated(bookmarks: &[String], max_width: usize) -> String {
+    if bookmarks.is_empty() {
+        return String::new();
+    }
+    if bookmarks.len() == 1 {
+        return bookmarks[0].clone();
+    }
+
+    let mut result = String::new();
+
+    for (i, bm) in bookmarks.iter().enumerate() {
+        let remaining = bookmarks.len() - i - 1;
+        let suffix = if remaining > 0 { format!(" +{}", remaining) } else { String::new() };
+        let candidate = if result.is_empty() {
+            format!("{}{}", bm, suffix)
+        } else {
+            format!("{} {}{}", result, bm, suffix)
+        };
+
+        if candidate.len() <= max_width {
+            if remaining == 0 {
+                result = candidate;
+            } else {
+                // add this bookmark, continue to next
+                if result.is_empty() {
+                    result = bm.clone();
+                } else {
+                    result = format!("{} {}", result, bm);
+                }
+            }
+        } else {
+            // doesn't fit, stop here and add +N
+            let overflow = bookmarks.len() - i;
+            if result.is_empty() {
+                return format!("{} +{}", bookmarks[0], overflow - 1);
+            }
+            return format!("{} +{}", result, overflow);
+        }
+    }
+    result
+}
+
 pub fn render(frame: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -30,7 +73,7 @@ pub fn render(frame: &mut Frame, app: &App) {
             }
         }
         Mode::Normal | Mode::Help | Mode::Selecting | Mode::Confirming
-        | Mode::Rebasing | Mode::MovingBookmark | Mode::BookmarkInput | Mode::Squashing => {
+        | Mode::Rebasing | Mode::MovingBookmark | Mode::BookmarkInput | Mode::BookmarkSelect | Mode::Squashing => {
             if app.split_view {
                 let split = Layout::default()
                     .direction(Direction::Horizontal)
@@ -60,6 +103,12 @@ pub fn render(frame: &mut Frame, app: &App) {
     if let Some(ref state) = app.bookmark_input_state {
         if matches!(app.mode, Mode::BookmarkInput) {
             render_bookmark_input(frame, state);
+        }
+    }
+
+    if let Some(ref state) = app.bookmark_select_state {
+        if matches!(app.mode, Mode::BookmarkSelect) {
+            render_bookmark_select(frame, state);
         }
     }
 
@@ -200,7 +249,7 @@ fn render_tree_line_with_markers(
     ]);
 
     if !node.bookmarks.is_empty() {
-        let bookmark_str = node.bookmarks.join(" ");
+        let bookmark_str = format_bookmarks_truncated(&node.bookmarks, 30);
         spans.push(Span::raw(" "));
         let bm_color = if is_source { Color::Yellow } else { Color::Cyan };
         spans.push(Span::styled(bookmark_str, Style::default().fg(bm_color)));
@@ -453,7 +502,7 @@ fn render_tree_line_rebase(
     ]);
 
     if !node.bookmarks.is_empty() {
-        let bookmark_str = node.bookmarks.join(" ");
+        let bookmark_str = format_bookmarks_truncated(&node.bookmarks, 30);
         spans.push(Span::raw(" "));
         spans.push(Span::styled(bookmark_str, Style::default().fg(Color::Cyan)));
     }
@@ -517,6 +566,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         }
         Mode::MovingBookmark => "MOVE BOOKMARK",
         Mode::BookmarkInput => "BOOKMARK",
+        Mode::BookmarkSelect => "SELECT BM",
         Mode::Squashing => "SQUASH",
     };
 
@@ -616,6 +666,7 @@ fn render_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         }
         Mode::MovingBookmark => "j/k:dest  Enter:run  Esc:cancel",
         Mode::BookmarkInput => "Enter:confirm  Esc:cancel",
+        Mode::BookmarkSelect => "j/k:navigate  Enter:select  Esc:cancel",
         Mode::Squashing => "j/k:dest  Enter:run  Esc:cancel",
     };
 
@@ -971,6 +1022,71 @@ fn render_bookmark_input(frame: &mut Frame, state: &BookmarkInputState) {
         Line::from(""),
         Line::from(Span::styled(help_text, Style::default().fg(Color::DarkGray))),
     ];
+
+    let paragraph = Paragraph::new(lines);
+    frame.render_widget(paragraph, inner);
+}
+
+fn render_bookmark_select(frame: &mut Frame, state: &BookmarkSelectState) {
+    let area = frame.area();
+    let popup_width = 50u16.min(area.width.saturating_sub(4));
+    let popup_height = (6 + state.bookmarks.len().min(10)) as u16;
+
+    let popup_area = Rect {
+        x: (area.width.saturating_sub(popup_width)) / 2,
+        y: (area.height.saturating_sub(popup_height)) / 2,
+        width: popup_width,
+        height: popup_height,
+    };
+
+    frame.render_widget(Clear, popup_area);
+
+    let (title, border_color, bg_color) = match state.action {
+        BookmarkSelectAction::Move => (
+            " Select Bookmark to Move ",
+            Color::Cyan,
+            Color::Rgb(20, 20, 30),
+        ),
+        BookmarkSelectAction::Delete => (
+            " Select Bookmark to Delete ",
+            Color::Red,
+            Color::Rgb(30, 20, 20),
+        ),
+    };
+
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(border_color));
+
+    let inner = block.inner(popup_area);
+    frame.render_widget(block.style(Style::default().bg(bg_color)), popup_area);
+
+    let mut lines: Vec<Line> = Vec::new();
+
+    // show revision context
+    let rev_short: String = state.target_rev.chars().take(8).collect();
+    lines.push(Line::from(vec![
+        Span::styled("At: ", Style::default().fg(Color::Yellow)),
+        Span::styled(rev_short, Style::default().fg(Color::DarkGray)),
+    ]));
+    lines.push(Line::from(""));
+
+    for (i, bookmark) in state.bookmarks.iter().enumerate() {
+        let marker = if i == state.selected_index { "> " } else { "  " };
+        let style = if i == state.selected_index {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        lines.push(Line::from(Span::styled(format!("{marker}{bookmark}"), style)));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(Span::styled(
+        "j/k: navigate | Enter: select | Esc: cancel",
+        Style::default().fg(Color::DarkGray),
+    )));
 
     let paragraph = Paragraph::new(lines);
     frame.render_widget(paragraph, inner);
