@@ -9,6 +9,7 @@
 - Only add important comments to explain why something is being done
 - Try to minimize nesting in functions
 - All comments should make sense without the context if this particular conversation
+- When I report a bug, don't start by trying to fix it. Instead, start by writing a test that reproduces the bug. Then, have subagents try to fix the bug and prove it with a passing test
 
 # Rust Project Specific
 
