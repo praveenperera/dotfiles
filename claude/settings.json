@@ -69,6 +69,10 @@
     "greptile@claude-plugins-official": true
   },
   "alwaysThinkingEnabled": true,
+  "statusLine": {
+    "type": "command",
+    "command": "/bin/zsh /Users/praveen/.claude/statusline-command.sh"
+  },
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
   }
