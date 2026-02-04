@@ -80,7 +80,8 @@
       "Bash(curl:*)",
       "Bash(better-context:*)",
       "Bash(/Users/praveen/code/dotfiles/cmd/target/release/cmd*)",
-      "Bash(./cmd/target/release/cmd:*)"
+      "Bash(./cmd/target/release/cmd:*)",
+      "WebFetch(domain:opentofu.org)"
     ],
     "deny": [],
     "ask": []
