@@ -137,6 +137,13 @@ pub enum MainCmd {
         #[command(subcommand)]
         subcommand: CrateCmd,
     },
+
+    /// File encryption/decryption operations
+    #[command(arg_required_else_help = true)]
+    File {
+        #[command(subcommand)]
+        subcommand: crate::cmd::file::FileCmd,
+    },
 }
 
 #[derive(Debug, Clone, Subcommand)]

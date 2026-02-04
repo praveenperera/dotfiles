@@ -1,6 +1,7 @@
 pub mod better_context;
 pub mod bootstrap;
 pub mod crate_versions;
+pub mod file;
 pub mod gcloud;
 pub mod generate;
 pub mod main_cmd;
@@ -73,5 +74,9 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::Crate { subcommand } => match subcommand {
             main_cmd::CrateCmd::Versions(flags) => crate_versions::run_with_flags(&sh, flags),
         },
+        MainCmd::File { subcommand } => {
+            let file_flags = file::File { subcommand };
+            file::run_with_flags(&sh, file_flags)
+        }
     }
 }
