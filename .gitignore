@@ -35,3 +35,4 @@ claude/stats-cache.json
 /claude/skills/skill-creator/scripts/__pycache__
 /claude/tasks
 /claude/image-cache/
+/config/jj/repos

@@ -1,5 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "attribution": {
     "commit": "",
     "pr": ""
@@ -54,6 +57,10 @@
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "/bin/zsh /Users/praveen/.claude/statusline-command.sh"
+  },
   "enabledPlugins": {
     "feature-dev@claude-plugins-official": true,
     "github@claude-plugins-official": false,
@@ -69,10 +76,6 @@
     "greptile@claude-plugins-official": true
   },
   "alwaysThinkingEnabled": true,
-  "statusLine": {
-    "type": "command",
-    "command": "/bin/zsh /Users/praveen/.claude/statusline-command.sh"
-  },
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
   }

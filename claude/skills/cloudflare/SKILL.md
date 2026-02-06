@@ -53,7 +53,7 @@ Each product in `./references/<product>/` contains a `README.md` as the entry po
 
 ```
 Need to run code?
-├─ Static website / SPA / SSG → static-assets/ (Workers - recommended)
+├─ Static website / SPA / SSG → static-assets/ (Workers - free, no JS needed)
 ├─ Serverless functions at the edge → workers/
 ├─ Full-stack web app with Git deploys → pages/ (legacy, consider Workers)
 ├─ Stateful coordination/real-time → durable-objects/
