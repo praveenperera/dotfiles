@@ -6,4 +6,6 @@ set -e
 cargo build --release
 
 mkdir -p $HOME/.local/bin
+# unlink first so we can overwrite even if the binary is currently running (macOS ETXTBSY)
+rm -f $HOME/.local/bin/cmd
 cp target/release/cmd $HOME/.local/bin/cmd
