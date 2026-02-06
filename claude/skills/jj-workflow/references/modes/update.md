@@ -30,19 +30,27 @@ jj new
 
 **Critical:** Without this, future changes keep amending the edited commit!
 
-### 5. Verify descendants auto-rebased
+### 5. Squash review changes into the target commit
+
+If you made review fixes in a new commit on top, squash them back:
+
+```bash
+jj squash -u  # keeps the original commit message, skips editor
+```
+
+### 6. Verify descendants auto-rebased
 
 ```bash
 jj log -r 'master..@'
 ```
 
-### 6. Update bookmarks if needed
+### 7. Update bookmarks if needed
 
 ```bash
 jj bookmark set feature -r <change-id>
 ```
 
-### 7. Push updates
+### 8. Push updates
 
 ```bash
 jj git push

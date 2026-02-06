@@ -132,8 +132,13 @@ Normal in colocated mode. jj doesn't track "current branch". Use jj commands, no
 Commands like `jj split` and `jj squash` open an editor by default. Use flags to skip:
 ```bash
 jj split -m "feat: description" file1.ts file2.ts
-jj squash --from X --into Y -u  # -u keeps destination message
+
+# squash without editor — use one of:
+jj squash -u                    # -u / --use-destination-message: keeps destination description
+jj squash -m "combined message" # explicit message
+jj squash --from X --into Y -u
 ```
+**Note:** Without `-u` or `-m`, squash opens an editor when both source and destination have descriptions.
 
 For hunk-level splitting (same file, different features), use `jju sh`:
 ```bash

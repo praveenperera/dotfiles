@@ -30,7 +30,8 @@
 | `jj split -r X` | Split older commit |
 | `jj squash` | Squash @ into parent |
 | `jj squash --into X` | Move @ changes into X |
-| `jj squash -u` | Squash, keep destination message (no editor) |
+| `jj squash -u` / `--use-destination-message` | Squash, keep destination message, skip editor |
+| `jj squash -m "msg"` | Squash with explicit message, skip editor |
 
 ### Non-Interactive Hunk Selection (`jju sh`)
 
@@ -43,6 +44,8 @@
 | `jju sh -m "msg" --pattern "regex"` | Split by pattern match |
 | `jju sh -m "msg" --invert --hunks 0` | Exclude matched hunks |
 | `jju sh --dry-run -m "msg" --hunks 0` | Preview without committing |
+| `jju sh -r X --preview` | Preview hunks in older commit |
+| `jju sh -r X -m "msg" --hunks 0,2` | Split hunks from older commit |
 
 ## Rebasing
 

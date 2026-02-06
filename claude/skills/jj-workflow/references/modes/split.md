@@ -139,6 +139,23 @@ Preview what would be committed without making changes:
 jju sh --dry-run -m "Test" --hunks 0,2
 ```
 
+### Split hunks from an older commit
+
+Use `-r` / `--revision` to split hunks from a commit other than `@`:
+
+```bash
+# preview hunks in an older commit
+jju sh -r <change-id> --preview
+
+# split specific hunks from an older commit
+jju sh -r <change-id> -m "extract logging" --pattern "log::"
+
+# split by hunk index from a parent commit
+jju sh -r @- -m "refactor: move helpers" --hunks 0,3
+```
+
+Descendants auto-rebase after the split, same as `jj split -r`.
+
 ### Workflow Example
 
 ```bash
