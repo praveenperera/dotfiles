@@ -111,20 +111,35 @@ pub fn run_with_flags(sh: &Shell, flags: BetterContext) -> Result<()> {
                 clone_repo_with_retry(sh, &clone_url, &cache_path, flags.full, flags.quiet)?;
             }
 
-            let branch = if let Some(ref git_ref) = flags.r#ref {
+            let mut branch = if let Some(ref git_ref) = flags.r#ref {
                 match checkout_ref(sh, &cache_path, git_ref) {
-                    Ok(()) => git_ref.clone(),
+                    Ok(()) => Ok(git_ref.clone()),
                     Err(e) => {
                         warn!(
                             "Could not checkout {}: {}. Using default branch.",
                             git_ref, e
                         );
-                        get_current_branch(sh, &cache_path)?
+                        get_current_branch(sh, &cache_path)
                     }
                 }
             } else {
-                get_current_branch(sh, &cache_path)?
+                get_current_branch(sh, &cache_path)
             };
+
+            // if branch detection failed, re-clone with full history
+            if branch.is_err() {
+                if !flags.quiet {
+                    info!("Could not determine branch, re-cloning with full history");
+                }
+                let _ = std::fs::remove_dir_all(&cache_path);
+                clone_repo_with_retry(sh, &clone_url, &cache_path, true, flags.quiet)?;
+                if let Some(ref git_ref) = flags.r#ref {
+                    let _ = checkout_ref(sh, &cache_path, git_ref);
+                }
+                branch = get_current_branch(sh, &cache_path);
+            }
+
+            let branch = branch?;
 
             (cache_path, Some(clone_url), branch)
         }
@@ -161,10 +176,12 @@ fn update_repo_with_retry(sh: &Shell, path: &PathBuf, quiet: bool) -> Result<()>
 
         match fetch.run() {
             Ok(()) => {
+                let target = get_default_remote_branch(sh, path)
+                    .unwrap_or_else(|_| "origin/HEAD".to_string());
                 let reset = if quiet {
-                    cmd!(sh, "git reset --hard --quiet origin/HEAD").quiet()
+                    cmd!(sh, "git reset --hard --quiet {target}").quiet()
                 } else {
-                    cmd!(sh, "git reset --hard origin/HEAD")
+                    cmd!(sh, "git reset --hard {target}")
                 };
                 reset.run()?;
                 return Ok(());
@@ -333,4 +350,61 @@ fn checkout_ref(sh: &Shell, path: &PathBuf, git_ref: &str) -> Result<()> {
     let _guard = sh.push_dir(path);
     cmd!(sh, "git checkout {git_ref}").quiet().run()?;
     Ok(())
+}
+
+/// Resolve the default remote branch without network calls
+fn get_default_remote_branch(sh: &Shell, path: &PathBuf) -> Result<String> {
+    let _guard = sh.push_dir(path);
+
+    // try symbolic-ref for origin/HEAD
+    if let Ok(output) = cmd!(sh, "git symbolic-ref refs/remotes/origin/HEAD")
+        .ignore_status()
+        .quiet()
+        .read()
+    {
+        let trimmed = output.trim();
+        if !trimmed.is_empty() && !trimmed.contains("not a symbolic ref") {
+            if let Some(branch) = trimmed.strip_prefix("refs/remotes/") {
+                return Ok(branch.to_string());
+            }
+        }
+    }
+
+    // try origin/main
+    if let Ok(output) = cmd!(sh, "git rev-parse --verify --quiet origin/main")
+        .ignore_status()
+        .quiet()
+        .read()
+    {
+        if !output.trim().is_empty() {
+            return Ok("origin/main".to_string());
+        }
+    }
+
+    // try origin/master
+    if let Ok(output) = cmd!(sh, "git rev-parse --verify --quiet origin/master")
+        .ignore_status()
+        .quiet()
+        .read()
+    {
+        if !output.trim().is_empty() {
+            return Ok("origin/master".to_string());
+        }
+    }
+
+    // pick first non-HEAD remote branch
+    if let Ok(output) = cmd!(sh, "git branch -r --list origin/*")
+        .ignore_status()
+        .quiet()
+        .read()
+    {
+        for line in output.lines() {
+            let branch = line.trim();
+            if !branch.is_empty() && !branch.contains("HEAD") {
+                return Ok(branch.to_string());
+            }
+        }
+    }
+
+    eyre::bail!("could not determine default remote branch")
 }
