@@ -29,7 +29,7 @@ impl CratesIoClient {
     }
 
     /// Fetches the latest non-yanked version for a crate
-    pub async fn get_latest_version(&self, crate_name: &str) -> Result<String> {
+    pub async fn get_latest_version(&self, crate_name: &str, pre: bool) -> Result<String> {
         let url = format!("{API_BASE}/{crate_name}");
 
         let response = self
@@ -51,7 +51,7 @@ impl CratesIoClient {
         crate_data
             .versions
             .iter()
-            .find(|v| !v.yanked)
+            .find(|v| !v.yanked && (pre || !v.num.contains('-')))
             .map(|v| v.num.clone())
             .ok_or_else(|| eyre!("no non-yanked versions found for '{}'", crate_name))
     }

@@ -26,6 +26,10 @@ pub struct CrateVersions {
     /// Use exact version pinning (=1.0.0 instead of 1.0.0)
     #[arg(short, long)]
     pub exact: bool,
+
+    /// Include pre-release versions
+    #[arg(long)]
+    pub pre: bool,
 }
 
 pub fn run_with_flags(_sh: &Shell, flags: CrateVersions) -> Result<()> {
@@ -39,7 +43,7 @@ async fn run_async(flags: CrateVersions) -> Result<()> {
     let futures = flags
         .crates
         .iter()
-        .map(|name| fetch_version(&client, name));
+        .map(|name| fetch_version(&client, name, flags.pre));
 
     let results: Vec<_> = join_all(futures).await;
 
@@ -69,8 +73,8 @@ async fn run_async(flags: CrateVersions) -> Result<()> {
     Ok(())
 }
 
-async fn fetch_version(client: &CratesIoClient, name: &str) -> Result<String> {
-    client.get_latest_version(name).await
+async fn fetch_version(client: &CratesIoClient, name: &str, pre: bool) -> Result<String> {
+    client.get_latest_version(name, pre).await
 }
 
 fn format_version(version: &str, exact: bool) -> String {
