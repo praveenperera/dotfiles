@@ -59,8 +59,11 @@ if [[ -n "$model" ]]; then
     # Simplify model names
     display_model="$model"
     case "$model" in
+        *opus*4-6*|*opus*4.6*) display_model="Opus 4.6" ;;
         *opus*|*Opus*) display_model="Opus 4.5" ;;
+        *sonnet*4-5*|*sonnet*4.5*) display_model="Sonnet 4.5" ;;
         *sonnet*|*Sonnet*) display_model="Sonnet 4" ;;
+        *haiku*4-5*|*haiku*4.5*) display_model="Haiku 4.5" ;;
         *haiku*|*Haiku*) display_model="Haiku" ;;
     esac
     output+=" ${BOLD}•${RESET} ${BLUE}${display_model}${RESET}"
