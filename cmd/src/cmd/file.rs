@@ -36,8 +36,8 @@ pub enum FileCmd {
     /// Initialize encryption keys for a new file
     #[command(arg_required_else_help = true)]
     Init {
-        /// Output file to create
-        output: String,
+        /// Source file to initialize encryption for
+        input: String,
         /// Prefix for the 1password secret name
         #[arg(long, short = 'p')]
         prefix: Option<String>,
@@ -54,7 +54,7 @@ pub fn run_with_flags(sh: &Shell, flags: File) -> Result<()> {
     match flags.subcommand {
         FileCmd::Encrypt { input, output } => encrypt_file(sh, &input, output.as_deref()),
         FileCmd::Decrypt { input, output } => decrypt_file(sh, &input, output.as_deref()),
-        FileCmd::Init { output, prefix } => init_file(sh, &output, prefix.as_deref()),
+        FileCmd::Init { input, prefix } => init_file(sh, &input, prefix.as_deref()),
     }
 }
 
@@ -100,19 +100,25 @@ fn decrypt_file(sh: &Shell, input: &str, output: Option<&str>) -> Result<()> {
     encrypt::decrypt(sh, input, &output_path)
 }
 
-fn init_file(sh: &Shell, output: &str, prefix: Option<&str>) -> Result<()> {
-    if sh.path_exists(output) {
+fn init_file(sh: &Shell, input: &str, prefix: Option<&str>) -> Result<()> {
+    let output = if input.ends_with(".enc") {
+        input.to_string()
+    } else {
+        format!("{input}.enc")
+    };
+
+    if sh.path_exists(&output) {
         return Err(eyre::eyre!("{output} already exists"));
     }
 
     let prefix = prefix.unwrap_or_else(|| {
-        Path::new(output)
+        Path::new(&output)
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("file")
     });
 
-    encrypt::create_secret_and_files(sh, prefix, output)?;
+    encrypt::create_secret_and_files(sh, prefix, &output)?;
 
     println!("Created encryption keys and initialized {output}");
     Ok(())
