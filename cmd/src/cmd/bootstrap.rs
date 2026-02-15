@@ -183,7 +183,14 @@ const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
     ("nvim", ".config/nvim"),
     ("claude", ".claude"),
     ("claude/CLAUDE.md", ".codex/AGENT.md"),
+    ("claude/CLAUDE.md", ".codex/AGENTS.md"),
+    ("claude/CLAUDE.md", ".config/opencode/AGENTS.md"),
     ("opencode", ".config/opencode"),
+];
+
+const CUSTOM_CONFIG_DIR_ENTRIES: &[(&str, &str)] = &[
+    ("claude/skills", ".codex/skills"),
+    ("claude/skills", ".config/opencode/skills"),
 ];
 
 const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
@@ -439,6 +446,19 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
         let target = home.join(dest);
 
         path_and_target.push((path, target));
+    }
+
+    for (src_dir, dest_dir) in CUSTOM_CONFIG_DIR_ENTRIES {
+        let src_dir = crate::dotfiles_dir().join(src_dir);
+        let dest_dir = home.join(dest_dir);
+
+        for entry in std::fs::read_dir(&src_dir)? {
+            let entry = entry?;
+            let src_path = entry.path();
+            let target = dest_dir.join(entry.file_name());
+
+            path_and_target.push((src_path, target));
+        }
     }
 
     for (path, target) in path_and_target.iter() {
