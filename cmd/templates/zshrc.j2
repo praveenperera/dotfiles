@@ -78,11 +78,20 @@ export SAVEHIST=2000
 function tmuxSessionSwitch() {
   session=$(tmux list-windows -a | fzf | sed 's/: .*//g')
   tmux attach -t "$session"
-}
+  }
+
 
 {% if os == Os::MacOS %}
 # subl
 export PATH="/Applications/Sublime Text.app/Contents/SharedSupport/bin:$PATH"
+
+# terminus
+unl() {
+  if [ -n "$SSH_CONNECTION" ]; then
+    security unlock-keychain ~/Library/Keychains/login.keychain-db
+    export KEYCHAIN_UNLOCKED=true
+  fi
+}
 {% endif %}
 
 ip() {
@@ -264,6 +273,11 @@ bindkey "[C" forward-word
 # option + left/right arrow to move by word
 bindkey '^[[1;3C' forward-word
 bindkey '^[[1;3D' backward-word
+
+# shift-tab to accept autosuggestion (non-tmux only)
+if [[ -z "$TMUX" ]]; then
+  bindkey '^[[Z' autosuggest-accept
+fi
 
 setopt histreduceblanks
 setopt autocd autopushd pushdminus pushdsilent pushdtohome pushdignoredups
