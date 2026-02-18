@@ -1,7 +1,6 @@
 # General
 
 - Stop puttting Created by claude code into my files, if it has an author use me Praveen Perera
-- Don't add comments that need old removed code to make sense in context
 - All comments should make sense without the context if this particular conversation
 - If creating git commits never co author the commit with claude/codex or add any notes about claude just use my name
 - Start inline code comments with a lowercase
@@ -9,7 +8,6 @@
 - Don't end comments with a period (periods within comments are fine)
 - Only add important comments to explain why something is being done
 - Try to minimize nesting in functions
-- When I report a bug, don't start by trying to fix it. Instead, start by writing a test that reproduces the bug. Then, have subagents try to fix the bug and prove it with a passing test
 - Don't default to leaving deprecated code in place, remove it or ask if this is a full replacement or if old code is still needed
 
 # Rust Project Specific
