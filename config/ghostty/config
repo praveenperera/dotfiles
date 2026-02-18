@@ -34,6 +34,7 @@ palette = 15=#feffff
 ## KEYBINDS
 
 # general
+keybind = cmd+shift+k=text:\x02k
 keybind = cmd+shift+comma=reload_config
 
 keybind = global:cmd+shift+grave_accent=toggle_quick_terminal
