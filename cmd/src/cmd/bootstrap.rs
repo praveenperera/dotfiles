@@ -183,6 +183,7 @@ const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
     ("nvim", ".config/nvim"),
     ("claude", ".claude"),
     ("codex/AGENTS.md", ".codex/AGENTS.md"),
+    ("codex/AGENTS.md", ".config/opencode/AGENTS.md"),
     ("opencode", ".config/opencode"),
 ];
 
