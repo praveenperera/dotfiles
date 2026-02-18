@@ -1,4 +1,4 @@
-# General
+# Core Rules
 
 - Stop puttting Created by claude code into my files, if it has an author use me Praveen Perera
 - Don't add comments that need old removed code to make sense in context
@@ -11,6 +11,8 @@
 - Try to minimize nesting in functions
 - When I report a bug, don't start by trying to fix it. Instead, start by writing a test that reproduces the bug. Then, have subagents try to fix the bug and prove it with a passing test
 - Don't default to leaving deprecated code in place, remove it or ask if this is a full replacement or if old code is still needed
+- When working with this user's projects: always read existing config/code before answering from general knowledge. Never assume defaults — check the actual files first
+- Scope changes precisely to what the user asks for. Do not modify files or components beyond the explicit request without asking first. If unsure about scope, ask before making changes — not after
 
 # Rust Project Specific
 
@@ -25,3 +27,11 @@
 - Prefer tuple structs over named field structs for simple wrappers (e.g., `struct Foo(Arc<Inner>)` not `struct Foo { inner: Arc<Inner> }`)
 - `#[act_zero_ext::into_actor_result]` on `fn foo()` generates: public async `foo() -> ActorResult<T>` wrapper + private `do_foo()` with original logic
 - Prefer structs with methods over freestanding functions to encapsulate state and provide a cleaner API
+
+# Build Verification
+
+- For Rust projects: always run `just fmt` and `just clippy` after changes (most projects use a justfile; fall back to `cargo fmt` and `cargo clippy` if no justfile exists). For Android/Kotlin: verify builds compile. For iOS/Swift: verify builds compile. Never submit changes without verifying they compile
+
+# Project Context
+
+- This user's primary stack: Rust (dominant), TypeScript/Svelte, Kotlin (Android), Swift (iOS). Cross-platform mobile wallet app with Rust core. Also: Terraform/infrastructure, web scraping tools in Rust

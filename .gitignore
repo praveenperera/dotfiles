@@ -37,3 +37,4 @@ claude/stats-cache.json
 /claude/image-cache/
 /config/jj/repos
 opencode/AGENTS.md
+/claude/usage-data
