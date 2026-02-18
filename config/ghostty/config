@@ -73,7 +73,7 @@ keybind = cmd+physical:nine=text:\x029
 
 # rename window/tab
 keybind = cmd+period=text:\x02,
-keybind = cmd+left_bracket=text:\x02$
+keybind = cmd+shift+period=text:\x02$
 
 # delete by word
 keybind = alt+backspace=text:\x17
