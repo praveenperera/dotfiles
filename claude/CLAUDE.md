@@ -15,6 +15,7 @@
 # Rust Project Specific
 
 - `info` and `error` logs are okay to start capitalized
+- log/println! macros, prefer inline variable capture like `warn!("person id={id} ...")` instead of positional placeholders like `warn!("person id={} ...", id)`
 - Generate docs for a crate with `cargo doc -p <crate-name>`, this will then be available at `target/doc/<crate-name>/index.html`, if you are unsure about how to use a crate, please generate the docs and read them
 - If docs have already been generated, check `target/doc/` for existing documentation of the project and its dependencies before regenerating
 - Whenever you get clippy errors first run cargo fix --allow-dirty and then fix whatever remains
