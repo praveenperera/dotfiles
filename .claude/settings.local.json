@@ -83,7 +83,10 @@
       "Bash(./cmd/target/release/cmd:*)",
       "WebFetch(domain:opentofu.org)",
       "Bash(command -v:*)",
-      "Bash(jju:*)"
+      "Bash(jju:*)",
+      "Bash(env:*)",
+      "Bash(infocmp:*)",
+      "Bash(/Applications/Ghostty.app/Contents/MacOS/ghostty:*)"
     ],
     "deny": [],
     "ask": []
