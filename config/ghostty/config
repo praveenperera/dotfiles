@@ -1,5 +1,6 @@
 ## GENERAL
 macos-titlebar-style = hidden
+shell-integration-features = ssh-env,ssh-terminfo
 
 ## FONTS
 font-size = 13
