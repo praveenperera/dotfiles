@@ -34,6 +34,7 @@ claude/stats-cache.json
 /claude/telemetry
 /claude/skills/skill-creator/scripts/__pycache__
 /claude/tasks
+/claude/teams
 /claude/image-cache/
 /config/jj/repos
 opencode/AGENTS.md
