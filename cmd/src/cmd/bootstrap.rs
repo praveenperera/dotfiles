@@ -162,6 +162,7 @@ const LINUX_TOOLS_FULL: &[&str] = &[
 const CARGO_PKGS: &[&str] = &["bacon", "cargo-update", "cargo-nextest", "cargo-expand"];
 const DOTFILES: &[&str] = &[
     "zshrc",
+    "zshenv",
     "gitconfig",
     "zsh_plugins.zsh",
     "gitignore",
@@ -276,6 +277,8 @@ pub fn config(sh: &Shell) -> Result<()> {
         println!("{}", "installing osx defaults".green());
         let osx_defaults = OsxDefaults {}.render()?;
         create_and_run_file(sh, &osx_defaults, "osx_defaults.zsh")?;
+
+        setup_ghostty_terminfo(sh)?;
     }
 
     // setup dotfiles and config dirs
@@ -586,6 +589,26 @@ fn install_via_shell_script(sh: &Shell, url: &str, tool_name: &str, args: &[&str
     cmd!(sh, "sh {script_path} {args}").run()?;
 
     // cleanup is automatic when tmp_dir goes out of scope
+    Ok(())
+}
+
+/// Install Ghostty's xterm-ghostty terminfo entry to ~/.terminfo so it's
+/// available to the terminfo library before any shell initialization runs
+fn setup_ghostty_terminfo(sh: &Shell) -> Result<()> {
+    let ghostty_terminfo = "/Applications/Ghostty.app/Contents/Resources/terminfo";
+    if !sh.path_exists(ghostty_terminfo) {
+        return Ok(());
+    }
+
+    let home = std::env::var("HOME")?;
+    if sh.path_exists(format!("{home}/.terminfo/78/xterm-ghostty")) {
+        return Ok(());
+    }
+
+    println!("{}", "installing ghostty terminfo to ~/.terminfo".green());
+    let script = format!("TERMINFO_DIRS='{ghostty_terminfo}' infocmp -x xterm-ghostty | tic -x -");
+    cmd!(sh, "sh -c {script}").run()?;
+
     Ok(())
 }
 
