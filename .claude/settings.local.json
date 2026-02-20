@@ -86,7 +86,10 @@
       "Bash(jju:*)",
       "Bash(env:*)",
       "Bash(infocmp:*)",
-      "Bash(/Applications/Ghostty.app/Contents/MacOS/ghostty:*)"
+      "Bash(/Applications/Ghostty.app/Contents/MacOS/ghostty:*)",
+      "Bash(ghostty:*)",
+      "WebFetch(domain:abacusnoir.com)",
+      "WebFetch(domain:deepwiki.com)"
     ],
     "deny": [],
     "ask": []
