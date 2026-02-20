@@ -60,6 +60,12 @@ pub enum TmuxCmd {
         #[arg(short, long)]
         force: bool,
     },
+    /// Execute a quick action by name (used by fzf quick actions menu)
+    Action {
+        /// Action name (e.g., "New Tab", "Close Pane")
+        #[arg(trailing_var_arg = true)]
+        name: Vec<String>,
+    },
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
@@ -72,6 +78,7 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
             title,
             force,
         } => notify(sh, &kind, message.as_deref(), title.as_deref(), force),
+        TmuxCmd::Action { name } => action(sh, &name.join(" ")),
     }
 }
 
@@ -92,6 +99,66 @@ fn move_after(sh: &Shell, position: u32) -> Result<()> {
     } else {
         let target = position.to_string();
         cmd!(sh, "tmux move-window -a -t {target}").quiet().run()?;
+    }
+    Ok(())
+}
+
+fn action(sh: &Shell, name: &str) -> Result<()> {
+    let pane_path = || -> String {
+        let fmt = "#{pane_current_path}";
+        cmd!(sh, "tmux display-message -p {fmt}")
+            .quiet()
+            .read()
+            .unwrap_or_default()
+    };
+
+    match name.trim() {
+        "New Tab" => {
+            let path = pane_path();
+            cmd!(sh, "tmux new-window -c {path}").quiet().run()?;
+        }
+        "Close Pane" => {
+            cmd!(sh, "tmux kill-pane").quiet().run()?;
+        }
+        "Zoom Pane" => {
+            cmd!(sh, "tmux resize-pane -Z").quiet().run()?;
+        }
+        "Split Right" => {
+            let path = pane_path();
+            cmd!(sh, "tmux split-window -h -c {path}").quiet().run()?;
+        }
+        "Split Down" => {
+            let path = pane_path();
+            cmd!(sh, "tmux split-window -c {path}").quiet().run()?;
+        }
+        "Next Tab" => {
+            cmd!(sh, "tmux next-window").quiet().run()?;
+        }
+        "Prev Tab" => {
+            cmd!(sh, "tmux previous-window").quiet().run()?;
+        }
+        "Swap Down" => {
+            cmd!(sh, "tmux swap-pane -D").quiet().run()?;
+        }
+        "Swap Up" => {
+            cmd!(sh, "tmux swap-pane -U").quiet().run()?;
+        }
+        "Rename Tab" => {
+            std::process::Command::new("tmux")
+                .args(["command-prompt", "-p", "Window name:", "rename-window '%1'"])
+                .spawn()?;
+        }
+        "Rename Session" => {
+            std::process::Command::new("tmux")
+                .args(["command-prompt", "-p", "Session name:", "rename-session '%1'"])
+                .spawn()?;
+        }
+        "Scroll Back" => {
+            cmd!(sh, "tmux copy-mode").quiet().run()?;
+        }
+        other => {
+            eprintln!("Unknown action: {other}");
+        }
     }
     Ok(())
 }
