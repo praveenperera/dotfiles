@@ -1,12 +1,9 @@
 ---
 name: shadcn-baseui
 description: >
-  shadcn/ui component catalog, CLI commands, patterns, and migration guide.
-  ALWAYS use Base UI (@base-ui/react) as the primitive library — Radix UI is
-  legacy and should not be used. Use this skill when working with shadcn/ui,
-  adding shadcn components, initializing new shadcn projects, or building UI
-  with @base-ui/react. Triggers on: shadcn, shadcn/ui, Base UI, @base-ui/react,
-  or shadcn component names (Dialog, Select, Popover, etc.) in React/Next.js.
+  shadcn/ui component catalog, CLI commands, patterns. Use this skill when working with shadcn/ui,
+  adding shadcn components, initializing new shadcn projects, or building UI. 
+  Triggers on: UIs in react, shadcn, shadcn/ui, Base UI, @base-ui/react, or shadcn component names (Dialog, Select, Popover, etc.) in React/Next.js.
 ---
 
 # shadcn/ui with Base UI
