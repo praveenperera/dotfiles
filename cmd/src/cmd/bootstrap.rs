@@ -274,17 +274,6 @@ fn reload_configs(sh: &Shell) {
     {
         println!("{}", "reloaded tmux config".green());
     }
-
-    // ghostty reloads on SIGUSR1
-    if let Ok(pids) = cmd!(sh, "pgrep -x ghostty").quiet().read() {
-        for pid in pids.lines() {
-            let pid = pid.trim();
-            if !pid.is_empty() {
-                cmd!(sh, "kill -USR1 {pid}").quiet().run().ok();
-            }
-        }
-        println!("{}", "reloaded ghostty config".green());
-    }
 }
 
 pub fn config(sh: &Shell) -> Result<()> {
