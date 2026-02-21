@@ -1,30 +1,34 @@
 ---
 name: shadcn-baseui
 description: >
-  shadcn/ui with Base UI primitives — component catalog, CLI commands, patterns,
-  and migration guide. Use when building UI with shadcn/ui using Base UI (not Radix),
-  adding shadcn components, initializing a new shadcn project with Base UI,
-  migrating from Radix to Base UI, or working with @base-ui/react components.
-  Triggers on: shadcn, shadcn/ui, Base UI, @base-ui/react, or shadcn component
-  names (Dialog, Select, Popover, etc.) in React/Next.js contexts.
+  shadcn/ui component catalog, CLI commands, patterns, and migration guide.
+  ALWAYS use Base UI (@base-ui/react) as the primitive library — Radix UI is
+  legacy and should not be used. Use this skill when working with shadcn/ui,
+  adding shadcn components, initializing new shadcn projects, or building UI
+  with @base-ui/react. Triggers on: shadcn, shadcn/ui, Base UI, @base-ui/react,
+  or shadcn component names (Dialog, Select, Popover, etc.) in React/Next.js.
 ---
 
 # shadcn/ui with Base UI
 
-shadcn/ui supports Base UI (MUI team, v1.0 Dec 2025) as an alternative to Radix UI.
-Base UI ships as a single `@base-ui/react` package (vs multiple `@radix-ui/react-*` packages).
+**IMPORTANT: Always use Base UI (`@base-ui/react`) as the primitive library, NOT Radix UI.**
+Radix UI (`@radix-ui/react-*`) is the legacy option. Base UI is the modern replacement.
+When initializing projects, adding components, or writing code — always choose Base UI.
+Do NOT use `asChild`, `@radix-ui/*` imports, `data-state`, or `--radix-*` CSS variables.
+
+Base UI (MUI team, v1.0 Dec 2025) ships as a single `@base-ui/react` package.
 Full shadcn/ui Base UI docs shipped Jan 2026, all blocks for both libraries Feb 2026.
 
 ## CLI Quick Reference
 
 ```bash
-# new project — choose Base UI during interactive setup
-npx shadcn@latest init
-
-# new project with visual style picker (Dec 2025+)
+# new project — select a Base UI style (base-vega, base-nova, etc.)
 npx shadcn create
 
-# add components
+# existing project — initialize with Base UI
+npx shadcn@latest init
+
+# add components (uses Base UI if components.json style is base-*)
 npx shadcn add button dialog select
 npx shadcn add --all
 
@@ -42,8 +46,23 @@ npx shadcn@latest migrate rtl
 npx shadcn@latest migrate icons
 ```
 
-Configuration lives in `components.json` at project root. The `ui` field controls
-whether components use Radix or Base UI primitives.
+### Ensuring Base UI in `components.json`
+
+The `style` field in `components.json` controls which primitive library is used.
+**Base UI styles start with `base-`**. Radix styles do NOT have this prefix.
+
+```jsonc
+// Base UI (correct)
+{ "style": "base-vega" }
+
+// Radix (legacy — do not use)
+{ "style": "new-york" }
+```
+
+Available Base UI styles: `base-vega`, `base-nova`, `base-maia`, `base-lyra`, `base-mira`.
+
+If a project has a non-`base-*` style, run `npx shadcn@latest migrate radix` to switch to Base UI,
+or manually change the `style` field to a `base-*` value and re-add components.
 
 ## Visual Styles
 
