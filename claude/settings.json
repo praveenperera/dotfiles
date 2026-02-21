@@ -39,7 +39,8 @@
       "Bash(pr:*)",
       "Bash(cargo:*)",
       "Bash(just:*)",
-      "WebFetch(domain:*)"
+      "WebFetch(domain:*)",
+      "mcp__pencil"
     ],
     "deny": [],
     "ask": []

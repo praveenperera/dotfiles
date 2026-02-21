@@ -90,7 +90,10 @@
       "Bash(ghostty:*)",
       "WebFetch(domain:abacusnoir.com)",
       "WebFetch(domain:deepwiki.com)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "WebFetch(domain:ui.shadcn.com)",
+      "Bash(tail:*)",
+      "Bash(git:*)"
     ],
     "deny": [],
     "ask": []
