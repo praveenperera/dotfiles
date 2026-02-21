@@ -266,6 +266,27 @@ pub fn run_with_flags(sh: &Shell, flags: Bootstrap) -> Result<()> {
     Ok(())
 }
 
+fn reload_configs(sh: &Shell) {
+    if cmd!(sh, "tmux source-file ~/.tmux.conf")
+        .quiet()
+        .run()
+        .is_ok()
+    {
+        println!("{}", "reloaded tmux config".green());
+    }
+
+    // ghostty reloads on SIGUSR1
+    if let Ok(pids) = cmd!(sh, "pgrep -x ghostty").quiet().read() {
+        for pid in pids.lines() {
+            let pid = pid.trim();
+            if !pid.is_empty() {
+                cmd!(sh, "kill -USR1 {pid}").quiet().run().ok();
+            }
+        }
+        println!("{}", "reloaded ghostty config".green());
+    }
+}
+
 pub fn config(sh: &Shell) -> Result<()> {
     let path = crate::dotfiles_dir().join("zshrc");
     let zshrc = Zshrc { os: Os::current() };
@@ -286,6 +307,9 @@ pub fn config(sh: &Shell) -> Result<()> {
 
     // create hardlinks for cmd tools
     create_hardlinks(sh)?;
+
+    // reload configs
+    reload_configs(sh);
 
     Ok(())
 }
