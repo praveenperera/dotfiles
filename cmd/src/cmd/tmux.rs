@@ -66,12 +66,25 @@ pub enum TmuxCmd {
         #[arg(trailing_var_arg = true)]
         name: Vec<String>,
     },
-    /// Open fzf window switcher popup
-    #[command(alias = "wp")]
-    WindowPicker,
-    /// Open fzf quick actions popup
-    #[command(alias = "ap")]
-    ActionPicker,
+    /// Fzf picker menus (window, session, action)
+    #[command(alias = "p")]
+    Picker {
+        #[command(subcommand)]
+        kind: PickerKind,
+    },
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum PickerKind {
+    /// Fzf window switcher
+    #[command(alias = "w")]
+    Window,
+    /// Fzf session switcher
+    #[command(alias = "s")]
+    Session,
+    /// Fzf quick actions menu
+    #[command(alias = "a")]
+    Action,
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
@@ -85,8 +98,11 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
             force,
         } => notify(sh, &kind, message.as_deref(), title.as_deref(), force),
         TmuxCmd::Action { name } => action(sh, &name.join(" ")),
-        TmuxCmd::WindowPicker => window_picker(sh),
-        TmuxCmd::ActionPicker => action_picker(sh),
+        TmuxCmd::Picker { kind } => match kind {
+            PickerKind::Window => window_picker(sh),
+            PickerKind::Session => session_picker(sh),
+            PickerKind::Action => action_picker(sh),
+        },
     }
 }
 
@@ -107,6 +123,22 @@ fn move_after(sh: &Shell, position: u32) -> Result<()> {
     } else {
         let target = position.to_string();
         cmd!(sh, "tmux move-window -a -t {target}").quiet().run()?;
+    }
+    Ok(())
+}
+
+fn session_picker(sh: &Shell) -> Result<()> {
+    let fmt = "#S";
+    let sessions = cmd!(sh, "tmux list-sessions -F {fmt}").quiet().read()?;
+    let prompt = "Session > ";
+    let selection = cmd!(sh, "fzf --prompt {prompt} --height=100% --no-sort")
+        .quiet()
+        .stdin(sessions.as_bytes())
+        .read()?;
+
+    let session = selection.trim();
+    if !session.is_empty() {
+        cmd!(sh, "tmux switch-client -t {session}").quiet().run()?;
     }
     Ok(())
 }
