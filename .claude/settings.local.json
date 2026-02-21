@@ -89,7 +89,8 @@
       "Bash(/Applications/Ghostty.app/Contents/MacOS/ghostty:*)",
       "Bash(ghostty:*)",
       "WebFetch(domain:abacusnoir.com)",
-      "WebFetch(domain:deepwiki.com)"
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

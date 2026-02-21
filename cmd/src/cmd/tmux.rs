@@ -60,6 +60,18 @@ pub enum TmuxCmd {
         #[arg(short, long)]
         force: bool,
     },
+    /// Execute a quick action by name (used by fzf quick actions menu)
+    Action {
+        /// Action name (e.g., "New Tab", "Close Pane")
+        #[arg(trailing_var_arg = true)]
+        name: Vec<String>,
+    },
+    /// Open fzf window switcher popup
+    #[command(alias = "wp")]
+    WindowPicker,
+    /// Open fzf quick actions popup
+    #[command(alias = "ap")]
+    ActionPicker,
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
@@ -72,6 +84,9 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
             title,
             force,
         } => notify(sh, &kind, message.as_deref(), title.as_deref(), force),
+        TmuxCmd::Action { name } => action(sh, &name.join(" ")),
+        TmuxCmd::WindowPicker => window_picker(sh),
+        TmuxCmd::ActionPicker => action_picker(sh),
     }
 }
 
@@ -92,6 +107,113 @@ fn move_after(sh: &Shell, position: u32) -> Result<()> {
     } else {
         let target = position.to_string();
         cmd!(sh, "tmux move-window -a -t {target}").quiet().run()?;
+    }
+    Ok(())
+}
+
+fn window_picker(sh: &Shell) -> Result<()> {
+    let fmt = "#I: #W";
+    let windows = cmd!(sh, "tmux list-windows -F {fmt}").quiet().read()?;
+    let prompt = "Window > ";
+    let selection = cmd!(sh, "fzf --prompt {prompt} --height=100% --no-sort")
+        .quiet()
+        .stdin(windows.as_bytes())
+        .read()?;
+
+    if let Some(index) = selection.split(':').next() {
+        let index = index.trim();
+        cmd!(sh, "tmux select-window -t {index}").quiet().run()?;
+    }
+    Ok(())
+}
+
+const ACTIONS: &[&str] = &[
+    "New Tab",
+    "Close Pane",
+    "Zoom Pane",
+    "Split Right",
+    "Split Down",
+    "Next Tab",
+    "Prev Tab",
+    "Swap Down",
+    "Swap Up",
+    "Rename Tab",
+    "Rename Session",
+    "Scroll Back",
+];
+
+fn action_picker(sh: &Shell) -> Result<()> {
+    let menu = ACTIONS.join("\n");
+    let prompt = "Action > ";
+    let selection = cmd!(sh, "fzf --prompt {prompt} --height=100% --no-sort")
+        .quiet()
+        .stdin(menu.as_bytes())
+        .read()?;
+
+    action(sh, &selection)
+}
+
+fn action(sh: &Shell, name: &str) -> Result<()> {
+    let pane_path = || -> String {
+        let fmt = "#{pane_current_path}";
+        cmd!(sh, "tmux display-message -p {fmt}")
+            .quiet()
+            .read()
+            .unwrap_or_default()
+    };
+
+    match name.trim() {
+        "New Tab" => {
+            let path = pane_path();
+            cmd!(sh, "tmux new-window -c {path}").quiet().run()?;
+        }
+        "Close Pane" => {
+            cmd!(sh, "tmux kill-pane").quiet().run()?;
+        }
+        "Zoom Pane" => {
+            cmd!(sh, "tmux resize-pane -Z").quiet().run()?;
+        }
+        "Split Right" => {
+            let path = pane_path();
+            cmd!(sh, "tmux split-window -h -c {path}").quiet().run()?;
+        }
+        "Split Down" => {
+            let path = pane_path();
+            cmd!(sh, "tmux split-window -c {path}").quiet().run()?;
+        }
+        "Next Tab" => {
+            cmd!(sh, "tmux next-window").quiet().run()?;
+        }
+        "Prev Tab" => {
+            cmd!(sh, "tmux previous-window").quiet().run()?;
+        }
+        "Swap Down" => {
+            cmd!(sh, "tmux swap-pane -D").quiet().run()?;
+        }
+        "Swap Up" => {
+            cmd!(sh, "tmux swap-pane -U").quiet().run()?;
+        }
+        "Rename Tab" => {
+            std::process::Command::new("tmux")
+                .args(["command-prompt", "-p", "Window name:", "rename-window '%1'"])
+                .spawn()?;
+        }
+        "Rename Session" => {
+            std::process::Command::new("tmux")
+                .args([
+                    "command-prompt",
+                    "-p",
+                    "Session name:",
+                    "rename-session '%1'",
+                ])
+                .spawn()?;
+        }
+        "Scroll Back" => {
+            cmd!(sh, "tmux copy-mode").quiet().run()?;
+        }
+        other => {
+            eprintln!("Unknown action: {other}");
+        }
     }
     Ok(())
 }
