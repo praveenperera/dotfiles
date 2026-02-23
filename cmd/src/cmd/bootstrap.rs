@@ -267,7 +267,9 @@ pub fn run_with_flags(sh: &Shell, flags: Bootstrap) -> Result<()> {
 }
 
 fn reload_configs(sh: &Shell) {
-    if cmd!(sh, "tmux source-file ~/.tmux.conf")
+    let home = std::env::var("HOME").expect("HOME env var not set");
+    let tmux_conf = format!("{home}/.tmux.conf");
+    if cmd!(sh, "tmux source-file {tmux_conf}")
         .quiet()
         .run()
         .is_ok()
