@@ -40,3 +40,4 @@ claude/stats-cache.json
 opencode/AGENTS.md
 /claude/usage-data
 /claude/backups
+claude/mcp-needs-auth-cache.json
