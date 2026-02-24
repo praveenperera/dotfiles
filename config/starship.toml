@@ -1,4 +1,3 @@
-# Which is equivalent to
 format = """
 $username\
 $hostname\
@@ -91,7 +90,7 @@ disabled = true
 
 [pulumi]
 format = "[$symbol$stack]($style) "
-style = "bold 4"	
+style = "bold 4"
 
 
 # [username]
