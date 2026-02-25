@@ -28,6 +28,7 @@ alias gpr="gh pr create --web"
 # zellij
 alias zz=zellij
 alias x=tmuxSessionSwitch
+alias sf="cmd tmux sync-ssh --all"
 
 # jj
 alias jjt="ju tree"
@@ -360,20 +361,6 @@ export PATH="$NS_ROOT/bin:$PATH"
 {% if os == Os::MacOS %}
   eval "$(fnm env)"
 {% endif %}
-
-# sync SSH env vars with tmux session environment so starship
-# hides user@host after local reattach
-if [[ -n "$TMUX" ]]; then
-  autoload -Uz add-zsh-hook
-  _sync_ssh_env() {
-    for var in SSH_CONNECTION SSH_CLIENT; do
-      if [[ "$(tmux show-environment $var 2>/dev/null)" == "-$var" ]]; then
-        unset $var
-      fi
-    done
-  }
-  add-zsh-hook precmd _sync_ssh_env
-fi
 
 eval "$(starship init zsh)"
 eval "$(direnv hook zsh)"

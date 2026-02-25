@@ -46,6 +46,12 @@ pub enum TmuxCmd {
     },
     /// Clear 🔔 prefix from current window name
     ClearBell,
+    /// Print "unset SSH_CONNECTION SSH_CLIENT" if the tmux client is local (no sshd in parent chain)
+    SyncSsh {
+        /// Unset SSH vars in tmux session env and all idle panes at once
+        #[arg(short, long)]
+        all: bool,
+    },
     /// Send terminal notification (bell, macos, or both)
     Notify {
         /// Notification message (used with macos)
@@ -91,6 +97,7 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
     match flags.subcommand {
         TmuxCmd::MoveAfter { position } => move_after(sh, position),
         TmuxCmd::ClearBell => clear_bell(sh),
+        TmuxCmd::SyncSsh { all } => sync_ssh(sh, all),
         TmuxCmd::Notify {
             kind,
             message,
@@ -247,6 +254,80 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
             eprintln!("Unknown action: {other}");
         }
     }
+    Ok(())
+}
+
+fn is_client_local(sh: &Shell) -> Result<bool> {
+    let fmt = "#{client_pid}";
+    let client_pid: u32 = cmd!(sh, "tmux display-message -p {fmt}")
+        .quiet()
+        .read()?
+        .trim()
+        .parse()?;
+
+    let mut pid = client_pid;
+    while pid > 1 {
+        let pid_str = pid.to_string();
+        let output = match cmd!(sh, "ps -o comm= -o ppid= -p {pid_str}").quiet().read() {
+            Ok(o) => o,
+            Err(_) => break,
+        };
+
+        let parts: Vec<&str> = output.split_whitespace().collect();
+        if parts.len() < 2 {
+            break;
+        }
+
+        if parts[0].contains("sshd") {
+            return Ok(false);
+        }
+
+        pid = parts[1].parse().unwrap_or(0);
+    }
+
+    Ok(true)
+}
+
+fn sync_ssh(sh: &Shell, all: bool) -> Result<()> {
+    if !is_client_local(sh)? {
+        return Ok(());
+    }
+
+    if !all {
+        println!("unset SSH_CONNECTION SSH_CLIENT");
+        return Ok(());
+    }
+
+    // clear from tmux session env so new panes start clean
+    cmd!(sh, "tmux set-environment -u SSH_CONNECTION")
+        .quiet()
+        .run()
+        .ok();
+    cmd!(sh, "tmux set-environment -u SSH_CLIENT")
+        .quiet()
+        .run()
+        .ok();
+
+    // send unset to all idle shell panes
+    let fmt = "#{pane_id} #{pane_current_command}";
+    let panes = cmd!(sh, "tmux list-panes -a -F {fmt}").quiet().read()?;
+
+    for line in panes.lines() {
+        let Some((pane_id, current_cmd)) = line.split_once(' ') else {
+            continue;
+        };
+
+        if matches!(current_cmd, "zsh" | "bash") {
+            cmd!(
+                sh,
+                "tmux send-keys -t {pane_id} 'unset SSH_CONNECTION SSH_CLIENT' Enter"
+            )
+            .quiet()
+            .run()
+            .ok();
+        }
+    }
+
     Ok(())
 }
 
