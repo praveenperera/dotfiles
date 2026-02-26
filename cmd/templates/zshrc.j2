@@ -28,7 +28,7 @@ alias gpr="gh pr create --web"
 # zellij
 alias zz=zellij
 alias x=tmuxSessionSwitch
-alias sf="cmd tmux sync-ssh --all"
+sf() { cmd tmux sync-ssh --all && unset SSH_CONNECTION SSH_CLIENT; }
 
 # jj
 alias jjt="ju tree"

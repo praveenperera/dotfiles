@@ -72,8 +72,7 @@ pub enum TmuxCmd {
         #[arg(trailing_var_arg = true)]
         name: Vec<String>,
     },
-    /// Fzf picker menus (window, session, action)
-    #[command(alias = "p")]
+    /// Fzf picker menus (window, session, action, pane)
     Picker {
         #[command(subcommand)]
         kind: PickerKind,
@@ -91,6 +90,9 @@ pub enum PickerKind {
     /// Fzf quick actions menu
     #[command(alias = "a")]
     Action,
+    /// Fzf pane switcher
+    #[command(alias = "p")]
+    Pane,
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
@@ -109,6 +111,7 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
             PickerKind::Window => window_picker(sh),
             PickerKind::Session => session_picker(sh),
             PickerKind::Action => action_picker(sh),
+            PickerKind::Pane => pane_picker(sh),
         },
     }
 }
@@ -162,6 +165,22 @@ fn window_picker(sh: &Shell) -> Result<()> {
     if let Some(index) = selection.split(':').next() {
         let index = index.trim();
         cmd!(sh, "tmux select-window -t {index}").quiet().run()?;
+    }
+    Ok(())
+}
+
+fn pane_picker(sh: &Shell) -> Result<()> {
+    let fmt = "#{pane_index}: #{pane_current_command} (#{pane_current_path})";
+    let panes = cmd!(sh, "tmux list-panes -F {fmt}").quiet().read()?;
+    let prompt = "Pane > ";
+    let selection = cmd!(sh, "fzf --prompt {prompt} --height=100% --no-sort")
+        .quiet()
+        .stdin(panes.as_bytes())
+        .read()?;
+
+    if let Some(index) = selection.split(':').next() {
+        let index = index.trim();
+        cmd!(sh, "tmux select-pane -t {index}").quiet().run()?;
     }
     Ok(())
 }
@@ -290,6 +309,10 @@ fn is_client_local(sh: &Shell) -> Result<bool> {
 
 fn sync_ssh(sh: &Shell, all: bool) -> Result<()> {
     if !is_client_local(sh)? {
+        if all {
+            // silent non-zero exit so the shell function skips the unset
+            std::process::exit(1);
+        }
         return Ok(());
     }
 
@@ -308,7 +331,8 @@ fn sync_ssh(sh: &Shell, all: bool) -> Result<()> {
         .run()
         .ok();
 
-    // send unset to all idle shell panes
+    // send unset to all idle shell panes (skip current — handled by the shell function)
+    let self_pane = std::env::var("TMUX_PANE").ok();
     let fmt = "#{pane_id} #{pane_current_command}";
     let panes = cmd!(sh, "tmux list-panes -a -F {fmt}").quiet().read()?;
 
@@ -316,6 +340,10 @@ fn sync_ssh(sh: &Shell, all: bool) -> Result<()> {
         let Some((pane_id, current_cmd)) = line.split_once(' ') else {
             continue;
         };
+
+        if self_pane.as_deref() == Some(pane_id) {
+            continue;
+        }
 
         if matches!(current_cmd, "zsh" | "bash") {
             cmd!(
@@ -326,17 +354,6 @@ fn sync_ssh(sh: &Shell, all: bool) -> Result<()> {
             .run()
             .ok();
         }
-    }
-
-    // send-keys to the current pane too — keys buffer until cmd exits
-    if let Ok(self_pane) = std::env::var("TMUX_PANE") {
-        cmd!(
-            sh,
-            "tmux send-keys -t {self_pane} 'unset SSH_CONNECTION SSH_CLIENT' Enter"
-        )
-        .quiet()
-        .run()
-        .ok();
     }
 
     Ok(())

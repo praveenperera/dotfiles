@@ -94,7 +94,8 @@
       "WebFetch(domain:ui.shadcn.com)",
       "Bash(tail:*)",
       "Bash(git:*)",
-      "Bash(alias:*)"
+      "Bash(alias:*)",
+      "Bash(cargo build:*)"
     ],
     "deny": [],
     "ask": []
