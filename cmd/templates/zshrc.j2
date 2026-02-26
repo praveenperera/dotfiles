@@ -73,6 +73,15 @@ alias clps="claude --permission-mode plan --model sonnet"
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"
 
+# start codex in plan mode by default for plain codex
+codex() {
+  if [[ $# -eq 0 ]]; then
+    command codex "/plan"
+  else
+    command codex "$@"
+  fi
+}
+
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
 
