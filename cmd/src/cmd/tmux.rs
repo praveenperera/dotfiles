@@ -328,6 +328,17 @@ fn sync_ssh(sh: &Shell, all: bool) -> Result<()> {
         }
     }
 
+    // send-keys to the current pane too — keys buffer until cmd exits
+    if let Ok(self_pane) = std::env::var("TMUX_PANE") {
+        cmd!(
+            sh,
+            "tmux send-keys -t {self_pane} 'unset SSH_CONNECTION SSH_CLIENT' Enter"
+        )
+        .quiet()
+        .run()
+        .ok();
+    }
+
     Ok(())
 }
 

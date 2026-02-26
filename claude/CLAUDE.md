@@ -3,7 +3,7 @@
 - Stop puttting Created by claude code into my files, if it has an author use me Praveen Perera
 - Don't add comments that need old removed code to make sense in context
 - All comments should make sense without the context if this particular conversation
-- If creating git commits never co author the commit with claude/codex or add any notes about claude just use my name
+- If creating git commits never co author the commit with claude or add any notes about claude just use my name
 - Start inline code comments with a lowercase
 - Capitalize higher level doc comments like functions and modules (ex: in rust comments starting with /// instead of //)
 - Don't end comments with a period (periods within comments are fine)
