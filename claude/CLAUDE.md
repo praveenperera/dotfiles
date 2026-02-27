@@ -9,6 +9,7 @@
 - Don't end comments with a period (periods within comments are fine)
 - Only add important comments to explain why something is being done
 - Try to minimize nesting in functions
+- Separate distinct logical steps within functions with blank lines, but not between a comment and the code it describes
 - When I report a bug, don't start by trying to fix it. Instead, start by writing a test that reproduces the bug. Then, have subagents try to fix the bug and prove it with a passing test
 - Don't default to leaving deprecated code in place, remove it or ask if this is a full replacement or if old code is still needed
 - When working with this user's projects: always read existing config/code before answering from general knowledge. Never assume defaults — check the actual files first
