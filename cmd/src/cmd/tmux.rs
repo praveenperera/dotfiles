@@ -254,29 +254,25 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
             cmd!(sh, "tmux swap-pane -U").quiet().run()?;
         }
         "Rename Tab" => {
-            std::process::Command::new("tmux")
-                .args(["command-prompt", "-p", "Window name:", "rename-window '%1'"])
-                .spawn()?;
+            let prompt = "Window name:";
+            let action = "rename-window '%1'";
+            cmd!(sh, "tmux command-prompt -p {prompt} {action}")
+                .quiet()
+                .run()?;
         }
         "Rename Session" => {
-            std::process::Command::new("tmux")
-                .args([
-                    "command-prompt",
-                    "-p",
-                    "Session name:",
-                    "rename-session '%1'",
-                ])
-                .spawn()?;
+            let prompt = "Session name:";
+            let action = "rename-session '%1'";
+            cmd!(sh, "tmux command-prompt -p {prompt} {action}")
+                .quiet()
+                .run()?;
         }
         "Rename Pane" => {
-            std::process::Command::new("tmux")
-                .args([
-                    "command-prompt",
-                    "-p",
-                    "Pane name:",
-                    "set -p @pane_name '%1'",
-                ])
-                .spawn()?;
+            let prompt = "Pane name:";
+            let action = "set -p @pane_name '%1'";
+            cmd!(sh, "tmux command-prompt -p {prompt} {action}")
+                .quiet()
+                .run()?;
         }
         "Toggle Pane Names" => {
             let status = cmd!(sh, "tmux show-option -gv pane-border-status")
