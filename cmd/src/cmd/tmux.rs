@@ -170,7 +170,7 @@ fn window_picker(sh: &Shell) -> Result<()> {
 }
 
 fn pane_picker(sh: &Shell) -> Result<()> {
-    let fmt = "#{pane_index}: #{pane_current_command} (#{pane_current_path})";
+    let fmt = "#{pane_index}: #{?#{@pane_name},#{@pane_name} - ,}#{pane_current_command} (#{pane_current_path})";
     let panes = cmd!(sh, "tmux list-panes -F {fmt}").quiet().read()?;
     let prompt = "Pane > ";
     let selection = cmd!(sh, "fzf --prompt {prompt} --height=100% --no-sort")
@@ -197,6 +197,8 @@ const ACTIONS: &[&str] = &[
     "Swap Up",
     "Rename Tab",
     "Rename Session",
+    "Rename Pane",
+    "Toggle Pane Names",
     "Scroll Back",
 ];
 
@@ -265,6 +267,31 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
                     "rename-session '%1'",
                 ])
                 .spawn()?;
+        }
+        "Rename Pane" => {
+            std::process::Command::new("tmux")
+                .args([
+                    "command-prompt",
+                    "-p",
+                    "Pane name:",
+                    "set -p @pane_name '%1'",
+                ])
+                .spawn()?;
+        }
+        "Toggle Pane Names" => {
+            let status = cmd!(sh, "tmux show-option -gv pane-border-status")
+                .quiet()
+                .read()
+                .unwrap_or_default();
+            if status.trim() == "off" {
+                cmd!(sh, "tmux set -g pane-border-status top")
+                    .quiet()
+                    .run()?;
+            } else {
+                cmd!(sh, "tmux set -g pane-border-status off")
+                    .quiet()
+                    .run()?;
+            }
         }
         "Scroll Back" => {
             cmd!(sh, "tmux copy-mode").quiet().run()?;

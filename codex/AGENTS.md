@@ -1,3 +1,7 @@
+# Workflow
+
+- Always start in plan mode. Before making any changes, present a clear plan of what you intend to do and wait for explicit approval before proceeding with implementation
+
 # General
 
 - Stop puttting Created by claude code into my files, if it has an author use me Praveen Perera

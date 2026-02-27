@@ -77,6 +77,12 @@ keybind = cmd+physical:nine=text:\x029
 keybind = cmd+period=text:\x02,
 keybind = cmd+shift+period=text:\x02$
 
+# rename pane
+keybind = ctrl+shift+period=text:\x02.
+
+# toggle pane name labels
+keybind = ctrl+shift+t=text:\x02P
+
 # delete by word
 keybind = alt+backspace=text:\x17
 

@@ -95,7 +95,11 @@
       "Bash(tail:*)",
       "Bash(git:*)",
       "Bash(alias:*)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "Bash(command codex --help)",
+      "Bash(command codex -a untrusted -s read-only --help)",
+      "Bash(command codex -a suggest --help)",
+      "Bash(command which:*)"
     ],
     "deny": [],
     "ask": []
