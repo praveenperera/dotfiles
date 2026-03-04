@@ -1,5 +1,7 @@
 ---
 name: better-context
+aliases:
+  - btx
 description: |
   Clone and explore external codebases using the better-context CLI. Use this skill when:
   - User wants to explore a GitHub repository (e.g., "explore anthropics/claude-code")
