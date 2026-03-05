@@ -33,6 +33,7 @@
       "Bash(gh api:*)",
       "Bash(gh project list)",
       "Bash(awk:*)",
+      "Skill(review-fix-loop)",
       "Bash(tee:*)",
       "Bash(jj:*)",
       "Bash(find:*)",
@@ -80,5 +81,6 @@
   "skipDangerousModePermissionPrompt": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
-  }
+  },
+  "voiceEnabled": true
 }
