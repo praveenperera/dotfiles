@@ -38,7 +38,7 @@ Write the current plan to `/tmp/claude-plan-${REVIEW_ID}.md`. If there is no pla
 
 ```bash
 codex exec \
-  -m gpt-5.3-codex \
+  -m gpt-5.4 \
   -s read-only \
   -o /tmp/codex-review-${REVIEW_ID}.md \
   "Review the implementation plan in /tmp/claude-plan-${REVIEW_ID}.md. Focus on:
@@ -56,7 +56,7 @@ If changes are needed, end with exactly: VERDICT: REVISE"
 **Capture the Codex session ID** from the output. Store as `CODEX_SESSION_ID` for session resume.
 
 **Notes:**
-- Use `-m gpt-5.3-codex` as default. Accept model override from user arguments (e.g., `/codex-review-auto o4-mini`).
+- Use `-m gpt-5.4` as default. Accept model override from user arguments (e.g., `/codex-review-auto o4-mini`).
 - Use `-s read-only` so Codex cannot modify files.
 - Use `-o` to capture output to a file.
 
@@ -119,7 +119,7 @@ Then go back to **Step 4**.
 # Codex Review Decision Log
 
 **Plan:** [brief plan title]
-**Model:** gpt-5.3-codex
+**Model:** gpt-5.4
 **Rounds:** N
 **Final verdict:** APPROVED / NOT APPROVED
 
@@ -146,7 +146,7 @@ Then go back to **Step 4**.
 **Then present to user:**
 
 ```
-## Codex Review — Complete (model: gpt-5.3-codex)
+## Codex Review — Complete (model: gpt-5.4)
 
 **Status:** ✅ Approved after N round(s) | ⚠️ Max rounds reached
 
@@ -186,7 +186,7 @@ Final:   Write decision log → Enter plan mode → User approves
 - The **decision log file is mandatory** — always write it before presenting results
 - **Enter plan mode once at the end** so the user gets final approval over the revised plan
 - Do NOT delete the decision log during cleanup
-- Default model is `gpt-5.3-codex`. Accept model override from user arguments
+- Default model is `gpt-5.4`. Accept model override from user arguments
 - Always use read-only sandbox mode
 - Max 5 review rounds
 - If Codex CLI is not installed or fails, inform the user and suggest `npm install -g @openai/codex`
