@@ -15,6 +15,12 @@
 - When working with this user's projects: always read existing config/code before answering from general knowledge. Never assume defaults — check the actual files first
 - Scope changes precisely to what the user asks for. Do not modify files or components beyond the explicit request without asking first. If unsure about scope, ask before making changes — not after
 
+# Refactoring Discipline
+
+- When refactoring code that calls external crates, read the dependency source to verify behavior — don't trust variable names or comments. Use `/rust-crate-source` or `/better-context` skills, or check `~/.cargo/registry/src/` to read crate source
+- When code has documented assumptions, trace the data flow backwards to verify callers satisfy those assumptions
+- Refactoring is an opportunity to catch correctness bugs, not just move code around — question the logic, not just the structure
+
 # Rust Project Specific
 
 - `info` and `error` logs are okay to start capitalized
