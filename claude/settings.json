@@ -77,12 +77,6 @@
     "safety-net@cc-marketplace": true,
     "greptile@claude-plugins-official": true
   },
-  "alwaysThinkingEnabled": true,
-  "voiceEnabled": true,
-  "skipDangerousModePermissionPrompt": true,
-  "feedbackSurveyState": {
-    "lastShownTime": 1754075865483
-  },
   "extraKnownMarketplaces": {
     "claude-code-plugins": {
       "source": {
@@ -90,5 +84,11 @@
         "repo": "anthropics/claude-code"
       }
     }
+  },
+  "alwaysThinkingEnabled": true,
+  "voiceEnabled": true,
+  "skipDangerousModePermissionPrompt": true,
+  "feedbackSurveyState": {
+    "lastShownTime": 1754075865483
   }
 }

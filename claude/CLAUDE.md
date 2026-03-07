@@ -35,6 +35,10 @@
 - `#[act_zero_ext::into_actor_result]` on `fn foo()` generates: public async `foo() -> ActorResult<T>` wrapper + private `do_foo()` with original logic
 - Prefer structs with methods over freestanding functions to encapsulate state and provide a cleaner API
 
+# Python Project Specific
+
+- Always use `uv` NEVER pip
+
 # Build Verification
 
 - For Rust projects: always run `just fmt` and `just clippy` after changes (most projects use a justfile; fall back to `cargo fmt` and `cargo clippy` if no justfile exists). For Android/Kotlin: verify builds compile. For iOS/Swift: verify builds compile. Never submit changes without verifying they compile
