@@ -17,7 +17,7 @@
 
 # Refactoring Discipline
 
-- When refactoring code that calls external crates, read the dependency source to verify behavior — don't trust variable names or comments. Use `/rust-crate-source` or `/better-context` skills, or check `~/.cargo/registry/src/` to read crate source
+- When refactoring code that calls external crates, read the dependency source to verify behavior — don't trust variable names or comments. Use `/rust-crate-source` or `/btx` skills, or check `~/.cargo/registry/src/` to read crate source
 - When code has documented assumptions, trace the data flow backwards to verify callers satisfy those assumptions
 - Refactoring is an opportunity to catch correctness bugs, not just move code around — question the logic, not just the structure
 

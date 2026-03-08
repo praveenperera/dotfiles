@@ -3,21 +3,21 @@ name: better-context
 aliases:
   - btx
 description: |
-  Clone and explore external codebases using the better-context CLI. Use this skill when:
+  Clone and explore external codebases using the btx CLI. Use this skill when:
   - User wants to explore a GitHub repository (e.g., "explore anthropics/claude-code")
   - User asks how a library/framework works and you need to read its source
   - User wants to understand implementation details of an external project
   - User provides a repo URL or owner/repo and wants you to examine it
 ---
 
-# better-context
+# btx
 
-Clone or update repos for exploration using the `better-context` CLI.
+Clone or update repos for exploration using the `btx` CLI.
 
 ## Usage
 
 ```bash
-better-context <repo> [options]
+btx <repo> [options]
 ```
 
 **Arguments:**
@@ -45,7 +45,7 @@ JSON with repo location and metadata:
 
 ## Workflow
 
-1. Run `better-context <repo>` to clone/update
+1. Run `btx <repo>` to clone/update
 2. Parse the JSON output to get the `path`
 3. Use Glob/Grep/Read tools to explore the codebase at that path
 
@@ -53,14 +53,14 @@ JSON with repo location and metadata:
 
 ```bash
 # GitHub shorthand
-better-context anthropics/claude-code
+btx anthropics/claude-code
 
 # Specific branch
-better-context tokio-rs/tokio --ref tokio-1.0.0
+btx tokio-rs/tokio --ref tokio-1.0.0
 
 # Fresh clone
-better-context facebook/react --fresh
+btx facebook/react --fresh
 
 # Local path (just validates and returns info)
-better-context ./my-project
+btx ./my-project
 ```

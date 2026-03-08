@@ -11,7 +11,7 @@ use xshell::{cmd, Shell};
 
 #[derive(Debug, Clone, Parser)]
 #[command(
-    name = "better-context",
+    name = "btx",
     about = "Clone/update a repo for agent exploration"
 )]
 pub struct BetterContext {

@@ -78,7 +78,7 @@
       "WebFetch(domain:developers.openai.com)",
       "WebFetch(domain:fossies.org)",
       "Bash(curl:*)",
-      "Bash(better-context:*)",
+      "Bash(btx:*)",
       "Bash(/Users/praveen/code/dotfiles/cmd/target/release/cmd*)",
       "Bash(./cmd/target/release/cmd:*)",
       "WebFetch(domain:opentofu.org)",

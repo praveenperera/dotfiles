@@ -15,7 +15,7 @@ use xshell::Shell;
 
 pub type Tool = (&'static str, fn(&Shell, &[OsString]) -> Result<()>);
 pub const CMD_TOOLS: &[Tool] = &[
-    ("better-context", better_context::run),
+    ("btx", better_context::run),
     ("cmd", cmd::run),
     ("file", file::run),
     ("notf", cmd::tmux::notify_run),
