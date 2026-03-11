@@ -200,6 +200,7 @@ const ACTIONS: &[&str] = &[
     "Rename Pane",
     "Toggle Pane Names",
     "Scroll Back",
+    "Move Tab to Session",
 ];
 
 fn action_picker(sh: &Shell) -> Result<()> {
@@ -291,6 +292,47 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
         }
         "Scroll Back" => {
             cmd!(sh, "tmux copy-mode").quiet().run()?;
+        }
+        "Move Tab to Session" => {
+            let session_fmt = "#S";
+            let current = cmd!(sh, "tmux display-message -p {session_fmt}")
+                .quiet()
+                .read()
+                .unwrap_or_default();
+            let current = current.trim().to_string();
+
+            let src_fmt = "#{session_name}:#{window_index}";
+            let source = cmd!(sh, "tmux display-message -p {src_fmt}")
+                .quiet()
+                .read()
+                .unwrap_or_default();
+            let source = source.trim().to_string();
+
+            let all_sessions = cmd!(sh, "tmux list-sessions -F {session_fmt}")
+                .quiet()
+                .read()?;
+            let other_sessions: String = all_sessions
+                .lines()
+                .filter(|s| s.trim() != current)
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            if other_sessions.is_empty() {
+                eprintln!("No other sessions to move to");
+                return Ok(());
+            }
+
+            let prompt = "Move to > ";
+            let selection = cmd!(sh, "fzf --prompt {prompt} --height=100% --no-sort")
+                .quiet()
+                .stdin(other_sessions.as_bytes())
+                .read()?;
+
+            let target = selection.trim();
+            if !target.is_empty() {
+                let dst = format!("{target}:");
+                cmd!(sh, "tmux move-window -s {source} -t {dst}").run()?;
+            }
         }
         other => {
             eprintln!("Unknown action: {other}");
