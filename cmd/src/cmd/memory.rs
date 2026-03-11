@@ -1,23 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use clap::Subcommand;
 use colored::Colorize;
 use eyre::{eyre, Context as _, Result};
 use log::info;
 use xshell::Shell;
-
-#[derive(Debug, Clone)]
-pub struct Memory {
-    pub subcommand: MemoryCmd,
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum MemoryCmd {
-    /// Set up iCloud symlinks for Claude and Codex memories
-    Setup,
-    /// Sync Claude project memories into Codex global memories
-    Sync,
-}
 
 fn home_dir() -> PathBuf {
     let home = std::env::var("HOME").expect("HOME env var not set");
@@ -53,14 +39,7 @@ fn human_readable_name(short_name: &str) -> String {
     }
 }
 
-pub fn run_with_flags(sh: &Shell, flags: Memory) -> Result<()> {
-    match flags.subcommand {
-        MemoryCmd::Setup => setup(sh),
-        MemoryCmd::Sync => sync(sh),
-    }
-}
-
-fn setup(sh: &Shell) -> Result<()> {
+pub fn setup(sh: &Shell) -> Result<()> {
     let icloud_dir = icloud_memories_dir();
     let icloud_claude = icloud_dir.join("claude/projects");
     let icloud_codex = icloud_dir.join("codex");
@@ -163,13 +142,13 @@ fn setup_codex_memories(sh: &Shell, icloud_codex: &Path) -> Result<()> {
     Ok(())
 }
 
-fn sync(sh: &Shell) -> Result<()> {
+pub fn sync(sh: &Shell) -> Result<()> {
     let icloud_claude = icloud_memories_dir().join("claude/projects");
     let icloud_codex = icloud_memories_dir().join("codex");
 
     if !sh.path_exists(&icloud_claude) {
         return Err(eyre!(
-            "iCloud Claude memories not found. Run `cmd memory setup` first"
+            "iCloud Claude memories not found. Run `cmd sync memory --setup` first"
         ));
     }
 
