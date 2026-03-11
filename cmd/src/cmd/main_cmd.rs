@@ -144,6 +144,13 @@ pub enum MainCmd {
         #[command(subcommand)]
         subcommand: crate::cmd::file::FileCmd,
     },
+
+    /// Sync AI memories (Claude/Codex) via iCloud
+    #[command(arg_required_else_help = true)]
+    Memory {
+        #[command(subcommand)]
+        subcommand: crate::cmd::memory::MemoryCmd,
+    },
 }
 
 #[derive(Debug, Clone, Subcommand)]

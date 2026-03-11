@@ -5,6 +5,7 @@ pub mod file;
 pub mod gcloud;
 pub mod generate;
 pub mod main_cmd;
+pub mod memory;
 pub mod secrets;
 pub mod terraform;
 pub mod tmux;
@@ -77,6 +78,10 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::File { subcommand } => {
             let file_flags = file::File { subcommand };
             file::run_with_flags(&sh, file_flags)
+        }
+        MainCmd::Memory { subcommand } => {
+            let memory_flags = memory::Memory { subcommand };
+            memory::run_with_flags(&sh, memory_flags)
         }
     }
 }

@@ -10,10 +10,7 @@ use std::time::Duration;
 use xshell::{cmd, Shell};
 
 #[derive(Debug, Clone, Parser)]
-#[command(
-    name = "btx",
-    about = "Clone/update a repo for agent exploration"
-)]
+#[command(name = "btx", about = "Clone/update a repo for agent exploration")]
 pub struct BetterContext {
     /// Repository: owner/repo, URL, or local path
     pub repo: String,
