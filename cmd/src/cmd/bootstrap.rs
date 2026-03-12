@@ -296,6 +296,9 @@ pub fn config(sh: &Shell) -> Result<()> {
     // setup dotfiles and config dirs
     setup_config_and_dotfiles(sh)?;
 
+    // create ~/.gitconfig.local if it doesn't exist
+    create_gitconfig_local(sh)?;
+
     // create hardlinks for cmd tools
     create_hardlinks(sh)?;
 
@@ -623,6 +626,20 @@ fn setup_ghostty_terminfo(sh: &Shell) -> Result<()> {
     println!("{}", "installing ghostty terminfo to ~/.terminfo".green());
     let script = format!("TERMINFO_DIRS='{ghostty_terminfo}' infocmp -x xterm-ghostty | tic -x -");
     cmd!(sh, "sh -c {script}").run()?;
+
+    Ok(())
+}
+
+fn create_gitconfig_local(sh: &Shell) -> Result<()> {
+    let home = std::env::var("HOME").expect("HOME env var not set");
+    let path = format!("{home}/.gitconfig.local");
+
+    if sh.path_exists(&path) {
+        return Ok(());
+    }
+
+    println!("{}", "creating ~/.gitconfig.local".green());
+    sh.write_file(&path, "[user]\n  signingkey = CHANGE_THIS\n")?;
 
     Ok(())
 }
