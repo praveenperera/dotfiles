@@ -64,6 +64,8 @@
 [user]
   name = Praveen Perera
   email = me@praveenperera.com
+[include]
+  path = ~/.gitconfig.local
 [rerere]
   enabled = true
 [init]
