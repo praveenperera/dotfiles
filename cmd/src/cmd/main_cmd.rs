@@ -151,6 +151,13 @@ pub enum MainCmd {
         #[command(subcommand)]
         subcommand: crate::cmd::sync::SyncCmd,
     },
+
+    /// Academic paper search (Semantic Scholar & OpenAlex)
+    #[command(arg_required_else_help = true)]
+    Search {
+        #[command(subcommand)]
+        subcommand: crate::cmd::search::SearchCmd,
+    },
 }
 
 #[derive(Debug, Clone, Subcommand)]
