@@ -154,7 +154,7 @@ pub enum MainCmd {
 
     /// Academic paper search (Semantic Scholar & OpenAlex)
     #[command(arg_required_else_help = true)]
-    Search {
+    Aps {
         #[command(subcommand)]
         subcommand: crate::cmd::search::SearchCmd,
     },

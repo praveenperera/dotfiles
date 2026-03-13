@@ -85,7 +85,7 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
             let sync_flags = sync::Sync { subcommand };
             sync::run_with_flags(&sh, sync_flags)
         }
-        MainCmd::Search { subcommand } => {
+        MainCmd::Aps { subcommand } => {
             let search_flags = search::Search { subcommand };
             search::run_with_flags(search_flags)
         }

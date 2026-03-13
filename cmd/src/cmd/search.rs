@@ -15,7 +15,7 @@ pub enum OutputFormat {
 
 #[derive(Debug, Clone, Parser)]
 #[command(
-    name = "cms",
+    name = "aps",
     about = "Academic paper search (Semantic Scholar & OpenAlex)"
 )]
 pub struct Search {

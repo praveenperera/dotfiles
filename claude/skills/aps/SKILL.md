@@ -1,11 +1,11 @@
 ---
-name: cms
+name: aps
 description: Academic paper search CLI (Semantic Scholar & OpenAlex). Use when the user needs to find papers, look up citations, get paper details, search authors, or do any academic research task.
 ---
 
-# cms — Academic Paper Search
+# aps — Academic Paper Search
 
-`cms` (or `cmd search`) searches academic papers across Semantic Scholar (S2) and OpenAlex (OA). Both backends share a unified interface — learn one, swap the prefix.
+`aps` (or `cmd search`) searches academic papers across Semantic Scholar (S2) and OpenAlex (OA). Both backends share a unified interface — learn one, swap the prefix.
 
 ## When to Use
 
@@ -19,7 +19,7 @@ description: Academic paper search CLI (Semantic Scholar & OpenAlex). Use when t
 
 ## Quick Reference
 
-### Shared Commands (both `cms s2` and `cms oa`)
+### Shared Commands (both `aps s2` and `aps oa`)
 
 | Command | Alias | Description |
 |---------|-------|-------------|
@@ -64,77 +64,77 @@ description: Academic paper search CLI (Semantic Scholar & OpenAlex). Use when t
 
 ```bash
 # keyword search
-cms s2 search "transformer attention" --limit 5
-cms oa search "CRISPR gene editing" --limit 5
+aps s2 search "transformer attention" --limit 5
+aps oa search "CRISPR gene editing" --limit 5
 
 # with filters
-cms s2 search "large language models" --year 2023- --field "Computer Science" --limit 10
-cms oa search "climate change" --year 2020-2024 --open-access --sort cited_by_count:desc
+aps s2 search "large language models" --year 2023- --field "Computer Science" --limit 10
+aps oa search "climate change" --year 2020-2024 --open-access --sort cited_by_count:desc
 
 # semantic search (embedding-based, finds conceptually related papers)
-cms oa search --semantic "effects of sleep on memory consolidation" --limit 10
+aps oa search --semantic "effects of sleep on memory consolidation" --limit 10
 ```
 
 ### Look Up a Specific Paper
 
 ```bash
 # by arXiv ID
-cms s2 paper ARXIV:1706.03762
+aps s2 paper ARXIV:1706.03762
 
 # by DOI
-cms s2 paper DOI:10.1038/s41586-020-2308-7
-cms oa paper "10.1038/s41586-020-2308-7"
+aps s2 paper DOI:10.1038/s41586-020-2308-7
+aps oa paper "10.1038/s41586-020-2308-7"
 
 # by title (S2 fuzzy match)
-cms s2 match "Attention Is All You Need"
+aps s2 match "Attention Is All You Need"
 ```
 
 ### Citations & References
 
 ```bash
 # what cites this paper?
-cms s2 citations ARXIV:1706.03762 --limit 20
-cms oa citations W2963403868 --limit 20
+aps s2 citations ARXIV:1706.03762 --limit 20
+aps oa citations W2963403868 --limit 20
 
 # what does this paper cite?
-cms s2 references ARXIV:1706.03762
-cms oa references W2963403868
+aps s2 references ARXIV:1706.03762
+aps oa references W2963403868
 ```
 
 ### Authors
 
 ```bash
 # search by name
-cms s2 author "Geoffrey Hinton"
-cms oa author "Geoffrey Hinton"
+aps s2 author "Geoffrey Hinton"
+aps oa author "Geoffrey Hinton"
 
 # get details by ID
-cms s2 author 1695689        # S2 numeric author ID
-cms oa author A5023888391    # OpenAlex author ID (starts with A)
+aps s2 author 1695689        # S2 numeric author ID
+aps oa author A5023888391    # OpenAlex author ID (starts with A)
 ```
 
 ### S2-only: Recommendations & Snippets
 
 ```bash
 # papers similar to "Attention Is All You Need"
-cms s2 recommend ARXIV:1706.03762 --limit 5 --pool recent
+aps s2 recommend ARXIV:1706.03762 --limit 5 --pool recent
 
 # full-text passage search
-cms s2 snippets "backpropagation through time" --limit 5
+aps s2 snippets "backpropagation through time" --limit 5
 ```
 
 ### OA-only: Institutions, Topics, Group-by
 
 ```bash
 # find institutions
-cms oa institutions "MIT"
+aps oa institutions "MIT"
 
 # find topics
-cms oa topics "machine learning"
+aps oa topics "machine learning"
 
 # aggregate data
-cms oa group-by oa_status --filter "publication_year:2024"
-cms oa group-by publication_year --filter "authorships.institutions.id:I63966007"
+aps oa group-by oa_status --filter "publication_year:2024"
+aps oa group-by publication_year --filter "authorships.institutions.id:I63966007"
 ```
 
 ### JSON Output
@@ -142,22 +142,22 @@ cms oa group-by publication_year --filter "authorships.institutions.id:I63966007
 Any command supports `-F json` for structured output:
 
 ```bash
-cms s2 search "attention" --limit 1 -F json
-cms oa search "CRISPR" --limit 1 -F json | jq '.results[0].title'
+aps s2 search "attention" --limit 1 -F json
+aps oa search "CRISPR" --limit 1 -F json | jq '.results[0].title'
 ```
 
 ## Choosing Between S2 and OA
 
 | Need | Use |
 |------|-----|
-| Paper recommendations | `cms s2 recommend` |
-| Full-text snippets | `cms s2 snippets` |
-| Exact title lookup | `cms s2 match` |
-| Semantic search | `cms oa search --semantic` (better) or `cms s2 search` |
-| Institution data | `cms oa institutions` |
-| Topic taxonomy | `cms oa topics` |
-| Aggregation/analytics | `cms oa group-by` |
-| Citation intents (why cited) | `cms s2 citations` |
+| Paper recommendations | `aps s2 recommend` |
+| Full-text snippets | `aps s2 snippets` |
+| Exact title lookup | `aps s2 match` |
+| Semantic search | `aps oa search --semantic` (better) or `aps s2 search` |
+| Institution data | `aps oa institutions` |
+| Topic taxonomy | `aps oa topics` |
+| Aggregation/analytics | `aps oa group-by` |
+| Citation intents (why cited) | `aps s2 citations` |
 | Open access filtering | Both, but OA has richer `--filter` |
 | General paper search | Both work well |
 
@@ -177,10 +177,10 @@ The `--filter` flag accepts raw OpenAlex filter strings:
 
 ```bash
 # combine filters with commas (AND)
-cms oa search "deep learning" --filter "is_oa:true,language:en,type:article"
+aps oa search "deep learning" --filter "is_oa:true,language:en,type:article"
 
 # OR within a filter using pipe
-cms oa search "neural" --filter "publication_year:2023|2024"
+aps oa search "neural" --filter "publication_year:2023|2024"
 ```
 
 Key filters: `publication_year`, `is_oa`, `oa_status`, `type`, `language`, `has_fulltext`, `cited_by_count`

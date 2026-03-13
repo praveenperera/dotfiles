@@ -17,7 +17,7 @@ pub type Tool = (&'static str, fn(&Shell, &[OsString]) -> Result<()>);
 pub const CMD_TOOLS: &[Tool] = &[
     ("btx", better_context::run),
     ("cmd", cmd::run),
-    ("cms", cmd::search::run),
+    ("aps", cmd::search::run),
     ("file", file::run),
     ("notf", cmd::tmux::notify_run),
     ("pr-context", pr_context::run),
