@@ -99,7 +99,14 @@
       "Bash(command codex --help)",
       "Bash(command codex -a untrusted -s read-only --help)",
       "Bash(command codex -a suggest --help)",
-      "Bash(command which:*)"
+      "Bash(command which:*)",
+      "Bash(open -a Tailscale 2>&1)",
+      "Bash(sleep 5 && ping -c 3 -W 2 100.95.117.69 2>&1)",
+      "Bash(tailscale status:*)",
+      "Bash(sleep 10 && ping -c 5 -W 2 100.95.117.69 2>&1)",
+      "Bash(nc -z -w 5 100.95.117.69 22 2>&1; echo \"ssh: $?\")",
+      "Bash(tailscale ping:*)",
+      "Bash(scutil --nc stop \"Tailscale\" 2>&1; echo \"stopped\"; sleep 3; scutil --nc start \"Tailscale\" 2>&1; echo \"started\")"
     ],
     "deny": [],
     "ask": []
