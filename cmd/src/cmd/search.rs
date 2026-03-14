@@ -1,3 +1,4 @@
+pub mod config;
 pub mod openalex;
 pub mod s2;
 
@@ -38,6 +39,12 @@ pub enum SearchCmd {
         #[command(subcommand)]
         subcommand: openalex::OpenAlexCmd,
     },
+
+    /// Save API keys from env vars to ~/.config/aps/
+    Login,
+
+    /// Show current auth status
+    Status,
 }
 
 pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
@@ -54,6 +61,8 @@ async fn run_async(flags: Search) -> Result<()> {
     match flags.subcommand {
         SearchCmd::SemanticScholar { subcommand } => s2::run_async(subcommand).await,
         SearchCmd::Openalex { subcommand } => openalex::run_async(subcommand).await,
+        SearchCmd::Login => config::login(),
+        SearchCmd::Status => config::status(),
     }
 }
 

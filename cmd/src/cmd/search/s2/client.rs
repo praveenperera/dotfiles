@@ -2,6 +2,7 @@ use eyre::{eyre, Result};
 
 use super::types::*;
 use super::CommonFilters;
+use crate::cmd::search::config;
 
 const API_BASE: &str = "https://api.semanticscholar.org/graph/v1";
 const RECS_BASE: &str = "https://api.semanticscholar.org/recommendations/v1";
@@ -19,7 +20,7 @@ impl S2Client {
     pub fn new() -> Result<Self> {
         let mut headers = reqwest::header::HeaderMap::new();
 
-        if let Ok(key) = std::env::var("SEMANTIC_SCHOLAR_API_KEY") {
+        if let Some(key) = config::get_api_key("s2-api-key", "SEMANTIC_SCHOLAR_API_KEY") {
             headers.insert("x-api-key", key.parse()?);
         }
 
@@ -32,6 +33,7 @@ impl S2Client {
     }
 
     async fn get(&self, url: &str) -> Result<reqwest::Response> {
+        config::s2_throttle().await;
         let response = self.client.get(url).send().await?;
         let status = response.status();
 

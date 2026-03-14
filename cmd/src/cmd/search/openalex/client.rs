@@ -2,6 +2,7 @@ use eyre::{eyre, Result};
 
 use super::types::*;
 use super::CommonFilters;
+use crate::cmd::search::config;
 
 const API_BASE: &str = "https://api.openalex.org";
 const USER_AGENT: &str =
@@ -14,7 +15,7 @@ pub struct OpenAlexClient {
 
 impl OpenAlexClient {
     pub fn new() -> Result<Self> {
-        let api_key = std::env::var("OPENALEX_API_KEY").ok();
+        let api_key = config::get_api_key("oa-api-key", "OPENALEX_API_KEY");
 
         let client = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
 
