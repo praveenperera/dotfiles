@@ -5,7 +5,9 @@ description: Academic paper search CLI (Semantic Scholar & OpenAlex). Use when t
 
 # aps — Academic Paper Search
 
-`aps` (or `cmd search`) searches academic papers across Semantic Scholar (S2) and OpenAlex (OA). Both backends share a unified interface — learn one, swap the prefix.
+`aps` (or `cmd aps`) searches academic papers across Semantic Scholar (S2) and OpenAlex (OA). Both backends share a unified interface — learn one, swap the prefix.
+
+**Always search both S2 and OA** for any query. They index different corpora and return different results. Run both in parallel and combine the findings.
 
 ## When to Use
 
@@ -146,20 +148,15 @@ aps s2 search "attention" --limit 1 -F json
 aps oa search "CRISPR" --limit 1 -F json | jq '.results[0].title'
 ```
 
-## Choosing Between S2 and OA
+## Always Use Both
 
-| Need | Use |
-|------|-----|
-| Paper recommendations | `aps s2 recommend` |
-| Full-text snippets | `aps s2 snippets` |
-| Exact title lookup | `aps s2 match` |
-| Semantic search | `aps oa search --semantic` (better) or `aps s2 search` |
-| Institution data | `aps oa institutions` |
-| Topic taxonomy | `aps oa topics` |
-| Aggregation/analytics | `aps oa group-by` |
-| Citation intents (why cited) | `aps s2 citations` |
-| Open access filtering | Both, but OA has richer `--filter` |
-| General paper search | Both work well |
+Always run both `aps s2` and `aps oa` for any search. They have different corpora and ranking — combining results gives better coverage. For commands only available on one backend, use that backend.
+
+| Only on S2 | Only on OA |
+|------------|------------|
+| `recommend` (SPECTER embeddings) | `institutions` |
+| `snippets` (full-text passages) | `topics` |
+| `match` (exact title lookup) | `group-by` (aggregation) |
 
 ## S2 Paper ID Formats
 
@@ -184,6 +181,11 @@ aps oa search "neural" --filter "publication_year:2023|2024"
 ```
 
 Key filters: `publication_year`, `is_oa`, `oa_status`, `type`, `language`, `has_fulltext`, `cited_by_count`
+
+## Rate Limits
+
+- **S2**: 1 RPS — the client automatically throttles across invocations via a tmp file
+- **OA**: 10 RPS, no delay needed for typical usage. Semantic search limited to 1 RPS and max 50 results
 
 ## Auth
 
