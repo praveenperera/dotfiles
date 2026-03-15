@@ -243,8 +243,11 @@ aps lib search "neural architecture comparison" --mode semantic
 - Cross-paper inferences (e.g., "diminishing returns from stacking") are hard to find via search — use `aps lib read` on candidate papers instead
 - Run multiple queries with different phrasings for important findings
 
-**Filtering by tag** narrows search to a paper subset:
+**Tags are for noisy results, not the default.** Search the full corpus first. Only add `--tag` if unrelated papers are drowning out relevant ones — hard-filtering by tag risks missing untagged papers that are relevant:
 ```bash
+# start without tags
+aps lib search "boundary precision"
+# only add --tag if results are noisy with unrelated papers
 aps lib search "boundary precision" --tag diarization
 ```
 
