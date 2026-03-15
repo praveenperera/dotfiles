@@ -64,9 +64,6 @@ tokio = { version = "1.0", features = ["full"] }
 # async
 futures = "0.3"
 
-# pdf text extraction
-pdf-extract = "0.10"
-
 # database (libSQL / SQLite)
 turso = "0.6.0-pre.2"
 turso_core = { version = "0.6.0-pre.2", features = ["fts"] }
