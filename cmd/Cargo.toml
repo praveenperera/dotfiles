@@ -69,6 +69,7 @@ pdf-extract = "0.10"
 
 # database (libSQL / SQLite)
 turso = "0.6.0-pre.2"
+turso_core = { version = "0.6.0-pre.2", features = ["fts"] }
 
 # html parsing
 scraper = "0.25"

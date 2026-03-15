@@ -15,6 +15,7 @@ impl PaperDb {
         }
 
         let db = Builder::new_local(db_path.to_str().ok_or_else(|| eyre!("invalid db path"))?)
+            .experimental_index_method(true)
             .build()
             .await
             .map_err(|e| eyre!("failed to open database: {e}"))?;
@@ -36,11 +37,7 @@ impl PaperDb {
                 full_text TEXT
             );
 
-            CREATE VIRTUAL TABLE IF NOT EXISTS papers_fts USING fts5(
-                title, authors, full_text,
-                content=papers,
-                content_rowid=id
-            );",
+            CREATE INDEX IF NOT EXISTS papers_fts ON papers USING fts (title, authors, full_text);",
         )
         .await
         .map_err(|e| eyre!("failed to init schema: {e}"))?;
@@ -88,22 +85,6 @@ impl PaperDb {
             .await
             .map_err(|e| eyre!("insert error: {e}"))?;
 
-        let rowid = self.conn.last_insert_rowid();
-
-        // sync FTS index
-        self.conn
-            .execute(
-                "INSERT INTO papers_fts (rowid, title, authors, full_text) VALUES (?1, ?2, ?3, ?4)",
-                [
-                    Value::from(rowid),
-                    opt_text(&paper.title),
-                    opt_text(&paper.authors),
-                    opt_text(&paper.full_text),
-                ],
-            )
-            .await
-            .map_err(|e| eyre!("FTS insert error: {e}"))?;
-
         Ok(())
     }
 
@@ -131,13 +112,12 @@ impl PaperDb {
         let mut stmt = self
             .conn
             .prepare(
-                "SELECT p.doi, p.title, p.authors, p.year,
-                        snippet(papers_fts, 2, '»', '«', '…', 40) as snip,
-                        rank
-                 FROM papers_fts
-                 JOIN papers p ON p.id = papers_fts.rowid
-                 WHERE papers_fts MATCH ?1
-                 ORDER BY rank
+                "SELECT doi, title, authors, year,
+                        fts_highlight(title, '»', '«', ?1) as highlighted,
+                        fts_score(title, authors, full_text, ?1) as score
+                 FROM papers
+                 WHERE fts_match(title, authors, full_text, ?1)
+                 ORDER BY score DESC
                  LIMIT ?2",
             )
             .await
@@ -155,10 +135,8 @@ impl PaperDb {
                 title: get_opt_text(&row, 1),
                 authors: get_opt_text(&row, 2),
                 year: get_opt_int(&row, 3),
-                snippet: get_text(&row, 4)?,
-                rank: row
-                    .get::<f64>(5)
-                    .map_err(|e| eyre!("rank column error: {e}"))?,
+                snippet: get_opt_text(&row, 4).unwrap_or_default(),
+                rank: row.get::<f64>(5).unwrap_or(0.0),
             });
         }
 
@@ -170,20 +148,7 @@ impl PaperDb {
             return Ok(None);
         };
 
-        // remove from FTS first
-        self.conn
-            .execute(
-                "INSERT INTO papers_fts (papers_fts, rowid, title, authors, full_text) VALUES ('delete', ?1, ?2, ?3, ?4)",
-                [
-                    Value::from(paper.id),
-                    opt_text(&paper.title),
-                    opt_text(&paper.authors),
-                    opt_text(&paper.full_text),
-                ],
-            )
-            .await
-            .map_err(|e| eyre!("FTS delete error: {e}"))?;
-
+        // turso FTS indexes auto-update on DELETE
         self.conn
             .execute("DELETE FROM papers WHERE doi = ?1", [Value::from(doi)])
             .await

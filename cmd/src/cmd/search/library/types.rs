@@ -1,5 +1,6 @@
 /// A paper stored in the local library
 pub struct LocalPaper {
+    #[allow(dead_code)]
     pub id: i64,
     pub doi: String,
     pub title: Option<String>,
