@@ -196,6 +196,7 @@ aps lib config  # show current config
 | `tag rm <doi> <tags...>` | | Remove tag(s) from a paper |
 | `tag ls` | | List all tags with paper counts |
 | `reindex` | | Resolve missing titles, re-extract text, rebuild search index |
+| `optimize` | `opt`, `compact` | Compact and prune lancedb (`-a` for aggressive) |
 | `config` | | Show/set Sci-Hub base URL |
 
 Flags: `dl --tag <TAG>` (repeatable), `search --tag <TAG>`, `search --mode <MODE>`, `ls --tag <TAG>`, `dl --force`
