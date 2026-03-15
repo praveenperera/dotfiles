@@ -6,7 +6,6 @@ pub mod gcloud;
 pub mod generate;
 pub mod main_cmd;
 pub mod memory;
-pub mod search;
 pub mod secrets;
 pub mod sync;
 pub mod terraform;
@@ -84,10 +83,6 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::Sync { subcommand } => {
             let sync_flags = sync::Sync { subcommand };
             sync::run_with_flags(&sh, sync_flags)
-        }
-        MainCmd::Aps { subcommand } => {
-            let search_flags = search::Search { subcommand };
-            search::run_with_flags(search_flags)
         }
     }
 }

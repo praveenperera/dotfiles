@@ -5,7 +5,7 @@ description: Academic paper search CLI (Semantic Scholar, OpenAlex & local libra
 
 # aps — Academic Paper Search
 
-`aps` (or `cmd aps`) searches academic papers across Semantic Scholar (S2) and OpenAlex (OA), and manages a local paper library with PDF downloads and full-text search. Both search backends share a unified interface — learn one, swap the prefix.
+`aps` searches academic papers across Semantic Scholar (S2) and OpenAlex (OA), and manages a local paper library with PDF downloads, full-text search, and semantic vector search. Both search backends share a unified interface — learn one, swap the prefix.
 
 **Always search both S2 and OA** for any query. They index different corpora and return different results. Run both in parallel and combine the findings.
 
@@ -19,7 +19,7 @@ description: Academic paper search CLI (Semantic Scholar, OpenAlex & local libra
 - User needs to search full-text passages (S2 snippets)
 - User wants to aggregate/analyze publication data (OA group-by)
 - User wants to download a paper PDF for local reading
-- User wants to search across downloaded papers (full-text search)
+- User wants to search across downloaded papers (hybrid/semantic/FTS search)
 - User wants to manage their local paper library
 
 ## Quick Reference
@@ -146,12 +146,15 @@ aps oa group-by publication_year --filter "authorships.institutions.id:I63966007
 
 ```bash
 # download a paper by DOI (tries OA sources first, Sci-Hub fallback)
+# automatically chunks and embeds text for semantic search
 aps lib dl "10.1145/3442188.3445922"
 aps lib dl "https://doi.org/10.1145/3442188.3445922"  # URL prefixes auto-stripped
 aps lib dl --tag ml --tag nlp "10.1145/3442188.3445922"  # download with tags
 
-# full-text search across all downloaded papers
-aps lib search "language model" --limit 5
+# search across all downloaded papers (hybrid by default)
+aps lib search "boundary precision" --mode hybrid   # default, best of both
+aps lib search "combining improvements" --mode semantic  # vocabulary bridging
+aps lib search "WavLM Mamba" --mode fts  # exact keyword match
 aps lib search "attention" --tag ml  # search within tagged papers only
 
 # list all downloaded papers
@@ -169,8 +172,11 @@ aps lib info "10.1145/3442188.3445922"
 # open PDF in default viewer
 aps lib open "10.1145/3442188.3445922"
 
-# remove a paper from the library (cascade-deletes tags)
+# remove a paper from the library (cascade-deletes tags + chunks)
 aps lib rm "10.1145/3442188.3445922"
+
+# re-extract text and rebuild semantic index for all papers
+aps lib reindex
 
 # configure Sci-Hub base URL
 aps lib config --set-url https://sci-hub.se
@@ -179,28 +185,74 @@ aps lib config  # show current config
 
 | Command | Alias | Description |
 |---------|-------|-------------|
-| `download <doi>` | `dl` | Download PDF, resolve metadata, extract text, index |
-| `search <query>` | `s` | Full-text search across all papers |
+| `download <doi>` | `dl` | Download PDF, resolve metadata, extract text, chunk + embed |
+| `search <query>` | `s` | Hybrid/FTS/semantic search across papers |
 | `list` | `ls` | List all downloaded papers |
 | `open <doi>` | `o` | Open PDF in default viewer |
 | `info <doi>` | `i` | Show paper details + text stats + tags |
-| `remove <doi>` | `rm` | Delete paper from DB + disk (cascade-deletes tags) |
+| `remove <doi>` | `rm` | Delete paper from DB + disk + chunks (cascade-deletes tags) |
 | `read <doi>` | `r` | Output extracted paper text to stdout (for piping) |
 | `tag add <doi> <tags...>` | | Add tag(s) to a paper |
 | `tag rm <doi> <tags...>` | | Remove tag(s) from a paper |
 | `tag ls` | | List all tags with paper counts |
-| `reindex` | | Re-extract text for all papers using pdftotext |
+| `reindex` | | Resolve missing titles, re-extract text, rebuild search index |
 | `config` | | Show/set Sci-Hub base URL |
 
-Flags: `dl --tag <TAG>` (repeatable), `search --tag <TAG>`, `ls --tag <TAG>`, `dl --force`
+Flags: `dl --tag <TAG>` (repeatable), `search --tag <TAG>`, `search --mode <MODE>`, `ls --tag <TAG>`, `dl --force`
 
-Data stored at `~/.local/share/aps/` (SQLite DB + PDFs). Config at `~/.config/aps/`.
+Data stored at `~/.local/share/aps/` (turso DB at `papers.db`, PDFs in `pdfs/`, LanceDB at `lancedb/`). Config at `~/.config/aps/`.
+
+### Library Search Modes
+
+`aps lib search` supports three search modes via `--mode`:
+
+| Mode | Flag | Best for |
+|------|------|----------|
+| **hybrid** (default) | `--mode hybrid` | Most queries — combines keyword precision with semantic understanding |
+| **fts** | `--mode fts` | Known exact terms, specific model names, metric values |
+| **semantic** | `--mode semantic` | Conceptual queries, vocabulary bridging, paraphrased concepts |
+
+The hybrid mode uses BGE-small-en-v1.5 embeddings (384-dim) for vector search combined with full-text search, with decay-weighted grouping by paper. First run downloads the embedding model (~30MB).
+
+### How to Search Effectively
+
+**Use hybrid (default) for most queries** — it handles both keyword and conceptual matches:
+```bash
+aps lib search "missed speech dominant error type DER component"
+aps lib search "short segment embedding quality degradation speaker"
+aps lib search "discriminative VBx fine-tuning clustering end-to-end"
+```
+
+**Use FTS for exact term lookup** — when you know a specific term, model name, or metric:
+```bash
+aps lib search "DiariZen" --mode fts
+aps lib search "collar=0" --mode fts
+aps lib search "simulated data" --mode fts
+```
+
+**Use semantic for conceptual/paraphrased queries** — when you don't know the exact wording:
+```bash
+aps lib search "techniques from computer vision applied to speech" --mode semantic
+aps lib search "neural architecture comparison" --mode semantic
+```
+
+**Query writing tips:**
+- Include domain-specific terms to anchor results (e.g., "DER", "diarization", "speaker")
+- Hybrid mode excels when queries mix specific terms with natural language
+- For absence findings ("X has never been combined with Y"), search for each piece separately and reason across results
+- Cross-paper inferences (e.g., "diminishing returns from stacking") are hard to find via search — use `aps lib read` on candidate papers instead
+- Run multiple queries with different phrasings for important findings
+
+**Filtering by tag** narrows search to a paper subset:
+```bash
+aps lib search "boundary precision" --tag diarization
+```
 
 ### Local Library: When to Use What
 
 **`aps lib search <query>`** — search across your library
-- Full-text search across title, authors, and extracted text of ALL downloaded papers
-- Returns ranked results with highlighted snippets showing where the match occurred
+- Hybrid search combining FTS + semantic vector search across all downloaded papers
+- Returns ranked results grouped by paper with best matching chunk snippet
 - Use when: looking for a concept/term across multiple papers, finding which downloaded papers discuss a topic
 - Papers must already be downloaded with `dl` to appear in search results
 

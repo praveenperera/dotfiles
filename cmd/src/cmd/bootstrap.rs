@@ -338,7 +338,7 @@ macro_rules! project {
     };
 }
 
-const LOCAL_PROJECTS: &[LocalProject] = &[project!("jju")];
+const LOCAL_PROJECTS: &[LocalProject] = &[project!("jju"), project!("aps")];
 
 pub fn release(sh: &Shell, project: Option<String>) -> Result<()> {
     match project {
