@@ -10,7 +10,7 @@ use super::types::LocalPaper;
 use crate::cmd::search::config;
 use crate::cmd::search::s2::client::S2Client;
 
-pub async fn run(doi_input: &str, force: bool) -> Result<()> {
+pub async fn run(doi_input: &str, force: bool, tags: &[String]) -> Result<()> {
     let doi = normalize_doi(doi_input)?;
 
     let db = PaperDb::open(&config::data_dir().join("papers.db")).await?;
@@ -78,8 +78,13 @@ pub async fn run(doi_input: &str, force: bool) -> Result<()> {
 
     db.insert(&paper).await?;
 
+    if !tags.is_empty() {
+        let tags: Vec<String> = tags.iter().map(|t| t.trim().to_lowercase()).collect();
+        db.add_tags(&doi, &tags).await?;
+    }
+
     println!();
-    display_paper_info(&paper);
+    display_paper_info(&paper, tags);
 
     Ok(())
 }

@@ -68,7 +68,7 @@ pub fn display_search_results(results: &[SearchResult]) {
     }
 }
 
-pub fn display_paper_info(paper: &LocalPaper) {
+pub fn display_paper_info(paper: &LocalPaper, tags: &[String]) {
     let title = paper.title.as_deref().unwrap_or("Untitled");
     let year = paper.year.map(|y| format!("({y})")).unwrap_or_default();
 
@@ -89,6 +89,10 @@ pub fn display_paper_info(paper: &LocalPaper) {
 
     if let Some(len) = paper.text_length {
         println!("Text length: {len} chars");
+    }
+
+    if !tags.is_empty() {
+        println!("Tags: {}", tags.join(", ").cyan());
     }
 }
 

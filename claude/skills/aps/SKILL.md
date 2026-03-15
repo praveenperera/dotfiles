@@ -148,20 +148,28 @@ aps oa group-by publication_year --filter "authorships.institutions.id:I63966007
 # download a paper by DOI (tries OA sources first, Sci-Hub fallback)
 aps lib dl "10.1145/3442188.3445922"
 aps lib dl "https://doi.org/10.1145/3442188.3445922"  # URL prefixes auto-stripped
+aps lib dl --tag ml --tag nlp "10.1145/3442188.3445922"  # download with tags
 
 # full-text search across all downloaded papers
 aps lib search "language model" --limit 5
+aps lib search "attention" --tag ml  # search within tagged papers only
 
 # list all downloaded papers
 aps lib ls
+aps lib ls --tag ml  # filter by tag
+
+# manage tags
+aps lib tag add "10.1145/3442188.3445922" ml transformers  # add tags
+aps lib tag rm "10.1145/3442188.3445922" ml                # remove a tag
+aps lib tag ls                                              # list all tags with counts
+
+# show paper details and text extraction stats (includes tags)
+aps lib info "10.1145/3442188.3445922"
 
 # open PDF in default viewer
 aps lib open "10.1145/3442188.3445922"
 
-# show paper details and text extraction stats
-aps lib info "10.1145/3442188.3445922"
-
-# remove a paper from the library
+# remove a paper from the library (cascade-deletes tags)
 aps lib rm "10.1145/3442188.3445922"
 
 # configure Sci-Hub base URL
@@ -172,14 +180,49 @@ aps lib config  # show current config
 | Command | Alias | Description |
 |---------|-------|-------------|
 | `download <doi>` | `dl` | Download PDF, resolve metadata, extract text, index |
-| `search <query>` | `s` | FTS5 full-text search across all papers |
+| `search <query>` | `s` | Full-text search across all papers |
 | `list` | `ls` | List all downloaded papers |
 | `open <doi>` | `o` | Open PDF in default viewer |
-| `info <doi>` | `i` | Show paper details + text stats |
-| `remove <doi>` | `rm` | Delete paper from DB + disk |
+| `info <doi>` | `i` | Show paper details + text stats + tags |
+| `remove <doi>` | `rm` | Delete paper from DB + disk (cascade-deletes tags) |
+| `read <doi>` | `r` | Output extracted paper text to stdout (for piping) |
+| `tag add <doi> <tags...>` | | Add tag(s) to a paper |
+| `tag rm <doi> <tags...>` | | Remove tag(s) from a paper |
+| `tag ls` | | List all tags with paper counts |
+| `reindex` | | Re-extract text for all papers using pdftotext |
 | `config` | | Show/set Sci-Hub base URL |
 
+Flags: `dl --tag <TAG>` (repeatable), `search --tag <TAG>`, `ls --tag <TAG>`, `dl --force`
+
 Data stored at `~/.local/share/aps/` (SQLite DB + PDFs). Config at `~/.config/aps/`.
+
+### Local Library: When to Use What
+
+**`aps lib search <query>`** — search across your library
+- Full-text search across title, authors, and extracted text of ALL downloaded papers
+- Returns ranked results with highlighted snippets showing where the match occurred
+- Use when: looking for a concept/term across multiple papers, finding which downloaded papers discuss a topic
+- Papers must already be downloaded with `dl` to appear in search results
+
+**`aps lib read <doi>`** — read one paper's full text
+- Outputs the entire extracted text of a single paper to stdout
+- Auto-downloads the paper if not already in library (no `dl` needed first)
+- Use when: need to read/analyze one specific paper in detail, or pipe its text to another tool
+
+**`dl` + `search` vs `read` — breadth vs depth**
+- **Breadth** (`dl` then `search`): download several papers on a topic, then search across all of them to find which ones discuss a specific concept. Good for literature surveys and finding relevant passages across a corpus
+- **Depth** (`read`): get the full text of one known paper for detailed analysis. Good when you already know which paper you want and need its complete content
+
+```bash
+# breadth: build a library, then search across it
+aps lib dl "10.1145/3442188.3445922"
+aps lib dl "10.48550/arXiv.2005.14165"
+aps lib dl "10.48550/arXiv.2303.08774"
+aps lib search "alignment" --limit 5
+
+# depth: read one paper in full (auto-downloads if needed)
+aps lib read "10.48550/arXiv.2303.08774"
+```
 
 ### JSON Output
 
