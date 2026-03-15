@@ -1,11 +1,11 @@
 ---
 name: aps
-description: Academic paper search CLI (Semantic Scholar & OpenAlex). Use when the user needs to find papers, look up citations, get paper details, search authors, or do any academic research task.
+description: Academic paper search CLI (Semantic Scholar, OpenAlex & local library). Use when the user needs to find papers, look up citations, get paper details, search authors, download papers, or do any academic research task.
 ---
 
 # aps — Academic Paper Search
 
-`aps` (or `cmd aps`) searches academic papers across Semantic Scholar (S2) and OpenAlex (OA). Both backends share a unified interface — learn one, swap the prefix.
+`aps` (or `cmd aps`) searches academic papers across Semantic Scholar (S2) and OpenAlex (OA), and manages a local paper library with PDF downloads and full-text search. Both search backends share a unified interface — learn one, swap the prefix.
 
 **Always search both S2 and OA** for any query. They index different corpora and return different results. Run both in parallel and combine the findings.
 
@@ -18,6 +18,9 @@ description: Academic paper search CLI (Semantic Scholar & OpenAlex). Use when t
 - User wants paper recommendations based on a seed paper
 - User needs to search full-text passages (S2 snippets)
 - User wants to aggregate/analyze publication data (OA group-by)
+- User wants to download a paper PDF for local reading
+- User wants to search across downloaded papers (full-text search)
+- User wants to manage their local paper library
 
 ## Quick Reference
 
@@ -138,6 +141,45 @@ aps oa topics "machine learning"
 aps oa group-by oa_status --filter "publication_year:2024"
 aps oa group-by publication_year --filter "authorships.institutions.id:I63966007"
 ```
+
+### Local Library (`aps library` / `aps lib`)
+
+```bash
+# download a paper by DOI (tries OA sources first, Sci-Hub fallback)
+aps lib dl "10.1145/3442188.3445922"
+aps lib dl "https://doi.org/10.1145/3442188.3445922"  # URL prefixes auto-stripped
+
+# full-text search across all downloaded papers
+aps lib search "language model" --limit 5
+
+# list all downloaded papers
+aps lib ls
+
+# open PDF in default viewer
+aps lib open "10.1145/3442188.3445922"
+
+# show paper details and text extraction stats
+aps lib info "10.1145/3442188.3445922"
+
+# remove a paper from the library
+aps lib rm "10.1145/3442188.3445922"
+
+# configure Sci-Hub base URL
+aps lib config --set-url https://sci-hub.se
+aps lib config  # show current config
+```
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `download <doi>` | `dl` | Download PDF, resolve metadata, extract text, index |
+| `search <query>` | `s` | FTS5 full-text search across all papers |
+| `list` | `ls` | List all downloaded papers |
+| `open <doi>` | `o` | Open PDF in default viewer |
+| `info <doi>` | `i` | Show paper details + text stats |
+| `remove <doi>` | `rm` | Delete paper from DB + disk |
+| `config` | | Show/set Sci-Hub base URL |
+
+Data stored at `~/.local/share/aps/` (SQLite DB + PDFs). Config at `~/.config/aps/`.
 
 ### JSON Output
 

@@ -44,6 +44,38 @@ pub fn save_api_key(config_filename: &str, key: &str) -> Result<()> {
     Ok(())
 }
 
+/// Data directory for persistent storage (papers, DB)
+pub fn data_dir() -> std::path::PathBuf {
+    let home = std::env::var("HOME").expect("HOME env var must be set");
+    std::path::PathBuf::from(home).join(".local/share/aps")
+}
+
+/// Read the Sci-Hub base URL from env var or config file
+pub fn get_scihub_url() -> Option<String> {
+    if let Ok(url) = std::env::var("SCIHUB_URL") {
+        if !url.is_empty() {
+            return Some(url);
+        }
+    }
+
+    let config_path = config_dir().join("scihub-url");
+    if let Ok(url) = std::fs::read_to_string(&config_path) {
+        let url = url.trim().to_string();
+        if !url.is_empty() {
+            return Some(url);
+        }
+    }
+
+    None
+}
+
+/// Save Sci-Hub base URL to config
+pub fn save_scihub_url(url: &str) -> Result<()> {
+    let dir = ensure_config_dir()?;
+    std::fs::write(dir.join("scihub-url"), url)?;
+    Ok(())
+}
+
 /// S2 throttle: ensures 1 RPS across processes via timestamp file
 pub async fn s2_throttle() {
     let path = config_dir().join("s2-last-request");
@@ -55,8 +87,7 @@ pub async fn s2_throttle() {
                 .unwrap_or_default()
                 .as_millis();
 
-            let elapsed =
-                Duration::from_millis((now_millis.saturating_sub(epoch_millis)) as u64);
+            let elapsed = Duration::from_millis((now_millis.saturating_sub(epoch_millis)) as u64);
             if let Some(wait) = MIN_REQUEST_INTERVAL.checked_sub(elapsed) {
                 tokio::time::sleep(wait).await;
             }
@@ -156,11 +187,6 @@ fn print_auth_line(name: &str, authenticated: bool, source: &str) {
             format!("({source})").dimmed()
         );
     } else {
-        println!(
-            "{} {}: {}",
-            "✗".red(),
-            name.bold(),
-            "not configured".red()
-        );
+        println!("{} {}: {}", "✗".red(), name.bold(), "not configured".red());
     }
 }

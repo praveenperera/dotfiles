@@ -1,4 +1,5 @@
 pub mod config;
+pub mod library;
 pub mod openalex;
 pub mod s2;
 
@@ -17,7 +18,7 @@ pub enum OutputFormat {
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "aps",
-    about = "Academic paper search (Semantic Scholar & OpenAlex)"
+    about = "Academic paper search (Semantic Scholar, OpenAlex & local library)"
 )]
 pub struct Search {
     #[command(subcommand)]
@@ -38,6 +39,13 @@ pub enum SearchCmd {
     Openalex {
         #[command(subcommand)]
         subcommand: openalex::OpenAlexCmd,
+    },
+
+    /// Local paper library (download, search, manage PDFs)
+    #[command(visible_alias = "lib", arg_required_else_help = true)]
+    Library {
+        #[command(subcommand)]
+        subcommand: library::LibraryCmd,
     },
 
     /// Save API keys from env vars to ~/.config/aps/
@@ -61,6 +69,7 @@ async fn run_async(flags: Search) -> Result<()> {
     match flags.subcommand {
         SearchCmd::SemanticScholar { subcommand } => s2::run_async(subcommand).await,
         SearchCmd::Openalex { subcommand } => openalex::run_async(subcommand).await,
+        SearchCmd::Library { subcommand } => library::run_async(subcommand).await,
         SearchCmd::Login => config::login(),
         SearchCmd::Status => config::status(),
     }
