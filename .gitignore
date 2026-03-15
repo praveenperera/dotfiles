@@ -18,6 +18,7 @@ claude/plugins/
 claude/statsig/
 claude/plans
 claude/transcripts
+claude/sessions
 
 # .config/opencode machine-specific files
 opencode/.opencode.json
@@ -41,3 +42,4 @@ opencode/AGENTS.md
 /claude/usage-data
 /claude/backups
 claude/mcp-needs-auth-cache.json
+claude/security_warnings_state_*.json
