@@ -33,25 +33,44 @@ impl S2Client {
     }
 
     async fn get(&self, url: &str) -> Result<reqwest::Response> {
-        config::s2_throttle().await;
-        let response = self.client.get(url).send().await?;
-        let status = response.status();
+        const MAX_RETRIES: u32 = 3;
 
-        if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
-            let msg = if std::env::var("SEMANTIC_SCHOLAR_API_KEY").is_err() {
-                "rate limited by Semantic Scholar — set SEMANTIC_SCHOLAR_API_KEY for higher limits"
-            } else {
-                "rate limited by Semantic Scholar (authenticated)"
-            };
-            return Err(eyre!(msg));
+        for attempt in 0..=MAX_RETRIES {
+            config::s2_throttle().await;
+            let response = self.client.get(url).send().await?;
+            let status = response.status();
+
+            if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                if attempt == MAX_RETRIES {
+                    let msg = if std::env::var("SEMANTIC_SCHOLAR_API_KEY").is_err() {
+                        "rate limited by Semantic Scholar — set SEMANTIC_SCHOLAR_API_KEY for higher limits"
+                    } else {
+                        "rate limited by Semantic Scholar (authenticated)"
+                    };
+                    return Err(eyre!(msg));
+                }
+
+                let retry_secs = response
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or((attempt + 1) as u64 * 2);
+
+                log::warn!("S2 429 on attempt {attempt}, retrying in {retry_secs}s");
+                tokio::time::sleep(std::time::Duration::from_secs(retry_secs)).await;
+                continue;
+            }
+
+            if !status.is_success() {
+                let body = response.text().await.unwrap_or_default();
+                return Err(eyre!("S2 API error {status}: {body}"));
+            }
+
+            return Ok(response);
         }
 
-        if !status.is_success() {
-            let body = response.text().await.unwrap_or_default();
-            return Err(eyre!("S2 API error {status}: {body}"));
-        }
-
-        Ok(response)
+        unreachable!()
     }
 
     pub async fn search_papers(
