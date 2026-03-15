@@ -248,6 +248,30 @@ aps lib search "neural architecture comparison" --mode semantic
 aps lib search "boundary precision" --tag diarization
 ```
 
+### Research Workflow: Gather Broadly, Search Narrowly
+
+The hybrid search finds relevant passages even when papers use different vocabulary than your query. This means the best workflow is:
+
+1. **Gather broadly** — download 50-100 papers from S2/OA searches on a topic, tag them by topic
+2. **Search narrowly** — ask specific questions across the corpus, hybrid search surfaces the right passages
+3. **Read deeply** — use `aps lib read` on the papers search surfaces for full context
+
+The bottleneck is "did I ask the right question", not "did I download the right papers". Cast a wide net, then query cheaply.
+
+```bash
+# phase 1: gather papers broadly, tag by topic
+aps s2 search "speaker diarization" --year 2023- --limit 20 -F json | jq -r '.data[]?.externalIds?.DOI // empty'
+# download each DOI, tag them
+aps lib dl --tag diarization "10.xxxx/yyyy"
+
+# phase 2: search narrowly across the corpus
+aps lib search "missed speech dominant error" --tag diarization
+aps lib search "embedding quality short segments" --tag diarization
+
+# phase 3: read deeply when search surfaces something interesting
+aps lib read "10.xxxx/yyyy"
+```
+
 ### Local Library: When to Use What
 
 **`aps lib search <query>`** — search across your library
@@ -260,21 +284,6 @@ aps lib search "boundary precision" --tag diarization
 - Outputs the entire extracted text of a single paper to stdout
 - Auto-downloads the paper if not already in library (no `dl` needed first)
 - Use when: need to read/analyze one specific paper in detail, or pipe its text to another tool
-
-**`dl` + `search` vs `read` — breadth vs depth**
-- **Breadth** (`dl` then `search`): download several papers on a topic, then search across all of them to find which ones discuss a specific concept. Good for literature surveys and finding relevant passages across a corpus
-- **Depth** (`read`): get the full text of one known paper for detailed analysis. Good when you already know which paper you want and need its complete content
-
-```bash
-# breadth: build a library, then search across it
-aps lib dl "10.1145/3442188.3445922"
-aps lib dl "10.48550/arXiv.2005.14165"
-aps lib dl "10.48550/arXiv.2303.08774"
-aps lib search "alignment" --limit 5
-
-# depth: read one paper in full (auto-downloads if needed)
-aps lib read "10.48550/arXiv.2303.08774"
-```
 
 ### JSON Output
 
