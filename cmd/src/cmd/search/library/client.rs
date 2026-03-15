@@ -66,7 +66,7 @@ async fn try_scihub(doi: &str, dest: &Path) -> Option<String> {
         .ok()?;
 
     let html = client.get(&page_url).send().await.ok()?.text().await.ok()?;
-    let pdf_url = parse_scihub_pdf_url(&html)?;
+    let pdf_url = parse_scihub_pdf_url(&html, &base_url)?;
 
     // validate URL scheme
     if !pdf_url.starts_with("http://") && !pdf_url.starts_with("https://") {
@@ -80,39 +80,36 @@ async fn try_scihub(doi: &str, dest: &Path) -> Option<String> {
     None
 }
 
-fn parse_scihub_pdf_url(html: &str) -> Option<String> {
+fn parse_scihub_pdf_url(html: &str, base_url: &str) -> Option<String> {
     let doc = scraper::Html::parse_document(html);
 
-    // try iframe#pdf
-    let iframe_sel = scraper::Selector::parse("iframe#pdf").ok()?;
-    if let Some(el) = doc.select(&iframe_sel).next() {
-        if let Some(src) = el.value().attr("src") {
-            return Some(normalize_scihub_url(src));
-        }
-    }
+    let selectors = [
+        ("meta[name='citation_pdf_url']", "content"),
+        ("iframe#pdf", "src"),
+        ("embed[src]", "src"),
+        (r#"object[type="application/pdf"]"#, "data"),
+        (r#"a[href$=".pdf"]"#, "href"),
+    ];
 
-    // try embed[src]
-    let embed_sel = scraper::Selector::parse("embed[src]").ok()?;
-    if let Some(el) = doc.select(&embed_sel).next() {
-        if let Some(src) = el.value().attr("src") {
-            return Some(normalize_scihub_url(src));
-        }
-    }
-
-    // try a[href$=".pdf"]
-    let link_sel = scraper::Selector::parse(r#"a[href$=".pdf"]"#).ok()?;
-    if let Some(el) = doc.select(&link_sel).next() {
-        if let Some(href) = el.value().attr("href") {
-            return Some(normalize_scihub_url(href));
+    for (sel, attr) in selectors {
+        let selector = scraper::Selector::parse(sel).ok()?;
+        if let Some(el) = doc.select(&selector).next() {
+            if let Some(val) = el.value().attr(attr) {
+                // strip fragment (e.g. #navpanes=0)
+                let val = val.split('#').next().unwrap_or(val);
+                return Some(normalize_scihub_url(val, base_url));
+            }
         }
     }
 
     None
 }
 
-fn normalize_scihub_url(url: &str) -> String {
+fn normalize_scihub_url(url: &str, base_url: &str) -> String {
     if url.starts_with("//") {
         format!("https:{url}")
+    } else if url.starts_with('/') {
+        format!("{base_url}{url}")
     } else {
         url.to_string()
     }
