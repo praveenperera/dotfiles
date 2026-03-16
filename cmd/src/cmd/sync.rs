@@ -22,7 +22,7 @@ pub enum SyncCmd {
         setup: bool,
     },
 
-    /// Sync a local _-prefixed directory to iCloud Drive and symlink back
+    /// Sync a local directory to iCloud Drive (2-way) and symlink back
     #[command(arg_required_else_help = true)]
     Icloud {
         /// Local directory to sync (e.g., _plans)
@@ -56,15 +56,13 @@ fn git_root(sh: &Shell) -> Result<PathBuf> {
 fn icloud_sync(sh: &Shell, dir: &str) -> Result<()> {
     let local_dir = Path::new(dir);
 
-    // strip leading _ for iCloud category name
+    // strip leading _ if present for iCloud category name
     let dir_name = local_dir
         .file_name()
         .ok_or_else(|| eyre!("invalid directory: {dir}"))?
         .to_string_lossy();
 
-    let category = dir_name
-        .strip_prefix('_')
-        .ok_or_else(|| eyre!("directory must start with _ (got {dir_name})"))?;
+    let category = dir_name.strip_prefix('_').unwrap_or(&dir_name);
 
     let root = git_root(sh)?;
     let project_name = root
@@ -85,10 +83,10 @@ fn icloud_sync(sh: &Shell, dir: &str) -> Result<()> {
     if local_path.is_symlink() {
         // already symlinked, just rsync contents
         info!("{} (already symlinked, syncing)", dir_name);
-        rsync(sh, &local_path, &icloud_target)?;
+        rsync_two_way(sh, &local_path, &icloud_target)?;
     } else {
         // first time: copy contents, remove dir, create symlink
-        rsync(sh, &local_path, &icloud_target)?;
+        rsync_two_way(sh, &local_path, &icloud_target)?;
         sh.remove_path(&local_path)?;
         std::os::unix::fs::symlink(&icloud_target, &local_path)?;
         info!(
@@ -103,10 +101,15 @@ fn icloud_sync(sh: &Shell, dir: &str) -> Result<()> {
     Ok(())
 }
 
-fn rsync(sh: &Shell, src: &Path, dest: &Path) -> Result<()> {
-    // trailing slash on src means "contents of"
-    let src_str = format!("{}/", src.display());
-    let dest_str = format!("{}/", dest.display());
-    cmd!(sh, "rsync -a --delete {src_str} {dest_str}").run()?;
+fn rsync_two_way(sh: &Shell, local: &Path, icloud: &Path) -> Result<()> {
+    // trailing slash means "contents of"
+    let local_str = format!("{}/", local.display());
+    let icloud_str = format!("{}/", icloud.display());
+
+    // local → iCloud
+    cmd!(sh, "rsync -a {local_str} {icloud_str}").run()?;
+    // iCloud → local
+    cmd!(sh, "rsync -a {icloud_str} {local_str}").run()?;
+
     Ok(())
 }
