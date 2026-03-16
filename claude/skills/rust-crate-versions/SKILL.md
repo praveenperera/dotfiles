@@ -1,6 +1,9 @@
 ---
 name: rust-crate-versions
 description: Fetch latest crate versions from crates.io. Use when creating Rust projects, adding dependencies to Cargo.toml, or when the user asks about current crate versions.
+aliases:
+  - rcv
+  - crate-versions
 ---
 
 # Rust Crate Versions
@@ -10,6 +13,7 @@ This skill fetches the latest versions of Rust crates from crates.io using the `
 ## When to Use
 
 Use this skill when:
+
 - Creating a new Rust project with dependencies
 - Adding dependencies to an existing Cargo.toml
 - User asks what the latest version of a crate is
@@ -27,6 +31,7 @@ cmd crate versions serde tokio eyre
 ```
 
 Output (toml format by default):
+
 ```
 serde = "1.0.210"
 tokio = "1.41.0"
@@ -36,16 +41,19 @@ eyre = "0.6.12"
 ### Output Formats
 
 **TOML (default)** - Ready to paste into Cargo.toml:
+
 ```bash
 cmd crate versions serde tokio --format toml
 ```
 
 **JSON** - Structured output:
+
 ```bash
 cmd crate versions serde tokio --format json
 ```
 
 **Plain** - Just name and version:
+
 ```bash
 cmd crate versions serde tokio --format plain
 ```
@@ -53,6 +61,7 @@ cmd crate versions serde tokio --format plain
 ### Exact Version Pinning
 
 Use `--exact` to get `=1.0.0` format:
+
 ```bash
 cmd crate versions serde --exact
 # Output: serde = "=1.0.210"
@@ -63,6 +72,7 @@ cmd crate versions serde --exact
 User asks: "Create a Rust CLI app with serde, tokio, and clap"
 
 1. First, fetch the latest versions:
+
 ```bash
 cmd crate versions serde tokio clap color-eyre
 ```
