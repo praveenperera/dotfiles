@@ -55,7 +55,8 @@ description: Academic paper search CLI (Semantic Scholar, OpenAlex & local libra
 
 | Flag | Description |
 |------|-------------|
-| `--year <YEAR>` | Year or range: `2020`, `2020-2024`, `2020-` |
+| `--year <YEAR>` | Exact year or range: `2020`, `2020-2024`, `2020-` |
+| `--since <YEAR>` | Results from this year onwards (e.g. `2023`) |
 | `--field <FIELD>` | Field of study (S2) or topic filter (OA) |
 | `--min-citations <N>` | Minimum citation count |
 | `--open-access` | Only open access papers |
@@ -73,7 +74,7 @@ aps s2 search "transformer attention" --limit 5
 aps oa search "CRISPR gene editing" --limit 5
 
 # with filters
-aps s2 search "large language models" --year 2023- --field "Computer Science" --limit 10
+aps s2 search "large language models" --since 2023 --field "Computer Science" --limit 10
 aps oa search "climate change" --year 2020-2024 --open-access --sort cited_by_count:desc
 
 # semantic search (embedding-based, finds conceptually related papers)
@@ -264,7 +265,7 @@ The bottleneck is "did I ask the right question", not "did I download the right 
 
 ```bash
 # phase 1: gather papers broadly, tag by topic
-aps s2 search "speaker diarization" --year 2023- --limit 20 -F json | jq -r '.data[]?.externalIds?.DOI // empty'
+aps s2 search "speaker diarization" --since 2023 --limit 20 -F json | jq -r '.data[]?.externalIds?.DOI // empty'
 # download each DOI, tag them
 aps lib dl --tag diarization "10.xxxx/yyyy"
 
