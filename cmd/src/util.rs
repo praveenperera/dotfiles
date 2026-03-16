@@ -1,7 +1,7 @@
 use eyre::Result;
 use rand::{
     distr::{Alphanumeric, SampleString as _, Uniform},
-    Rng,
+    RngExt,
 };
 use xshell::{cmd, Shell};
 
