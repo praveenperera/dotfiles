@@ -55,12 +55,12 @@ description: Academic paper search CLI (Semantic Scholar, OpenAlex & local libra
 
 | Flag | Description |
 |------|-------------|
-| `--year <YEAR>` | Exact year or range: `2020`, `2020-2024`, `2020-` |
-| `--since <YEAR>` | Results from this year onwards (e.g. `2023`) |
+| `-y, --year <YEAR>` | Exact year or range: `2020`, `2020-2024`, `2020-` |
+| `-s, --since <YEAR>` | Results from this year onwards (e.g. `2023`) |
 | `--field <FIELD>` | Field of study (S2) or topic filter (OA) |
-| `--min-citations <N>` | Minimum citation count |
+| `-m, --min-citations <N>` | Minimum citation count |
 | `--open-access` | Only open access papers |
-| `-l, --limit <N>` | Max results (default 10) |
+| `-l, --limit <N>` | Max results (default 50). Use smaller limits (5-10) for focused lookups like specific paper/author queries |
 | `--offset <N>` | Pagination offset |
 | `-F, --format plain\|json` | Output format (default plain) |
 
@@ -69,16 +69,19 @@ description: Academic paper search CLI (Semantic Scholar, OpenAlex & local libra
 ### Search for Papers
 
 ```bash
-# keyword search
-aps s2 search "transformer attention" --limit 5
-aps oa search "CRISPR gene editing" --limit 5
+# keyword search (default limit is 50)
+aps s2 search "transformer attention"
+aps oa search "CRISPR gene editing"
 
 # with filters
-aps s2 search "large language models" --since 2023 --field "Computer Science" --limit 10
+aps s2 search "large language models" --since 2023 --field "Computer Science"
 aps oa search "climate change" --year 2020-2024 --open-access --sort cited_by_count:desc
 
 # semantic search (embedding-based, finds conceptually related papers)
-aps oa search --semantic "effects of sleep on memory consolidation" --limit 10
+aps oa search --semantic "effects of sleep on memory consolidation"
+
+# use --limit to restrict results for quick lookups
+aps s2 search "transformer attention" --limit 5
 ```
 
 ### Look Up a Specific Paper
@@ -99,8 +102,8 @@ aps s2 match "Attention Is All You Need"
 
 ```bash
 # what cites this paper?
-aps s2 citations ARXIV:1706.03762 --limit 20
-aps oa citations W2963403868 --limit 20
+aps s2 citations ARXIV:1706.03762
+aps oa citations W2963403868
 
 # what does this paper cite?
 aps s2 references ARXIV:1706.03762
@@ -123,10 +126,10 @@ aps oa author A5023888391    # OpenAlex author ID (starts with A)
 
 ```bash
 # papers similar to "Attention Is All You Need"
-aps s2 recommend ARXIV:1706.03762 --limit 5 --pool recent
+aps s2 recommend ARXIV:1706.03762 --pool recent
 
 # full-text passage search
-aps s2 snippets "backpropagation through time" --limit 5
+aps s2 snippets "backpropagation through time"
 ```
 
 ### OA-only: Institutions, Topics, Group-by
@@ -265,7 +268,7 @@ The bottleneck is "did I ask the right question", not "did I download the right 
 
 ```bash
 # phase 1: gather papers broadly, tag by topic
-aps s2 search "speaker diarization" --since 2023 --limit 20 -F json | jq -r '.data[]?.externalIds?.DOI // empty'
+aps s2 search "speaker diarization" --since 2023 -F json | jq -r '.data[]?.externalIds?.DOI // empty'
 # download each DOI, tag them
 aps lib dl --tag diarization "10.xxxx/yyyy"
 
@@ -276,6 +279,39 @@ aps lib search "embedding quality short segments" --tag diarization
 # phase 3: read deeply when search surfaces something interesting
 aps lib read "10.xxxx/yyyy"
 ```
+
+### Comprehensive Literature Search: Avoid Gaps
+
+Keyword search alone misses papers — even with 30+ queries across S2 and OA. The three failure modes:
+
+1. **Query bias** — queries centered on specific techniques miss papers about competing approaches, cross-cutting concerns, or negative results (e.g., searching for "VBx clustering" misses "spectral clustering-aware embeddings")
+2. **Pagination cutoff** — a low limit hides relevant papers ranked below the cutoff. The default is now 50, which covers most queries well. For very broad surveys, consider `--limit 100`
+3. **No graph exploration** — keyword search only finds papers that match your vocabulary. Citation graph traversal finds conceptually related work regardless of terminology
+
+**After keyword searches, always do citation graph exploration on your 5-10 most important seed papers:**
+
+```bash
+# step 1: identify seed papers (your most-cited/most-important results)
+# step 2: find what's building on them
+aps s2 citations ARXIV:2409.09408   # who cites DiariZen?
+aps s2 citations ARXIV:2401.12600   # who cites EEND-M2F?
+
+# step 3: find related work via SPECTER embeddings (finds papers keyword search misses)
+aps s2 recommend ARXIV:2409.09408 --pool recent
+aps s2 recommend ARXIV:2401.03506 --pool recent
+
+# step 4: check references of survey/benchmark papers (they've already done the lit review)
+aps s2 references ARXIV:2507.16136  # SDBench references
+```
+
+**Query design checklist for a new research topic:**
+- Technique-specific queries (what you're building): "WavLM speaker diarization", "VBx clustering"
+- Architecture-level queries (competing approaches): "end-to-end speaker diarization", "streaming speaker diarization"
+- Problem-level queries (the task broadly): "speaker diarization survey 2024", "speaker diarization benchmark"
+- Negative/analysis queries (what doesn't work): "speaker diarization limitations", "embedding quality diarization"
+- Cross-domain queries (adjacent ideas): "speech separation diarization joint", "audio-visual speaker diarization"
+
+**Practical rule:** for any research topic, plan for ~50 queries (not ~30) and run `recommend` + `citations` on your top 5 seed papers. This closes the gap that keyword search alone leaves open.
 
 ### Local Library: When to Use What
 
