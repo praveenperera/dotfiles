@@ -33,7 +33,9 @@
 - Avoid redundant closures - use `.map(func)` instead of `.map(|x| func(x))`
 - Prefer tuple structs over named field structs for simple wrappers (e.g., `struct Foo(Arc<Inner>)` not `struct Foo { inner: Arc<Inner> }`)
 - `#[act_zero_ext::into_actor_result]` on `fn foo()` generates: public async `foo() -> ActorResult<T>` wrapper + private `do_foo()` with original logic
-- Prefer structs with methods over freestanding functions to encapsulate state and provide a cleaner API
+- Always use structs with methods over freestanding functions to encapsulate state and provide a cleaner API
+- Always using serde with derive and serde_json over manual json parsing
+- Always using methods on structs with state when we have dealing with state, instead of passing state around as a function arguments
 
 # Python Project Specific
 
