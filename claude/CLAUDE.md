@@ -28,7 +28,7 @@
 - Generate docs for a crate with `cargo doc -p <crate-name>`, this will then be available at `target/doc/<crate-name>/index.html`, if you are unsure about how to use a crate, please generate the docs and read them
 - If docs have already been generated, check `target/doc/` for existing documentation of the project and its dependencies before regenerating
 - Whenever you get clippy errors first run cargo fix --allow-dirty and then fix whatever remains
-- I always prefer eyre (color-eyre if cli) to anyhow
+- I always prefer eyre to anyhow, on cli use color_eyre init in the main function
 - if-let chains are stable in Rust now, always collapse nested if-lets into a single statement using `&&`
 - Avoid redundant closures - use `.map(func)` instead of `.map(|x| func(x))`
 - Prefer tuple structs over named field structs for simple wrappers (e.g., `struct Foo(Arc<Inner>)` not `struct Foo { inner: Arc<Inner> }`)
