@@ -3,22 +3,16 @@
 # Claude Code Status Line - styled after Starship prompt
 # Reads JSON from stdin and outputs a formatted status line
 
-# Read JSON input from stdin
 input=$(cat)
 
-# Parse JSON fields using parameter expansion and simple parsing
-# Extract values between quotes after the field name
-get_field() {
-    echo "$input" | grep -o "\"$1\":[^,}]*" | sed 's/.*:"\{0,1\}\([^",}]*\)"\{0,1\}/\1/'
-}
-
-cwd=$(get_field "cwd")
-git_branch=$(get_field "git_branch")
-model=$(get_field "model")
-context_pct=$(get_field "context_remaining_percent")
-output_style=$(get_field "output_style")
-vim_mode=$(get_field "vim_mode")
-agent_name=$(get_field "agent_name")
+cwd=$(echo "$input" | jq -r '.cwd // empty')
+model_id=$(echo "$input" | jq -r '.model.id // empty')
+used_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
+output_style=$(echo "$input" | jq -r '.output_style.name // empty')
+vim_mode=$(echo "$input" | jq -r '.vim.mode // empty')
+agent_name=$(echo "$input" | jq -r '.agent.name // empty')
+rl_5h=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+rl_7d=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
 
 # ANSI color codes
 CYAN='\033[36m'
@@ -32,68 +26,93 @@ RED='\033[31m'
 RESET='\033[0m'
 BOLD='\033[1m'
 
-# Build output
 output=""
 
-# Directory (truncated like Starship, cyan)
+# Directory — truncate like Starship (up to 5 components, …/ prefix)
 if [[ -n "$cwd" ]]; then
-    # Replace home with ~
     dir="${cwd/#$HOME/~}"
-
-    # Truncate to last 3 components with …/ prefix if needed
     IFS='/' read -rA parts <<< "$dir"
-    if (( ${#parts[@]} > 4 )); then
-        dir="…/${parts[-3]}/${parts[-2]}/${parts[-1]}"
+    if (( ${#parts[@]} > 6 )); then
+        dir="…/${parts[-5]}/${parts[-4]}/${parts[-3]}/${parts[-2]}/${parts[-1]}"
     fi
-
     output+="${BOLD}${CYAN}${dir}${RESET}"
 fi
 
-# Git branch (yellow)
-if [[ -n "$git_branch" ]]; then
-    output+=" ${YELLOW}[${git_branch}]${RESET}"
+# Git branch from the working directory
+if git -C "$cwd" rev-parse --is-inside-work-tree &>/dev/null 2>&1; then
+    branch=$(git --git-dir="$cwd/.git" --work-tree="$cwd" symbolic-ref --short HEAD 2>/dev/null \
+             || git --git-dir="$cwd/.git" --work-tree="$cwd" rev-parse --short HEAD 2>/dev/null)
+    if [[ -n "$branch" ]]; then
+        output+=" ${YELLOW}[${branch}]${RESET}"
+    fi
 fi
 
 # Model name (blue, simplified)
-if [[ -n "$model" ]]; then
-    # Simplify model names
-    display_model="$model"
-    case "$model" in
+if [[ -n "$model_id" ]]; then
+    display_model="$model_id"
+    case "$model_id" in
         *opus*4-6*|*opus*4.6*) display_model="Opus 4.6" ;;
-        *opus*|*Opus*) display_model="Opus 4.5" ;;
+        *opus*)                 display_model="Opus" ;;
         *sonnet*4-5*|*sonnet*4.5*) display_model="Sonnet 4.5" ;;
-        *sonnet*|*Sonnet*) display_model="Sonnet 4" ;;
+        *sonnet*)               display_model="Sonnet" ;;
         *haiku*4-5*|*haiku*4.5*) display_model="Haiku 4.5" ;;
-        *haiku*|*Haiku*) display_model="Haiku" ;;
+        *haiku*)                display_model="Haiku" ;;
     esac
     output+=" ${BOLD}•${RESET} ${BLUE}${display_model}${RESET}"
 fi
 
-# Context remaining (color based on amount)
-if [[ -n "$context_pct" && "$context_pct" =~ ^[0-9]+$ ]]; then
-    if (( context_pct > 50 )); then
-        ctx_color="$GREEN"
-    elif (( context_pct > 20 )); then
-        ctx_color="$YELLOW"
-    else
-        ctx_color="$RED"
+# Context used (color based on usage)
+if [[ -n "$used_pct" ]]; then
+    pct_int=$(printf "%.0f" "$used_pct" 2>/dev/null)
+    if [[ "$pct_int" =~ ^[0-9]+$ ]]; then
+        if (( pct_int < 50 )); then
+            ctx_color="$GREEN"
+        elif (( pct_int < 80 )); then
+            ctx_color="$YELLOW"
+        else
+            ctx_color="$RED"
+        fi
+        output+=" ${BOLD}•${RESET} ${ctx_color}ctx: ${pct_int}%${RESET}"
     fi
-    output+=" ${BOLD}•${RESET} ${ctx_color}Context: ${context_pct}%${RESET}"
+fi
+
+# Rate limits (13%|45% — 5hr first, 7d after, no prefix)
+rl_parts=""
+for val in "$rl_5h" "$rl_7d"; do
+    if [[ -n "$val" ]]; then
+        pct_int=$(printf "%.0f" "$val" 2>/dev/null)
+        if [[ "$pct_int" =~ ^[0-9]+$ ]]; then
+            if (( pct_int < 50 )); then
+                rl_color="$GREEN"
+            elif (( pct_int < 80 )); then
+                rl_color="$YELLOW"
+            else
+                rl_color="$RED"
+            fi
+            if [[ -n "$rl_parts" ]]; then
+                rl_parts+="${RESET}|"
+            fi
+            rl_parts+="${rl_color}${pct_int}%"
+        fi
+    fi
+done
+if [[ -n "$rl_parts" ]]; then
+    output+=" ${BOLD}•${RESET} usage: ${rl_parts}${RESET}"
 fi
 
 # Output style (magenta, only if not default)
-if [[ -n "$output_style" && "$output_style" != "default" && "$output_style" != "normal" ]]; then
+if [[ -n "$output_style" && "$output_style" != "default" ]]; then
     output+=" ${BOLD}•${RESET} ${MAGENTA}${output_style}${RESET}"
 fi
 
 # Vim mode (purple)
-if [[ "$vim_mode" == "true" ]]; then
-    output+=" ${BOLD}•${RESET} ${PURPLE}vim${RESET}"
+if [[ -n "$vim_mode" ]]; then
+    output+=" ${BOLD}•${RESET} ${PURPLE}${vim_mode}${RESET}"
 fi
 
 # Agent name (bright cyan)
 if [[ -n "$agent_name" ]]; then
-    output+=" ${BOLD}•${RESET} ${BRIGHT_CYAN}⚡${agent_name}${RESET}"
+    output+=" ${BOLD}•${RESET} ${BRIGHT_CYAN}${agent_name}${RESET}"
 fi
 
-echo -e "$output"
+printf "%b\n" "$output"

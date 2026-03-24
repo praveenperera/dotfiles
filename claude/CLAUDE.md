@@ -40,6 +40,8 @@
 # Python Project Specific
 
 - Always use `uv` NEVER pip
+- Never use `Any` in type stubs (.pyi files) — it defeats the purpose of type checking. `Any` touching `Any` never produces errors. Use `/btx` to read the library source and get the real types. If a type is truly dynamic, use `object` instead of `Any`
+- When creating or fixing stubs, fix ALL types in every stub file — don't just fix the one that's currently broken and leave `Any` everywhere else
 
 # Build Verification
 
