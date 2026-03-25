@@ -43,3 +43,4 @@ opencode/AGENTS.md
 /claude/backups
 claude/mcp-needs-auth-cache.json
 claude/security_warnings_state_*.json
+/claude/scheduled-tasks
