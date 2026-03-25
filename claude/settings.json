@@ -98,6 +98,7 @@
   },
   "effortLevel": "high",
   "voiceEnabled": true,
+  "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
