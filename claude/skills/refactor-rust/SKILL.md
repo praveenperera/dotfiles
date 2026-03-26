@@ -13,7 +13,7 @@ Code should be easy to read, easy to follow, easy to review, and easy to change.
 
 Read the project's CLAUDE.md for project-specific rules before starting.
 
-Preserve behavior by default. If a refactor exposes a correctness bug, isolate it, add a test, and call out the semantic change explicitly. Ask the user before major module splits.
+Preserve behavior by default. If a refactor exposes a correctness bug, isolate it, write a reproducing test, and report it to the user — don't fix it in the same pass. Ask the user before major module splits.
 
 Discover repo-specific verification first: check for a justfile, then fall back to `cargo fmt` / `cargo clippy` / `cargo test`. Run tests before and after.
 
@@ -35,6 +35,8 @@ Before any refactoring, produce a findings report. Start skeptical — do not as
 - Order findings by severity. Only proceed to Pass 1/2 for findings that warrant action
 
 ## Pass 1: Structure
+
+Only proceed if Findings First identified structural issues that warrant action.
 
 Spawn an agent focused exclusively on structural refactoring. Do not touch style in this pass. Clarity over brevity — explicit code is often better than overly compact.
 
@@ -70,15 +72,16 @@ Spawn an agent focused exclusively on structural refactoring. Do not touch style
 - eyre over anyhow; color_eyre for CLIs; `thiserror` for library code errors
 - `.context()` / `.wrap_err()` to add meaning at each error layer
 
-### Clippy lint suppression audit
-- Review `#[allow(...)]` attributes — sometimes needed, but often a smell hiding something that needs a restructure rather than a suppression
+### Dead code and suppression audit
+- Review `#[allow(dead_code)]` and unused code — remove if genuinely dead, don't leave deprecated code in place
+- Review other `#[allow(...)]` attributes — sometimes needed, but often a smell hiding something that needs a restructure rather than a suppression
 
 ### Verify
 - Run repo-specific lint and test commands discovered during setup
 
 ## Pass 2: Style
 
-Spawn a separate agent focused on style and conventions. Run after structure pass is complete.
+Spawn a separate agent focused on style and conventions. Always runs if Pass 1 ran. May also run independently for style-only cleanup even without structural findings.
 
 ### Comments
 - Inline comments (`//`): start lowercase
