@@ -86,7 +86,8 @@
     "rust-analyzer-lsp@claude-plugins-official": true,
     "ralph-wiggum@claude-plugins-official": true,
     "safety-net@cc-marketplace": true,
-    "greptile@claude-plugins-official": true
+    "greptile@claude-plugins-official": true,
+    "figma@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "claude-code-plugins": {
