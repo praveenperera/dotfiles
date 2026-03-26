@@ -131,6 +131,13 @@ pub enum MainCmd {
     #[command(visible_aliases = ["agent", "bc"])]
     BetterContext(#[command(flatten)] BetterContextArgs),
 
+    /// Codex CLI profile management
+    #[command(arg_required_else_help = true)]
+    Codex {
+        #[command(subcommand)]
+        subcommand: crate::cmd::codex::CodexCmd,
+    },
+
     /// Crate operations (crates.io)
     #[command(arg_required_else_help = true)]
     Crate {

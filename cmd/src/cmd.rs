@@ -1,5 +1,6 @@
 pub mod better_context;
 pub mod bootstrap;
+pub mod codex;
 pub mod crate_versions;
 pub mod file;
 pub mod gcloud;
@@ -79,6 +80,10 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::File { subcommand } => {
             let file_flags = file::File { subcommand };
             file::run_with_flags(&sh, file_flags)
+        }
+        MainCmd::Codex { subcommand } => {
+            let codex_flags = codex::Codex { subcommand };
+            codex::run_with_flags(&sh, codex_flags)
         }
         MainCmd::Sync { subcommand } => {
             let sync_flags = sync::Sync { subcommand };
