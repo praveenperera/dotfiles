@@ -73,13 +73,6 @@ alias clps="claude --permission-mode plan --model sonnet"
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"
 
-# codex profiles
-alias cxa="cmd codex launch a --"
-alias cxs="cmd codex launch s --"
-alias cxd="cmd codex launch d --"
-alias cxf="cmd codex launch f --"
-alias cxg="cmd codex launch g --"
-
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
 
