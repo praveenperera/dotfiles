@@ -7,25 +7,45 @@ description: Refactor Rust code for clarity, structure, and maintainability. Spl
 
 ## Goal
 
-Code should be easy to read, easy to follow, easy to review, and easy to change.
+Code should be easy to read, easy to follow, easy to review, and easy to change. But "no refactor needed" is a valid and good outcome. Don't refactor for refactoring's sake — only change code that has real readability, maintainability, or correctness pain.
 
 ## Setup
 
 Read the project's CLAUDE.md for project-specific rules before starting.
 
-Never change behavior. Run `cargo test` before and after. Ask the user before major module splits.
+Preserve behavior by default. If a refactor exposes a correctness bug, isolate it, add a test, and call out the semantic change explicitly. Ask the user before major module splits.
+
+Discover repo-specific verification first: check for a justfile, then fall back to `cargo fmt` / `cargo clippy` / `cargo test`. Run tests before and after.
+
+## Scope
+
+- **Recent changes (default)**: Only refactor recently touched code — could mean uncommitted changes, commits on this branch, or the last day or two of work. Ask the user to confirm scope before starting
+- **Full sweep**: When the user explicitly asks to refactor a whole module, crate, or codebase
+
+Infer from context: bare `/refactor-rust` or "clean up my changes" = recent. "Refactor this codebase" or "refactor this module" = full sweep. When unsure, ask.
+
+## Findings First
+
+Before any refactoring, produce a findings report. Start skeptical — do not assume a refactor is justified.
+
+- Review the code in scope and list concrete problems: maintainability issues, correctness risks, testing gaps, unclear control flow
+- Every finding must point to specific code with a concrete reason — not "this file is large" or "this could be cleaner"
+- Separate actionable problems from code smells. Code smells alone don't justify a refactor
+- If the code is already in good shape, say so explicitly and stop
+- Order findings by severity. Only proceed to Pass 1/2 for findings that warrant action
 
 ## Pass 1: Structure
 
 Spawn an agent focused exclusively on structural refactoring. Do not touch style in this pass. Clarity over brevity — explicit code is often better than overly compact.
 
 ### Module splitting
-- Modules over ~300 lines: split by concern
+- Use line count as a heuristic, not a trigger — large modules may warrant splitting by concern, but too many tiny files can make code harder to follow
 - Use Rust 2018+ layout: `module_name.rs` + `module_name/nested.rs`, never `mod.rs`
 
 ### Function extraction
 - Functions doing multiple things: extract helpers
 - Each function should have a single clear responsibility
+- Same cohesion warning: too many tiny helpers can hurt readability more than a slightly long function
 
 ### Nesting reduction
 - Early returns and guard clauses at function start
@@ -43,7 +63,7 @@ Spawn an agent focused exclusively on structural refactoring. Do not touch style
 - Tuple structs for simple wrappers (e.g., `struct Foo(Arc<Inner>)`)
 - Newtypes over primitives for domain concepts (e.g., `UserId(u64)` not `u64`)
 - Avoid gratuitous `.clone()` where a borrow works just as well (it's noise), but don't contort ownership to avoid a clone when cloning is the clearest option
-- Actors (`ractor` for new projects, `act_zero` for existing) over `Arc<Mutex<T>>`
+- If the project already uses actors (`ractor` or `act_zero` for async; crossbeam channels with small actor structs for sync), `Arc<Mutex<T>>` patterns are likely actor candidates — refactor to match, but consider that some one-off Mutex usage may be intentional. If the project doesn't use actors, mention it once as an option but don't repeat if already discussed
 
 ### Error handling
 - `.unwrap()` only in tests; `.expect()` sparse in prod, mostly for early error-out
@@ -54,8 +74,7 @@ Spawn an agent focused exclusively on structural refactoring. Do not touch style
 - Review `#[allow(...)]` attributes — sometimes needed, but often a smell hiding something that needs a restructure rather than a suppression
 
 ### Verify
-- `just clippy` (fall back to `cargo clippy`)
-- `cargo test`
+- Run repo-specific lint and test commands discovered during setup
 
 ## Pass 2: Style
 
@@ -82,8 +101,7 @@ Spawn a separate agent focused on style and conventions. Run after structure pas
 - `tracing` for logging; `println!` is fine in CLIs for user-facing output
 
 ### Verify
-- `just fmt` (fall back to `cargo fmt`)
-- `just clippy` (fall back to `cargo clippy`)
+- Run repo-specific fmt, lint, and test commands discovered during setup
 
 ## Refactoring Discipline
 
