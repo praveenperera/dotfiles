@@ -70,6 +70,12 @@ alias clh="claude --permission-mode acceptEdits --model haiku"
 alias clpo="claude --permission-mode plan --model opus"
 alias clps="claude --permission-mode plan --model sonnet"
 
+alias cxa="cmd codex launch a --"
+alias cxs="cmd codex launch s --"
+alias cxd="cmd codex launch d --"
+alias cxf="cmd codex launch f --"
+alias cxg="cmd codex launch g --"
+
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"
 
