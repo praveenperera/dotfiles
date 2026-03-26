@@ -24,6 +24,7 @@
 - If docs have already been generated, check `target/doc/` for existing documentation of the project and its dependencies before regenerating
 - Whenever you get clippy errors first run cargo fix --allow-dirty and then fix whatever remains
 - I always prefer eyre (color-eyre if cli) to anyhow
+- Don't use `mod.rs` for regular modules, prefer the Rust 2018+ layout with `module_name.rs` and nested modules in `module_name/nested_module_name.rs`
 - if-let chains are stable in Rust now, always collapse nested if-lets into a single statement using `&&`
 - Avoid redundant closures - use `.map(func)` instead of `.map(|x| func(x))`
 - Prefer tuple structs over named field structs for simple wrappers (e.g., `struct Foo(Arc<Inner>)` not `struct Foo { inner: Arc<Inner> }`)
