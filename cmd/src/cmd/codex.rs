@@ -26,6 +26,10 @@ pub enum CodexCmd {
     Login {
         /// Profile name to save
         profile: String,
+
+        /// Use the device auth flow
+        #[arg(short = 'd', long)]
+        device_auth: bool,
     },
 
     /// List available profiles
@@ -49,7 +53,10 @@ fn auth_path() -> PathBuf {
 pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
     match flags.subcommand {
         CodexCmd::Launch { profile, args } => launch(&profile, &args),
-        CodexCmd::Login { profile } => login(&profile),
+        CodexCmd::Login {
+            profile,
+            device_auth,
+        } => login(&profile, device_auth),
         CodexCmd::List => list(),
     }
 }
@@ -75,7 +82,7 @@ fn launch(profile: &str, args: &[OsString]) -> Result<()> {
     std::process::exit(status.code().unwrap_or(1));
 }
 
-fn login(profile: &str) -> Result<()> {
+fn login(profile: &str, device_auth: bool) -> Result<()> {
     let profile_dir = profiles_dir().join(profile);
     std::fs::create_dir_all(&profile_dir)?;
 
@@ -84,7 +91,14 @@ fn login(profile: &str) -> Result<()> {
         .status()
         .ok();
 
-    let status = std::process::Command::new("codex").arg("login").status()?;
+    let mut login_command = std::process::Command::new("codex");
+    login_command.arg("login");
+
+    if device_auth {
+        login_command.arg("--device-auth");
+    }
+
+    let status = login_command.status()?;
 
     if !status.success() {
         return Err(eyre!("codex login failed"));
