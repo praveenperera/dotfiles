@@ -1,6 +1,6 @@
 # Workflow
 
-- Always start in plan mode. Before making any changes, present a clear plan of what you intend to do and wait for explicit approval before proceeding with implementation
+- If during implementation you realize some changes are needed that were not planned, ask for clarification before proceeding with making sweeping changes
 
 # General
 
