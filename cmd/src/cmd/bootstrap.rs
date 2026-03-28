@@ -1,4 +1,6 @@
 use std::ffi::OsString;
+use std::fs;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use askama::Template;
@@ -482,20 +484,66 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
     }
 
     for (path, target) in path_and_target.iter() {
-        sh.remove_path(target)?;
-
-        if let Some(parent) = PathBuf::from(target).parent() {
-            if !sh.path_exists(parent) {
-                cmd!(sh, "mkdir -p {parent}").quiet().run()?;
-            }
+        if sync_symlink(sh, path, target)? == SyncSymlinkOutcome::SkippedBrokenSource {
+            println!(
+                "{} {}",
+                "skipping broken symlink source".yellow(),
+                path.display().to_string().blue()
+            );
         }
-
-        cmd!(sh, "ln -s {path} {target}").run()?;
     }
 
     // only install tpm if tmux exists
     if has_tool(sh, "tmux") {
         install_tpm(sh, &home)?;
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SyncSymlinkOutcome {
+    Linked,
+    SkippedBrokenSource,
+}
+
+fn sync_symlink(sh: &Shell, path: &Path, target: &Path) -> Result<SyncSymlinkOutcome> {
+    if is_broken_symlink(path)? {
+        remove_existing_path(target)?;
+        return Ok(SyncSymlinkOutcome::SkippedBrokenSource);
+    }
+
+    remove_existing_path(target)?;
+
+    if let Some(parent) = target.parent() {
+        if !sh.path_exists(parent) {
+            cmd!(sh, "mkdir -p {parent}").quiet().run()?;
+        }
+    }
+
+    cmd!(sh, "ln -s {path} {target}").run()?;
+    Ok(SyncSymlinkOutcome::Linked)
+}
+
+fn is_broken_symlink(path: &Path) -> Result<bool> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) => Ok(metadata.file_type().is_symlink() && !path.exists()),
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(false),
+        Err(err) => Err(err.into()),
+    }
+}
+
+fn remove_existing_path(path: &Path) -> Result<()> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(err) => return Err(err.into()),
+    };
+
+    if metadata.is_dir() && !metadata.file_type().is_symlink() {
+        fs::remove_dir_all(path)?;
+    } else {
+        fs::remove_file(path)?;
     }
 
     Ok(())
@@ -653,4 +701,72 @@ fn create_and_run_file(sh: &Shell, contents: &str, file: &str) -> Result<()> {
     cmd!(sh, "zsh {tmp_path}").quiet().run()?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::io::ErrorKind;
+    use std::os::unix::fs::symlink;
+
+    use tempfile::tempdir;
+    use xshell::Shell;
+
+    use super::{sync_symlink, SyncSymlinkOutcome};
+
+    #[test]
+    fn replaces_broken_target_symlink() {
+        let dir = tempdir().unwrap();
+        let sh = Shell::new().unwrap();
+        let source = dir.path().join("source");
+        let missing = dir.path().join("missing");
+        let target = dir.path().join("target");
+
+        fs::create_dir(&source).unwrap();
+        symlink(&missing, &target).unwrap();
+
+        let outcome = sync_symlink(&sh, &source, &target).unwrap();
+
+        assert_eq!(outcome, SyncSymlinkOutcome::Linked);
+        assert_eq!(fs::read_link(&target).unwrap(), source);
+    }
+
+    #[test]
+    fn skips_broken_source_symlink_and_removes_stale_target() {
+        let dir = tempdir().unwrap();
+        let sh = Shell::new().unwrap();
+        let source = dir.path().join("source");
+        let missing = dir.path().join("missing");
+        let stale_source = dir.path().join("stale-source");
+        let target = dir.path().join("target");
+
+        fs::create_dir(&stale_source).unwrap();
+        symlink(&missing, &source).unwrap();
+        symlink(&stale_source, &target).unwrap();
+
+        let outcome = sync_symlink(&sh, &source, &target).unwrap();
+
+        assert_eq!(outcome, SyncSymlinkOutcome::SkippedBrokenSource);
+        assert_eq!(
+            fs::symlink_metadata(&target).unwrap_err().kind(),
+            ErrorKind::NotFound
+        );
+    }
+
+    #[test]
+    fn relinks_valid_source_on_repeat_runs() {
+        let dir = tempdir().unwrap();
+        let sh = Shell::new().unwrap();
+        let source = dir.path().join("source");
+        let target = dir.path().join("nested").join("target");
+
+        fs::create_dir(&source).unwrap();
+
+        let first = sync_symlink(&sh, &source, &target).unwrap();
+        let second = sync_symlink(&sh, &source, &target).unwrap();
+
+        assert_eq!(first, SyncSymlinkOutcome::Linked);
+        assert_eq!(second, SyncSymlinkOutcome::Linked);
+        assert_eq!(fs::read_link(&target).unwrap(), source);
+    }
 }
