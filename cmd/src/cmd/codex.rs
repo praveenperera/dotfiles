@@ -52,6 +52,17 @@ pub enum CodexCmd {
     /// List saved profiles and their identities
     #[command(visible_alias = "ls")]
     List,
+
+    /// Delete a saved profile
+    #[command(visible_alias = "rm")]
+    Delete {
+        /// Profile name to delete
+        profile: String,
+
+        /// Skip the confirmation prompt
+        #[arg(short = 'y', long)]
+        yes: bool,
+    },
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -289,6 +300,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
             device_auth,
         } => login(&profile, device_auth),
         CodexCmd::List => list(),
+        CodexCmd::Delete { profile, yes } => delete(&profile, yes),
     }
 }
 
@@ -465,6 +477,30 @@ fn list() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn delete(profile: &str, yes: bool) -> Result<()> {
+    let profile_home = profile_codex_home(profile);
+    if !profile_home.exists() {
+        return Err(eyre!("Profile '{profile}' not found. Run: cmd codex list"));
+    }
+
+    if !yes && !prompt_for_confirmation(&format!("Delete codex profile '{profile}'?"))? {
+        println!("Skipped deleting codex profile: {profile}");
+        return Ok(());
+    }
+
+    delete_profile_home(&profile_home)?;
+    println!("Deleted codex profile: {profile}");
+    Ok(())
+}
+
+fn delete_profile_home(profile_home: &Path) -> Result<()> {
+    if !profile_home.exists() {
+        return Err(eyre!("Profile home not found: {}", profile_home.display()));
+    }
+
+    remove_existing_path(profile_home)
 }
 
 fn colorize_row_cell(value: &str, width: usize, row: &ProfileRow) -> String {
@@ -1118,7 +1154,11 @@ fn conflicting_profiles(
 
 fn prompt_for_replacement(conflicts: &[String], requested_profile: &str) -> Result<bool> {
     let existing = conflicts.join(", ");
-    print!("Replace '{existing}' with '{requested_profile}'? [y/N] ");
+    prompt_for_confirmation(&format!("Replace '{existing}' with '{requested_profile}'?"))
+}
+
+fn prompt_for_confirmation(prompt: &str) -> Result<bool> {
+    print!("{prompt} [y/N] ");
     io::stdout().flush()?;
 
     let mut answer = String::new();
@@ -1430,10 +1470,10 @@ fn title_case(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_profile_rows, conflicting_profiles, parse_auth_identity, read_stored_auth,
-        save_profile_auth, sync_profile_codex_home, AuthIdentity, ProfileStyleKind,
-        ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome,
-        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
+        build_profile_rows, conflicting_profiles, delete_profile_home, parse_auth_identity,
+        read_stored_auth, save_profile_auth, sync_profile_codex_home, AuthIdentity,
+        ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState,
+        SaveProfileOutcome, SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::Local;
@@ -1555,6 +1595,33 @@ mod tests {
             fs::read_to_string(profiles_dir.join("new").join("auth.json")).unwrap(),
             new_auth
         );
+    }
+
+    #[test]
+    fn delete_removes_profile_home_without_touching_global_auth() {
+        let dir = tempdir().unwrap();
+        let global_auth = dir.path().join(".codex").join("auth.json");
+        let profile_home = dir.path().join(".codex").join("profiles").join("work");
+
+        fs::create_dir_all(&profile_home).unwrap();
+        fs::create_dir_all(global_auth.parent().unwrap()).unwrap();
+        fs::write(&global_auth, "global-auth").unwrap();
+        fs::write(profile_home.join("auth.json"), "profile-auth").unwrap();
+
+        delete_profile_home(&profile_home).unwrap();
+
+        assert!(!profile_home.exists());
+        assert_eq!(fs::read_to_string(global_auth).unwrap(), "global-auth");
+    }
+
+    #[test]
+    fn delete_errors_for_missing_profile() {
+        let dir = tempdir().unwrap();
+        let profile_home = dir.path().join(".codex").join("profiles").join("missing");
+
+        let err = delete_profile_home(&profile_home).unwrap_err();
+
+        assert!(err.to_string().contains("Profile home not found"));
     }
 
     #[test]
