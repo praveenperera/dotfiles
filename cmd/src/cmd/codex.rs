@@ -350,6 +350,36 @@ fn profile_codex_home(profile: &str) -> PathBuf {
     profiles_dir().join(profile)
 }
 
+fn profile_launches_dir(profile_home: &Path) -> PathBuf {
+    profile_home.join(".launch")
+}
+
+fn create_launch_home(profile_home: &Path) -> Result<PathBuf> {
+    let launches_dir = profile_launches_dir(profile_home);
+    fs::create_dir_all(&launches_dir)?;
+
+    for attempt in 0..10 {
+        let timestamp = Utc::now().format("%Y%m%dT%H%M%S%fZ");
+        let suffix = if attempt == 0 {
+            format!("pid{}", std::process::id())
+        } else {
+            format!("pid{}-{attempt}", std::process::id())
+        };
+        let launch_home = launches_dir.join(format!("{timestamp}-{suffix}"));
+
+        match fs::create_dir(&launch_home) {
+            Ok(()) => return Ok(launch_home),
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            Err(err) => return Err(err.into()),
+        }
+    }
+
+    Err(eyre!(
+        "Failed to create a unique launch home in {}",
+        launches_dir.display()
+    ))
+}
+
 fn auth_path() -> PathBuf {
     codex_dir().join("auth.json")
 }
@@ -386,29 +416,23 @@ fn launch(profile: &str, args: &[OsString]) -> Result<()> {
     }
 
     sync_profile_codex_home(&profile_home, &shared_codex_home)?;
-    let launch_home = tempfile::tempdir()?;
+    let launch_home = create_launch_home(&profile_home)?;
     let launch_auth = read_auth_snapshot(&profile_auth)?;
-    sync_launch_codex_home(launch_home.path(), &shared_codex_home, &profile_auth)?;
-    let mut child = codex_command(launch_home.path());
+    sync_launch_codex_home(&launch_home, &shared_codex_home, &profile_auth)?;
+    let mut child = codex_command(&launch_home);
     child.args(args);
     let mut child = child.spawn()?;
-    let session_marker_path =
-        match write_session_marker(&profile_home, child.id(), launch_home.path()) {
-            Ok(marker_path) => marker_path,
-            Err(err) => {
-                child.kill().ok();
-                let _ = child.wait();
-                return Err(err);
-            }
-        };
+    let session_marker_path = match write_session_marker(&profile_home, child.id(), &launch_home) {
+        Ok(marker_path) => marker_path,
+        Err(err) => {
+            child.kill().ok();
+            let _ = child.wait();
+            return Err(err);
+        }
+    };
     let status = child.wait()?;
     remove_existing_path(&session_marker_path)?;
-    promote_launch_auth_if_unchanged(
-        &profile_auth,
-        &launch_auth,
-        &launch_home.path().join("auth.json"),
-    )?;
-    drop(launch_home);
+    promote_launch_auth_if_unchanged(&profile_auth, &launch_auth, &launch_home.join("auth.json"))?;
     std::process::exit(status.code().unwrap_or(1));
 }
 
@@ -769,14 +793,14 @@ fn refresh_profile_auth_if_unchanged(
     write_auth_raw_if_unchanged(profile_auth, &launch_auth.raw, &refreshed_raw)
 }
 
-fn profile_sessions_dir(profile_home: &Path) -> PathBuf {
-    profile_home.join("sessions")
+fn profile_session_markers_dir(profile_home: &Path) -> PathBuf {
+    profile_home.join(".session-markers")
 }
 
 fn write_session_marker(profile_home: &Path, pid: u32, launch_home: &Path) -> Result<PathBuf> {
-    let sessions_dir = profile_sessions_dir(profile_home);
-    fs::create_dir_all(&sessions_dir)?;
-    let marker_path = sessions_dir.join(format!("{pid}.json"));
+    let markers_dir = profile_session_markers_dir(profile_home);
+    fs::create_dir_all(&markers_dir)?;
+    let marker_path = markers_dir.join(format!("{pid}.json"));
     let marker = SessionMarker {
         pid,
         started_at: Utc::now(),
@@ -787,13 +811,13 @@ fn write_session_marker(profile_home: &Path, pid: u32, launch_home: &Path) -> Re
 }
 
 fn active_session_markers(profile_home: &Path) -> Result<Vec<SessionMarker>> {
-    let sessions_dir = profile_sessions_dir(profile_home);
-    if !sessions_dir.exists() {
+    let markers_dir = profile_session_markers_dir(profile_home);
+    if !markers_dir.exists() {
         return Ok(Vec::new());
     }
 
     let mut active = Vec::new();
-    for entry in fs::read_dir(&sessions_dir)? {
+    for entry in fs::read_dir(&markers_dir)? {
         let entry = entry?;
         let path = entry.path();
         let marker = match read_session_marker(&path) {
@@ -2089,8 +2113,8 @@ fn title_case(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        active_session_markers, build_profile_rows, conflicting_profiles, delete_profile_home,
-        needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration,
+        active_session_markers, build_profile_rows, conflicting_profiles, create_launch_home,
+        delete_profile_home, needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration,
         promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth, save_profile_auth,
         sync_launch_codex_home, sync_profile_codex_home, write_auth_raw_if_unchanged,
         write_session_marker, AuthIdentity, LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind,
@@ -2363,6 +2387,47 @@ mod tests {
 
         assert!(active.is_empty());
         assert!(!marker_path.exists());
+    }
+
+    #[test]
+    fn active_session_markers_does_not_touch_rollout_dirs() {
+        let dir = tempdir().unwrap();
+        let profile_home = dir.path().join("profiles").join("a");
+        let shared_sessions = dir.path().join("shared-sessions");
+        let rollout_dir = shared_sessions.join("2026").join("03").join("31");
+        let rollout_path = rollout_dir.join("rollout-2026-03-31T12-00-00-thread.jsonl");
+        let markers_dir = profile_home.join(".session-markers");
+        let stale_marker = markers_dir.join("stale.json");
+
+        fs::create_dir_all(&profile_home).unwrap();
+        fs::create_dir_all(&rollout_dir).unwrap();
+        fs::write(&rollout_path, "{\"dummy\":true}\n").unwrap();
+        symlink(&shared_sessions, profile_home.join("sessions")).unwrap();
+        fs::create_dir_all(&markers_dir).unwrap();
+        fs::write(&stale_marker, "not-json").unwrap();
+
+        let active = active_session_markers(&profile_home).unwrap();
+
+        assert!(active.is_empty());
+        assert!(rollout_dir.exists());
+        assert!(rollout_path.exists());
+        assert!(!stale_marker.exists());
+    }
+
+    #[test]
+    fn create_launch_home_creates_unique_dirs_under_profile_launch_root() {
+        let dir = tempdir().unwrap();
+        let profile_home = dir.path().join("profiles").join("a");
+        fs::create_dir_all(&profile_home).unwrap();
+
+        let first = create_launch_home(&profile_home).unwrap();
+        let second = create_launch_home(&profile_home).unwrap();
+
+        assert_ne!(first, second);
+        assert!(first.starts_with(profile_home.join(".launch")));
+        assert!(second.starts_with(profile_home.join(".launch")));
+        assert!(first.is_dir());
+        assert!(second.is_dir());
     }
 
     #[test]
