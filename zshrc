@@ -75,6 +75,7 @@ alias lls="cmd codex launch s --"
 alias lld="cmd codex launch d --"
 alias llf="cmd codex launch f --"
 alias llg="cmd codex launch g --"
+alias llw="cmd codex launch w --"
 
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"

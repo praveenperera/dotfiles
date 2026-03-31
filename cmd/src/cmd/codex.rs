@@ -51,7 +51,11 @@ pub enum CodexCmd {
 
     /// List saved profiles and their identities
     #[command(visible_alias = "ls")]
-    List,
+    List {
+        /// Show full profile details
+        #[arg(short, long)]
+        verbose: bool,
+    },
 
     /// Refresh a saved profile's auth
     #[command(visible_alias = "rp")]
@@ -139,8 +143,12 @@ struct ProfileRow {
     plan: String,
     five_hour: String,
     five_hour_reset: String,
+    five_hour_compact: String,
+    five_hour_style: LimitStyleKind,
     weekly: String,
     weekly_reset: String,
+    weekly_compact: String,
+    weekly_style: LimitStyleKind,
     status: ProfileStatus,
 }
 
@@ -171,6 +179,16 @@ enum ProfileStyleKind {
     Success,
     Warning,
     Error,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LimitStyleKind {
+    Normal,
+    Success,
+    Warning,
+    Caution,
+    Error,
+    Critical,
 }
 
 #[derive(Debug, Clone)]
@@ -279,6 +297,14 @@ struct ProfileTableWidths {
     weekly_reset: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CompactProfileTableWidths {
+    profile: usize,
+    label: usize,
+    five_hour: usize,
+    weekly: usize,
+}
+
 fn codex_dir() -> PathBuf {
     let home = std::env::var("HOME").expect("HOME must be set");
     PathBuf::from(home).join(".codex")
@@ -309,7 +335,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
             profile,
             device_auth,
         } => login(&profile, device_auth),
-        CodexCmd::List => list(),
+        CodexCmd::List { verbose } => list(verbose),
         CodexCmd::RefreshProfile { profile } => refresh_profile(&profile),
         CodexCmd::Delete { profile, yes } => delete(&profile, yes),
     }
@@ -407,7 +433,7 @@ fn login(profile: &str, device_auth: bool) -> Result<()> {
     Ok(())
 }
 
-fn list() -> Result<()> {
+fn list(verbose: bool) -> Result<()> {
     let mut profiles = load_saved_profiles(&profiles_dir())?;
     if profiles.is_empty() {
         println!("No profiles. Run: cmd codex login <name>");
@@ -418,7 +444,64 @@ fn list() -> Result<()> {
 
     let active_identity = read_auth_identity(&auth_path()).ok();
     let rows = build_profile_rows(&profiles, active_identity.as_ref());
-    let widths = profile_table_widths(&rows);
+    if verbose {
+        print_verbose_profile_table(&rows);
+    } else {
+        print_compact_profile_table(&rows);
+    }
+
+    Ok(())
+}
+
+fn print_compact_profile_table(rows: &[ProfileRow]) {
+    let widths = compact_profile_table_widths(rows);
+
+    println!(
+        "{}   {}   {}   {}",
+        format!(
+            "{:<profile_width$}",
+            "PROFILE",
+            profile_width = widths.profile
+        )
+        .blue()
+        .bold(),
+        format!("{:<label_width$}", "EMAIL", label_width = widths.label)
+            .blue()
+            .bold(),
+        format!(
+            "{:<five_hour_width$}",
+            "5 HOUR LIMIT",
+            five_hour_width = widths.five_hour
+        )
+        .blue()
+        .bold(),
+        format!(
+            "{:<weekly_width$}",
+            "WEEKLY LIMIT",
+            weekly_width = widths.weekly
+        )
+        .blue()
+        .bold(),
+    );
+
+    for row in rows {
+        println!(
+            "{}   {}   {}   {}",
+            colorize_row_cell(&row.profile, widths.profile, row),
+            colorize_row_cell(&row.label, widths.label, row),
+            colorize_limit_cell(
+                &row.five_hour_compact,
+                widths.five_hour,
+                row.five_hour_style,
+                row,
+            ),
+            colorize_limit_cell(&row.weekly_compact, widths.weekly, row.weekly_style, row),
+        );
+    }
+}
+
+fn print_verbose_profile_table(rows: &[ProfileRow]) {
+    let widths = profile_table_widths(rows);
 
     println!(
         "{}  {}  {}  {}  {}  {}  {}  {}  {}  {}  {}",
@@ -429,7 +512,7 @@ fn list() -> Result<()> {
         )
         .blue()
         .bold(),
-        format!("{:<label_width$}", "LABEL", label_width = widths.label)
+        format!("{:<label_width$}", "EMAIL", label_width = widths.label)
             .blue()
             .bold(),
         format!(
@@ -482,21 +565,19 @@ fn list() -> Result<()> {
     for row in rows {
         println!(
             "{}  {}  {}  {}  {}  {}  {}  {}  {}  {}  {}",
-            colorize_row_cell(&row.profile, widths.profile, &row),
-            colorize_row_cell(&row.label, widths.label, &row),
-            colorize_row_cell(&row.provider, widths.provider, &row),
-            colorize_row_cell(&row.user, widths.user, &row),
-            colorize_row_cell(&row.account, widths.account, &row),
-            colorize_row_cell(&row.plan, widths.plan, &row),
-            colorize_row_cell(&row.five_hour, widths.five_hour, &row),
-            colorize_row_cell(&row.five_hour_reset, widths.five_hour_reset, &row),
-            colorize_row_cell(&row.weekly, widths.weekly, &row),
-            colorize_row_cell(&row.weekly_reset, widths.weekly_reset, &row),
-            colorize_status(&row),
+            colorize_row_cell(&row.profile, widths.profile, row),
+            colorize_row_cell(&row.label, widths.label, row),
+            colorize_row_cell(&row.provider, widths.provider, row),
+            colorize_row_cell(&row.user, widths.user, row),
+            colorize_row_cell(&row.account, widths.account, row),
+            colorize_row_cell(&row.plan, widths.plan, row),
+            colorize_limit_cell(&row.five_hour, widths.five_hour, row.five_hour_style, row),
+            colorize_row_cell(&row.five_hour_reset, widths.five_hour_reset, row),
+            colorize_limit_cell(&row.weekly, widths.weekly, row.weekly_style, row),
+            colorize_row_cell(&row.weekly_reset, widths.weekly_reset, row),
+            colorize_status(row),
         );
     }
-
-    Ok(())
 }
 
 fn refresh_profile(profile: &str) -> Result<()> {
@@ -553,6 +634,27 @@ fn colorize_row_cell(value: &str, width: usize, row: &ProfileRow) -> String {
     match row.status.whole_row_style() {
         ProfileStyleKind::Error => padded.red().bold().to_string(),
         _ => padded,
+    }
+}
+
+fn colorize_limit_cell(
+    value: &str,
+    width: usize,
+    style: LimitStyleKind,
+    row: &ProfileRow,
+) -> String {
+    let padded = format!("{value:<width$}");
+    if row.status.whole_row_style() == ProfileStyleKind::Error {
+        return padded.red().bold().to_string();
+    }
+
+    match style {
+        LimitStyleKind::Normal => padded,
+        LimitStyleKind::Success => padded.green().to_string(),
+        LimitStyleKind::Warning => padded.yellow().to_string(),
+        LimitStyleKind::Caution => padded.truecolor(255, 165, 0).to_string(),
+        LimitStyleKind::Error => padded.red().to_string(),
+        LimitStyleKind::Critical => padded.red().bold().to_string(),
     }
 }
 
@@ -1303,8 +1405,12 @@ fn build_profile_rows(
                     plan: "-".into(),
                     five_hour: "-".into(),
                     five_hour_reset: "-".into(),
+                    five_hour_compact: "-".into(),
+                    five_hour_style: LimitStyleKind::Normal,
                     weekly: "-".into(),
                     weekly_reset: "-".into(),
+                    weekly_compact: "-".into(),
+                    weekly_style: LimitStyleKind::Normal,
                     status: ProfileStatus {
                         items: if profile.invalid_auth {
                             vec![ProfileStatusItem::InvalidAuth]
@@ -1388,8 +1494,12 @@ fn build_profile_rows(
                 plan: usage_plan(&profile.usage),
                 five_hour: usage_window_percent(&profile.usage, UsageWindowKind::Primary),
                 five_hour_reset: usage_window_reset(&profile.usage, UsageWindowKind::Primary),
+                five_hour_compact: usage_window_compact(&profile.usage, UsageWindowKind::Primary),
+                five_hour_style: five_hour_limit_style(&profile.usage),
                 weekly: usage_window_percent(&profile.usage, UsageWindowKind::Secondary),
                 weekly_reset: usage_window_reset(&profile.usage, UsageWindowKind::Secondary),
+                weekly_compact: usage_window_compact(&profile.usage, UsageWindowKind::Secondary),
+                weekly_style: usage_window_style(&profile.usage, UsageWindowKind::Secondary),
                 status,
             }
         })
@@ -1400,7 +1510,7 @@ fn profile_table_widths(rows: &[ProfileRow]) -> ProfileTableWidths {
     rows.iter().fold(
         ProfileTableWidths {
             profile: "PROFILE".len(),
-            label: "LABEL".len(),
+            label: "EMAIL".len(),
             provider: "PROVIDER".len(),
             user: "USER".len(),
             account: "ACCOUNT".len(),
@@ -1421,6 +1531,23 @@ fn profile_table_widths(rows: &[ProfileRow]) -> ProfileTableWidths {
             five_hour_reset: widths.five_hour_reset.max(row.five_hour_reset.len()),
             weekly: widths.weekly.max(row.weekly.len()),
             weekly_reset: widths.weekly_reset.max(row.weekly_reset.len()),
+        },
+    )
+}
+
+fn compact_profile_table_widths(rows: &[ProfileRow]) -> CompactProfileTableWidths {
+    rows.iter().fold(
+        CompactProfileTableWidths {
+            profile: "PROFILE".len(),
+            label: "EMAIL".len(),
+            five_hour: "5 HOUR LIMIT".len(),
+            weekly: "WEEKLY LIMIT".len(),
+        },
+        |widths, row| CompactProfileTableWidths {
+            profile: widths.profile.max(row.profile.len()),
+            label: widths.label.max(row.label.len()),
+            five_hour: widths.five_hour.max(row.five_hour_compact.len()),
+            weekly: widths.weekly.max(row.weekly_compact.len()),
         },
     )
 }
@@ -1448,11 +1575,55 @@ fn usage_window_percent(usage: &ProfileUsageState, kind: UsageWindowKind) -> Str
         .unwrap_or_else(|| "-".into())
 }
 
+fn usage_window_style(usage: &ProfileUsageState, kind: UsageWindowKind) -> LimitStyleKind {
+    usage_window(usage, kind)
+        .map(|window| limit_style(window.used_percent))
+        .unwrap_or(LimitStyleKind::Normal)
+}
+
+fn five_hour_limit_style(usage: &ProfileUsageState) -> LimitStyleKind {
+    let weekly_exhausted = usage_window(usage, UsageWindowKind::Secondary)
+        .is_some_and(|window| format!("{:.0}", window.used_percent) == "100");
+
+    if weekly_exhausted {
+        LimitStyleKind::Critical
+    } else {
+        usage_window_style(usage, UsageWindowKind::Primary)
+    }
+}
+
 fn usage_window_reset(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
     usage_window(usage, kind)
         .and_then(|window| window.reset_at)
         .and_then(|timestamp| Local.timestamp_opt(timestamp, 0).single())
         .map(|timestamp| format_reset_timestamp(timestamp, Local::now()))
+        .unwrap_or_else(|| "-".into())
+}
+
+fn usage_window_compact(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
+    let percent = usage_window_percent(usage, kind);
+    let reset = usage_window_reset_compact(usage, kind);
+
+    match (percent.as_str(), reset.as_str()) {
+        ("-", _) => "-".into(),
+        (_, "-") => format_compact_percent(&percent),
+        _ => format!("{} ({reset})", format_compact_percent(&percent)),
+    }
+}
+
+fn format_compact_percent(percent: &str) -> String {
+    let Some(number) = percent.strip_suffix('%') else {
+        return percent.to_string();
+    };
+
+    format!("{number:>3}%")
+}
+
+fn usage_window_reset_compact(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
+    usage_window(usage, kind)
+        .and_then(|window| window.reset_at)
+        .and_then(|timestamp| Local.timestamp_opt(timestamp, 0).single())
+        .map(|timestamp| format_reset_timestamp_compact(timestamp, Local::now(), kind))
         .unwrap_or_else(|| "-".into())
 }
 
@@ -1463,6 +1634,20 @@ fn usage_window(usage: &ProfileUsageState, kind: UsageWindowKind) -> Option<&Usa
             UsageWindowKind::Secondary => snapshot.secondary.as_ref(),
         },
         _ => None,
+    }
+}
+
+fn limit_style(used_percent: f64) -> LimitStyleKind {
+    if used_percent < 50.0 {
+        LimitStyleKind::Success
+    } else if used_percent < 80.0 {
+        LimitStyleKind::Warning
+    } else if used_percent <= 90.0 {
+        LimitStyleKind::Caution
+    } else if used_percent <= 95.0 {
+        LimitStyleKind::Error
+    } else {
+        LimitStyleKind::Critical
     }
 }
 
@@ -1554,6 +1739,20 @@ fn format_reset_timestamp(
     }
 }
 
+fn format_reset_timestamp_compact(
+    dt: chrono::DateTime<Local>,
+    captured_at: chrono::DateTime<Local>,
+    kind: UsageWindowKind,
+) -> String {
+    let time = dt.format("%-I:%M %p").to_string();
+
+    match kind {
+        UsageWindowKind::Primary => time,
+        UsageWindowKind::Secondary if dt.date_naive() == captured_at.date_naive() => time,
+        UsageWindowKind::Secondary => format!("{} {time}", dt.format("%a")),
+    }
+}
+
 fn title_case(value: &str) -> String {
     if value.is_empty() {
         return String::new();
@@ -1573,9 +1772,9 @@ mod tests {
         build_profile_rows, conflicting_profiles, delete_profile_home, parse_auth_identity,
         promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth, save_profile_auth,
         sync_launch_codex_home, sync_profile_codex_home, write_auth_raw_if_unchanged, AuthIdentity,
-        ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot,
-        ProfileUsageState, SaveProfileOutcome, SavedProfile, StoredAuth, UsageFetchResult,
-        UsageWindowSnapshot,
+        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
+        ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome, SavedProfile, StoredAuth,
+        UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone};
@@ -1747,6 +1946,86 @@ mod tests {
     }
 
     #[test]
+    fn format_reset_timestamp_compact_uses_time_only_for_primary_window() {
+        let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
+        let reset_at = Local.with_ymd_and_hms(2026, 4, 2, 0, 30, 0).unwrap();
+
+        let formatted = super::format_reset_timestamp_compact(
+            reset_at,
+            captured_at,
+            super::UsageWindowKind::Primary,
+        );
+
+        assert_eq!(formatted, "12:30 AM");
+    }
+
+    #[test]
+    fn format_reset_timestamp_compact_uses_weekday_for_future_secondary_window() {
+        let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
+        let reset_at = Local.with_ymd_and_hms(2026, 4, 2, 0, 30, 0).unwrap();
+
+        let formatted = super::format_reset_timestamp_compact(
+            reset_at,
+            captured_at,
+            super::UsageWindowKind::Secondary,
+        );
+
+        assert_eq!(formatted, "Thu 12:30 AM");
+    }
+
+    #[test]
+    fn usage_window_compact_wraps_reset_in_parentheses() {
+        let usage =
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 73.0));
+
+        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::Primary);
+
+        assert!(formatted.starts_with(" 42% ("));
+        assert!(formatted.ends_with(')'));
+    }
+
+    #[test]
+    fn format_compact_percent_right_aligns_numeric_part() {
+        assert_eq!(super::format_compact_percent("0%"), "  0%");
+        assert_eq!(super::format_compact_percent("42%"), " 42%");
+        assert_eq!(super::format_compact_percent("100%"), "100%");
+    }
+
+    #[test]
+    fn usage_window_style_uses_expected_bands() {
+        assert_eq!(super::limit_style(49.0), LimitStyleKind::Success);
+        assert_eq!(super::limit_style(50.0), LimitStyleKind::Warning);
+        assert_eq!(super::limit_style(79.0), LimitStyleKind::Warning);
+        assert_eq!(super::limit_style(80.0), LimitStyleKind::Caution);
+        assert_eq!(super::limit_style(90.0), LimitStyleKind::Caution);
+        assert_eq!(super::limit_style(91.0), LimitStyleKind::Error);
+        assert_eq!(super::limit_style(95.0), LimitStyleKind::Error);
+        assert_eq!(super::limit_style(96.0), LimitStyleKind::Critical);
+        assert_eq!(
+            super::usage_window_style(
+                &ProfileUsageState::Unchecked,
+                super::UsageWindowKind::Primary
+            ),
+            LimitStyleKind::Normal
+        );
+    }
+
+    #[test]
+    fn five_hour_style_turns_bold_red_when_weekly_displays_hundred() {
+        let usage =
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 100.0));
+
+        assert_eq!(
+            super::five_hour_limit_style(&usage),
+            LimitStyleKind::Critical
+        );
+        assert_eq!(
+            super::usage_window_style(&usage, super::UsageWindowKind::Secondary),
+            LimitStyleKind::Critical
+        );
+    }
+
+    #[test]
     fn list_rows_mark_active_duplicates_shared_accounts_and_invalid_auth() {
         let active = identity("sub-1", "user-1", "acct-1", Some("praveen@example.com"));
         let profiles = vec![
@@ -1794,8 +2073,99 @@ mod tests {
         assert_eq!(row_field(&rows, "a", |row| row.plan.clone()), "Plus");
         assert_eq!(row_field(&rows, "a", |row| row.five_hour.clone()), "42%");
         assert_eq!(row_field(&rows, "a", |row| row.weekly.clone()), "73%");
+        assert_eq!(
+            row_limit_style(&rows, "a", |row| row.five_hour_style),
+            LimitStyleKind::Success
+        );
+        assert_eq!(
+            row_limit_style(&rows, "a", |row| row.weekly_style),
+            LimitStyleKind::Warning
+        );
         assert_eq!(row_style(&rows, "a"), ProfileStyleKind::Error);
         assert_eq!(row_style(&rows, "c"), ProfileStyleKind::Normal);
+    }
+
+    #[test]
+    fn list_rows_force_five_hour_bold_red_when_weekly_is_exhausted() {
+        let active = identity("sub-1", "user-1", "acct-1", Some("praveen@example.com"));
+        let profiles = vec![saved_profile(
+            "a",
+            active.clone(),
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 100.0)),
+        )];
+
+        let rows = build_profile_rows(&profiles, Some(&active));
+
+        assert_eq!(
+            row_limit_style(&rows, "a", |row| row.five_hour_style),
+            LimitStyleKind::Critical
+        );
+        assert_eq!(
+            row_limit_style(&rows, "a", |row| row.weekly_style),
+            LimitStyleKind::Critical
+        );
+    }
+
+    #[test]
+    fn colorize_limit_cell_uses_limit_style_when_row_has_no_error() {
+        colored::control::set_override(true);
+
+        let row = super::ProfileRow {
+            profile: "a".into(),
+            label: "-".into(),
+            provider: "-".into(),
+            user: "-".into(),
+            account: "-".into(),
+            plan: "-".into(),
+            five_hour: "96%".into(),
+            five_hour_reset: "-".into(),
+            five_hour_compact: "96%".into(),
+            five_hour_style: LimitStyleKind::Critical,
+            weekly: "82%".into(),
+            weekly_reset: "-".into(),
+            weekly_compact: "82%".into(),
+            weekly_style: LimitStyleKind::Caution,
+            status: Default::default(),
+        };
+
+        let critical = super::colorize_limit_cell("96%", 3, row.five_hour_style, &row);
+        let caution = super::colorize_limit_cell("82%", 3, row.weekly_style, &row);
+
+        assert!(critical.contains("\u{1b}[1;31m96%\u{1b}[0m"));
+        assert!(caution.contains("\u{1b}[38;2;255;165;0m82%\u{1b}[0m"));
+
+        colored::control::unset_override();
+    }
+
+    #[test]
+    fn colorize_limit_cell_keeps_whole_row_error_precedence() {
+        colored::control::set_override(true);
+
+        let row = super::ProfileRow {
+            profile: "a".into(),
+            label: "-".into(),
+            provider: "-".into(),
+            user: "-".into(),
+            account: "-".into(),
+            plan: "-".into(),
+            five_hour: "42%".into(),
+            five_hour_reset: "-".into(),
+            five_hour_compact: "42%".into(),
+            five_hour_style: LimitStyleKind::Success,
+            weekly: "73%".into(),
+            weekly_reset: "-".into(),
+            weekly_compact: "73%".into(),
+            weekly_style: LimitStyleKind::Warning,
+            status: super::ProfileStatus {
+                items: vec![super::ProfileStatusItem::SameUser(vec!["b".into()])],
+            },
+        };
+
+        let rendered = super::colorize_limit_cell("42%", 3, row.five_hour_style, &row);
+
+        assert!(rendered.contains("\u{1b}[1;31m42%\u{1b}[0m"));
+
+        colored::control::unset_override();
     }
 
     #[test]
@@ -2280,6 +2650,14 @@ mod tests {
             .unwrap()
             .status
             .whole_row_style()
+    }
+
+    fn row_limit_style(
+        rows: &[super::ProfileRow],
+        profile: &str,
+        value: impl Fn(&super::ProfileRow) -> LimitStyleKind,
+    ) -> LimitStyleKind {
+        value(rows.iter().find(|row| row.profile == profile).unwrap())
     }
 
     fn usage_snapshot(
