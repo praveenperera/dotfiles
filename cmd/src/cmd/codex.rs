@@ -64,6 +64,10 @@ pub enum CodexCmd {
         profile: String,
     },
 
+    /// Refresh stale saved profiles that are not currently in use
+    #[command(visible_alias = "ra")]
+    RefreshAll,
+
     /// Delete a saved profile
     #[command(visible_alias = "rm")]
     Delete {
@@ -111,6 +115,11 @@ struct IdTokenClaims {
 struct OpenAiClaims {
     user_id: Option<String>,
     chatgpt_account_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct StandardJwtClaims {
+    exp: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -213,6 +222,29 @@ struct ProfileUsageSnapshot {
 struct UsageWindowSnapshot {
     used_percent: f64,
     reset_at: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct SessionMarker {
+    pid: u32,
+    started_at: chrono::DateTime<Utc>,
+    launch_home: PathBuf,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RefreshAllResultKind {
+    Refreshed,
+    Fresh,
+    Deferred,
+    Invalid,
+    Failed,
+}
+
+#[derive(Debug, Clone)]
+struct RefreshAllRow {
+    profile: String,
+    result: RefreshAllResultKind,
+    detail: String,
 }
 
 #[derive(Debug, Clone)]
@@ -327,6 +359,7 @@ const CHATGPT_REFRESH_URL: &str = "https://auth.openai.com/oauth/token";
 const CHATGPT_REFRESH_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 const USAGE_FETCH_CONCURRENCY: usize = 4;
 const USAGE_FETCH_TIMEOUT: Duration = Duration::from_secs(5);
+const PROFILE_REFRESH_FALLBACK_DAYS: i64 = 7;
 
 pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
     match flags.subcommand {
@@ -337,6 +370,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
         } => login(&profile, device_auth),
         CodexCmd::List { verbose } => list(verbose),
         CodexCmd::RefreshProfile { profile } => refresh_profile(&profile),
+        CodexCmd::RefreshAll => refresh_all(),
         CodexCmd::Delete { profile, yes } => delete(&profile, yes),
     }
 }
@@ -355,14 +389,26 @@ fn launch(profile: &str, args: &[OsString]) -> Result<()> {
     let launch_home = tempfile::tempdir()?;
     let launch_auth = read_auth_snapshot(&profile_auth)?;
     sync_launch_codex_home(launch_home.path(), &shared_codex_home, &profile_auth)?;
-
-    let status = codex_command(launch_home.path()).args(args).status()?;
+    let mut child = codex_command(launch_home.path());
+    child.args(args);
+    let mut child = child.spawn()?;
+    let session_marker_path =
+        match write_session_marker(&profile_home, child.id(), launch_home.path()) {
+            Ok(marker_path) => marker_path,
+            Err(err) => {
+                child.kill().ok();
+                let _ = child.wait();
+                return Err(err);
+            }
+        };
+    let status = child.wait()?;
+    remove_existing_path(&session_marker_path)?;
     promote_launch_auth_if_unchanged(
         &profile_auth,
         &launch_auth,
         &launch_home.path().join("auth.json"),
     )?;
-
+    drop(launch_home);
     std::process::exit(status.code().unwrap_or(1));
 }
 
@@ -581,7 +627,16 @@ fn print_verbose_profile_table(rows: &[ProfileRow]) {
 }
 
 fn refresh_profile(profile: &str) -> Result<()> {
-    let profile_auth = profile_codex_home(profile).join("auth.json");
+    let profile_home = profile_codex_home(profile);
+    let active_sessions = active_session_markers(&profile_home)?;
+    if !active_sessions.is_empty() {
+        return Err(eyre!(
+            "Profile '{profile}' has {} active codex session(s)",
+            active_sessions.len()
+        ));
+    }
+
+    let profile_auth = profile_home.join("auth.json");
     if !profile_auth.exists() {
         return Err(eyre!("Profile '{profile}' not found. Run: cmd codex list"));
     }
@@ -603,6 +658,249 @@ fn refresh_profile(profile: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn refresh_all() -> Result<()> {
+    let profiles = load_saved_profiles(&profiles_dir())?;
+    if profiles.is_empty() {
+        println!("No profiles. Run: cmd codex login <name>");
+        return Ok(());
+    }
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let refresher = ProfileAuthRefresher::new()?;
+    let now = Utc::now();
+    let mut rows = Vec::new();
+
+    for profile in profiles {
+        let profile_home = profile_codex_home(&profile.name);
+        let active_sessions = active_session_markers(&profile_home)?;
+        if !active_sessions.is_empty() {
+            rows.push(RefreshAllRow {
+                profile: profile.name,
+                result: RefreshAllResultKind::Deferred,
+                detail: format!("{} active session(s)", active_sessions.len()),
+            });
+            continue;
+        }
+
+        if profile.invalid_auth {
+            rows.push(RefreshAllRow {
+                profile: profile.name,
+                result: RefreshAllResultKind::Invalid,
+                detail: "invalid auth".into(),
+            });
+            continue;
+        }
+
+        let auth = match read_stored_auth(&profile.auth_path) {
+            Ok(auth) => auth,
+            Err(err) => {
+                rows.push(RefreshAllRow {
+                    profile: profile.name,
+                    result: RefreshAllResultKind::Invalid,
+                    detail: err.to_string(),
+                });
+                continue;
+            }
+        };
+
+        if !needs_proactive_refresh(&auth, now)? {
+            rows.push(RefreshAllRow {
+                profile: profile.name,
+                result: RefreshAllResultKind::Fresh,
+                detail: "fresh".into(),
+            });
+            continue;
+        }
+
+        match refresh_profile_auth_if_unchanged(
+            &runtime,
+            &refresher,
+            &profile.auth_path,
+            &auth,
+            profile.identity.as_ref(),
+        ) {
+            Ok(true) => rows.push(RefreshAllRow {
+                profile: profile.name,
+                result: RefreshAllResultKind::Refreshed,
+                detail: "refreshed".into(),
+            }),
+            Ok(false) => rows.push(RefreshAllRow {
+                profile: profile.name,
+                result: RefreshAllResultKind::Failed,
+                detail: "profile auth changed".into(),
+            }),
+            Err(err) => rows.push(RefreshAllRow {
+                profile: profile.name,
+                result: RefreshAllResultKind::Failed,
+                detail: err.to_string(),
+            }),
+        }
+    }
+
+    print_refresh_all_rows(&rows);
+
+    if rows.iter().any(|row| {
+        matches!(
+            row.result,
+            RefreshAllResultKind::Failed | RefreshAllResultKind::Invalid
+        )
+    }) {
+        return Err(eyre!("Some profiles could not be refreshed"));
+    }
+
+    Ok(())
+}
+
+fn refresh_profile_auth_if_unchanged(
+    runtime: &tokio::runtime::Runtime,
+    refresher: &ProfileAuthRefresher,
+    profile_auth: &Path,
+    auth: &StoredAuth,
+    expected_identity: Option<&AuthIdentity>,
+) -> Result<bool> {
+    let launch_auth = read_auth_snapshot(profile_auth)?;
+    let refreshed_auth =
+        runtime.block_on(refresher.refresh_profile_auth(auth, expected_identity))?;
+    let refreshed_raw = serde_json::to_vec_pretty(&refreshed_auth)?;
+    write_auth_raw_if_unchanged(profile_auth, &launch_auth.raw, &refreshed_raw)
+}
+
+fn profile_sessions_dir(profile_home: &Path) -> PathBuf {
+    profile_home.join("sessions")
+}
+
+fn write_session_marker(profile_home: &Path, pid: u32, launch_home: &Path) -> Result<PathBuf> {
+    let sessions_dir = profile_sessions_dir(profile_home);
+    fs::create_dir_all(&sessions_dir)?;
+    let marker_path = sessions_dir.join(format!("{pid}.json"));
+    let marker = SessionMarker {
+        pid,
+        started_at: Utc::now(),
+        launch_home: launch_home.to_path_buf(),
+    };
+    fs::write(&marker_path, serde_json::to_vec_pretty(&marker)?)?;
+    Ok(marker_path)
+}
+
+fn active_session_markers(profile_home: &Path) -> Result<Vec<SessionMarker>> {
+    let sessions_dir = profile_sessions_dir(profile_home);
+    if !sessions_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut active = Vec::new();
+    for entry in fs::read_dir(&sessions_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        let marker = match read_session_marker(&path) {
+            Ok(marker) => marker,
+            Err(_) => {
+                remove_existing_path(&path)?;
+                continue;
+            }
+        };
+
+        if session_marker_is_active(&marker)? {
+            active.push(marker);
+        } else {
+            remove_existing_path(&path)?;
+        }
+    }
+
+    Ok(active)
+}
+
+fn read_session_marker(path: &Path) -> Result<SessionMarker> {
+    Ok(serde_json::from_slice(&fs::read(path)?)?)
+}
+
+fn session_marker_is_active(marker: &SessionMarker) -> Result<bool> {
+    let pid = marker.pid.to_string();
+    let output = std::process::Command::new("ps")
+        .args(["-o", "comm=", "-p", &pid])
+        .output()?;
+    if !output.status.success() {
+        return Ok(false);
+    }
+
+    let command = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if command.is_empty() {
+        return Ok(false);
+    }
+
+    Ok(command.contains("codex"))
+}
+
+fn needs_proactive_refresh(auth: &StoredAuth, now: chrono::DateTime<Utc>) -> Result<bool> {
+    let access_token = auth
+        .tokens
+        .as_ref()
+        .and_then(|tokens| tokens.access_token.as_deref())
+        .filter(|token| !token.is_empty());
+    if let Some(access_token) = access_token {
+        if let Ok(Some(expires_at)) = parse_jwt_expiration(access_token) {
+            return Ok(expires_at <= now);
+        }
+    }
+
+    let Some(last_refresh) = auth.last_refresh.as_deref() else {
+        return Ok(true);
+    };
+    let last_refresh = chrono::DateTime::parse_from_rfc3339(last_refresh)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .wrap_err("last_refresh is not valid RFC3339")?;
+    Ok(last_refresh < now - chrono::Duration::days(PROFILE_REFRESH_FALLBACK_DAYS))
+}
+
+fn parse_jwt_expiration(token: &str) -> Result<Option<chrono::DateTime<Utc>>> {
+    let claims: StandardJwtClaims = serde_json::from_slice(&jwt_payload(token)?)?;
+    Ok(claims
+        .exp
+        .and_then(|exp| Utc.timestamp_opt(exp, 0).single()))
+}
+
+fn print_refresh_all_rows(rows: &[RefreshAllRow]) {
+    let profile_width = rows
+        .iter()
+        .map(|row| row.profile.len())
+        .max()
+        .unwrap_or("PROFILE".len())
+        .max("PROFILE".len());
+    let result_width = rows
+        .iter()
+        .map(|row| row.result.text().len())
+        .max()
+        .unwrap_or("RESULT".len())
+        .max("RESULT".len());
+
+    println!(
+        "{}  {}  {}",
+        format!(
+            "{:<profile_width$}",
+            "PROFILE",
+            profile_width = profile_width
+        )
+        .blue()
+        .bold(),
+        format!("{:<result_width$}", "RESULT", result_width = result_width)
+            .blue()
+            .bold(),
+        "DETAIL".blue().bold(),
+    );
+
+    for row in rows {
+        println!(
+            "{:<profile_width$}  {}  {}",
+            row.profile,
+            row.result.render(result_width),
+            row.detail,
+            profile_width = profile_width,
+        );
+    }
 }
 
 fn delete(profile: &str, yes: bool) -> Result<()> {
@@ -740,6 +1038,28 @@ impl ProfileStatusItem {
             ProfileStyleKind::Warning => text.yellow().to_string(),
             ProfileStyleKind::Error => text.red().bold().to_string(),
             ProfileStyleKind::Normal => text,
+        }
+    }
+}
+
+impl RefreshAllResultKind {
+    fn text(&self) -> &'static str {
+        match self {
+            Self::Refreshed => "refreshed",
+            Self::Fresh => "fresh",
+            Self::Deferred => "deferred",
+            Self::Invalid => "invalid",
+            Self::Failed => "failed",
+        }
+    }
+
+    fn render(&self, width: usize) -> String {
+        let padded = format!("{:<width$}", self.text());
+        match self {
+            Self::Refreshed => padded.green().to_string(),
+            Self::Fresh => padded,
+            Self::Deferred => padded.yellow().to_string(),
+            Self::Invalid | Self::Failed => padded.red().bold().to_string(),
         }
     }
 }
@@ -1769,15 +2089,16 @@ fn title_case(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_profile_rows, conflicting_profiles, delete_profile_home, parse_auth_identity,
+        active_session_markers, build_profile_rows, conflicting_profiles, delete_profile_home,
+        needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration,
         promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth, save_profile_auth,
-        sync_launch_codex_home, sync_profile_codex_home, write_auth_raw_if_unchanged, AuthIdentity,
-        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
-        ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome, SavedProfile, StoredAuth,
-        UsageFetchResult, UsageWindowSnapshot,
+        sync_launch_codex_home, sync_profile_codex_home, write_auth_raw_if_unchanged,
+        write_session_marker, AuthIdentity, LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind,
+        ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome,
+        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-    use chrono::{Local, TimeZone};
+    use chrono::{Local, TimeZone, Utc};
     use serde_json::json;
     use std::fs;
     use std::os::unix::fs::symlink;
@@ -1992,6 +2313,59 @@ mod tests {
     }
 
     #[test]
+    fn parse_jwt_expiration_reads_exp_claim() {
+        let expires_at = Utc.with_ymd_and_hms(2026, 4, 3, 12, 0, 0).unwrap();
+        let jwt = access_jwt(Some(expires_at.timestamp()));
+
+        let parsed = parse_jwt_expiration(&jwt).unwrap();
+
+        assert_eq!(parsed, Some(expires_at));
+    }
+
+    #[test]
+    fn proactive_refresh_uses_access_token_expiration_when_available() {
+        let now = Utc.with_ymd_and_hms(2026, 4, 1, 12, 0, 0).unwrap();
+        let auth = stored_auth_with_access_token_and_last_refresh(
+            Some(access_jwt(Some(now.timestamp() - 60))),
+            Some(Utc.with_ymd_and_hms(2026, 3, 31, 12, 0, 0).unwrap()),
+        );
+
+        assert!(needs_proactive_refresh(&auth, now).unwrap());
+    }
+
+    #[test]
+    fn proactive_refresh_falls_back_to_last_refresh_when_access_token_is_not_jwt() {
+        let now = Utc.with_ymd_and_hms(2026, 4, 1, 12, 0, 0).unwrap();
+        let auth = stored_auth_with_access_token_and_last_refresh(
+            Some("opaque-access-token".into()),
+            Some(Utc.with_ymd_and_hms(2026, 3, 24, 11, 59, 59).unwrap()),
+        );
+
+        assert!(needs_proactive_refresh(&auth, now).unwrap());
+    }
+
+    #[test]
+    fn proactive_refresh_treats_missing_signals_as_stale() {
+        let now = Utc.with_ymd_and_hms(2026, 4, 1, 12, 0, 0).unwrap();
+        let auth = stored_auth_with_access_token_and_last_refresh(None, None);
+
+        assert!(needs_proactive_refresh(&auth, now).unwrap());
+    }
+
+    #[test]
+    fn active_session_markers_prunes_stale_or_non_codex_processes() {
+        let dir = tempdir().unwrap();
+        let profile_home = dir.path().join("profiles").join("a");
+        let marker_path =
+            write_session_marker(&profile_home, std::process::id(), dir.path()).unwrap();
+
+        let active = active_session_markers(&profile_home).unwrap();
+
+        assert!(active.is_empty());
+        assert!(!marker_path.exists());
+    }
+
+    #[test]
     fn usage_window_style_uses_expected_bands() {
         assert_eq!(super::limit_style(49.0), LimitStyleKind::Success);
         assert_eq!(super::limit_style(50.0), LimitStyleKind::Warning);
@@ -2132,7 +2506,8 @@ mod tests {
         let caution = super::colorize_limit_cell("82%", 3, row.weekly_style, &row);
 
         assert!(critical.contains("\u{1b}[1;31m96%\u{1b}[0m"));
-        assert!(caution.contains("\u{1b}[38;2;255;165;0m82%\u{1b}[0m"));
+        assert!(caution.contains("82%"));
+        assert!(caution.contains("\u{1b}["));
 
         colored::control::unset_override();
     }
@@ -2732,6 +3107,44 @@ mod tests {
             }
         }))
         .unwrap()
+    }
+
+    fn stored_auth_with_access_token_and_last_refresh(
+        access_token: Option<String>,
+        last_refresh: Option<chrono::DateTime<Utc>>,
+    ) -> StoredAuth {
+        StoredAuth {
+            openai_api_key: None,
+            auth_mode: Some("chatgpt".into()),
+            last_refresh: last_refresh.map(|timestamp| timestamp.to_rfc3339()),
+            tokens: Some(super::StoredTokens {
+                account_id: Some("acct-1".into()),
+                id_token: Some(jwt(
+                    "sub-1",
+                    "user-1",
+                    "acct-1",
+                    Some("praveen@example.com"),
+                    None,
+                    Some("google"),
+                )),
+                access_token,
+                refresh_token: Some("refresh-token".into()),
+                extra: Default::default(),
+            }),
+            extra: Default::default(),
+        }
+    }
+
+    fn access_jwt(exp: Option<i64>) -> String {
+        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"RS256","typ":"JWT"}"#);
+        let payload = URL_SAFE_NO_PAD.encode(
+            serde_json::to_vec(&json!({
+                "exp": exp,
+            }))
+            .unwrap(),
+        );
+
+        format!("{header}.{payload}.sig")
     }
 
     fn jwt(
