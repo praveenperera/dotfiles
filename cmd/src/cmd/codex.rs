@@ -1446,7 +1446,7 @@ fn format_reset_timestamp(
     dt: chrono::DateTime<Local>,
     captured_at: chrono::DateTime<Local>,
 ) -> String {
-    let time = dt.format("%H:%M").to_string();
+    let time = dt.format("%-I:%M %p").to_string();
     if dt.date_naive() == captured_at.date_naive() {
         time
     } else {
@@ -1476,7 +1476,7 @@ mod tests {
         SaveProfileOutcome, SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-    use chrono::Local;
+    use chrono::{Local, TimeZone};
     use serde_json::json;
     use std::fs;
     use std::os::unix::fs::symlink;
@@ -1622,6 +1622,26 @@ mod tests {
         let err = delete_profile_home(&profile_home).unwrap_err();
 
         assert!(err.to_string().contains("Profile home not found"));
+    }
+
+    #[test]
+    fn format_reset_timestamp_uses_am_pm_for_same_day() {
+        let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
+        let reset_at = Local.with_ymd_and_hms(2026, 3, 31, 17, 5, 0).unwrap();
+
+        let formatted = super::format_reset_timestamp(reset_at, captured_at);
+
+        assert_eq!(formatted, "5:05 PM");
+    }
+
+    #[test]
+    fn format_reset_timestamp_uses_am_pm_for_future_day() {
+        let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
+        let reset_at = Local.with_ymd_and_hms(2026, 4, 2, 0, 30, 0).unwrap();
+
+        let formatted = super::format_reset_timestamp(reset_at, captured_at);
+
+        assert_eq!(formatted, "12:30 AM on 2 Apr");
     }
 
     #[test]
