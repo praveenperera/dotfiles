@@ -53,6 +53,7 @@ textdistance = "1.1"
 
 # json
 serde_json = "1.0"
+base64 = "0.22"
 
 # datetime
 chrono = { version = "0.4", features = ["serde"] }
