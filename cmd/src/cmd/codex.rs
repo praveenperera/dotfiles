@@ -571,6 +571,16 @@ impl ProfileUsageLoader {
         })
     }
 
+    #[cfg(test)]
+    fn with_urls(usage_url: impl Into<String>, refresh_url: impl Into<String>) -> Result<Self> {
+        let http = HttpClient::builder().timeout(USAGE_FETCH_TIMEOUT).build()?;
+        Ok(Self {
+            http,
+            usage_url: usage_url.into(),
+            refresh_url: refresh_url.into(),
+        })
+    }
+
     async fn load_updates(&self, profiles: &[SavedProfile]) -> Vec<ProfileUsageUpdate> {
         stream::iter(profiles.iter().cloned())
             .map(|profile| {
@@ -1420,9 +1430,10 @@ fn title_case(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_profile_rows, conflicting_profiles, parse_auth_identity, save_profile_auth,
-        sync_profile_codex_home, AuthIdentity, ProfileStyleKind, ProfileUsageSnapshot,
-        ProfileUsageState, SaveProfileOutcome, SavedProfile, UsageWindowSnapshot,
+        build_profile_rows, conflicting_profiles, parse_auth_identity, read_stored_auth,
+        save_profile_auth, sync_profile_codex_home, AuthIdentity, ProfileStyleKind,
+        ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome,
+        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::Local;
@@ -1431,6 +1442,10 @@ mod tests {
     use std::os::unix::fs::symlink;
     use std::path::Path;
     use tempfile::tempdir;
+    use wiremock::{
+        matchers::{body_json, header, method, path},
+        Mock, MockServer, ResponseTemplate,
+    };
 
     #[test]
     fn parses_auth_identity_from_id_token() {
@@ -1592,6 +1607,143 @@ mod tests {
         assert_eq!(row_field(&rows, "a", |row| row.weekly.clone()), "73%");
         assert_eq!(row_style(&rows, "a"), ProfileStyleKind::Error);
         assert_eq!(row_style(&rows, "c"), ProfileStyleKind::Normal);
+    }
+
+    #[tokio::test]
+    async fn usage_loader_refreshes_on_unauthorized_and_retries() {
+        let server = MockServer::start().await;
+        let refresh_path = "/oauth/token";
+        let usage_path = "/backend-api/wham/usage";
+        let loader = ProfileUsageLoader::with_urls(
+            format!("{}{}", server.uri(), usage_path),
+            format!("{}{}", server.uri(), refresh_path),
+        )
+        .unwrap();
+        let auth = read_auth("sub-1", "user-1", "acct-1", "old-access", "old-refresh");
+
+        Mock::given(method("GET"))
+            .and(path(usage_path))
+            .and(header("authorization", "Bearer old-access"))
+            .respond_with(ResponseTemplate::new(401).set_body_json(json!({
+                "error": { "code": "token_invalid" }
+            })))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("POST"))
+            .and(path(refresh_path))
+            .and(body_json(json!({
+                "client_id": "app_EMoamEEZ73f0CkXaXp7hrann",
+                "grant_type": "refresh_token",
+                "refresh_token": "old-refresh",
+                "scope": "openid profile email",
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "id_token": jwt("sub-1", "user-1", "acct-1", Some("new@example.com"), None, Some("google")),
+                "access_token": "new-access",
+                "refresh_token": "new-refresh",
+            })))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path(usage_path))
+            .and(header("authorization", "Bearer new-access"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
+                "new@example.com",
+                "user-1",
+                "acct-1",
+                "plus",
+                10.0,
+                59.0,
+            )))
+            .mount(&server)
+            .await;
+
+        let result = loader
+            .fetch_profile_usage(
+                &auth,
+                Some(&identity(
+                    "sub-1",
+                    "user-1",
+                    "acct-1",
+                    Some("old@example.com"),
+                )),
+            )
+            .await
+            .unwrap();
+
+        let UsageFetchResult::Available {
+            usage,
+            refreshed_auth,
+            ..
+        } = result
+        else {
+            panic!("expected refreshed usage");
+        };
+
+        let refreshed_auth = refreshed_auth.expect("expected refreshed auth");
+        assert_eq!(usage.plan_type.as_deref(), Some("plus"));
+        assert_eq!(usage.user_id.as_deref(), Some("user-1"));
+        assert_eq!(
+            refreshed_auth
+                .tokens
+                .as_ref()
+                .and_then(|tokens| tokens.access_token.as_deref()),
+            Some("new-access")
+        );
+        assert_eq!(
+            refreshed_auth
+                .tokens
+                .as_ref()
+                .and_then(|tokens| tokens.refresh_token.as_deref()),
+            Some("new-refresh")
+        );
+    }
+
+    #[tokio::test]
+    async fn usage_loader_rejects_refresh_for_different_user() {
+        let server = MockServer::start().await;
+        let refresh_path = "/oauth/token";
+        let usage_path = "/backend-api/wham/usage";
+        let loader = ProfileUsageLoader::with_urls(
+            format!("{}{}", server.uri(), usage_path),
+            format!("{}{}", server.uri(), refresh_path),
+        )
+        .unwrap();
+        let auth = read_auth("sub-1", "user-1", "acct-1", "old-access", "old-refresh");
+
+        Mock::given(method("GET"))
+            .and(path(usage_path))
+            .and(header("authorization", "Bearer old-access"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("POST"))
+            .and(path(refresh_path))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "id_token": jwt("sub-2", "user-2", "acct-2", Some("other@example.com"), None, Some("google")),
+                "access_token": "new-access",
+                "refresh_token": "new-refresh",
+            })))
+            .mount(&server)
+            .await;
+
+        let result = loader
+            .fetch_profile_usage(
+                &auth,
+                Some(&identity(
+                    "sub-1",
+                    "user-1",
+                    "acct-1",
+                    Some("old@example.com"),
+                )),
+            )
+            .await
+            .unwrap();
+
+        assert!(matches!(result, UsageFetchResult::ReauthNeeded));
     }
 
     #[test]
@@ -1773,5 +1925,114 @@ mod tests {
                 reset_at: Some(now + 7200),
             }),
         }
+    }
+
+    fn read_auth(
+        subject: &str,
+        user_id: &str,
+        account_id: &str,
+        access_token: &str,
+        refresh_token: &str,
+    ) -> StoredAuth {
+        let dir = tempdir().unwrap();
+        let auth_path = dir.path().join("auth.json");
+        fs::write(
+            &auth_path,
+            auth_json_with_tokens(
+                subject,
+                user_id,
+                account_id,
+                Some("old@example.com"),
+                None,
+                Some("google"),
+                access_token,
+                refresh_token,
+            ),
+        )
+        .unwrap();
+        read_stored_auth(&auth_path).unwrap()
+    }
+
+    fn auth_json_with_tokens(
+        subject: &str,
+        user_id: &str,
+        account_id: &str,
+        email: Option<&str>,
+        name: Option<&str>,
+        auth_provider: Option<&str>,
+        access_token: &str,
+        refresh_token: &str,
+    ) -> String {
+        serde_json::to_string(&json!({
+            "OPENAI_API_KEY": null,
+            "auth_mode": "chatgpt",
+            "last_refresh": "2026-03-30T00:00:00Z",
+            "tokens": {
+                "access_token": access_token,
+                "account_id": account_id,
+                "id_token": jwt(subject, user_id, account_id, email, name, auth_provider),
+                "refresh_token": refresh_token,
+            }
+        }))
+        .unwrap()
+    }
+
+    fn jwt(
+        subject: &str,
+        user_id: &str,
+        account_id: &str,
+        email: Option<&str>,
+        name: Option<&str>,
+        auth_provider: Option<&str>,
+    ) -> String {
+        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"RS256","typ":"JWT"}"#);
+        let payload = URL_SAFE_NO_PAD.encode(
+            serde_json::to_vec(&json!({
+                "sub": subject,
+                "email": email,
+                "name": name,
+                "auth_provider": auth_provider,
+                "https://api.openai.com/auth": {
+                    "user_id": user_id,
+                    "chatgpt_account_id": account_id,
+                }
+            }))
+            .unwrap(),
+        );
+
+        format!("{header}.{payload}.sig")
+    }
+
+    fn usage_response(
+        email: &str,
+        user_id: &str,
+        account_id: &str,
+        plan_type: &str,
+        primary_used_percent: f64,
+        secondary_used_percent: f64,
+    ) -> serde_json::Value {
+        let now = Local::now().timestamp();
+        json!({
+            "email": email,
+            "user_id": user_id,
+            "account_id": account_id,
+            "plan_type": plan_type,
+            "rate_limit": {
+                "allowed": true,
+                "limit_reached": false,
+                "primary_window": {
+                    "used_percent": primary_used_percent,
+                    "limit_window_seconds": 18000,
+                    "reset_after_seconds": 18000,
+                    "reset_at": now + 3600,
+                },
+                "secondary_window": {
+                    "used_percent": secondary_used_percent,
+                    "limit_window_seconds": 604800,
+                    "reset_after_seconds": 604800,
+                    "reset_at": now + 7200,
+                }
+            }
+        })
     }
 }
