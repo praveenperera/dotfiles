@@ -53,6 +53,13 @@ pub enum CodexCmd {
     #[command(visible_alias = "ls")]
     List,
 
+    /// Refresh a saved profile's auth
+    #[command(visible_alias = "rp")]
+    RefreshProfile {
+        /// Profile name to refresh
+        profile: String,
+    },
+
     /// Delete a saved profile
     #[command(visible_alias = "rm")]
     Delete {
@@ -202,6 +209,11 @@ struct ProfileUsageUpdate {
 struct ProfileUsageLoader {
     http: HttpClient,
     usage_url: String,
+}
+
+#[derive(Debug, Clone)]
+struct ProfileAuthRefresher {
+    http: HttpClient,
     refresh_url: String,
 }
 
@@ -246,12 +258,10 @@ enum UsageFetchResult {
     Available {
         identity: Option<AuthIdentity>,
         usage: ProfileUsageSnapshot,
-        refreshed_auth: Option<StoredAuth>,
     },
     ReauthNeeded,
     Unavailable {
         identity: Option<AuthIdentity>,
-        refreshed_auth: Option<StoredAuth>,
     },
 }
 
@@ -300,11 +310,13 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
             device_auth,
         } => login(&profile, device_auth),
         CodexCmd::List => list(),
+        CodexCmd::RefreshProfile { profile } => refresh_profile(&profile),
         CodexCmd::Delete { profile, yes } => delete(&profile, yes),
     }
 }
 
 fn launch(profile: &str, args: &[OsString]) -> Result<()> {
+    let shared_codex_home = codex_dir();
     let profile_home = profile_codex_home(profile);
     let profile_auth = profile_home.join("auth.json");
     if !profile_auth.exists() {
@@ -313,9 +325,17 @@ fn launch(profile: &str, args: &[OsString]) -> Result<()> {
         ));
     }
 
-    sync_profile_codex_home(&profile_home, &codex_dir())?;
+    sync_profile_codex_home(&profile_home, &shared_codex_home)?;
+    let launch_home = tempfile::tempdir()?;
+    let launch_auth = read_auth_snapshot(&profile_auth)?;
+    sync_launch_codex_home(launch_home.path(), &shared_codex_home, &profile_auth)?;
 
-    let status = codex_command(&profile_home).args(args).status()?;
+    let status = codex_command(launch_home.path()).args(args).status()?;
+    promote_launch_auth_if_unchanged(
+        &profile_auth,
+        &launch_auth,
+        &launch_home.path().join("auth.json"),
+    )?;
 
     std::process::exit(status.code().unwrap_or(1));
 }
@@ -479,6 +499,31 @@ fn list() -> Result<()> {
     Ok(())
 }
 
+fn refresh_profile(profile: &str) -> Result<()> {
+    let profile_auth = profile_codex_home(profile).join("auth.json");
+    if !profile_auth.exists() {
+        return Err(eyre!("Profile '{profile}' not found. Run: cmd codex list"));
+    }
+
+    let launch_auth = read_auth_snapshot(&profile_auth)?;
+    let auth = read_stored_auth(&profile_auth)?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let refresher = ProfileAuthRefresher::new()?;
+    let refreshed_auth =
+        runtime.block_on(refresher.refresh_profile_auth(&auth, Some(&launch_auth.identity)))?;
+    let refreshed_raw = serde_json::to_vec_pretty(&refreshed_auth)?;
+
+    if write_auth_raw_if_unchanged(&profile_auth, &launch_auth.raw, &refreshed_raw)? {
+        println!("Refreshed codex profile: {profile}");
+    } else {
+        println!("Skipped refreshing codex profile: {profile} (profile auth changed)");
+    }
+
+    Ok(())
+}
+
 fn delete(profile: &str, yes: bool) -> Result<()> {
     let profile_home = profile_codex_home(profile);
     if !profile_home.exists() {
@@ -603,17 +648,15 @@ impl ProfileUsageLoader {
         Ok(Self {
             http,
             usage_url: CHATGPT_USAGE_URL.into(),
-            refresh_url: CHATGPT_REFRESH_URL.into(),
         })
     }
 
     #[cfg(test)]
-    fn with_urls(usage_url: impl Into<String>, refresh_url: impl Into<String>) -> Result<Self> {
+    fn with_urls(usage_url: impl Into<String>) -> Result<Self> {
         let http = HttpClient::builder().timeout(USAGE_FETCH_TIMEOUT).build()?;
         Ok(Self {
             http,
             usage_url: usage_url.into(),
-            refresh_url: refresh_url.into(),
         })
     }
 
@@ -657,48 +700,28 @@ impl ProfileUsageLoader {
             Ok(result) => result,
             Err(_) => UsageFetchResult::Unavailable {
                 identity: profile.identity.clone(),
-                refreshed_auth: None,
             },
         };
 
         match result {
-            UsageFetchResult::Available {
-                identity,
-                usage,
-                refreshed_auth,
-            } => {
-                if let Some(auth) = refreshed_auth.as_ref() {
-                    let _ = write_stored_auth(&profile.auth_path, auth);
-                }
-
-                ProfileUsageUpdate {
-                    profile: profile.name,
-                    identity: identity.or(profile.identity),
-                    invalid_auth: false,
-                    usage: ProfileUsageState::Available(usage),
-                }
-            }
+            UsageFetchResult::Available { identity, usage } => ProfileUsageUpdate {
+                profile: profile.name,
+                identity: identity.or(profile.identity),
+                invalid_auth: false,
+                usage: ProfileUsageState::Available(usage),
+            },
             UsageFetchResult::ReauthNeeded => ProfileUsageUpdate {
                 profile: profile.name,
                 identity: profile.identity,
                 invalid_auth: false,
                 usage: ProfileUsageState::ReauthNeeded,
             },
-            UsageFetchResult::Unavailable {
-                identity,
-                refreshed_auth,
-            } => {
-                if let Some(auth) = refreshed_auth.as_ref() {
-                    let _ = write_stored_auth(&profile.auth_path, auth);
-                }
-
-                ProfileUsageUpdate {
-                    profile: profile.name,
-                    identity: identity.or(profile.identity),
-                    invalid_auth: false,
-                    usage: ProfileUsageState::Unavailable,
-                }
-            }
+            UsageFetchResult::Unavailable { identity } => ProfileUsageUpdate {
+                profile: profile.name,
+                identity: identity.or(profile.identity),
+                invalid_auth: false,
+                usage: ProfileUsageState::Unavailable,
+            },
         }
     }
 
@@ -709,56 +732,10 @@ impl ProfileUsageLoader {
     ) -> Result<UsageFetchResult> {
         let usage = match self.fetch_usage(auth).await {
             Ok(usage) => usage,
-            Err(err) if err.status == Some(StatusCode::UNAUTHORIZED) => {
-                let Some(refresh_token) = auth
-                    .tokens
-                    .as_ref()
-                    .and_then(|tokens| tokens.refresh_token.as_deref())
-                    .filter(|token| !token.is_empty())
-                else {
-                    return Ok(UsageFetchResult::ReauthNeeded);
-                };
-
-                let refreshed_auth = self.refresh_auth(auth, refresh_token).await?;
-                let refreshed_identity = stored_auth_identity(&refreshed_auth).ok();
-                if let Some(expected_identity) = expected_identity {
-                    if let Some(refreshed_identity) = refreshed_identity.as_ref() {
-                        if !is_same_user(expected_identity, refreshed_identity) {
-                            return Ok(UsageFetchResult::ReauthNeeded);
-                        }
-                    }
-                }
-
-                match self.fetch_usage(&refreshed_auth).await {
-                    Ok(usage) => {
-                        if let Some(expected_identity) = expected_identity {
-                            if !usage_matches_identity(&usage, expected_identity) {
-                                return Ok(UsageFetchResult::ReauthNeeded);
-                            }
-                        }
-
-                        return Ok(UsageFetchResult::Available {
-                            identity: refreshed_identity.or_else(|| expected_identity.cloned()),
-                            usage,
-                            refreshed_auth: Some(refreshed_auth),
-                        });
-                    }
-                    Err(err) if err.status == Some(StatusCode::UNAUTHORIZED) => {
-                        return Ok(UsageFetchResult::ReauthNeeded);
-                    }
-                    Err(_) => {
-                        return Ok(UsageFetchResult::Unavailable {
-                            identity: refreshed_identity.or_else(|| expected_identity.cloned()),
-                            refreshed_auth: Some(refreshed_auth),
-                        });
-                    }
-                }
-            }
             Err(_) => {
                 return Ok(UsageFetchResult::Unavailable {
                     identity: expected_identity.cloned(),
-                    refreshed_auth: None,
-                });
+                })
             }
         };
 
@@ -771,7 +748,6 @@ impl ProfileUsageLoader {
         Ok(UsageFetchResult::Available {
             identity: expected_identity.cloned(),
             usage,
-            refreshed_auth: None,
         })
     }
 
@@ -857,8 +833,38 @@ impl ProfileUsageLoader {
             }),
         })
     }
+}
 
-    async fn refresh_auth(&self, auth: &StoredAuth, refresh_token: &str) -> Result<StoredAuth> {
+impl ProfileAuthRefresher {
+    fn new() -> Result<Self> {
+        let http = HttpClient::builder().timeout(USAGE_FETCH_TIMEOUT).build()?;
+        Ok(Self {
+            http,
+            refresh_url: CHATGPT_REFRESH_URL.into(),
+        })
+    }
+
+    #[cfg(test)]
+    fn with_url(refresh_url: impl Into<String>) -> Result<Self> {
+        let http = HttpClient::builder().timeout(USAGE_FETCH_TIMEOUT).build()?;
+        Ok(Self {
+            http,
+            refresh_url: refresh_url.into(),
+        })
+    }
+
+    async fn refresh_profile_auth(
+        &self,
+        auth: &StoredAuth,
+        expected_identity: Option<&AuthIdentity>,
+    ) -> Result<StoredAuth> {
+        let refresh_token = auth
+            .tokens
+            .as_ref()
+            .and_then(|tokens| tokens.refresh_token.as_deref())
+            .filter(|token| !token.is_empty())
+            .ok_or_else(|| eyre!("Missing refresh_token in auth.json"))?;
+
         let request = RefreshRequest {
             client_id: CHATGPT_REFRESH_CLIENT_ID,
             grant_type: "refresh_token",
@@ -876,7 +882,6 @@ impl ProfileUsageLoader {
         if response.status() == StatusCode::UNAUTHORIZED {
             return Err(eyre!("Refresh token rejected"));
         }
-
         if !response.status().is_success() {
             return Err(eyre!("Refresh token request failed: {}", response.status()));
         }
@@ -896,34 +901,37 @@ impl ProfileUsageLoader {
         }
         refreshed.last_refresh = Some(Utc::now().to_rfc3339());
 
+        if let Some(expected_identity) = expected_identity {
+            let refreshed_identity = stored_auth_identity(&refreshed)?;
+            if !matches_launch_identity(expected_identity, &refreshed_identity) {
+                return Err(eyre!(
+                    "Refreshed auth does not match saved profile identity"
+                ));
+            }
+        }
+
         Ok(refreshed)
     }
 }
 
 #[derive(Debug)]
 struct UsageHttpError {
-    status: Option<StatusCode>,
     message: String,
 }
 
 impl UsageHttpError {
-    fn with_status(status: StatusCode, message: String) -> Self {
-        Self {
-            status: Some(status),
-            message,
-        }
+    fn with_status(_status: StatusCode, message: String) -> Self {
+        Self { message }
     }
 
     fn other(message: impl Into<String>) -> Self {
         Self {
-            status: None,
             message: message.into(),
         }
     }
 
     fn from_reqwest(err: reqwest::Error) -> Self {
         Self {
-            status: err.status(),
             message: err.to_string(),
         }
     }
@@ -986,8 +994,26 @@ fn sync_profile_codex_home(profile_home: &Path, shared_codex_home: &Path) -> Res
     Ok(())
 }
 
+fn sync_launch_codex_home(
+    launch_home: &Path,
+    shared_codex_home: &Path,
+    profile_auth: &Path,
+) -> Result<()> {
+    sync_profile_codex_home(launch_home, shared_codex_home)?;
+    copy_auth_file(profile_auth, &launch_home.join("auth.json"))
+}
+
 fn is_profile_local_entry(name: &str) -> bool {
     matches!(name, "auth.json" | "profiles")
+}
+
+fn copy_auth_file(source: &Path, target: &Path) -> Result<()> {
+    remove_existing_path(target)?;
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::copy(source, target)?;
+    Ok(())
 }
 
 fn sync_shared_entry(source: &Path, target: &Path) -> Result<()> {
@@ -1040,9 +1066,75 @@ fn read_stored_auth(path: &Path) -> Result<StoredAuth> {
     Ok(serde_json::from_str(&auth)?)
 }
 
-fn write_stored_auth(path: &Path, auth: &StoredAuth) -> Result<()> {
-    fs::write(path, serde_json::to_string_pretty(auth)?)?;
+#[derive(Debug, Clone)]
+struct AuthSnapshot {
+    raw: Vec<u8>,
+    identity: AuthIdentity,
+}
+
+fn read_auth_snapshot(path: &Path) -> Result<AuthSnapshot> {
+    let raw = fs::read(path)?;
+    let identity = parse_auth_identity_bytes(&raw)?;
+    Ok(AuthSnapshot { raw, identity })
+}
+
+fn parse_auth_identity_bytes(raw: &[u8]) -> Result<AuthIdentity> {
+    let auth = std::str::from_utf8(raw).wrap_err("auth.json is not valid UTF-8")?;
+    parse_auth_identity(auth)
+}
+
+// only promote auth back to the saved profile when nothing else changed it mid-run
+fn promote_launch_auth_if_unchanged(
+    profile_auth: &Path,
+    launch_auth: &AuthSnapshot,
+    final_launch_auth_path: &Path,
+) -> Result<()> {
+    let Ok(final_launch_raw) = fs::read(final_launch_auth_path) else {
+        return Ok(());
+    };
+    if final_launch_raw == launch_auth.raw {
+        return Ok(());
+    }
+
+    let Ok(final_launch_identity) = parse_auth_identity_bytes(&final_launch_raw) else {
+        return Ok(());
+    };
+    if !matches_launch_identity(&launch_auth.identity, &final_launch_identity) {
+        return Ok(());
+    }
+
+    write_auth_raw_if_unchanged(profile_auth, &launch_auth.raw, &final_launch_raw)?;
     Ok(())
+}
+
+fn write_auth_raw_if_unchanged(
+    path: &Path,
+    expected_raw: &[u8],
+    replacement_raw: &[u8],
+) -> Result<bool> {
+    let Ok(current_raw) = fs::read(path) else {
+        return Ok(false);
+    };
+    if current_raw != expected_raw {
+        return Ok(false);
+    }
+
+    fs::write(path, replacement_raw)?;
+    Ok(true)
+}
+
+fn matches_launch_identity(initial: &AuthIdentity, final_auth: &AuthIdentity) -> bool {
+    if !is_same_user(initial, final_auth) {
+        return false;
+    }
+
+    match (
+        initial.chatgpt_account_id.as_deref(),
+        final_auth.chatgpt_account_id.as_deref(),
+    ) {
+        (Some(initial_account), Some(final_account)) => initial_account == final_account,
+        _ => true,
+    }
 }
 
 fn stored_auth_identity(auth: &StoredAuth) -> Result<AuthIdentity> {
@@ -1424,6 +1516,14 @@ fn usage_matches_identity(usage: &ProfileUsageSnapshot, identity: &AuthIdentity)
         usage.account_id.as_deref(),
         identity.chatgpt_account_id.as_deref(),
     ) {
+        if usage
+            .user_id
+            .as_deref()
+            .is_some_and(|usage_user_id| usage_account_id == usage_user_id)
+        {
+            return true;
+        }
+
         if usage_account_id != identity_account_id {
             return false;
         }
@@ -1471,9 +1571,11 @@ fn title_case(value: &str) -> String {
 mod tests {
     use super::{
         build_profile_rows, conflicting_profiles, delete_profile_home, parse_auth_identity,
-        read_stored_auth, save_profile_auth, sync_profile_codex_home, AuthIdentity,
-        ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState,
-        SaveProfileOutcome, SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
+        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth, save_profile_auth,
+        sync_launch_codex_home, sync_profile_codex_home, write_auth_raw_if_unchanged, AuthIdentity,
+        ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot,
+        ProfileUsageState, SaveProfileOutcome, SavedProfile, StoredAuth, UsageFetchResult,
+        UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone};
@@ -1483,7 +1585,7 @@ mod tests {
     use std::path::Path;
     use tempfile::tempdir;
     use wiremock::{
-        matchers::{body_json, header, method, path},
+        matchers::{header, method, path},
         Mock, MockServer, ResponseTemplate,
     };
 
@@ -1696,16 +1798,27 @@ mod tests {
         assert_eq!(row_style(&rows, "c"), ProfileStyleKind::Normal);
     }
 
+    #[test]
+    fn usage_matches_identity_allows_personal_account_usage_shape() {
+        let usage = ProfileUsageSnapshot {
+            user_id: Some("user-1".into()),
+            account_id: Some("user-1".into()),
+            email: Some("praveen@example.com".into()),
+            plan_type: Some("plus".into()),
+            primary: None,
+            secondary: None,
+        };
+        let identity = identity("sub-1", "user-1", "acct-1", Some("praveen@example.com"));
+
+        assert!(super::usage_matches_identity(&usage, &identity));
+    }
+
     #[tokio::test]
-    async fn usage_loader_refreshes_on_unauthorized_and_retries() {
+    async fn usage_loader_marks_unauthorized_usage_unavailable_without_refreshing() {
         let server = MockServer::start().await;
-        let refresh_path = "/oauth/token";
         let usage_path = "/backend-api/wham/usage";
-        let loader = ProfileUsageLoader::with_urls(
-            format!("{}{}", server.uri(), usage_path),
-            format!("{}{}", server.uri(), refresh_path),
-        )
-        .unwrap();
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}{}", server.uri(), usage_path)).unwrap();
         let auth = read_auth("sub-1", "user-1", "acct-1", "old-access", "old-refresh");
 
         Mock::given(method("GET"))
@@ -1714,36 +1827,6 @@ mod tests {
             .respond_with(ResponseTemplate::new(401).set_body_json(json!({
                 "error": { "code": "token_invalid" }
             })))
-            .mount(&server)
-            .await;
-
-        Mock::given(method("POST"))
-            .and(path(refresh_path))
-            .and(body_json(json!({
-                "client_id": "app_EMoamEEZ73f0CkXaXp7hrann",
-                "grant_type": "refresh_token",
-                "refresh_token": "old-refresh",
-                "scope": "openid profile email",
-            })))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "id_token": jwt("sub-1", "user-1", "acct-1", Some("new@example.com"), None, Some("google")),
-                "access_token": "new-access",
-                "refresh_token": "new-refresh",
-            })))
-            .mount(&server)
-            .await;
-
-        Mock::given(method("GET"))
-            .and(path(usage_path))
-            .and(header("authorization", "Bearer new-access"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
-                "new@example.com",
-                "user-1",
-                "acct-1",
-                "plus",
-                10.0,
-                59.0,
-            )))
             .mount(&server)
             .await;
 
@@ -1760,60 +1843,35 @@ mod tests {
             .await
             .unwrap();
 
-        let UsageFetchResult::Available {
-            usage,
-            refreshed_auth,
-            ..
-        } = result
-        else {
-            panic!("expected refreshed usage");
+        let UsageFetchResult::Unavailable { .. } = result else {
+            panic!("expected unavailable usage");
         };
 
-        let refreshed_auth = refreshed_auth.expect("expected refreshed auth");
-        assert_eq!(usage.plan_type.as_deref(), Some("plus"));
-        assert_eq!(usage.user_id.as_deref(), Some("user-1"));
-        assert_eq!(
-            refreshed_auth
-                .tokens
-                .as_ref()
-                .and_then(|tokens| tokens.access_token.as_deref()),
-            Some("new-access")
-        );
-        assert_eq!(
-            refreshed_auth
-                .tokens
-                .as_ref()
-                .and_then(|tokens| tokens.refresh_token.as_deref()),
-            Some("new-refresh")
-        );
+        let requests = server.received_requests().await.unwrap();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].method.as_str(), "GET");
+        assert_eq!(requests[0].url.path(), usage_path);
     }
 
     #[tokio::test]
-    async fn usage_loader_rejects_refresh_for_different_user() {
+    async fn usage_loader_marks_identity_mismatches_as_reauth_needed() {
         let server = MockServer::start().await;
-        let refresh_path = "/oauth/token";
         let usage_path = "/backend-api/wham/usage";
-        let loader = ProfileUsageLoader::with_urls(
-            format!("{}{}", server.uri(), usage_path),
-            format!("{}{}", server.uri(), refresh_path),
-        )
-        .unwrap();
-        let auth = read_auth("sub-1", "user-1", "acct-1", "old-access", "old-refresh");
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}{}", server.uri(), usage_path)).unwrap();
+        let auth = read_auth("sub-1", "user-1", "acct-1", "valid-access", "old-refresh");
 
         Mock::given(method("GET"))
             .and(path(usage_path))
-            .and(header("authorization", "Bearer old-access"))
-            .respond_with(ResponseTemplate::new(401))
-            .mount(&server)
-            .await;
-
-        Mock::given(method("POST"))
-            .and(path(refresh_path))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "id_token": jwt("sub-2", "user-2", "acct-2", Some("other@example.com"), None, Some("google")),
-                "access_token": "new-access",
-                "refresh_token": "new-refresh",
-            })))
+            .and(header("authorization", "Bearer valid-access"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
+                "other@example.com",
+                "user-2",
+                "acct-2",
+                "plus",
+                10.0,
+                59.0,
+            )))
             .mount(&server)
             .await;
 
@@ -1900,6 +1958,240 @@ mod tests {
             fs::read_to_string(profile_home.join("auth.json")).unwrap(),
             "local-auth"
         );
+    }
+
+    #[test]
+    fn sync_launch_codex_home_copies_auth_and_links_shared_entries() {
+        let dir = tempdir().unwrap();
+        let global_codex = dir.path().join(".codex");
+        let launch_home = dir.path().join("launch");
+        let profile_auth = global_codex.join("profiles").join("a").join("auth.json");
+
+        fs::create_dir_all(global_codex.join("profiles").join("a")).unwrap();
+        fs::create_dir_all(global_codex.join("skills")).unwrap();
+        fs::write(global_codex.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
+        fs::write(&profile_auth, "profile-auth").unwrap();
+
+        sync_launch_codex_home(&launch_home, &global_codex, &profile_auth).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(launch_home.join("auth.json")).unwrap(),
+            "profile-auth"
+        );
+        assert_eq!(
+            fs::read_link(launch_home.join("config.toml")).unwrap(),
+            global_codex.join("config.toml")
+        );
+        assert_eq!(
+            fs::read_link(launch_home.join("skills")).unwrap(),
+            global_codex.join("skills")
+        );
+        assert!(!launch_home.join("profiles").exists());
+    }
+
+    #[test]
+    fn promote_launch_auth_if_unchanged_updates_profile_auth() {
+        let dir = tempdir().unwrap();
+        let profile_auth = dir.path().join("profile-auth.json");
+        let launch_auth_path = dir.path().join("launch-auth.json");
+        let original_auth = auth_json(
+            "sub-1",
+            "user-1",
+            "acct-1",
+            Some("old@example.com"),
+            None,
+            Some("google"),
+        );
+        let refreshed_auth = auth_json_with_tokens(
+            "sub-1",
+            "user-1",
+            "acct-1",
+            Some("new@example.com"),
+            None,
+            Some("google"),
+            "new-access",
+            "new-refresh",
+        );
+
+        fs::write(&profile_auth, &original_auth).unwrap();
+        fs::write(&launch_auth_path, &refreshed_auth).unwrap();
+        let launch_auth = read_auth_snapshot(&profile_auth).unwrap();
+
+        promote_launch_auth_if_unchanged(&profile_auth, &launch_auth, &launch_auth_path).unwrap();
+
+        assert_eq!(fs::read_to_string(&profile_auth).unwrap(), refreshed_auth);
+    }
+
+    #[test]
+    fn promote_launch_auth_if_unchanged_skips_when_profile_changed() {
+        let dir = tempdir().unwrap();
+        let profile_auth = dir.path().join("profile-auth.json");
+        let launch_auth_path = dir.path().join("launch-auth.json");
+        let original_auth = auth_json(
+            "sub-1",
+            "user-1",
+            "acct-1",
+            Some("old@example.com"),
+            None,
+            Some("google"),
+        );
+        let competing_auth = auth_json_with_tokens(
+            "sub-1",
+            "user-1",
+            "acct-1",
+            Some("other@example.com"),
+            None,
+            Some("google"),
+            "other-access",
+            "other-refresh",
+        );
+        let refreshed_auth = auth_json_with_tokens(
+            "sub-1",
+            "user-1",
+            "acct-1",
+            Some("new@example.com"),
+            None,
+            Some("google"),
+            "new-access",
+            "new-refresh",
+        );
+
+        fs::write(&profile_auth, &original_auth).unwrap();
+        let launch_auth = read_auth_snapshot(&profile_auth).unwrap();
+        fs::write(&profile_auth, &competing_auth).unwrap();
+        fs::write(&launch_auth_path, &refreshed_auth).unwrap();
+
+        promote_launch_auth_if_unchanged(&profile_auth, &launch_auth, &launch_auth_path).unwrap();
+
+        assert_eq!(fs::read_to_string(&profile_auth).unwrap(), competing_auth);
+    }
+
+    #[test]
+    fn promote_launch_auth_if_unchanged_skips_account_mismatch() {
+        let dir = tempdir().unwrap();
+        let profile_auth = dir.path().join("profile-auth.json");
+        let launch_auth_path = dir.path().join("launch-auth.json");
+        let original_auth = auth_json(
+            "sub-1",
+            "user-1",
+            "acct-1",
+            Some("old@example.com"),
+            None,
+            Some("google"),
+        );
+        let switched_account_auth = auth_json_with_tokens(
+            "sub-1",
+            "user-1",
+            "acct-2",
+            Some("new@example.com"),
+            None,
+            Some("google"),
+            "new-access",
+            "new-refresh",
+        );
+
+        fs::write(&profile_auth, &original_auth).unwrap();
+        fs::write(&launch_auth_path, &switched_account_auth).unwrap();
+        let launch_auth = read_auth_snapshot(&profile_auth).unwrap();
+
+        promote_launch_auth_if_unchanged(&profile_auth, &launch_auth, &launch_auth_path).unwrap();
+
+        assert_eq!(fs::read_to_string(&profile_auth).unwrap(), original_auth);
+    }
+
+    #[test]
+    fn write_auth_raw_if_unchanged_skips_when_profile_changed() {
+        let dir = tempdir().unwrap();
+        let auth_path = dir.path().join("auth.json");
+
+        fs::write(&auth_path, "current").unwrap();
+
+        let wrote = write_auth_raw_if_unchanged(&auth_path, b"expected", b"replacement").unwrap();
+
+        assert!(!wrote);
+        assert_eq!(fs::read_to_string(&auth_path).unwrap(), "current");
+    }
+
+    #[tokio::test]
+    async fn refresh_profile_auth_updates_tokens() {
+        let server = MockServer::start().await;
+        let refresher =
+            ProfileAuthRefresher::with_url(format!("{}/oauth/token", server.uri())).unwrap();
+        let auth = read_auth("sub-1", "user-1", "acct-1", "old-access", "old-refresh");
+
+        Mock::given(method("POST"))
+            .and(path("/oauth/token"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "id_token": jwt("sub-1", "user-1", "acct-1", Some("new@example.com"), None, Some("google")),
+                "access_token": "new-access",
+                "refresh_token": "new-refresh",
+            })))
+            .mount(&server)
+            .await;
+
+        let refreshed = refresher
+            .refresh_profile_auth(
+                &auth,
+                Some(&identity(
+                    "sub-1",
+                    "user-1",
+                    "acct-1",
+                    Some("old@example.com"),
+                )),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(
+            refreshed
+                .tokens
+                .as_ref()
+                .and_then(|tokens| tokens.access_token.as_deref()),
+            Some("new-access")
+        );
+        assert_eq!(
+            refreshed
+                .tokens
+                .as_ref()
+                .and_then(|tokens| tokens.refresh_token.as_deref()),
+            Some("new-refresh")
+        );
+        assert!(refreshed.last_refresh.is_some());
+    }
+
+    #[tokio::test]
+    async fn refresh_profile_auth_rejects_identity_mismatch() {
+        let server = MockServer::start().await;
+        let refresher =
+            ProfileAuthRefresher::with_url(format!("{}/oauth/token", server.uri())).unwrap();
+        let auth = read_auth("sub-1", "user-1", "acct-1", "old-access", "old-refresh");
+
+        Mock::given(method("POST"))
+            .and(path("/oauth/token"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "id_token": jwt("sub-2", "user-2", "acct-2", Some("other@example.com"), None, Some("google")),
+                "access_token": "new-access",
+                "refresh_token": "new-refresh",
+            })))
+            .mount(&server)
+            .await;
+
+        let err = refresher
+            .refresh_profile_auth(
+                &auth,
+                Some(&identity(
+                    "sub-1",
+                    "user-1",
+                    "acct-1",
+                    Some("old@example.com"),
+                )),
+            )
+            .await
+            .unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("Refreshed auth does not match saved profile identity"));
     }
 
     fn saved_profile(name: &str, identity: AuthIdentity, usage: ProfileUsageState) -> SavedProfile {
