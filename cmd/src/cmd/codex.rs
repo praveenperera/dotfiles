@@ -9,7 +9,7 @@ use base64::{
     Engine as _,
 };
 use chrono::{Local, TimeZone, Utc};
-use clap::{Args, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use colored::Colorize;
 use eyre::{eyre, Result, WrapErr};
 use futures::stream::{self, StreamExt};
@@ -41,12 +41,18 @@ pub struct Codex {
     pub subcommand: CodexCmd,
 }
 
+#[derive(Debug, Clone, Parser)]
+struct CodexCli {
+    #[command(subcommand)]
+    subcommand: CodexCmd,
+}
+
 #[derive(Debug, Clone, Subcommand)]
 pub enum CodexCmd {
-    /// Launch codex with a specific profile
+    /// Launch codex with an optional profile
     Launch {
-        /// Profile name
-        profile: String,
+        /// Optional profile name, or first codex argument when auto-selecting
+        profile_or_arg: Option<OsString>,
 
         /// Arguments to pass to codex
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
@@ -383,6 +389,17 @@ struct AuthSnapshot {
     identity: AuthIdentity,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum LaunchTarget {
+    Explicit {
+        profile: String,
+        args: Vec<OsString>,
+    },
+    Auto {
+        args: Vec<OsString>,
+    },
+}
+
 const CHATGPT_USAGE_URL: &str = "https://chatgpt.com/backend-api/wham/usage";
 const CHATGPT_REFRESH_URL: &str = "https://auth.openai.com/oauth/token";
 const CHATGPT_REFRESH_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
@@ -390,9 +407,17 @@ const USAGE_FETCH_CONCURRENCY: usize = 4;
 const USAGE_FETCH_TIMEOUT: Duration = Duration::from_secs(5);
 const PROFILE_REFRESH_FALLBACK_DAYS: i64 = 7;
 
+pub fn run_with_args(_sh: &Shell, args: &[OsString]) -> Result<()> {
+    let flags = parse_raw_args(args)?;
+    run_with_flags(_sh, flags)
+}
+
 pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
     match flags.subcommand {
-        CodexCmd::Launch { profile, args } => launch(&profile, &args),
+        CodexCmd::Launch {
+            profile_or_arg,
+            args,
+        } => launch(profile_or_arg.as_ref(), &args),
         CodexCmd::Login {
             profile,
             device_auth,
@@ -405,29 +430,68 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
     }
 }
 
+fn parse_raw_args(args: &[OsString]) -> Result<Codex> {
+    if let Some(flags) = parse_launch_with_forced_auto_selection(args) {
+        return Ok(flags);
+    }
+
+    let mut full_args = vec![OsString::from("codex")];
+    full_args.extend_from_slice(args);
+
+    match CodexCli::try_parse_from(full_args) {
+        Ok(flags) => Ok(Codex {
+            subcommand: flags.subcommand,
+        }),
+        Err(err) => {
+            let _ = err.print();
+            std::process::exit(err.exit_code());
+        }
+    }
+}
+
+fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Option<Codex> {
+    if args.first()?.to_str() != Some("launch") {
+        return None;
+    }
+
+    if args.get(1)?.to_str() != Some("--") {
+        return None;
+    }
+
+    Some(Codex {
+        subcommand: CodexCmd::Launch {
+            profile_or_arg: None,
+            args: args[2..].to_vec(),
+        },
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         active_session_markers, build_profile_rows, conflicting_profiles, create_launch_home,
-        delete_profile_home, needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration,
-        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
-        replace_global_auth_with_profile, save_profile_auth, sync_launch_codex_home,
+        delete_profile_home, format_launch_banner, needs_proactive_refresh, parse_auth_identity,
+        parse_jwt_expiration, parse_raw_args, promote_launch_auth_if_unchanged, read_auth_snapshot,
+        read_stored_auth, replace_global_auth_with_profile, resolve_launch_target,
+        save_profile_auth, select_auto_launch_profile, sync_launch_codex_home,
         sync_profile_codex_home, write_auth_raw_if_unchanged, write_session_marker, AuthIdentity,
-        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
-        ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome, SavedProfile, StoredAuth,
-        UsageFetchResult, UsageWindowSnapshot,
+        CodexCmd, LaunchTarget, LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind,
+        ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome,
+        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
     use serde_json::json;
-    use std::fs;
     use std::os::unix::fs::symlink;
     use std::path::Path;
+    use std::{ffi::OsString, fs, sync::Mutex};
     use tempfile::tempdir;
     use wiremock::{
         matchers::{header, method, path},
         Mock, MockServer, ResponseTemplate,
     };
+
+    static COLOR_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn parses_auth_identity_from_id_token() {
@@ -917,6 +981,7 @@ mod tests {
 
     #[test]
     fn colorize_limit_cell_uses_limit_style_when_row_has_no_error() {
+        let _guard = COLOR_TEST_LOCK.lock().unwrap();
         colored::control::set_override(true);
 
         let row = super::ProfileRow {
@@ -949,6 +1014,7 @@ mod tests {
 
     #[test]
     fn colorize_limit_cell_keeps_whole_row_error_precedence() {
+        let _guard = COLOR_TEST_LOCK.lock().unwrap();
         colored::control::set_override(true);
 
         let row = super::ProfileRow {
@@ -983,6 +1049,7 @@ mod tests {
 
     #[test]
     fn colorize_profile_cell_bolds_active_profile() {
+        let _guard = COLOR_TEST_LOCK.lock().unwrap();
         colored::control::set_override(true);
 
         let row = super::ProfileRow {
@@ -1413,6 +1480,183 @@ mod tests {
             .contains("Refreshed auth does not match saved profile identity"));
     }
 
+    #[test]
+    fn cmd_parses_launch_with_explicit_profile_and_separator() {
+        let cmd = parse_raw_args(&[
+            OsString::from("launch"),
+            OsString::from("a"),
+            OsString::from("--"),
+            OsString::from("--model"),
+            OsString::from("gpt-5.4"),
+        ])
+        .unwrap();
+
+        let subcommand = cmd.subcommand;
+        let CodexCmd::Launch {
+            profile_or_arg,
+            args,
+        } = subcommand
+        else {
+            panic!("expected launch subcommand");
+        };
+
+        assert_eq!(profile_or_arg, Some(OsString::from("a")));
+        assert_eq!(
+            args,
+            vec![OsString::from("--model"), OsString::from("gpt-5.4")]
+        );
+    }
+
+    #[test]
+    fn cmd_parses_launch_with_forced_auto_selection() {
+        let cmd = parse_raw_args(&[
+            OsString::from("launch"),
+            OsString::from("--"),
+            OsString::from("a"),
+        ])
+        .unwrap();
+
+        let subcommand = cmd.subcommand;
+        let CodexCmd::Launch {
+            profile_or_arg,
+            args,
+        } = subcommand
+        else {
+            panic!("expected launch subcommand");
+        };
+
+        assert_eq!(profile_or_arg, None);
+        assert_eq!(args, vec![OsString::from("a")]);
+    }
+
+    #[test]
+    fn resolve_launch_target_treats_matching_profile_as_explicit() {
+        let profiles = vec![available_saved_profile("a", 10.0, 20.0)];
+        let profile_or_arg = OsString::from("a");
+        let args = vec![OsString::from("--model"), OsString::from("gpt-5.4")];
+
+        let target = resolve_launch_target(Some(&profile_or_arg), &args, &profiles);
+
+        assert_eq!(
+            target,
+            LaunchTarget::Explicit {
+                profile: "a".into(),
+                args,
+            }
+        );
+    }
+
+    #[test]
+    fn resolve_launch_target_treats_non_matching_first_value_as_codex_arg() {
+        let profiles = vec![available_saved_profile("a", 10.0, 20.0)];
+        let profile_or_arg = OsString::from("--model");
+        let args = vec![OsString::from("gpt-5.4")];
+
+        let target = resolve_launch_target(Some(&profile_or_arg), &args, &profiles);
+
+        assert_eq!(
+            target,
+            LaunchTarget::Auto {
+                args: vec![OsString::from("--model"), OsString::from("gpt-5.4")],
+            }
+        );
+    }
+
+    #[test]
+    fn select_auto_launch_profile_prefers_lowest_weighted_score() {
+        let profiles = vec![
+            available_saved_profile("a", 20.0, 30.0),
+            available_saved_profile("b", 15.0, 20.0),
+            available_saved_profile("c", 10.0, 40.0),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "b");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_skips_hot_candidate_when_cool_one_exists() {
+        let profiles = vec![
+            available_saved_profile("a", 85.0, 5.0),
+            available_saved_profile("b", 30.0, 25.0),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "b");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_falls_back_to_best_hot_candidate() {
+        let profiles = vec![
+            available_saved_profile("a", 90.0, 10.0),
+            available_saved_profile("b", 85.0, 20.0),
+            available_saved_profile("c", 80.0, 30.0),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "a");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_ignores_invalid_and_incomplete_usage() {
+        let mut invalid = available_saved_profile("invalid", 10.0, 10.0);
+        invalid.invalid_auth = true;
+
+        let incomplete = profile_with_snapshot(
+            "incomplete",
+            ProfileUsageSnapshot {
+                user_id: Some("user-incomplete".into()),
+                account_id: Some("acct-incomplete".into()),
+                email: Some("incomplete@example.com".into()),
+                plan_type: Some("plus".into()),
+                primary: Some(UsageWindowSnapshot {
+                    used_percent: 5.0,
+                    reset_at: Some(Local::now().timestamp() + 3600),
+                }),
+                secondary: None,
+            },
+        );
+
+        let profiles = vec![
+            invalid,
+            profile_with_state("reauth", ProfileUsageState::ReauthNeeded),
+            profile_with_state("unavailable", ProfileUsageState::Unavailable),
+            incomplete,
+            available_saved_profile("winner", 12.0, 18.0),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "winner");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_errors_when_no_eligible_profile_exists() {
+        let profiles = vec![
+            profile_with_state("reauth", ProfileUsageState::ReauthNeeded),
+            profile_with_state("unavailable", ProfileUsageState::Unavailable),
+        ];
+
+        let err = select_auto_launch_profile(&profiles).unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("No profiles with usable usage data found"));
+    }
+
+    #[test]
+    fn format_launch_banner_includes_profile_and_email() {
+        let banner = format_launch_banner("a", "praveen@example.com");
+
+        assert!(banner.contains("launching"));
+        assert!(banner.contains("profile"));
+        assert!(banner.contains("a"));
+        assert!(banner.contains("praveen@example.com"));
+    }
+
     fn saved_profile(name: &str, identity: AuthIdentity, usage: ProfileUsageState) -> SavedProfile {
         SavedProfile {
             name: name.into(),
@@ -1421,6 +1665,55 @@ mod tests {
             invalid_auth: false,
             usage,
         }
+    }
+
+    fn available_saved_profile(
+        name: &str,
+        primary_used_percent: f64,
+        secondary_used_percent: f64,
+    ) -> SavedProfile {
+        let subject = format!("sub-{name}");
+        let user_id = format!("user-{name}");
+        let account_id = format!("acct-{name}");
+        let email = format!("{name}@example.com");
+
+        saved_profile(
+            name,
+            identity(&subject, &user_id, &account_id, Some(&email)),
+            ProfileUsageState::Available(usage_snapshot(
+                "plus",
+                &user_id,
+                &account_id,
+                primary_used_percent,
+                secondary_used_percent,
+            )),
+        )
+    }
+
+    fn profile_with_state(name: &str, usage: ProfileUsageState) -> SavedProfile {
+        let subject = format!("sub-{name}");
+        let user_id = format!("user-{name}");
+        let account_id = format!("acct-{name}");
+        let email = format!("{name}@example.com");
+
+        saved_profile(
+            name,
+            identity(&subject, &user_id, &account_id, Some(&email)),
+            usage,
+        )
+    }
+
+    fn profile_with_snapshot(name: &str, usage: ProfileUsageSnapshot) -> SavedProfile {
+        let subject = format!("sub-{name}");
+        let user_id = format!("user-{name}");
+        let account_id = format!("acct-{name}");
+        let email = format!("{name}@example.com");
+
+        saved_profile(
+            name,
+            identity(&subject, &user_id, &account_id, Some(&email)),
+            ProfileUsageState::Available(usage),
+        )
     }
 
     fn identity(

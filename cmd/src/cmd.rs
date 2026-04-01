@@ -80,10 +80,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             let file_flags = file::File { subcommand };
             file::run_with_flags(sh, file_flags)
         }
-        MainCmd::Codex { subcommand } => {
-            let codex_flags = codex::Codex { subcommand };
-            codex::run_with_flags(sh, codex_flags)
-        }
+        MainCmd::Codex { .. } => codex::run_with_args(sh, &args[1..]),
         MainCmd::Sync { subcommand } => {
             let sync_flags = sync::Sync { subcommand };
             sync::run_with_flags(sh, sync_flags)

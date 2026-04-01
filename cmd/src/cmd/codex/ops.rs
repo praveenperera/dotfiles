@@ -1,7 +1,31 @@
 use super::*;
 use crate::{fsutil, runtime};
 
-pub(super) fn launch(profile: &str, args: &[OsString]) -> Result<()> {
+pub(super) fn launch(profile_or_arg: Option<&OsString>, args: &[OsString]) -> Result<()> {
+    let mut profiles = load_saved_profiles(&profiles_dir()?)?;
+    let target = resolve_launch_target(profile_or_arg, args, &profiles);
+
+    match target {
+        LaunchTarget::Explicit { profile, args } => {
+            let label = profiles
+                .iter()
+                .find(|saved_profile| saved_profile.name == profile)
+                .map(saved_profile_label)
+                .unwrap_or_else(|| "-".into());
+            launch_with_profile(&profile, &label, &args)
+        }
+        LaunchTarget::Auto { args } => {
+            enrich_profile_usage(&mut profiles)?;
+            let profile = select_auto_launch_profile(&profiles)?;
+            let label = saved_profile_label(profile);
+            launch_with_profile(&profile.name, &label, &args)
+        }
+    }
+}
+
+fn launch_with_profile(profile: &str, label: &str, args: &[OsString]) -> Result<()> {
+    println!("{}", format_launch_banner(profile, label));
+
     let shared_codex_home = codex_dir()?;
     let profile_home = profile_codex_home(profile)?;
     let profile_auth = profile_home.join("auth.json");
@@ -30,6 +54,123 @@ pub(super) fn launch(profile: &str, args: &[OsString]) -> Result<()> {
     fsutil::remove_existing_path(&session_marker_path)?;
     promote_launch_auth_if_unchanged(&profile_auth, &launch_auth, &launch_home.join("auth.json"))?;
     std::process::exit(status.code().unwrap_or(1));
+}
+
+pub(super) fn resolve_launch_target(
+    profile_or_arg: Option<&OsString>,
+    args: &[OsString],
+    profiles: &[SavedProfile],
+) -> LaunchTarget {
+    let explicit_profile = profile_or_arg
+        .and_then(|value| value.to_str())
+        .filter(|profile| {
+            profiles
+                .iter()
+                .any(|saved_profile| saved_profile.name == *profile)
+        });
+
+    if let Some(profile) = explicit_profile {
+        return LaunchTarget::Explicit {
+            profile: profile.into(),
+            args: args.to_vec(),
+        };
+    }
+
+    let mut resolved_args = Vec::with_capacity(args.len() + usize::from(profile_or_arg.is_some()));
+    if let Some(value) = profile_or_arg {
+        resolved_args.push(value.clone());
+    }
+    resolved_args.extend(args.iter().cloned());
+
+    LaunchTarget::Auto {
+        args: resolved_args,
+    }
+}
+
+pub(super) fn select_auto_launch_profile(profiles: &[SavedProfile]) -> Result<&SavedProfile> {
+    let mut cool_candidates = Vec::new();
+    let mut hot_candidates = Vec::new();
+
+    for profile in profiles {
+        let Some(candidate) = launch_candidate(profile) else {
+            continue;
+        };
+
+        if candidate.five_hour >= 80.0 {
+            hot_candidates.push(candidate);
+        } else {
+            cool_candidates.push(candidate);
+        }
+    }
+
+    cool_candidates.sort_by(compare_launch_candidates);
+    hot_candidates.sort_by(compare_launch_candidates);
+
+    cool_candidates
+        .first()
+        .or_else(|| hot_candidates.first())
+        .map(|candidate| candidate.profile)
+        .ok_or_else(|| {
+            eyre!(
+                "No profiles with usable usage data found. Run: cmd codex list or specify a saved profile explicitly"
+            )
+        })
+}
+
+pub(super) fn saved_profile_label(profile: &SavedProfile) -> String {
+    profile
+        .identity
+        .as_ref()
+        .map(best_label)
+        .unwrap_or_else(|| "-".into())
+}
+
+pub(super) fn format_launch_banner(profile: &str, label: &str) -> String {
+    format!(
+        "{} {} {} - {}",
+        "launching".green().bold(),
+        "profile".blue().bold(),
+        profile.cyan().bold(),
+        label.yellow()
+    )
+}
+
+struct LaunchCandidate<'a> {
+    profile: &'a SavedProfile,
+    weekly: f64,
+    five_hour: f64,
+    score: f64,
+}
+
+fn launch_candidate(profile: &SavedProfile) -> Option<LaunchCandidate<'_>> {
+    if profile.invalid_auth {
+        return None;
+    }
+
+    let ProfileUsageState::Available(usage) = &profile.usage else {
+        return None;
+    };
+
+    let five_hour = usage.primary.as_ref()?.used_percent;
+    let weekly = usage.secondary.as_ref()?.used_percent;
+
+    Some(LaunchCandidate {
+        profile,
+        weekly,
+        five_hour,
+        score: weekly * 2.0 + five_hour,
+    })
+}
+
+fn compare_launch_candidates(
+    left: &LaunchCandidate<'_>,
+    right: &LaunchCandidate<'_>,
+) -> std::cmp::Ordering {
+    left.score
+        .total_cmp(&right.score)
+        .then_with(|| left.weekly.total_cmp(&right.weekly))
+        .then_with(|| left.five_hour.total_cmp(&right.five_hour))
+        .then_with(|| left.profile.name.cmp(&right.profile.name))
 }
 
 pub(super) fn login(profile: &str, device_auth: bool) -> Result<()> {
