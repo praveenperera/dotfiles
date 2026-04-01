@@ -15,8 +15,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::ffi::OsString;
 use std::fs;
-use std::io::{self, ErrorKind, Write};
+use std::io::{self, ErrorKind, Read, Write};
+use std::net::Shutdown;
 use std::os::unix::fs::symlink;
+use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use xshell::Shell;
@@ -68,6 +70,13 @@ pub enum CodexCmd {
     #[command(visible_alias = "ra")]
     RefreshAll,
 
+    /// Switch the default global codex profile
+    #[command(visible_alias = "switch-default")]
+    Switch {
+        /// Profile name to switch to
+        profile: String,
+    },
+
     /// Delete a saved profile
     #[command(visible_alias = "rm")]
     Delete {
@@ -115,6 +124,25 @@ struct IdTokenClaims {
 struct OpenAiClaims {
     user_id: Option<String>,
     chatgpt_account_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct RemodexBridgeSwitchRequest<'a> {
+    method: &'a str,
+    profile: &'a str,
+}
+
+#[derive(Debug, Deserialize)]
+struct RemodexBridgeSwitchResponse {
+    ok: bool,
+    #[serde(default)]
+    error: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RemodexBridgeSwitchOutcome {
+    Switched,
+    NotRunning,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -350,6 +378,20 @@ fn profile_codex_home(profile: &str) -> PathBuf {
     profiles_dir().join(profile)
 }
 
+fn remodex_state_dir() -> PathBuf {
+    std::env::var_os("REMODEX_DEVICE_STATE_DIR")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            let home = std::env::var("HOME").expect("HOME must be set");
+            PathBuf::from(home).join(".remodex")
+        })
+}
+
+fn remodex_bridge_control_socket_path() -> PathBuf {
+    remodex_state_dir().join("bridge-control.sock")
+}
+
 fn profile_launches_dir(profile_home: &Path) -> PathBuf {
     profile_home.join(".launch")
 }
@@ -401,6 +443,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
         CodexCmd::List { verbose } => list(verbose),
         CodexCmd::RefreshProfile { profile } => refresh_profile(&profile),
         CodexCmd::RefreshAll => refresh_all(),
+        CodexCmd::Switch { profile } => switch_default_profile(&profile),
         CodexCmd::Delete { profile, yes } => delete(&profile, yes),
     }
 }
@@ -774,6 +817,31 @@ fn refresh_all() -> Result<()> {
         )
     }) {
         return Err(eyre!("Some profiles could not be refreshed"));
+    }
+
+    Ok(())
+}
+
+fn switch_default_profile(profile: &str) -> Result<()> {
+    let profile_auth = profile_codex_home(profile).join("auth.json");
+    if !profile_auth.exists() {
+        return Err(eyre!("Profile '{profile}' not found. Run: cmd codex list"));
+    }
+
+    replace_global_auth_with_profile(&profile_auth, &auth_path())?;
+
+    match notify_remodex_bridge_profile_switch(profile) {
+        Ok(RemodexBridgeSwitchOutcome::Switched) => {
+            println!("Switched codex default profile to {profile} and updated phodex-bridge");
+        }
+        Ok(RemodexBridgeSwitchOutcome::NotRunning) => {
+            println!("Switched codex default profile to {profile}");
+        }
+        Err(err) => {
+            return Err(eyre!(
+                "Switched codex default profile to {profile}, but failed to update phodex-bridge: {err}"
+            ));
+        }
     }
 
     Ok(())
@@ -1462,6 +1530,53 @@ fn copy_auth_file(source: &Path, target: &Path) -> Result<()> {
     Ok(())
 }
 
+fn replace_global_auth_with_profile(profile_auth: &Path, global_auth: &Path) -> Result<()> {
+    copy_auth_file(profile_auth, global_auth)
+}
+
+fn notify_remodex_bridge_profile_switch(profile: &str) -> Result<RemodexBridgeSwitchOutcome> {
+    let socket_path = remodex_bridge_control_socket_path();
+    let mut stream = match UnixStream::connect(&socket_path) {
+        Ok(stream) => stream,
+        Err(err)
+            if matches!(
+                err.kind(),
+                ErrorKind::NotFound | ErrorKind::ConnectionRefused
+            ) =>
+        {
+            return Ok(RemodexBridgeSwitchOutcome::NotRunning);
+        }
+        Err(err) => return Err(err.into()),
+    };
+
+    let request = RemodexBridgeSwitchRequest {
+        method: "switchProfile",
+        profile,
+    };
+    let request_raw = serde_json::to_vec(&request)?;
+    stream.write_all(&request_raw)?;
+    stream.write_all(b"\n")?;
+    stream.shutdown(Shutdown::Write)?;
+
+    let mut response_raw = Vec::new();
+    stream.read_to_end(&mut response_raw)?;
+    if response_raw.is_empty() {
+        return Err(eyre!("phodex-bridge returned no response"));
+    }
+
+    let response: RemodexBridgeSwitchResponse = serde_json::from_slice(&response_raw)?;
+    if response.ok {
+        Ok(RemodexBridgeSwitchOutcome::Switched)
+    } else {
+        Err(eyre!(
+            "{}",
+            response
+                .error
+                .unwrap_or_else(|| "phodex-bridge rejected the profile switch".into())
+        ))
+    }
+}
+
 fn sync_shared_entry(source: &Path, target: &Path) -> Result<()> {
     if symlink_points_to(target, source)? {
         return Ok(());
@@ -1938,6 +2053,7 @@ fn five_hour_limit_style(usage: &ProfileUsageState) -> LimitStyleKind {
 
 fn usage_window_reset(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
     usage_window(usage, kind)
+        .filter(|window| should_display_reset(window, kind))
         .and_then(|window| window.reset_at)
         .and_then(|timestamp| Local.timestamp_opt(timestamp, 0).single())
         .map(|timestamp| format_reset_timestamp(timestamp, Local::now()))
@@ -1965,10 +2081,15 @@ fn format_compact_percent(percent: &str) -> String {
 
 fn usage_window_reset_compact(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
     usage_window(usage, kind)
+        .filter(|window| should_display_reset(window, kind))
         .and_then(|window| window.reset_at)
         .and_then(|timestamp| Local.timestamp_opt(timestamp, 0).single())
         .map(|timestamp| format_reset_timestamp_compact(timestamp, Local::now(), kind))
         .unwrap_or_else(|| "-".into())
+}
+
+fn should_display_reset(window: &UsageWindowSnapshot, kind: UsageWindowKind) -> bool {
+    !matches!(kind, UsageWindowKind::Primary) || window.used_percent > 0.0
 }
 
 fn usage_window(usage: &ProfileUsageState, kind: UsageWindowKind) -> Option<&UsageWindowSnapshot> {
@@ -2115,11 +2236,12 @@ mod tests {
     use super::{
         active_session_markers, build_profile_rows, conflicting_profiles, create_launch_home,
         delete_profile_home, needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration,
-        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth, save_profile_auth,
-        sync_launch_codex_home, sync_profile_codex_home, write_auth_raw_if_unchanged,
-        write_session_marker, AuthIdentity, LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind,
-        ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome,
-        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
+        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
+        replace_global_auth_with_profile, save_profile_auth, sync_launch_codex_home,
+        sync_profile_codex_home, write_auth_raw_if_unchanged, write_session_marker, AuthIdentity,
+        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
+        ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome, SavedProfile, StoredAuth,
+        UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
@@ -2271,6 +2393,22 @@ mod tests {
     }
 
     #[test]
+    fn replace_global_auth_with_profile_overwrites_global_auth() {
+        let dir = tempdir().unwrap();
+        let profile_auth = dir.path().join("profiles").join("w").join("auth.json");
+        let global_auth = dir.path().join(".codex").join("auth.json");
+
+        fs::create_dir_all(profile_auth.parent().unwrap()).unwrap();
+        fs::create_dir_all(global_auth.parent().unwrap()).unwrap();
+        fs::write(&profile_auth, "profile-auth").unwrap();
+        fs::write(&global_auth, "global-auth").unwrap();
+
+        replace_global_auth_with_profile(&profile_auth, &global_auth).unwrap();
+
+        assert_eq!(fs::read_to_string(global_auth).unwrap(), "profile-auth");
+    }
+
+    #[test]
     fn format_reset_timestamp_uses_am_pm_for_same_day() {
         let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
         let reset_at = Local.with_ymd_and_hms(2026, 3, 31, 17, 5, 0).unwrap();
@@ -2327,6 +2465,26 @@ mod tests {
 
         assert!(formatted.starts_with(" 42% ("));
         assert!(formatted.ends_with(')'));
+    }
+
+    #[test]
+    fn usage_window_reset_hides_primary_reset_for_zero_percent_window() {
+        let usage =
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 0.0, 73.0));
+
+        let formatted = super::usage_window_reset(&usage, super::UsageWindowKind::Primary);
+
+        assert_eq!(formatted, "-");
+    }
+
+    #[test]
+    fn usage_window_compact_hides_primary_reset_for_zero_percent_window() {
+        let usage =
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 0.0, 73.0));
+
+        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::Primary);
+
+        assert_eq!(formatted, "  0%");
     }
 
     #[test]
@@ -2603,7 +2761,10 @@ mod tests {
 
         let rendered = super::colorize_limit_cell("42%", 3, row.five_hour_style, &row);
 
-        assert!(rendered.contains("\u{1b}[1;31m42%\u{1b}[0m"));
+        assert!(
+            rendered.contains("\u{1b}[1;31m42%\u{1b}[0m")
+                || rendered.contains("\u{1b}[31;1m42%\u{1b}[0m")
+        );
 
         colored::control::unset_override();
     }
