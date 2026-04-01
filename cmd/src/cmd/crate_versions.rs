@@ -3,7 +3,7 @@ use eyre::Result;
 use futures::future::join_all;
 use xshell::Shell;
 
-use crate::crates_io::CratesIoClient;
+use crate::{crates_io::CratesIoClient, runtime};
 
 #[derive(Debug, Clone, Copy, ValueEnum, Default)]
 pub enum OutputFormat {
@@ -33,8 +33,7 @@ pub struct CrateVersions {
 }
 
 pub fn run_with_flags(_sh: &Shell, flags: CrateVersions) -> Result<()> {
-    let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(run_async(flags))
+    runtime::block_on(run_async(flags))?
 }
 
 async fn run_async(flags: CrateVersions) -> Result<()> {
@@ -59,7 +58,7 @@ async fn run_async(flags: CrateVersions) -> Result<()> {
 
     match flags.format {
         OutputFormat::Toml => print_toml(&versions, flags.exact),
-        OutputFormat::Json => print_json(&versions, flags.exact),
+        OutputFormat::Json => print_json(&versions, flags.exact)?,
         OutputFormat::Plain => print_plain(&versions, flags.exact),
     }
 
@@ -91,7 +90,7 @@ fn print_toml(versions: &[(String, String)], exact: bool) {
     }
 }
 
-fn print_json(versions: &[(String, String)], exact: bool) {
+fn print_json(versions: &[(String, String)], exact: bool) -> Result<()> {
     let map: serde_json::Map<String, serde_json::Value> = versions
         .iter()
         .map(|(name, version)| {
@@ -102,8 +101,11 @@ fn print_json(versions: &[(String, String)], exact: bool) {
         })
         .collect();
 
-    let json = serde_json::to_string_pretty(&serde_json::Value::Object(map)).unwrap();
-    println!("{json}");
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::Value::Object(map))?
+    );
+    Ok(())
 }
 
 fn print_plain(versions: &[(String, String)], exact: bool) {

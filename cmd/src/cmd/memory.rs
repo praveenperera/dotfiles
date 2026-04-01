@@ -5,21 +5,18 @@ use eyre::{eyre, Context as _, Result};
 use log::info;
 use xshell::Shell;
 
-fn home_dir() -> PathBuf {
-    let home = std::env::var("HOME").expect("HOME env var not set");
-    PathBuf::from(home)
+use crate::fsutil;
+
+fn icloud_memories_dir() -> Result<PathBuf> {
+    Ok(fsutil::home_dir()?.join("Library/Mobile Documents/com~apple~CloudDocs/dotfiles/memories"))
 }
 
-fn icloud_memories_dir() -> PathBuf {
-    home_dir().join("Library/Mobile Documents/com~apple~CloudDocs/dotfiles/memories")
+fn claude_projects_dir() -> Result<PathBuf> {
+    Ok(fsutil::home_dir()?.join(".claude/projects"))
 }
 
-fn claude_projects_dir() -> PathBuf {
-    home_dir().join(".claude/projects")
-}
-
-fn codex_memories_dir() -> PathBuf {
-    home_dir().join(".codex/memories")
+fn codex_memories_dir() -> Result<PathBuf> {
+    Ok(fsutil::home_dir()?.join(".codex/memories"))
 }
 
 /// Strips the `-Users-praveen-code-` prefix from a Claude project dir name
@@ -40,7 +37,7 @@ fn human_readable_name(short_name: &str) -> String {
 }
 
 pub fn setup(sh: &Shell) -> Result<()> {
-    let icloud_dir = icloud_memories_dir();
+    let icloud_dir = icloud_memories_dir()?;
     let icloud_claude = icloud_dir.join("claude/projects");
     let icloud_codex = icloud_dir.join("codex");
 
@@ -60,7 +57,7 @@ pub fn setup(sh: &Shell) -> Result<()> {
 }
 
 fn setup_claude_memories(sh: &Shell, icloud_claude: &Path) -> Result<()> {
-    let claude_projects = claude_projects_dir();
+    let claude_projects = claude_projects_dir()?;
 
     let entries = sh
         .read_dir(&claude_projects)
@@ -116,7 +113,7 @@ fn setup_claude_memories(sh: &Shell, icloud_claude: &Path) -> Result<()> {
 }
 
 fn setup_codex_memories(sh: &Shell, icloud_codex: &Path) -> Result<()> {
-    let codex_dir = codex_memories_dir();
+    let codex_dir = codex_memories_dir()?;
 
     // skip if already a symlink
     if codex_dir.is_symlink() {
@@ -143,8 +140,9 @@ fn setup_codex_memories(sh: &Shell, icloud_codex: &Path) -> Result<()> {
 }
 
 pub fn sync(sh: &Shell) -> Result<()> {
-    let icloud_claude = icloud_memories_dir().join("claude/projects");
-    let icloud_codex = icloud_memories_dir().join("codex");
+    let icloud_dir = icloud_memories_dir()?;
+    let icloud_claude = icloud_dir.join("claude/projects");
+    let icloud_codex = icloud_dir.join("codex");
 
     if !sh.path_exists(&icloud_claude) {
         return Err(eyre!(

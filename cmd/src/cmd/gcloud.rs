@@ -139,7 +139,9 @@ pub fn switch_project(sh: &Shell, project: &str) -> Result<()> {
         switch_to_single_cluster(sh, cluster)?;
     }
 
-    let cluster = clusters.last().expect("already checked");
+    let cluster = clusters
+        .last()
+        .ok_or_else(|| eyre!("{project} has no clusters"))?;
     let cluster_name = &cluster.name;
 
     cmd!(sh, "gcloud config set container/cluster {cluster_name}").run()?;

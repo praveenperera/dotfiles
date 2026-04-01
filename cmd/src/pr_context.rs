@@ -4,7 +4,7 @@ use serde::Serialize;
 use std::ffi::OsString;
 use xshell::Shell;
 
-use crate::github;
+use crate::{github, runtime};
 
 #[derive(Debug, Clone, ValueEnum)]
 pub enum OutputFormat {
@@ -85,96 +85,86 @@ struct CompactPrContext {
 }
 
 pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
-    let args = Args::parse_from(args);
+    execute(Args::parse_from(args).into())
+}
 
-    // parse the input to extract owner, repo, and pr_number
-    let (owner, repo, pr_number) = parse_input(&args.repo_or_url, args.pr_number)?;
+pub fn run_with_flags(_sh: &Shell, args: crate::cmd::main_cmd::PrContextArgs) -> Result<()> {
+    execute(args.into())
+}
 
-    let runtime = tokio::runtime::Runtime::new()?;
+#[derive(Debug, Clone)]
+struct PrContextOptions {
+    repo_or_url: String,
+    pr_number: Option<u64>,
+    token: Option<String>,
+    code_only: bool,
+    compact: bool,
+    format: OutputFormat,
+}
+
+impl From<Args> for PrContextOptions {
+    fn from(value: Args) -> Self {
+        Self {
+            repo_or_url: value.repo_or_url,
+            pr_number: value.pr_number,
+            token: value.token,
+            code_only: value.code_only,
+            compact: value.compact,
+            format: value.format,
+        }
+    }
+}
+
+impl From<crate::cmd::main_cmd::PrContextArgs> for PrContextOptions {
+    fn from(value: crate::cmd::main_cmd::PrContextArgs) -> Self {
+        Self {
+            repo_or_url: value.repo_or_url,
+            pr_number: value.pr_number,
+            token: value.token,
+            code_only: value.code_only,
+            compact: value.compact,
+            format: value.format,
+        }
+    }
+}
+
+fn execute(options: PrContextOptions) -> Result<()> {
+    let (owner, repo, pr_number) = parse_input(&options.repo_or_url, options.pr_number)?;
     let mut pr_context =
-        runtime.block_on(fetch_pr_context(&owner, &repo, pr_number, &args.token))?;
+        runtime::block_on(fetch_pr_context(&owner, &repo, pr_number, &options.token))??;
 
-    // filter to only comments with code references if requested
-    if args.code_only {
-        pr_context.comments.retain(|c| c.code_reference.is_some());
+    if options.code_only {
+        pr_context
+            .comments
+            .retain(|comment| comment.code_reference.is_some());
     }
 
-    // output based on format flag
-    match args.format {
-        OutputFormat::Markdown => {
-            let markdown = format_as_markdown(&pr_context, args.compact);
-            print!("{}", markdown);
-        }
-        OutputFormat::Json => {
-            // output compact or full format
-            if args.compact {
-                let compact_context = CompactPrContext {
-                    repo: pr_context.repo,
-                    pr_number: pr_context.pr_number,
-                    comments: pr_context
-                        .comments
-                        .into_iter()
-                        .map(|c| CompactComment {
-                            author: c.author,
-                            body: c.body,
-                            code_reference: c.code_reference,
-                        })
-                        .collect(),
-                };
-                let json = serde_json::to_string_pretty(&compact_context)?;
-                println!("{}", json);
-            } else {
-                let json = serde_json::to_string_pretty(&pr_context)?;
-                println!("{}", json);
-            }
-        }
+    match options.format {
+        OutputFormat::Markdown => print!("{}", format_as_markdown(&pr_context, options.compact)),
+        OutputFormat::Json => print_json(pr_context, options.compact)?,
     }
 
     Ok(())
 }
 
-pub fn run_with_flags(_sh: &Shell, args: crate::cmd::main_cmd::PrContextArgs) -> Result<()> {
-    // parse the input to extract owner, repo, and pr_number
-    let (owner, repo, pr_number) = parse_input(&args.repo_or_url, args.pr_number)?;
-
-    let runtime = tokio::runtime::Runtime::new()?;
-    let mut pr_context =
-        runtime.block_on(fetch_pr_context(&owner, &repo, pr_number, &args.token))?;
-
-    // filter to only comments with code references if requested
-    if args.code_only {
-        pr_context.comments.retain(|c| c.code_reference.is_some());
-    }
-
-    // output based on format flag
-    match args.format {
-        OutputFormat::Markdown => {
-            let markdown = format_as_markdown(&pr_context, args.compact);
-            print!("{}", markdown);
-        }
-        OutputFormat::Json => {
-            // output compact or full format
-            if args.compact {
-                let compact_context = CompactPrContext {
-                    repo: pr_context.repo,
-                    pr_number: pr_context.pr_number,
-                    comments: pr_context
-                        .comments
-                        .into_iter()
-                        .map(|c| CompactComment {
-                            author: c.author,
-                            body: c.body,
-                            code_reference: c.code_reference,
-                        })
-                        .collect(),
-                };
-                let json = serde_json::to_string_pretty(&compact_context)?;
-                println!("{}", json);
-            } else {
-                let json = serde_json::to_string_pretty(&pr_context)?;
-                println!("{}", json);
-            }
-        }
+fn print_json(pr_context: PrContext, compact: bool) -> Result<()> {
+    if compact {
+        let compact_context = CompactPrContext {
+            repo: pr_context.repo,
+            pr_number: pr_context.pr_number,
+            comments: pr_context
+                .comments
+                .into_iter()
+                .map(|comment| CompactComment {
+                    author: comment.author,
+                    body: comment.body,
+                    code_reference: comment.code_reference,
+                })
+                .collect(),
+        };
+        println!("{}", serde_json::to_string_pretty(&compact_context)?);
+    } else {
+        println!("{}", serde_json::to_string_pretty(&pr_context)?);
     }
 
     Ok(())

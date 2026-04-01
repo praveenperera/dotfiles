@@ -8,8 +8,12 @@ use xshell::{cmd, Shell};
 pub const VAULT: &str = "CLI";
 
 fn random_with_charset(length: usize, charset: &[u8]) -> String {
+    if charset.is_empty() {
+        return String::new();
+    }
+
     let mut rng = rand::rng();
-    let dist = Uniform::new(0, charset.len()).expect("invalid charset");
+    let dist = Uniform::new(0, charset.len()).unwrap_or_else(|_| unreachable!());
     (0..length)
         .map(|_| charset[rng.sample(dist)] as char)
         .collect()

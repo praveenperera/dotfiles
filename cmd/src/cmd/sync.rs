@@ -7,6 +7,7 @@ use log::info;
 use xshell::{cmd, Shell};
 
 use crate::cmd::memory;
+use crate::fsutil;
 
 #[derive(Debug, Clone)]
 pub struct Sync {
@@ -43,9 +44,8 @@ pub fn run_with_flags(sh: &Shell, flags: Sync) -> Result<()> {
     }
 }
 
-fn icloud_drive() -> PathBuf {
-    let home = std::env::var("HOME").expect("HOME env var not set");
-    PathBuf::from(home).join("Library/Mobile Documents/com~apple~CloudDocs")
+fn icloud_drive() -> Result<PathBuf> {
+    Ok(fsutil::home_dir()?.join("Library/Mobile Documents/com~apple~CloudDocs"))
 }
 
 fn git_root(sh: &Shell) -> Result<PathBuf> {
@@ -71,7 +71,7 @@ fn icloud_sync(sh: &Shell, dir: &str) -> Result<()> {
         .to_string_lossy()
         .to_string();
 
-    let icloud_target = icloud_drive().join(category).join(&project_name);
+    let icloud_target = icloud_drive()?.join(category).join(&project_name);
     let local_path = root.join(&*dir_name);
 
     if !sh.path_exists(&local_path) && !local_path.is_symlink() {

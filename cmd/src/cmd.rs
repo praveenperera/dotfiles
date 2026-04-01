@@ -20,7 +20,7 @@ use xshell::Shell;
 use main_cmd::{Cmd, MainCmd};
 use std::ffi::OsString;
 
-pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
+pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     debug!("cmd run args: {args:?}");
 
     let flags = Cmd::from_args(args)?;
@@ -29,41 +29,40 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
         return Ok(());
     }
 
-    let sh = Shell::new()?;
     match flags.subcommand {
-        MainCmd::Release { project } => bootstrap::release(&sh, project),
-        MainCmd::Config => bootstrap::config(&sh),
+        MainCmd::Release { project } => bootstrap::release(sh, project),
+        MainCmd::Config => bootstrap::config(sh),
 
         MainCmd::Bootstrap { mode } => {
             let bootstrap_flags = bootstrap::Bootstrap { mode };
-            bootstrap::run_with_flags(&sh, bootstrap_flags)
+            bootstrap::run_with_flags(sh, bootstrap_flags)
         }
 
         MainCmd::Gcloud { subcommand } => {
             let gcloud_flags = gcloud::Gcloud { subcommand };
-            gcloud::run_with_flags(&sh, gcloud_flags)
+            gcloud::run_with_flags(sh, gcloud_flags)
         }
         MainCmd::Secret { subcommand } => {
             let secret_flags = secrets::Secrets { subcommand };
-            secrets::run_with_flags(&sh, secret_flags)
+            secrets::run_with_flags(sh, secret_flags)
         }
         MainCmd::Terraform { subcommand } => {
             let terraform_flags = terraform::Terraform { subcommand };
-            terraform::run_with_flags(&sh, terraform_flags)
+            terraform::run_with_flags(sh, terraform_flags)
         }
         MainCmd::Vault { subcommand } => {
             let vault_flags = vault::Vault { subcommand };
-            vault::run_with_flags(&sh, vault_flags)
+            vault::run_with_flags(sh, vault_flags)
         }
         MainCmd::Generate { subcommand } => {
             let generate_flags = generate::Generate { subcommand };
-            generate::run_with_flags(&sh, generate_flags)
+            generate::run_with_flags(sh, generate_flags)
         }
         MainCmd::Tmux { subcommand } => {
             let tmux_flags = tmux::Tmux { subcommand };
-            tmux::run_with_flags(&sh, tmux_flags)
+            tmux::run_with_flags(sh, tmux_flags)
         }
-        MainCmd::PrContext(args) => crate::pr_context::run_with_flags(&sh, args),
+        MainCmd::PrContext(args) => crate::pr_context::run_with_flags(sh, args),
         MainCmd::BetterContext(args) => {
             let flags = better_context::BetterContext {
                 repo: args.repo,
@@ -72,22 +71,22 @@ pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
                 full: args.full,
                 quiet: args.quiet,
             };
-            better_context::run_with_flags(&sh, flags)
+            better_context::run_with_flags(sh, flags)
         }
         MainCmd::Crate { subcommand } => match subcommand {
-            main_cmd::CrateCmd::Versions(flags) => crate_versions::run_with_flags(&sh, flags),
+            main_cmd::CrateCmd::Versions(flags) => crate_versions::run_with_flags(sh, flags),
         },
         MainCmd::File { subcommand } => {
             let file_flags = file::File { subcommand };
-            file::run_with_flags(&sh, file_flags)
+            file::run_with_flags(sh, file_flags)
         }
         MainCmd::Codex { subcommand } => {
             let codex_flags = codex::Codex { subcommand };
-            codex::run_with_flags(&sh, codex_flags)
+            codex::run_with_flags(sh, codex_flags)
         }
         MainCmd::Sync { subcommand } => {
             let sync_flags = sync::Sync { subcommand };
-            sync::run_with_flags(&sh, sync_flags)
+            sync::run_with_flags(sh, sync_flags)
         }
     }
 }

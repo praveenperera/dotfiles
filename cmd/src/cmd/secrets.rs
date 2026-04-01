@@ -117,7 +117,7 @@ pub fn gen(
 }
 
 pub fn save(sh: &Shell) -> Result<()> {
-    let secret_dir = crate::dotfiles_dir().join("cmd/secrets");
+    let secret_dir = crate::dotfiles_dir()?.join("cmd/secrets");
     for secret in SECRETS {
         eprintln!("getting secret: {secret}");
         let secret_text = get_and_return(sh, SECRET_NAME, secret)?;
@@ -146,7 +146,7 @@ pub fn get_and_return(sh: &Shell, secret_name: &str, secret: &str) -> Result<Str
 }
 
 pub fn update(sh: &Shell, secret: &str) -> Result<()> {
-    let secret_dir = crate::dotfiles_dir().join("cmd/secrets");
+    let secret_dir = crate::dotfiles_dir()?.join("cmd/secrets");
 
     match secret {
         "all" => {

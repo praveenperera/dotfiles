@@ -1,9 +1,11 @@
 pub mod cmd;
 pub mod crates_io;
 pub mod encrypt;
+pub mod fsutil;
 pub mod github;
 pub mod os;
 pub mod pr_context;
+pub mod runtime;
 pub mod util;
 
 use cmd::{better_context, file, terraform, vault};
@@ -35,9 +37,10 @@ fn tools_str() -> String {
         .join(", ")
 }
 
-pub fn dotfiles_dir() -> PathBuf {
-    let home = env::var("HOME").expect("HOME env var must be set");
-    PathBuf::new().join(home).join("code/dotfiles")
+pub fn dotfiles_dir() -> Result<PathBuf> {
+    Ok(PathBuf::new()
+        .join(fsutil::home_dir()?)
+        .join("code/dotfiles"))
 }
 
 pub fn command_exists(sh: &Shell, command: &str) -> bool {
@@ -58,7 +61,10 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let program: PathBuf = args.first().expect("not enough args").into();
+    let program: PathBuf = args
+        .first()
+        .ok_or_else(|| eyre!("argv is unexpectedly empty"))?
+        .into();
     let program = program
         .file_stem()
         .unwrap_or_default()

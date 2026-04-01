@@ -9,6 +9,8 @@ use std::thread;
 use std::time::Duration;
 use xshell::{cmd, Shell};
 
+use crate::fsutil;
+
 #[derive(Debug, Clone, Parser)]
 #[command(name = "btx", about = "Clone/update a repo for agent exploration")]
 pub struct BetterContext {
@@ -195,7 +197,9 @@ fn update_repo_with_retry(sh: &Shell, path: &PathBuf, quiet: bool) -> Result<()>
         }
     }
 
-    Err(last_err.unwrap().into())
+    Err(last_err
+        .map(Into::into)
+        .unwrap_or_else(|| eyre::eyre!("git fetch failed without reporting an error")))
 }
 
 fn clone_repo_with_retry(
@@ -208,7 +212,7 @@ fn clone_repo_with_retry(
     let delays = [1, 2, 4];
     let mut last_err = None;
 
-    std::fs::create_dir_all(path.parent().unwrap())?;
+    fsutil::ensure_parent_dir(path)?;
 
     for (i, delay) in delays.iter().enumerate() {
         if !quiet {
@@ -237,8 +241,10 @@ fn clone_repo_with_retry(
         }
     }
 
-    Err(eyre::Report::from(last_err.unwrap())
-        .wrap_err("Failed to clone repository after 3 attempts"))
+    let err = last_err
+        .map(eyre::Report::from)
+        .unwrap_or_else(|| eyre::eyre!("git clone failed without reporting an error"));
+    Err(err.wrap_err("Failed to clone repository after 3 attempts"))
 }
 
 fn parse_repo_source(input: &str) -> Result<RepoSource> {

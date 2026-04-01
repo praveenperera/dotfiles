@@ -174,7 +174,7 @@ impl Cmd {
         match Self::try_parse_from(full_args) {
             Ok(cmd) => Ok(cmd),
             Err(err) => {
-                err.print().unwrap();
+                let _ = err.print();
                 std::process::exit(err.exit_code());
             }
         }
