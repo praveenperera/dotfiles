@@ -600,8 +600,8 @@ fn print_compact_profile_table(rows: &[ProfileRow]) {
     for row in rows {
         println!(
             "{}   {}   {}   {}",
-            colorize_row_cell(&row.profile, widths.profile, row),
-            colorize_row_cell(&row.label, widths.label, row),
+            colorize_profile_cell(&row.profile, widths.profile, row),
+            colorize_email_cell(&row.label, widths.label, row),
             colorize_limit_cell(
                 &row.five_hour_compact,
                 widths.five_hour,
@@ -678,8 +678,8 @@ fn print_verbose_profile_table(rows: &[ProfileRow]) {
     for row in rows {
         println!(
             "{}  {}  {}  {}  {}  {}  {}  {}  {}  {}  {}",
-            colorize_row_cell(&row.profile, widths.profile, row),
-            colorize_row_cell(&row.label, widths.label, row),
+            colorize_profile_cell(&row.profile, widths.profile, row),
+            colorize_email_cell(&row.label, widths.label, row),
             colorize_row_cell(&row.provider, widths.provider, row),
             colorize_row_cell(&row.user, widths.user, row),
             colorize_row_cell(&row.account, widths.account, row),
@@ -1027,6 +1027,28 @@ fn colorize_row_cell(value: &str, width: usize, row: &ProfileRow) -> String {
     }
 }
 
+fn colorize_profile_cell(value: &str, width: usize, row: &ProfileRow) -> String {
+    let padded = format!("{value:<width$}");
+    match row.status.whole_row_style() {
+        ProfileStyleKind::Error => padded.red().bold().to_string(),
+        _ if row.status.is_active() => colorize_active_cell(&padded),
+        _ => padded,
+    }
+}
+
+fn colorize_email_cell(value: &str, width: usize, row: &ProfileRow) -> String {
+    let padded = format!("{value:<width$}");
+    match row.status.whole_row_style() {
+        ProfileStyleKind::Error => padded.red().bold().to_string(),
+        _ if row.status.is_active() => colorize_active_cell(&padded),
+        _ => padded,
+    }
+}
+
+fn colorize_active_cell(value: &str) -> String {
+    value.bright_white().bold().to_string()
+}
+
 fn colorize_limit_cell(
     value: &str,
     width: usize,
@@ -1036,6 +1058,16 @@ fn colorize_limit_cell(
     let padded = format!("{value:<width$}");
     if row.status.whole_row_style() == ProfileStyleKind::Error {
         return padded.red().bold().to_string();
+    }
+    if row.status.is_active() {
+        return match style {
+            LimitStyleKind::Normal => padded.bold().to_string(),
+            LimitStyleKind::Success => padded.green().bold().to_string(),
+            LimitStyleKind::Warning => padded.yellow().bold().to_string(),
+            LimitStyleKind::Caution => padded.truecolor(255, 165, 0).bold().to_string(),
+            LimitStyleKind::Error => padded.red().bold().to_string(),
+            LimitStyleKind::Critical => padded.red().bold().to_string(),
+        };
     }
 
     match style {
@@ -1055,6 +1087,12 @@ fn colorize_status(row: &ProfileRow) -> String {
 impl ProfileStatus {
     fn push(&mut self, item: ProfileStatusItem) {
         self.items.push(item);
+    }
+
+    fn is_active(&self) -> bool {
+        self.items
+            .iter()
+            .any(|item| matches!(item, ProfileStatusItem::Active))
     }
 
     fn text(&self) -> String {
@@ -2764,6 +2802,42 @@ mod tests {
         assert!(
             rendered.contains("\u{1b}[1;31m42%\u{1b}[0m")
                 || rendered.contains("\u{1b}[31;1m42%\u{1b}[0m")
+        );
+
+        colored::control::unset_override();
+    }
+
+    #[test]
+    fn colorize_profile_cell_bolds_active_profile() {
+        colored::control::set_override(true);
+
+        let row = super::ProfileRow {
+            profile: "a".into(),
+            label: "-".into(),
+            provider: "-".into(),
+            user: "-".into(),
+            account: "-".into(),
+            plan: "-".into(),
+            five_hour: "42%".into(),
+            five_hour_reset: "-".into(),
+            five_hour_compact: "42%".into(),
+            five_hour_style: LimitStyleKind::Normal,
+            weekly: "73%".into(),
+            weekly_reset: "-".into(),
+            weekly_compact: "73%".into(),
+            weekly_style: LimitStyleKind::Normal,
+            status: super::ProfileStatus {
+                items: vec![super::ProfileStatusItem::Active],
+            },
+        };
+
+        let rendered = super::colorize_profile_cell("a", 1, &row);
+
+        assert!(
+            rendered.contains("\u{1b}[1;97ma\u{1b}[0m")
+                || rendered.contains("\u{1b}[97;1ma\u{1b}[0m")
+                || rendered.contains("\u{1b}[1;97;49ma\u{1b}[0m")
+                || rendered.contains("\u{1b}[97;1;49ma\u{1b}[0m")
         );
 
         colored::control::unset_override();
