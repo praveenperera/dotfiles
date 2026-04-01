@@ -2091,7 +2091,7 @@ fn five_hour_limit_style(usage: &ProfileUsageState) -> LimitStyleKind {
 
 fn usage_window_reset(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
     usage_window(usage, kind)
-        .filter(|window| should_display_reset(window, kind))
+        .filter(|window| window.used_percent > 0.0)
         .and_then(|window| window.reset_at)
         .and_then(|timestamp| Local.timestamp_opt(timestamp, 0).single())
         .map(|timestamp| format_reset_timestamp(timestamp, Local::now()))
@@ -2119,15 +2119,11 @@ fn format_compact_percent(percent: &str) -> String {
 
 fn usage_window_reset_compact(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
     usage_window(usage, kind)
-        .filter(|window| should_display_reset(window, kind))
+        .filter(|window| window.used_percent > 0.0)
         .and_then(|window| window.reset_at)
         .and_then(|timestamp| Local.timestamp_opt(timestamp, 0).single())
         .map(|timestamp| format_reset_timestamp_compact(timestamp, Local::now(), kind))
         .unwrap_or_else(|| "-".into())
-}
-
-fn should_display_reset(window: &UsageWindowSnapshot, kind: UsageWindowKind) -> bool {
-    !matches!(kind, UsageWindowKind::Primary) || window.used_percent > 0.0
 }
 
 fn usage_window(usage: &ProfileUsageState, kind: UsageWindowKind) -> Option<&UsageWindowSnapshot> {
@@ -2526,6 +2522,26 @@ mod tests {
     }
 
     #[test]
+    fn usage_window_reset_hides_weekly_reset_for_zero_percent_window() {
+        let usage =
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 0.0));
+
+        let formatted = super::usage_window_reset(&usage, super::UsageWindowKind::Secondary);
+
+        assert_eq!(formatted, "-");
+    }
+
+    #[test]
+    fn usage_window_compact_hides_weekly_reset_for_zero_percent_window() {
+        let usage =
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 0.0));
+
+        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::Secondary);
+
+        assert_eq!(formatted, "  0%");
+    }
+
+    #[test]
     fn format_compact_percent_right_aligns_numeric_part() {
         assert_eq!(super::format_compact_percent("0%"), "  0%");
         assert_eq!(super::format_compact_percent("42%"), " 42%");
@@ -2738,6 +2754,24 @@ mod tests {
         assert_eq!(
             row_limit_style(&rows, "a", |row| row.weekly_style),
             LimitStyleKind::Critical
+        );
+    }
+
+    #[test]
+    fn list_rows_hide_weekly_reset_before_weekly_window_starts() {
+        let active = identity("sub-1", "user-1", "acct-1", Some("praveen@example.com"));
+        let profiles = vec![saved_profile(
+            "a",
+            active.clone(),
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 0.0)),
+        )];
+
+        let rows = build_profile_rows(&profiles, Some(&active));
+
+        assert_eq!(row_field(&rows, "a", |row| row.weekly_reset.clone()), "-");
+        assert_eq!(
+            row_field(&rows, "a", |row| row.weekly_compact.clone()),
+            "  0%"
         );
     }
 
