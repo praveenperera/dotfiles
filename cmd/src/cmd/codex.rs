@@ -200,10 +200,12 @@ struct ProfileRow {
     five_hour_reset: String,
     five_hour_compact: String,
     five_hour_style: LimitStyleKind,
+    five_hour_usage: Option<UsageWindowSnapshot>,
     weekly: String,
     weekly_reset: String,
     weekly_compact: String,
     weekly_style: LimitStyleKind,
+    weekly_usage: Option<UsageWindowSnapshot>,
     status: ProfileStatus,
 }
 
@@ -470,14 +472,15 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Option<Codex> {
 mod tests {
     use super::{
         active_session_markers, build_profile_rows, conflicting_profiles, create_launch_home,
-        delete_profile_home, format_launch_banner, needs_proactive_refresh, parse_auth_identity,
-        parse_jwt_expiration, parse_raw_args, promote_launch_auth_if_unchanged, read_auth_snapshot,
-        read_stored_auth, replace_global_auth_with_profile, resolve_launch_target,
-        save_profile_auth, select_auto_launch_profile, sync_launch_codex_home,
-        sync_profile_codex_home, write_auth_raw_if_unchanged, write_session_marker, AuthIdentity,
-        CodexCmd, LaunchTarget, LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind,
-        ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome,
-        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
+        delete_profile_home, format_launch_banner, launch_banner_details, needs_proactive_refresh,
+        parse_auth_identity, parse_jwt_expiration, parse_raw_args,
+        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
+        replace_global_auth_with_profile, resolve_launch_target, save_profile_auth,
+        select_auto_launch_profile, sync_launch_codex_home, sync_profile_codex_home,
+        write_auth_raw_if_unchanged, write_session_marker, AuthIdentity, CodexCmd, LaunchTarget,
+        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
+        ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome, SavedProfile, StoredAuth,
+        UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
@@ -995,10 +998,12 @@ mod tests {
             five_hour_reset: "-".into(),
             five_hour_compact: "96%".into(),
             five_hour_style: LimitStyleKind::Critical,
+            five_hour_usage: None,
             weekly: "82%".into(),
             weekly_reset: "-".into(),
             weekly_compact: "82%".into(),
             weekly_style: LimitStyleKind::Caution,
+            weekly_usage: None,
             status: Default::default(),
         };
 
@@ -1028,10 +1033,12 @@ mod tests {
             five_hour_reset: "-".into(),
             five_hour_compact: "42%".into(),
             five_hour_style: LimitStyleKind::Success,
+            five_hour_usage: None,
             weekly: "73%".into(),
             weekly_reset: "-".into(),
             weekly_compact: "73%".into(),
             weekly_style: LimitStyleKind::Warning,
+            weekly_usage: None,
             status: super::ProfileStatus {
                 items: vec![super::ProfileStatusItem::SameUser(vec!["b".into()])],
             },
@@ -1063,10 +1070,12 @@ mod tests {
             five_hour_reset: "-".into(),
             five_hour_compact: "42%".into(),
             five_hour_style: LimitStyleKind::Normal,
+            five_hour_usage: None,
             weekly: "73%".into(),
             weekly_reset: "-".into(),
             weekly_compact: "73%".into(),
             weekly_style: LimitStyleKind::Normal,
+            weekly_usage: None,
             status: super::ProfileStatus {
                 items: vec![super::ProfileStatusItem::Active],
             },
@@ -1648,13 +1657,54 @@ mod tests {
     }
 
     #[test]
-    fn format_launch_banner_includes_profile_and_email() {
-        let banner = format_launch_banner("a", "praveen@example.com");
+    fn format_launch_banner_includes_profile_usage_and_reset_times() {
+        let profile = available_saved_profile("a", 42.0, 73.0);
+        let details = launch_banner_details(&profile);
+        let banner = format_launch_banner("a", &details);
 
         assert!(banner.contains("launching"));
         assert!(banner.contains("profile"));
         assert!(banner.contains("a"));
-        assert!(banner.contains("praveen@example.com"));
+        assert!(banner.contains("a@example.com"));
+        assert!(banner.contains("5h"));
+        assert!(banner.contains("42%"));
+        assert!(banner.contains("week"));
+        assert!(banner.contains("73%"));
+        assert!(banner.contains("reset"));
+    }
+
+    #[test]
+    fn launch_banner_details_use_compact_weekly_reset_format() {
+        let weekly_reset = (Local::now() + chrono::Duration::days(1)).timestamp();
+        let profile = profile_with_snapshot(
+            "a",
+            ProfileUsageSnapshot {
+                user_id: Some("user-a".into()),
+                account_id: Some("acct-a".into()),
+                email: Some("a@example.com".into()),
+                plan_type: Some("plus".into()),
+                primary: Some(UsageWindowSnapshot {
+                    used_percent: 42.0,
+                    reset_at: Some(Local::now().timestamp() + 3600),
+                }),
+                secondary: Some(UsageWindowSnapshot {
+                    used_percent: 3.0,
+                    reset_at: Some(weekly_reset),
+                }),
+            },
+        );
+
+        let details = launch_banner_details(&profile);
+        let banner = format_launch_banner("a", &details);
+        let weekday = Local
+            .timestamp_opt(weekly_reset, 0)
+            .single()
+            .unwrap()
+            .format("%a")
+            .to_string();
+
+        assert!(banner.contains(&weekday));
+        assert!(!banner.contains(" on "));
     }
 
     fn saved_profile(name: &str, identity: AuthIdentity, usage: ProfileUsageState) -> SavedProfile {

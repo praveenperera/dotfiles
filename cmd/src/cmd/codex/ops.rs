@@ -4,27 +4,31 @@ use crate::{fsutil, runtime};
 pub(super) fn launch(profile_or_arg: Option<&OsString>, args: &[OsString]) -> Result<()> {
     let mut profiles = load_saved_profiles(&profiles_dir()?)?;
     let target = resolve_launch_target(profile_or_arg, args, &profiles);
+    enrich_profile_usage(&mut profiles)?;
 
     match target {
         LaunchTarget::Explicit { profile, args } => {
-            let label = profiles
+            let details = profiles
                 .iter()
                 .find(|saved_profile| saved_profile.name == profile)
-                .map(saved_profile_label)
-                .unwrap_or_else(|| "-".into());
-            launch_with_profile(&profile, &label, &args)
+                .map(launch_banner_details)
+                .unwrap_or_else(LaunchBannerDetails::fallback);
+            launch_with_profile(&profile, &details, &args)
         }
         LaunchTarget::Auto { args } => {
-            enrich_profile_usage(&mut profiles)?;
             let profile = select_auto_launch_profile(&profiles)?;
-            let label = saved_profile_label(profile);
-            launch_with_profile(&profile.name, &label, &args)
+            let details = launch_banner_details(profile);
+            launch_with_profile(&profile.name, &details, &args)
         }
     }
 }
 
-fn launch_with_profile(profile: &str, label: &str, args: &[OsString]) -> Result<()> {
-    println!("{}", format_launch_banner(profile, label));
+fn launch_with_profile(
+    profile: &str,
+    details: &LaunchBannerDetails,
+    args: &[OsString],
+) -> Result<()> {
+    println!("{}", format_launch_banner(profile, details));
 
     let shared_codex_home = codex_dir()?;
     let profile_home = profile_codex_home(profile)?;
@@ -125,14 +129,52 @@ pub(super) fn saved_profile_label(profile: &SavedProfile) -> String {
         .unwrap_or_else(|| "-".into())
 }
 
-pub(super) fn format_launch_banner(profile: &str, label: &str) -> String {
+pub(super) fn format_launch_banner(profile: &str, details: &LaunchBannerDetails) -> String {
     format!(
-        "{} {} {} - {}",
+        "{} {} {} - {}  {} {} {} {} {} {} {} {}",
         "launching".green().bold(),
         "profile".blue().bold(),
         profile.cyan().bold(),
-        label.yellow()
+        details.label.yellow(),
+        "5h".blue().bold(),
+        details.five_hour.white().bold(),
+        "reset".blue().bold(),
+        details.five_hour_reset.yellow(),
+        "week".blue().bold(),
+        details.weekly.white().bold(),
+        "reset".blue().bold(),
+        details.weekly_reset.yellow(),
     )
+}
+
+pub(super) struct LaunchBannerDetails {
+    label: String,
+    five_hour: String,
+    five_hour_reset: String,
+    weekly: String,
+    weekly_reset: String,
+}
+
+impl LaunchBannerDetails {
+    fn fallback() -> Self {
+        Self {
+            label: "-".into(),
+            five_hour: "-".into(),
+            five_hour_reset: "-".into(),
+            weekly: "-".into(),
+            weekly_reset: "-".into(),
+        }
+    }
+}
+
+pub(super) fn launch_banner_details(profile: &SavedProfile) -> LaunchBannerDetails {
+    LaunchBannerDetails {
+        label: saved_profile_label(profile),
+        five_hour: usage_window_percent(&profile.usage, UsageWindowKind::Primary),
+        five_hour_reset: usage_window_reset_compact(&profile.usage, UsageWindowKind::Primary),
+        weekly: usage_window_percent(&profile.usage, UsageWindowKind::Secondary),
+        weekly_reset: usage_window_reset_compact(&profile.usage, UsageWindowKind::Secondary),
+    }
 }
 
 struct LaunchCandidate<'a> {
