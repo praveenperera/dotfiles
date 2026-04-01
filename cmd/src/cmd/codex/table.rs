@@ -5,7 +5,6 @@ pub(super) fn print_compact_profile_table(rows: &[ProfileRow]) {
     let widths = compact_profile_table_widths(rows, totals.as_ref());
 
     if let Some(totals) = &totals {
-        println!();
         println!("{}", compact_totals_header(&widths));
         println!(
             "{profile}   {label}   {five_hour}   {weekly}",
