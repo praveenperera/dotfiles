@@ -92,11 +92,12 @@ pub(super) fn resolve_launch_target(
 }
 
 pub(super) fn select_auto_launch_profile(profiles: &[SavedProfile]) -> Result<&SavedProfile> {
+    let now = Utc::now();
     let mut cool_candidates = Vec::new();
     let mut hot_candidates = Vec::new();
 
     for profile in profiles {
-        let Some(candidate) = launch_candidate(profile) else {
+        let Some(candidate) = launch_candidate(profile, now) else {
             continue;
         };
 
@@ -179,12 +180,15 @@ pub(super) fn launch_banner_details(profile: &SavedProfile) -> LaunchBannerDetai
 
 struct LaunchCandidate<'a> {
     profile: &'a SavedProfile,
-    weekly: f64,
+    weekly_pace_delta: f64,
     five_hour: f64,
     score: f64,
 }
 
-fn launch_candidate(profile: &SavedProfile) -> Option<LaunchCandidate<'_>> {
+fn launch_candidate(
+    profile: &SavedProfile,
+    now: chrono::DateTime<Utc>,
+) -> Option<LaunchCandidate<'_>> {
     if profile.invalid_auth {
         return None;
     }
@@ -194,13 +198,14 @@ fn launch_candidate(profile: &SavedProfile) -> Option<LaunchCandidate<'_>> {
     };
 
     let five_hour = usage.primary.as_ref()?.used_percent;
-    let weekly = usage.secondary.as_ref()?.used_percent;
+    let weekly_pace_delta =
+        pace_delta_percent(usage.secondary.as_ref()?, now, UsageWindowKind::Secondary)?;
 
     Some(LaunchCandidate {
         profile,
-        weekly,
+        weekly_pace_delta,
         five_hour,
-        score: weekly * 2.0 + five_hour,
+        score: weekly_pace_delta * 3.0 + five_hour,
     })
 }
 
@@ -210,7 +215,7 @@ fn compare_launch_candidates(
 ) -> std::cmp::Ordering {
     left.score
         .total_cmp(&right.score)
-        .then_with(|| left.weekly.total_cmp(&right.weekly))
+        .then_with(|| left.weekly_pace_delta.total_cmp(&right.weekly_pace_delta))
         .then_with(|| left.five_hour.total_cmp(&right.five_hour))
         .then_with(|| left.profile.name.cmp(&right.profile.name))
 }

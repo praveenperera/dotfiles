@@ -766,7 +766,7 @@ fn average_delta_percent(
     }
 }
 
-fn pace_delta_percent(
+pub(super) fn pace_delta_percent(
     window: &UsageWindowSnapshot,
     now: chrono::DateTime<Utc>,
     kind: UsageWindowKind,
@@ -890,7 +890,7 @@ pub(super) fn format_reset_timestamp_compact(
     match kind {
         UsageWindowKind::Primary => time,
         UsageWindowKind::Secondary if dt.date_naive() == captured_at.date_naive() => time,
-        UsageWindowKind::Secondary => format!("{} {time}", dt.format("%a")),
+        UsageWindowKind::Secondary => format!("{} {time}", dt.format("%a %-d %b")),
     }
 }
 

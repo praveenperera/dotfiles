@@ -684,7 +684,7 @@ mod tests {
     }
 
     #[test]
-    fn format_reset_timestamp_compact_uses_weekday_for_future_secondary_window() {
+    fn format_reset_timestamp_compact_uses_calendar_day_for_future_secondary_window() {
         let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
         let reset_at = Local.with_ymd_and_hms(2026, 4, 2, 0, 30, 0).unwrap();
 
@@ -694,7 +694,7 @@ mod tests {
             super::UsageWindowKind::Secondary,
         );
 
-        assert_eq!(formatted, "Thu 12:30 AM");
+        assert_eq!(formatted, "Thu 2 Apr 12:30 AM");
     }
 
     #[test]
@@ -1585,6 +1585,57 @@ mod tests {
     }
 
     #[test]
+    fn select_auto_launch_profile_prefers_most_under_pace_weekly_account() {
+        let now = Utc::now();
+        let profiles = vec![
+            available_saved_profile_with_resets(
+                "a",
+                20.0,
+                now.timestamp() + 3600,
+                10.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.05),
+            ),
+            available_saved_profile_with_resets(
+                "b",
+                20.0,
+                now.timestamp() + 3600,
+                40.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.8),
+            ),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "b");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_uses_three_x_weekly_pace_weight() {
+        let now = Utc::now();
+        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.5);
+        let profiles = vec![
+            available_saved_profile_with_resets(
+                "a",
+                50.0,
+                now.timestamp() + 3600,
+                20.0,
+                weekly_reset,
+            ),
+            available_saved_profile_with_resets(
+                "b",
+                10.0,
+                now.timestamp() + 3600,
+                35.0,
+                weekly_reset,
+            ),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "a");
+    }
+
+    #[test]
     fn select_auto_launch_profile_skips_hot_candidate_when_cool_one_exists() {
         let profiles = vec![
             available_saved_profile("a", 85.0, 5.0),
@@ -1696,14 +1747,10 @@ mod tests {
 
         let details = launch_banner_details(&profile);
         let banner = format_launch_banner("a", &details);
-        let weekday = Local
-            .timestamp_opt(weekly_reset, 0)
-            .single()
-            .unwrap()
-            .format("%a")
-            .to_string();
+        let reset = Local.timestamp_opt(weekly_reset, 0).single().unwrap();
+        let expected_reset = reset.format("%a %-d %b %-I:%M %p").to_string();
 
-        assert!(banner.contains(&weekday));
+        assert!(banner.contains(&expected_reset));
         assert!(!banner.contains(" on "));
     }
 
@@ -1763,6 +1810,38 @@ mod tests {
             name,
             identity(&subject, &user_id, &account_id, Some(&email)),
             ProfileUsageState::Available(usage),
+        )
+    }
+
+    fn available_saved_profile_with_resets(
+        name: &str,
+        primary_used_percent: f64,
+        primary_reset_at: i64,
+        secondary_used_percent: f64,
+        secondary_reset_at: i64,
+    ) -> SavedProfile {
+        let subject = format!("sub-{name}");
+        let user_id = format!("user-{name}");
+        let account_id = format!("acct-{name}");
+        let email = format!("{name}@example.com");
+
+        saved_profile(
+            name,
+            identity(&subject, &user_id, &account_id, Some(&email)),
+            ProfileUsageState::Available(ProfileUsageSnapshot {
+                user_id: Some(user_id),
+                account_id: Some(account_id),
+                email: Some(email),
+                plan_type: Some("plus".into()),
+                primary: Some(UsageWindowSnapshot {
+                    used_percent: primary_used_percent,
+                    reset_at: Some(primary_reset_at),
+                }),
+                secondary: Some(UsageWindowSnapshot {
+                    used_percent: secondary_used_percent,
+                    reset_at: Some(secondary_reset_at),
+                }),
+            }),
         )
     }
 
@@ -1874,6 +1953,21 @@ mod tests {
                 reset_at: Some(now + 7200),
             }),
         }
+    }
+
+    fn reset_at_for_elapsed(
+        now: chrono::DateTime<Utc>,
+        kind: super::UsageWindowKind,
+        elapsed_fraction: f64,
+    ) -> i64 {
+        let duration = match kind {
+            super::UsageWindowKind::Primary => chrono::Duration::hours(5),
+            super::UsageWindowKind::Secondary => chrono::Duration::days(7),
+        };
+        let remaining_seconds =
+            ((1.0 - elapsed_fraction) * duration.num_seconds() as f64).round() as i64;
+
+        (now + chrono::Duration::seconds(remaining_seconds)).timestamp()
     }
 
     fn read_auth(
