@@ -3,7 +3,10 @@ use eyre::Result;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ffi::OsString;
+use std::fs::File;
+use std::io::Read;
 use std::process::{Command, Stdio};
+use tempfile::NamedTempFile;
 use xshell::{cmd, Shell};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -401,25 +404,34 @@ fn action_picker(sh: &Shell) -> Result<()> {
     action(sh, &selection)
 }
 
-fn spawn_command_prompt(sh: &Shell, prompt: &str, action: &str) -> Result<()> {
-    let client_fmt = "#{client_tty}";
-    let client = cmd!(sh, "tmux display-message -p {client_fmt}")
-        .quiet()
-        .read()
-        .unwrap_or_default();
-    let client = client.trim();
+fn prompt_text(prompt: &str) -> Result<Option<String>> {
+    let output_file = NamedTempFile::new()?;
+    let output_path = output_file.path().to_path_buf();
+    let stdout = File::create(&output_path)?;
 
-    let mut command = Command::new("tmux");
-    command.stdin(Stdio::null());
-    command.stdout(Stdio::null());
-    command.stderr(Stdio::null());
-    command.arg("command-prompt");
-    if !client.is_empty() {
-        command.args(["-t", client]);
+    let status = Command::new("sh")
+        .arg("-c")
+        .arg("printf '' | fzf --print-query --prompt \"$1\" --phony --bind 'enter:accept'")
+        .arg("sh")
+        .arg(prompt)
+        .stdin(Stdio::inherit())
+        .stdout(stdout)
+        .stderr(Stdio::inherit())
+        .status()?;
+
+    if status.code() == Some(130) {
+        return Ok(None);
     }
-    command.args(["-b", "-p", prompt, action]);
-    command.spawn()?;
-    Ok(())
+
+    let mut output = String::new();
+    File::open(output_path)?.read_to_string(&mut output)?;
+    let value = output
+        .lines()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .map(str::trim)
+        .map(str::to_string);
+    Ok(value.filter(|value| !value.is_empty()))
 }
 
 fn action(sh: &Shell, name: &str) -> Result<()> {
@@ -463,19 +475,21 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
             cmd!(sh, "tmux swap-pane -U").quiet().run()?;
         }
         "Rename Tab" => {
-            let prompt = "Window name:";
-            let action = "rename-window '%1'";
-            spawn_command_prompt(sh, prompt, action)?;
+            if let Some(new_name) = prompt_text("Window name > ")? {
+                cmd!(sh, "tmux rename-window {new_name}").quiet().run()?;
+            }
         }
         "Rename Session" => {
-            let prompt = "Session name:";
-            let action = "rename-session '%1'";
-            spawn_command_prompt(sh, prompt, action)?;
+            if let Some(new_name) = prompt_text("Session name > ")? {
+                cmd!(sh, "tmux rename-session {new_name}").quiet().run()?;
+            }
         }
         "Rename Pane" => {
-            let prompt = "Pane name:";
-            let action = "set -p @pane_name '%1'";
-            spawn_command_prompt(sh, prompt, action)?;
+            if let Some(new_name) = prompt_text("Pane name > ")? {
+                cmd!(sh, "tmux set -p @pane_name {new_name}")
+                    .quiet()
+                    .run()?;
+            }
         }
         "Toggle Pane Names" => {
             let status = cmd!(sh, "tmux show-option -gv pane-border-status")
