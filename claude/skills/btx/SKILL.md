@@ -1,7 +1,5 @@
 ---
 name: btx
-aliases:
-  - better-context
 description: |
   Clone and explore external codebases using the btx CLI. Use this skill when:
   - User wants to explore a GitHub repository (e.g., "explore anthropics/claude-code")
