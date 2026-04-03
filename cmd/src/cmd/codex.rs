@@ -1636,6 +1636,58 @@ mod tests {
     }
 
     #[test]
+    fn select_auto_launch_profile_prefers_earlier_five_hour_reset_when_pace_ties() {
+        let now = Utc::now();
+        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.5);
+        let profiles = vec![
+            available_saved_profile_with_resets(
+                "later-reset",
+                10.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.1),
+                50.0,
+                weekly_reset,
+            ),
+            available_saved_profile_with_resets(
+                "earlier-reset",
+                70.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.7),
+                50.0,
+                weekly_reset,
+            ),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "earlier-reset");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_prefers_better_five_hour_pace_over_lower_raw_usage() {
+        let now = Utc::now();
+        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.5);
+        let profiles = vec![
+            available_saved_profile_with_resets(
+                "on-pace",
+                60.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.8),
+                50.0,
+                weekly_reset,
+            ),
+            available_saved_profile_with_resets(
+                "behind-pace",
+                30.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.2),
+                50.0,
+                weekly_reset,
+            ),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "on-pace");
+    }
+
+    #[test]
     fn select_auto_launch_profile_skips_hot_candidate_when_cool_one_exists() {
         let profiles = vec![
             available_saved_profile("a", 85.0, 5.0),
@@ -1691,6 +1743,67 @@ mod tests {
         let selected = select_auto_launch_profile(&profiles).unwrap();
 
         assert_eq!(selected.name, "winner");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_keeps_candidate_when_primary_reset_is_missing() {
+        let now = Utc::now();
+        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.2);
+        let profiles = vec![
+            profile_with_snapshot(
+                "missing-reset",
+                ProfileUsageSnapshot {
+                    user_id: Some("user-missing-reset".into()),
+                    account_id: Some("acct-missing-reset".into()),
+                    email: Some("missing-reset@example.com".into()),
+                    plan_type: Some("plus".into()),
+                    primary: Some(UsageWindowSnapshot {
+                        used_percent: 10.0,
+                        reset_at: None,
+                    }),
+                    secondary: Some(UsageWindowSnapshot {
+                        used_percent: 20.0,
+                        reset_at: Some(weekly_reset),
+                    }),
+                },
+            ),
+            available_saved_profile_with_resets(
+                "fully-timed",
+                40.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.2),
+                20.0,
+                weekly_reset,
+            ),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "missing-reset");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_breaks_exact_ties_by_profile_name() {
+        let now = Utc::now();
+        let profiles = vec![
+            available_saved_profile_with_resets(
+                "b",
+                40.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.4),
+                30.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.3),
+            ),
+            available_saved_profile_with_resets(
+                "a",
+                40.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.4),
+                30.0,
+                reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.3),
+            ),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "a");
     }
 
     #[test]

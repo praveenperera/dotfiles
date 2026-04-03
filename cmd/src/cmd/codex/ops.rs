@@ -181,7 +181,9 @@ pub(super) fn launch_banner_details(profile: &SavedProfile) -> LaunchBannerDetai
 struct LaunchCandidate<'a> {
     profile: &'a SavedProfile,
     weekly_pace_delta: f64,
+    five_hour_pace_delta: f64,
     five_hour: f64,
+    five_hour_reset_at: Option<i64>,
     score: f64,
 }
 
@@ -197,15 +199,20 @@ fn launch_candidate(
         return None;
     };
 
-    let five_hour = usage.primary.as_ref()?.used_percent;
+    let primary = usage.primary.as_ref()?;
+    let five_hour = primary.used_percent;
+    let five_hour_pace_delta =
+        pace_delta_percent(primary, now, UsageWindowKind::Primary).unwrap_or(five_hour);
     let weekly_pace_delta =
         pace_delta_percent(usage.secondary.as_ref()?, now, UsageWindowKind::Secondary)?;
 
     Some(LaunchCandidate {
         profile,
         weekly_pace_delta,
+        five_hour_pace_delta,
         five_hour,
-        score: weekly_pace_delta * 3.0 + five_hour,
+        five_hour_reset_at: primary.reset_at,
+        score: weekly_pace_delta * 3.0 + five_hour_pace_delta,
     })
 }
 
@@ -216,8 +223,20 @@ fn compare_launch_candidates(
     left.score
         .total_cmp(&right.score)
         .then_with(|| left.weekly_pace_delta.total_cmp(&right.weekly_pace_delta))
+        .then_with(|| {
+            left.five_hour_pace_delta
+                .total_cmp(&right.five_hour_pace_delta)
+        })
+        .then_with(|| compare_reset_timestamps(left.five_hour_reset_at, right.five_hour_reset_at))
         .then_with(|| left.five_hour.total_cmp(&right.five_hour))
         .then_with(|| left.profile.name.cmp(&right.profile.name))
+}
+
+fn compare_reset_timestamps(left: Option<i64>, right: Option<i64>) -> std::cmp::Ordering {
+    match (left, right) {
+        (Some(left), Some(right)) => left.cmp(&right),
+        _ => std::cmp::Ordering::Equal,
+    }
 }
 
 pub(super) fn login(profile: &str, device_auth: bool) -> Result<()> {
