@@ -3,6 +3,7 @@ use eyre::Result;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ffi::OsString;
+use std::process::{Command, Stdio};
 use xshell::{cmd, Shell};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -400,6 +401,27 @@ fn action_picker(sh: &Shell) -> Result<()> {
     action(sh, &selection)
 }
 
+fn spawn_command_prompt(sh: &Shell, prompt: &str, action: &str) -> Result<()> {
+    let client_fmt = "#{client_tty}";
+    let client = cmd!(sh, "tmux display-message -p {client_fmt}")
+        .quiet()
+        .read()
+        .unwrap_or_default();
+    let client = client.trim();
+
+    let mut command = Command::new("tmux");
+    command.stdin(Stdio::null());
+    command.stdout(Stdio::null());
+    command.stderr(Stdio::null());
+    command.arg("command-prompt");
+    if !client.is_empty() {
+        command.args(["-t", client]);
+    }
+    command.args(["-b", "-p", prompt, action]);
+    command.spawn()?;
+    Ok(())
+}
+
 fn action(sh: &Shell, name: &str) -> Result<()> {
     let pane_path = || -> String {
         let fmt = "#{pane_current_path}";
@@ -443,23 +465,17 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
         "Rename Tab" => {
             let prompt = "Window name:";
             let action = "rename-window '%1'";
-            cmd!(sh, "tmux command-prompt -p {prompt} {action}")
-                .quiet()
-                .run()?;
+            spawn_command_prompt(sh, prompt, action)?;
         }
         "Rename Session" => {
             let prompt = "Session name:";
             let action = "rename-session '%1'";
-            cmd!(sh, "tmux command-prompt -p {prompt} {action}")
-                .quiet()
-                .run()?;
+            spawn_command_prompt(sh, prompt, action)?;
         }
         "Rename Pane" => {
             let prompt = "Pane name:";
             let action = "set -p @pane_name '%1'";
-            cmd!(sh, "tmux command-prompt -p {prompt} {action}")
-                .quiet()
-                .run()?;
+            spawn_command_prompt(sh, prompt, action)?;
         }
         "Toggle Pane Names" => {
             let status = cmd!(sh, "tmux show-option -gv pane-border-status")
