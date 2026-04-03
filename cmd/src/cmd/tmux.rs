@@ -404,36 +404,6 @@ fn action_picker(sh: &Shell) -> Result<()> {
     action(sh, &selection)
 }
 
-fn prompt_text(prompt: &str) -> Result<Option<String>> {
-    let output_file = NamedTempFile::new()?;
-    let output_path = output_file.path().to_path_buf();
-    let stdout = File::create(&output_path)?;
-
-    let status = Command::new("sh")
-        .arg("-c")
-        .arg("printf '' | fzf --print-query --prompt \"$1\" --phony --bind 'enter:accept'")
-        .arg("sh")
-        .arg(prompt)
-        .stdin(Stdio::inherit())
-        .stdout(stdout)
-        .stderr(Stdio::inherit())
-        .status()?;
-
-    if status.code() == Some(130) {
-        return Ok(None);
-    }
-
-    let mut output = String::new();
-    File::open(output_path)?.read_to_string(&mut output)?;
-    let value = output
-        .lines()
-        .rev()
-        .find(|line| !line.trim().is_empty())
-        .map(str::trim)
-        .map(str::to_string);
-    Ok(value.filter(|value| !value.is_empty()))
-}
-
 fn action(sh: &Shell, name: &str) -> Result<()> {
     let pane_path = || -> String {
         let fmt = "#{pane_current_path}";
@@ -475,21 +445,13 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
             cmd!(sh, "tmux swap-pane -U").quiet().run()?;
         }
         "Rename Tab" => {
-            if let Some(new_name) = prompt_text("Window name > ")? {
-                cmd!(sh, "tmux rename-window {new_name}").quiet().run()?;
-            }
+            prompt_and_run(sh, "Window name > ", "rename-window")?;
         }
         "Rename Session" => {
-            if let Some(new_name) = prompt_text("Session name > ")? {
-                cmd!(sh, "tmux rename-session {new_name}").quiet().run()?;
-            }
+            prompt_and_run(sh, "Session name > ", "rename-session")?;
         }
         "Rename Pane" => {
-            if let Some(new_name) = prompt_text("Pane name > ")? {
-                cmd!(sh, "tmux set -p @pane_name {new_name}")
-                    .quiet()
-                    .run()?;
-            }
+            prompt_and_run(sh, "Pane name > ", "set -p @pane_name")?;
         }
         "Toggle Pane Names" => {
             let status = cmd!(sh, "tmux show-option -gv pane-border-status")
@@ -723,6 +685,43 @@ fn notify(
                 .run()
                 .ok();
         }
+    }
+    Ok(())
+}
+
+fn prompt_text(prompt: &str) -> Result<Option<String>> {
+    let output_file = NamedTempFile::new()?;
+    let output_path = output_file.path().to_path_buf();
+    let stdout = File::create(&output_path)?;
+
+    let status = Command::new("sh")
+        .arg("-c")
+        .arg("printf '' | fzf --print-query --prompt \"$1\" --phony --bind 'enter:accept'")
+        .arg("sh")
+        .arg(prompt)
+        .stdin(Stdio::inherit())
+        .stdout(stdout)
+        .stderr(Stdio::inherit())
+        .status()?;
+
+    if status.code() == Some(130) {
+        return Ok(None);
+    }
+
+    let mut output = String::new();
+    File::open(output_path)?.read_to_string(&mut output)?;
+    let value = output
+        .lines()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .map(str::trim)
+        .map(str::to_string);
+    Ok(value.filter(|value| !value.is_empty()))
+}
+
+fn prompt_and_run(sh: &Shell, prompt: &str, command: &str) -> Result<()> {
+    if let Some(value) = prompt_text(prompt)? {
+        cmd!(sh, "tmux {command} {value}").quiet().run()?;
     }
     Ok(())
 }
