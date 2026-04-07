@@ -200,11 +200,15 @@ fn launch_candidate(
     };
 
     let primary = usage.primary.as_ref()?;
+    let secondary = usage.secondary.as_ref()?;
+    if primary.used_percent >= 100.0 || secondary.used_percent >= 100.0 {
+        return None;
+    }
+
     let five_hour = primary.used_percent;
     let five_hour_pace_delta =
         pace_delta_percent(primary, now, UsageWindowKind::Primary).unwrap_or(five_hour);
-    let weekly_pace_delta =
-        pace_delta_percent(usage.secondary.as_ref()?, now, UsageWindowKind::Secondary)?;
+    let weekly_pace_delta = pace_delta_percent(secondary, now, UsageWindowKind::Secondary)?;
 
     Some(LaunchCandidate {
         profile,

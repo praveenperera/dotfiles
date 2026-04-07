@@ -1821,6 +1821,45 @@ mod tests {
     }
 
     #[test]
+    fn select_auto_launch_profile_skips_profile_with_100_percent_weekly_usage() {
+        let profiles = vec![
+            available_saved_profile("maxed-weekly", 30.0, 100.0),
+            available_saved_profile("usable", 20.0, 40.0),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "usable");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_skips_profile_with_100_percent_five_hour_usage() {
+        let profiles = vec![
+            available_saved_profile("maxed-five-hour", 100.0, 30.0),
+            available_saved_profile("usable", 20.0, 40.0),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "usable");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_errors_when_all_profiles_at_100_percent() {
+        let profiles = vec![
+            available_saved_profile("a", 100.0, 50.0),
+            available_saved_profile("b", 50.0, 100.0),
+            available_saved_profile("c", 100.0, 100.0),
+        ];
+
+        let err = select_auto_launch_profile(&profiles).unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("No profiles with usable usage data found"));
+    }
+
+    #[test]
     fn format_launch_banner_includes_profile_usage_and_reset_times() {
         let profile = available_saved_profile("a", 42.0, 73.0);
         let details = launch_banner_details(&profile);
