@@ -33,6 +33,17 @@ return {
             --   return true
             -- end
         },
+        lsp_handlers = {
+            ["textDocument/hover"] = function(err, result, ctx, config)
+                config = vim.tbl_extend("force", config or {}, { border = "rounded", silent = true })
+                return vim.lsp.handlers.hover(err, result, ctx, config)
+            end,
+            ["textDocument/signatureHelp"] = function(err, result, ctx, config)
+                config =
+                    vim.tbl_extend("force", config or {}, { border = "rounded", silent = true, focusable = false })
+                return vim.lsp.handlers.signature_help(err, result, ctx, config)
+            end,
+        },
         -- enable servers that you already have installed without mason
         servers = {
             "sourcekit",
