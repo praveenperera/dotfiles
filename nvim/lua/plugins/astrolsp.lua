@@ -40,35 +40,32 @@ return {
         -- customize language server configuration options passed to `lspconfig`
         ---@diagnostic disable: missing-fields
         config = {
-            tailwind = function()
-                return {
-                    filetypes = {
-                        "html",
-                        "css",
-                        "scss",
-                        "javascript",
-                        "javascriptreact",
-                        "typescript",
-                        "typescriptreact",
-                        "vue",
-                        "jinja",
+            tailwind = {
+                filetypes = {
+                    "html",
+                    "css",
+                    "scss",
+                    "javascript",
+                    "javascriptreact",
+                    "typescript",
+                    "typescriptreact",
+                    "vue",
+                    "jinja",
+                },
+                init_options = {
+                    userLanguages = {
+                        html = "html",
+                        css = "css",
+                        scss = "scss",
+                        javascript = "javascript",
+                        javascriptreact = "javascript",
+                        typescript = "typescript",
+                        typescriptreact = "typescript",
+                        vue = "vue",
+                        jinja = "html",
                     },
-
-                    init_options = {
-                        userLanguages = {
-                            html = "html",
-                            css = "css",
-                            scss = "scss",
-                            javascript = "javascript",
-                            javascriptreact = "javascript",
-                            typescript = "typescript",
-                            typescriptreact = "typescript",
-                            vue = "vue",
-                            jinja = "html",
-                        },
-                    },
-                }
-            end,
+                },
+            },
             sourcekit = {
                 settings = {
                     timeout_ms = 2000,
@@ -78,52 +75,42 @@ return {
                 settings = {
                     evenBetterToml = {
                         formatter = {
-                            columnWidth = 120, -- Set max line length
-                            arrayAutoExpand = true, -- Prevent array multi-line expansion
-                            arrayAutoCollapse = false, -- Automatically collapse arrays if they fit in one line.
-                            compactArrays = true, -- Remove array whitespace
+                            columnWidth = 120,
+                            arrayAutoExpand = true,
+                            arrayAutoCollapse = false,
+                            compactArrays = true,
                         },
                     },
                 },
             },
-            emmet_language_server = function()
-                return {
-                    filetypes = {
-                        "css",
-                        "eruby",
-                        "html",
-                        "javascript",
-                        "javascriptreact",
-                        "less",
-                        "sass",
-                        "scss",
-                        "svelte",
-                        "pug",
-                        "typescriptreact",
-                        "vue",
-                        "jinja",
-                        "heex",
-                        "elixir",
-                    },
-
-                    init_options = {
-                        --- @type table<string, any> https://docs.emmet.io/customization/preferences/
-                        preferences = {},
-                        --- @type "always" | "never" defaults to `"always"`
-                        showexpandedabbreviation = "always",
-                        --- @type boolean defaults to `true`
-                        showabbreviationsuggestions = true,
-                        --- @type boolean defaults to `false`
-                        showsuggestionsassnippets = false,
-                        --- @type table<string, any> https://docs.emmet.io/customization/syntax-profiles/
-                        syntaxprofiles = {},
-                        --- @type table<string, string> https://docs.emmet.io/customization/snippets/#variables
-                        variables = {},
-                        --- @type string[]
-                        excludelanguages = {},
-                    },
-                }
-            end,
+            emmet_language_server = {
+                filetypes = {
+                    "css",
+                    "eruby",
+                    "html",
+                    "javascript",
+                    "javascriptreact",
+                    "less",
+                    "sass",
+                    "scss",
+                    "svelte",
+                    "pug",
+                    "typescriptreact",
+                    "vue",
+                    "jinja",
+                    "heex",
+                    "elixir",
+                },
+                init_options = {
+                    preferences = {},
+                    showexpandedabbreviation = "always",
+                    showabbreviationsuggestions = true,
+                    showsuggestionsassnippets = false,
+                    syntaxprofiles = {},
+                    variables = {},
+                    excludelanguages = {},
+                },
+            },
         },
         -- Configure buffer local auto commands to add when attaching a language server
         autocmds = {
