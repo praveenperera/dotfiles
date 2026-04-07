@@ -1,8 +1,5 @@
-local telescope = require("telescope")
 local serpl = require("config.serpl")
 
--- Mappings can be configured through AstroCore as well.
--- NOTE: keycodes follow the casing in the vimdocs. For example, `<Leader>` must be capitalized
 return {
     {
         "AstroNvim/astrocore",
@@ -173,41 +170,51 @@ return {
                     ["<C-Home>"] = { "<C-w>+", desc = "Resize up" },
                     ["<C-End>"] = { "<C-w>-", desc = "Resize down" },
 
-                    -- find
+                    -- find (snacks.picker)
                     ["<Leader>fi"] = {
-                        "<cmd>Telescope current_buffer_fuzzy_find case_mode=smart_case<CR>",
+                        function()
+                            Snacks.picker.lines()
+                        end,
                         desc = "Find in Buffer",
                     },
 
                     -- mark in file
                     ["<Leader>fm"] = {
-                        "<cmd>Telescope current_buffer_fuzzy_find case_mode=smart_case default_text=MARK:\\ <CR>",
-                        desc = "Find in Buffer",
+                        function()
+                            Snacks.picker.lines({ search = "MARK: " })
+                        end,
+                        desc = "Find MARK in Buffer",
                     },
 
                     -- mark in project
                     ["<Leader>fM"] = {
-                        "<cmd>Telescope live_grep case_mode=smart_case default_text=MARK:\\ <CR>",
-                        desc = "Find in Buffer",
+                        function()
+                            Snacks.picker.grep({ search = "MARK: " })
+                        end,
+                        desc = "Find MARK in Project",
                     },
 
                     ["<Leader>ft"] = {
-                        "<cmd>TodoTelescope<CR>",
+                        function()
+                            Snacks.picker.todo()
+                        end,
                         desc = "Find TODOs",
                     },
                     ["<Leader>ff"] = {
-                        telescope.find_files,
+                        function()
+                            Snacks.picker.files({ hidden = true, exclude = { ".git" } })
+                        end,
                         desc = "Find all files",
                     },
                     ["<Leader>fs"] = {
                         function()
-                            require("telescope").extensions.aerial.aerial()
+                            Snacks.picker.symbols()
                         end,
                         desc = "Search document symbols",
                     },
                     ["<Leader>fS"] = {
                         function()
-                            require("telescope.builtin").lsp_dynamic_workspace_symbols()
+                            Snacks.picker.lsp_workspace_symbols()
                         end,
                         desc = "Search project symbols",
                     },

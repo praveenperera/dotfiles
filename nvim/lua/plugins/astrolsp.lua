@@ -33,19 +33,6 @@ return {
             --   return true
             -- end
         },
-        lsp_handlers = {
-            -- remove these handler overrides after AstroNvim/astrolsp stop building them
-            -- with vim.lsp.with, which is deprecated on nvim 0.12
-            ["textDocument/hover"] = function(err, result, ctx, config)
-                config = vim.tbl_extend("force", config or {}, { border = "rounded", silent = true })
-                return vim.lsp.handlers.hover(err, result, ctx, config)
-            end,
-            ["textDocument/signatureHelp"] = function(err, result, ctx, config)
-                config =
-                    vim.tbl_extend("force", config or {}, { border = "rounded", silent = true, focusable = false })
-                return vim.lsp.handlers.signature_help(err, result, ctx, config)
-            end,
-        },
         -- enable servers that you already have installed without mason
         servers = {
             "sourcekit",

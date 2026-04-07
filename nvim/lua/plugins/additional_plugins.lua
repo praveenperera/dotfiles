@@ -1,7 +1,5 @@
 return {
-    { "folke/neodev.nvim" },
     { "nvim-lua/plenary.nvim" },
-    { "jose-elias-alvarez/typescript.nvim" },
     { "Vigemus/iron.nvim", cmd = "IronRepl" },
     { "kevinhwang91/nvim-bqf", event = "VeryLazy" },
     { "ThePrimeagen/harpoon", event = "User AstroFile" },
