@@ -1,4 +1,5 @@
 local serpl = require("config.serpl")
+local snacks = require("snacks")
 
 return {
     {
@@ -173,7 +174,7 @@ return {
                     -- find (snacks.picker)
                     ["<Leader>fi"] = {
                         function()
-                            require("snacks").picker.lines()
+                            snacks.picker.lines()
                         end,
                         desc = "Find in Buffer",
                     },
@@ -181,7 +182,7 @@ return {
                     -- mark in file
                     ["<Leader>fm"] = {
                         function()
-                            require("snacks").picker.lines({ search = "MARK: " })
+                            snacks.picker.lines({ search = "MARK: " })
                         end,
                         desc = "Find MARK in Buffer",
                     },
@@ -189,32 +190,32 @@ return {
                     -- mark in project
                     ["<Leader>fM"] = {
                         function()
-                            require("snacks").picker.grep({ search = "MARK: " })
+                            snacks.picker.grep({ search = "MARK: " })
                         end,
                         desc = "Find MARK in Project",
                     },
 
                     ["<Leader>ft"] = {
                         function()
-                            require("snacks").picker.todo()
+                            snacks.picker.todo()
                         end,
                         desc = "Find TODOs",
                     },
                     ["<Leader>ff"] = {
                         function()
-                            require("snacks").picker.files({ hidden = true, exclude = { ".git" } })
+                            snacks.picker.files({ hidden = true, exclude = { ".git" } })
                         end,
                         desc = "Find all files",
                     },
                     ["<Leader>fs"] = {
                         function()
-                            require("snacks").picker.symbols()
+                            snacks.picker.symbols()
                         end,
                         desc = "Search document symbols",
                     },
                     ["<Leader>fS"] = {
                         function()
-                            require("snacks").picker.lsp_workspace_symbols()
+                            snacks.picker.lsp_workspace_symbols()
                         end,
                         desc = "Search project symbols",
                     },
