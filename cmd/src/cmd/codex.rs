@@ -498,14 +498,14 @@ mod tests {
 
     #[test]
     fn parses_auth_identity_from_id_token() {
-        let auth = auth_json(
-            "google-oauth2|1234",
-            "user-1234",
-            "acct-1234",
-            Some("praveen@example.com"),
-            Some("Praveen Perera"),
-            Some("google"),
-        );
+        let auth = auth_json(&TestIdentity {
+            subject: "google-oauth2|1234",
+            user_id: "user-1234",
+            account_id: "acct-1234",
+            email: Some("praveen@example.com"),
+            name: Some("Praveen Perera"),
+            auth_provider: Some("google"),
+        });
 
         let identity = parse_auth_identity(&auth).unwrap();
 
@@ -546,16 +546,16 @@ mod tests {
         let auth_path = dir.path().join("auth.json");
 
         fs::create_dir_all(&old_dir).unwrap();
-        fs::write(
-            old_dir.join("auth.json"),
-            auth_json("sub-1", "user-1", "acct-1", None, None, None),
-        )
-        .unwrap();
-        fs::write(
-            &auth_path,
-            auth_json("sub-1", "user-1", "acct-1", None, None, None),
-        )
-        .unwrap();
+        let id = TestIdentity {
+            subject: "sub-1",
+            user_id: "user-1",
+            account_id: "acct-1",
+            email: None,
+            name: None,
+            auth_provider: None,
+        };
+        fs::write(old_dir.join("auth.json"), auth_json(&id)).unwrap();
+        fs::write(&auth_path, auth_json(&id)).unwrap();
 
         let outcome = save_profile_auth(
             "new",
@@ -577,19 +577,26 @@ mod tests {
         let profiles_dir = dir.path().join("profiles");
         let old_dir = profiles_dir.join("old");
         let auth_path = dir.path().join("auth.json");
-        let new_auth = auth_json(
-            "sub-1",
-            "user-1",
-            "acct-1",
-            Some("new@example.com"),
-            None,
-            None,
-        );
+        let new_auth = auth_json(&TestIdentity {
+            subject: "sub-1",
+            user_id: "user-1",
+            account_id: "acct-1",
+            email: Some("new@example.com"),
+            name: None,
+            auth_provider: None,
+        });
 
         fs::create_dir_all(&old_dir).unwrap();
         fs::write(
             old_dir.join("auth.json"),
-            auth_json("sub-1", "user-1", "acct-1", None, None, None),
+            auth_json(&TestIdentity {
+                subject: "sub-1",
+                user_id: "user-1",
+                account_id: "acct-1",
+                email: None,
+                name: None,
+                auth_provider: None,
+            }),
         )
         .unwrap();
         fs::write(&auth_path, &new_auth).unwrap();
@@ -1114,7 +1121,7 @@ mod tests {
         let usage_path = "/backend-api/wham/usage";
         let loader =
             ProfileUsageLoader::with_urls(format!("{}{}", server.uri(), usage_path)).unwrap();
-        let auth = read_auth("sub-1", "user-1", "acct-1", "old-access", "old-refresh");
+        let auth = read_auth(&ID_1, "old-access", "old-refresh");
 
         Mock::given(method("GET"))
             .and(path(usage_path))
@@ -1154,7 +1161,7 @@ mod tests {
         let usage_path = "/backend-api/wham/usage";
         let loader =
             ProfileUsageLoader::with_urls(format!("{}{}", server.uri(), usage_path)).unwrap();
-        let auth = read_auth("sub-1", "user-1", "acct-1", "valid-access", "old-refresh");
+        let auth = read_auth(&ID_1, "valid-access", "old-refresh");
 
         Mock::given(method("GET"))
             .and(path(usage_path))
@@ -1289,21 +1296,12 @@ mod tests {
         let dir = tempdir().unwrap();
         let profile_auth = dir.path().join("profile-auth.json");
         let launch_auth_path = dir.path().join("launch-auth.json");
-        let original_auth = auth_json(
-            "sub-1",
-            "user-1",
-            "acct-1",
-            Some("old@example.com"),
-            None,
-            Some("google"),
-        );
+        let original_auth = auth_json(&ID_1);
         let refreshed_auth = auth_json_with_tokens(
-            "sub-1",
-            "user-1",
-            "acct-1",
-            Some("new@example.com"),
-            None,
-            Some("google"),
+            &TestIdentity {
+                email: Some("new@example.com"),
+                ..ID_1
+            },
             "new-access",
             "new-refresh",
         );
@@ -1322,31 +1320,20 @@ mod tests {
         let dir = tempdir().unwrap();
         let profile_auth = dir.path().join("profile-auth.json");
         let launch_auth_path = dir.path().join("launch-auth.json");
-        let original_auth = auth_json(
-            "sub-1",
-            "user-1",
-            "acct-1",
-            Some("old@example.com"),
-            None,
-            Some("google"),
-        );
+        let original_auth = auth_json(&ID_1);
         let competing_auth = auth_json_with_tokens(
-            "sub-1",
-            "user-1",
-            "acct-1",
-            Some("other@example.com"),
-            None,
-            Some("google"),
+            &TestIdentity {
+                email: Some("other@example.com"),
+                ..ID_1
+            },
             "other-access",
             "other-refresh",
         );
         let refreshed_auth = auth_json_with_tokens(
-            "sub-1",
-            "user-1",
-            "acct-1",
-            Some("new@example.com"),
-            None,
-            Some("google"),
+            &TestIdentity {
+                email: Some("new@example.com"),
+                ..ID_1
+            },
             "new-access",
             "new-refresh",
         );
@@ -1366,21 +1353,13 @@ mod tests {
         let dir = tempdir().unwrap();
         let profile_auth = dir.path().join("profile-auth.json");
         let launch_auth_path = dir.path().join("launch-auth.json");
-        let original_auth = auth_json(
-            "sub-1",
-            "user-1",
-            "acct-1",
-            Some("old@example.com"),
-            None,
-            Some("google"),
-        );
+        let original_auth = auth_json(&ID_1);
         let switched_account_auth = auth_json_with_tokens(
-            "sub-1",
-            "user-1",
-            "acct-2",
-            Some("new@example.com"),
-            None,
-            Some("google"),
+            &TestIdentity {
+                account_id: "acct-2",
+                email: Some("new@example.com"),
+                ..ID_1
+            },
             "new-access",
             "new-refresh",
         );
@@ -1412,12 +1391,12 @@ mod tests {
         let server = MockServer::start().await;
         let refresher =
             ProfileAuthRefresher::with_url(format!("{}/oauth/token", server.uri())).unwrap();
-        let auth = read_auth("sub-1", "user-1", "acct-1", "old-access", "old-refresh");
+        let auth = read_auth(&ID_1, "old-access", "old-refresh");
 
         Mock::given(method("POST"))
             .and(path("/oauth/token"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "id_token": jwt("sub-1", "user-1", "acct-1", Some("new@example.com"), None, Some("google")),
+                "id_token": jwt(&TestIdentity { email: Some("new@example.com"), ..ID_1 }),
                 "access_token": "new-access",
                 "refresh_token": "new-refresh",
             })))
@@ -1459,12 +1438,12 @@ mod tests {
         let server = MockServer::start().await;
         let refresher =
             ProfileAuthRefresher::with_url(format!("{}/oauth/token", server.uri())).unwrap();
-        let auth = read_auth("sub-1", "user-1", "acct-1", "old-access", "old-refresh");
+        let auth = read_auth(&ID_1, "old-access", "old-refresh");
 
         Mock::given(method("POST"))
             .and(path("/oauth/token"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "id_token": jwt("sub-2", "user-2", "acct-2", Some("other@example.com"), None, Some("google")),
+                "id_token": jwt(&TestIdentity { subject: "sub-2", user_id: "user-2", account_id: "acct-2", email: Some("other@example.com"), name: None, auth_provider: Some("google") }),
                 "access_token": "new-access",
                 "refresh_token": "new-refresh",
             })))
@@ -2014,37 +1993,15 @@ mod tests {
         }
     }
 
-    fn auth_json(
-        subject: &str,
-        user_id: &str,
-        account_id: &str,
-        email: Option<&str>,
-        name: Option<&str>,
-        auth_provider: Option<&str>,
-    ) -> String {
-        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"RS256","typ":"JWT"}"#);
-        let payload = URL_SAFE_NO_PAD.encode(
-            serde_json::to_vec(&json!({
-                "sub": subject,
-                "email": email,
-                "name": name,
-                "auth_provider": auth_provider,
-                "https://api.openai.com/auth": {
-                    "user_id": user_id,
-                    "chatgpt_account_id": account_id,
-                }
-            }))
-            .unwrap(),
-        );
-
+    fn auth_json(id: &TestIdentity) -> String {
         serde_json::to_string(&json!({
             "OPENAI_API_KEY": null,
             "auth_mode": "chatgpt",
             "last_refresh": "2026-03-30T00:00:00Z",
             "tokens": {
                 "access_token": "access-token",
-                "account_id": account_id,
-                "id_token": format!("{header}.{payload}.sig"),
+                "account_id": id.account_id,
+                "id_token": jwt(id),
                 "refresh_token": "refresh-token",
             }
         }))
@@ -2122,50 +2079,26 @@ mod tests {
         (now + chrono::Duration::seconds(remaining_seconds)).timestamp()
     }
 
-    fn read_auth(
-        subject: &str,
-        user_id: &str,
-        account_id: &str,
-        access_token: &str,
-        refresh_token: &str,
-    ) -> StoredAuth {
+    fn read_auth(id: &TestIdentity, access_token: &str, refresh_token: &str) -> StoredAuth {
         let dir = tempdir().unwrap();
         let auth_path = dir.path().join("auth.json");
         fs::write(
             &auth_path,
-            auth_json_with_tokens(
-                subject,
-                user_id,
-                account_id,
-                Some("old@example.com"),
-                None,
-                Some("google"),
-                access_token,
-                refresh_token,
-            ),
+            auth_json_with_tokens(id, access_token, refresh_token),
         )
         .unwrap();
         read_stored_auth(&auth_path).unwrap()
     }
 
-    fn auth_json_with_tokens(
-        subject: &str,
-        user_id: &str,
-        account_id: &str,
-        email: Option<&str>,
-        name: Option<&str>,
-        auth_provider: Option<&str>,
-        access_token: &str,
-        refresh_token: &str,
-    ) -> String {
+    fn auth_json_with_tokens(id: &TestIdentity, access_token: &str, refresh_token: &str) -> String {
         serde_json::to_string(&json!({
             "OPENAI_API_KEY": null,
             "auth_mode": "chatgpt",
             "last_refresh": "2026-03-30T00:00:00Z",
             "tokens": {
                 "access_token": access_token,
-                "account_id": account_id,
-                "id_token": jwt(subject, user_id, account_id, email, name, auth_provider),
+                "account_id": id.account_id,
+                "id_token": jwt(id),
                 "refresh_token": refresh_token,
             }
         }))
@@ -2182,14 +2115,14 @@ mod tests {
             last_refresh: last_refresh.map(|timestamp| timestamp.to_rfc3339()),
             tokens: Some(super::StoredTokens {
                 account_id: Some("acct-1".into()),
-                id_token: Some(jwt(
-                    "sub-1",
-                    "user-1",
-                    "acct-1",
-                    Some("praveen@example.com"),
-                    None,
-                    Some("google"),
-                )),
+                id_token: Some(jwt(&TestIdentity {
+                    subject: "sub-1",
+                    user_id: "user-1",
+                    account_id: "acct-1",
+                    email: Some("praveen@example.com"),
+                    name: None,
+                    auth_provider: Some("google"),
+                })),
                 access_token,
                 refresh_token: Some("refresh-token".into()),
                 extra: Default::default(),
@@ -2210,24 +2143,35 @@ mod tests {
         format!("{header}.{payload}.sig")
     }
 
-    fn jwt(
-        subject: &str,
-        user_id: &str,
-        account_id: &str,
-        email: Option<&str>,
-        name: Option<&str>,
-        auth_provider: Option<&str>,
-    ) -> String {
+    struct TestIdentity {
+        subject: &'static str,
+        user_id: &'static str,
+        account_id: &'static str,
+        email: Option<&'static str>,
+        name: Option<&'static str>,
+        auth_provider: Option<&'static str>,
+    }
+
+    const ID_1: TestIdentity = TestIdentity {
+        subject: "sub-1",
+        user_id: "user-1",
+        account_id: "acct-1",
+        email: Some("old@example.com"),
+        name: None,
+        auth_provider: Some("google"),
+    };
+
+    fn jwt(id: &TestIdentity) -> String {
         let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"RS256","typ":"JWT"}"#);
         let payload = URL_SAFE_NO_PAD.encode(
             serde_json::to_vec(&json!({
-                "sub": subject,
-                "email": email,
-                "name": name,
-                "auth_provider": auth_provider,
+                "sub": id.subject,
+                "email": id.email,
+                "name": id.name,
+                "auth_provider": id.auth_provider,
                 "https://api.openai.com/auth": {
-                    "user_id": user_id,
-                    "chatgpt_account_id": account_id,
+                    "user_id": id.user_id,
+                    "chatgpt_account_id": id.account_id,
                 }
             }))
             .unwrap(),
