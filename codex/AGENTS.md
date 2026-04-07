@@ -16,6 +16,7 @@
 - Don't default to leaving deprecated code in place, remove it or ask if this is a full replacement or if old code is still needed
 - When working with this user's projects: always read existing config/code before answering from general knowledge. Never assume defaults — check the actual files first
 - Scope changes precisely to what the user asks for. Do not modify files or components beyond the explicit request without asking first. If unsure about scope, ask before making changes — not after
+- Never remove unrelated code or user changes just to make a clean commit. Use hunk staging to commit only your intended changes and leave unrelated working-tree changes intact
 
 # Rust Project Specific
 
