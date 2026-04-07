@@ -1,6 +1,8 @@
 return {
     {
         "nvimtools/none-ls.nvim",
+        -- remove this override after AstroNvim ships a none-ls pin that is compatible
+        -- with nvim 0.12's LSP capability map changes
         commit = "7f9301e416533b5d74e2fb3b1ce5059eeaed748b",
         version = false,
         opts = function(_, opts)
@@ -10,6 +12,8 @@ return {
             opts.on_init = function(client, initialize_result)
                 local methods = require("null-ls.methods")
 
+                -- remove this wrapper after upstream plugins stop calling
+                -- client.supports_method with dot syntax on nvim 0.12
                 client.supports_method = function(maybe_self, method)
                     local actual_method = maybe_self == client and method or maybe_self
                     local capability_map = vim.lsp.protocol._request_name_to_capability

@@ -7,6 +7,8 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 if vim.fn.has("nvim-0.12") == 1 then
+    -- remove this block after AstroNvim and its LSP-related plugins stop calling
+    -- deprecated nvim 0.12 APIs during startup
     -- keep deprecated vim.lsp.with callers working without noisy startup warnings on nvim 0.12
     vim.lsp.with = function(handler, override_config)
         return function(err, result, ctx, config)
