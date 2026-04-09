@@ -731,10 +731,10 @@ fn compact_total_cell(
         };
     }
 
-    let average_used = average_percent(
+    let average_used = weighted_average_percent(
         &windows
             .iter()
-            .map(|window| window.used_percent)
+            .map(|window| (effective_used_percent(window), limit_weight(window)))
             .collect::<Vec<_>>(),
     );
     let average_delta = average_delta_percent(windows, now, kind);
@@ -745,8 +745,13 @@ fn compact_total_cell(
     }
 }
 
-fn average_percent(values: &[f64]) -> f64 {
-    values.iter().sum::<f64>() / values.len() as f64
+fn weighted_average_percent(values: &[(f64, f64)]) -> f64 {
+    let total_weight = values.iter().map(|(_, weight)| weight).sum::<f64>();
+    values
+        .iter()
+        .map(|(value, weight)| value * weight)
+        .sum::<f64>()
+        / total_weight
 }
 
 fn average_delta_percent(
@@ -756,13 +761,15 @@ fn average_delta_percent(
 ) -> Option<f64> {
     let deltas = windows
         .iter()
-        .filter_map(|window| pace_delta_percent(window, now, kind))
+        .filter_map(|window| {
+            pace_delta_percent(window, now, kind).map(|delta| (delta, limit_weight(window)))
+        })
         .collect::<Vec<_>>();
 
     if deltas.is_empty() {
         None
     } else {
-        Some(average_percent(&deltas))
+        Some(weighted_average_percent(&deltas))
     }
 }
 
@@ -782,7 +789,15 @@ pub(super) fn pace_delta_percent(
     let elapsed_fraction = elapsed_seconds as f64 / duration.num_seconds() as f64;
     let ideal_used_percent = elapsed_fraction * 100.0;
 
-    Some(window.used_percent - ideal_used_percent)
+    Some(effective_used_percent(window) - ideal_used_percent)
+}
+
+fn effective_used_percent(window: &UsageWindowSnapshot) -> f64 {
+    window.used_percent / limit_weight(window)
+}
+
+fn limit_weight(window: &UsageWindowSnapshot) -> f64 {
+    window.limit_multiplier.max(1.0)
 }
 
 fn usage_window_duration(kind: UsageWindowKind) -> chrono::Duration {
@@ -979,6 +994,31 @@ mod tests {
     }
 
     #[test]
+    fn compact_profile_totals_account_for_limit_multiplier() {
+        let now = Utc.timestamp_opt(1_800, 0).single().unwrap();
+        let rows = vec![
+            profile_row_with_usage_and_multiplier(
+                10.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.1)),
+                10.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.1)),
+                10.0,
+            ),
+            profile_row_with_usage(
+                10.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.1)),
+                10.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.1)),
+            ),
+        ];
+
+        let totals = compact_profile_totals_at(&rows, now).expect("totals");
+
+        assert_eq!(totals.five_hour.text, "2% (-8%)");
+        assert_eq!(totals.weekly.text, "2% (-8%)");
+    }
+
+    #[test]
     fn compact_profile_totals_formats_negative_pace_delta() {
         let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
         let rows = vec![profile_row_with_usage(
@@ -1076,6 +1116,22 @@ mod tests {
         weekly: f64,
         weekly_reset_at: Option<i64>,
     ) -> ProfileRow {
+        profile_row_with_usage_and_multiplier(
+            five_hour,
+            five_hour_reset_at,
+            weekly,
+            weekly_reset_at,
+            1.0,
+        )
+    }
+
+    fn profile_row_with_usage_and_multiplier(
+        five_hour: f64,
+        five_hour_reset_at: Option<i64>,
+        weekly: f64,
+        weekly_reset_at: Option<i64>,
+        limit_multiplier: f64,
+    ) -> ProfileRow {
         ProfileRow {
             profile: "p".into(),
             label: "p@example.com".into(),
@@ -1090,6 +1146,7 @@ mod tests {
             five_hour_usage: five_hour_reset_at.map(|reset_at| UsageWindowSnapshot {
                 used_percent: five_hour,
                 reset_at: Some(reset_at),
+                limit_multiplier,
             }),
             weekly: format!("{weekly:.0}%"),
             weekly_reset: "-".into(),
@@ -1098,6 +1155,7 @@ mod tests {
             weekly_usage: weekly_reset_at.map(|reset_at| UsageWindowSnapshot {
                 used_percent: weekly,
                 reset_at: Some(reset_at),
+                limit_multiplier,
             }),
             status: ProfileStatus::default(),
         }

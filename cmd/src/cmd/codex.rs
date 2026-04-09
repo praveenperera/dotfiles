@@ -270,6 +270,7 @@ struct ProfileUsageSnapshot {
 struct UsageWindowSnapshot {
     used_percent: f64,
     reset_at: Option<i64>,
+    limit_multiplier: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1706,6 +1707,7 @@ mod tests {
                 primary: Some(UsageWindowSnapshot {
                     used_percent: 5.0,
                     reset_at: Some(Local::now().timestamp() + 3600),
+                    limit_multiplier: 1.0,
                 }),
                 secondary: None,
             },
@@ -1739,10 +1741,12 @@ mod tests {
                     primary: Some(UsageWindowSnapshot {
                         used_percent: 10.0,
                         reset_at: None,
+                        limit_multiplier: 1.0,
                     }),
                     secondary: Some(UsageWindowSnapshot {
                         used_percent: 20.0,
                         reset_at: Some(weekly_reset),
+                        limit_multiplier: 1.0,
                     }),
                 },
             ),
@@ -1868,10 +1872,12 @@ mod tests {
                 primary: Some(UsageWindowSnapshot {
                     used_percent: 42.0,
                     reset_at: Some(Local::now().timestamp() + 3600),
+                    limit_multiplier: 1.0,
                 }),
                 secondary: Some(UsageWindowSnapshot {
                     used_percent: 3.0,
                     reset_at: Some(weekly_reset),
+                    limit_multiplier: 1.0,
                 }),
             },
         );
@@ -1967,10 +1973,12 @@ mod tests {
                 primary: Some(UsageWindowSnapshot {
                     used_percent: primary_used_percent,
                     reset_at: Some(primary_reset_at),
+                    limit_multiplier: 1.0,
                 }),
                 secondary: Some(UsageWindowSnapshot {
                     used_percent: secondary_used_percent,
                     reset_at: Some(secondary_reset_at),
+                    limit_multiplier: 1.0,
                 }),
             }),
         )
@@ -2056,10 +2064,12 @@ mod tests {
             primary: Some(UsageWindowSnapshot {
                 used_percent: primary_used_percent,
                 reset_at: Some(now + 3600),
+                limit_multiplier: 1.0,
             }),
             secondary: Some(UsageWindowSnapshot {
                 used_percent: secondary_used_percent,
                 reset_at: Some(now + 7200),
+                limit_multiplier: 1.0,
             }),
         }
     }

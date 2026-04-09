@@ -1,5 +1,128 @@
 use super::*;
 use crate::runtime;
+use std::collections::BTreeMap;
+use std::str::FromStr;
+
+const DOUBLED_PLAN_TYPES: &[KnownPlanType] = &[KnownPlanType::Prolite, KnownPlanType::Pro];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum KnownPlanType {
+    Plus,
+    Team,
+    Prolite,
+    Pro,
+}
+
+impl KnownPlanType {
+    fn default_limit_config(self) -> PlanLimitConfig {
+        let multiplier = match self {
+            Self::Plus | Self::Team => 1.0,
+            Self::Prolite => 5.0,
+            Self::Pro => 20.0,
+        };
+
+        PlanLimitConfig {
+            multiplier,
+            is_doubled: DOUBLED_PLAN_TYPES.contains(&self),
+        }
+    }
+}
+
+impl FromStr for KnownPlanType {
+    type Err = ();
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        match value {
+            "plus" => Ok(Self::Plus),
+            "team" => Ok(Self::Team),
+            "prolite" => Ok(Self::Prolite),
+            "pro" => Ok(Self::Pro),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PlanLimitConfig {
+    multiplier: f64,
+    is_doubled: bool,
+}
+
+impl PlanLimitConfig {
+    fn effective_multiplier(self) -> f64 {
+        let doubled_multiplier = if self.is_doubled { 2.0 } else { 1.0 };
+        self.multiplier * doubled_multiplier
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct CmdConfigFile {
+    #[serde(default)]
+    cmd: CmdConfigSection,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct CmdConfigSection {
+    #[serde(default)]
+    codex_usage: CodexUsageConfig,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct CodexUsageConfig {
+    #[serde(default)]
+    plans: BTreeMap<String, PlanLimitOverride>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct PlanLimitOverride {
+    multiplier: Option<f64>,
+    is_doubled: Option<bool>,
+}
+
+fn effective_limit_multiplier(plan_type: Option<&str>) -> f64 {
+    let Some(plan_type) = plan_type else {
+        return 1.0;
+    };
+    let plan_type = plan_type.to_ascii_lowercase();
+    let mut limit_config = default_limit_config(&plan_type);
+
+    let config_path = codex_dir().ok().map(|dir| dir.join("config.toml"));
+    if let Some(config_path) = config_path {
+        if let Ok(raw) = stdfs::read_to_string(config_path) {
+            if let Ok(config) = toml::from_str::<CmdConfigFile>(&raw) {
+                apply_plan_limit_override(
+                    &mut limit_config,
+                    config.cmd.codex_usage.plans.get(&plan_type),
+                );
+            }
+        }
+    }
+
+    limit_config.effective_multiplier()
+}
+
+fn default_limit_config(plan_type: &str) -> PlanLimitConfig {
+    KnownPlanType::from_str(plan_type)
+        .map(KnownPlanType::default_limit_config)
+        .unwrap_or(PlanLimitConfig {
+            multiplier: 1.0,
+            is_doubled: false,
+        })
+}
+
+fn apply_plan_limit_override(
+    limit_config: &mut PlanLimitConfig,
+    override_config: Option<&PlanLimitOverride>,
+) {
+    if let Some(override_config) = override_config {
+        if let Some(multiplier) = override_config.multiplier {
+            limit_config.multiplier = multiplier;
+        }
+        if let Some(is_doubled) = override_config.is_doubled {
+            limit_config.is_doubled = is_doubled;
+        }
+    }
+}
 
 pub(super) fn needs_proactive_refresh(
     auth: &StoredAuth,
@@ -198,6 +321,7 @@ impl ProfileUsageLoader {
             .json::<UsageResponse>()
             .await
             .map_err(UsageHttpError::from_reqwest)?;
+        let limit_multiplier = effective_limit_multiplier(payload.plan_type.as_deref());
         Ok(ProfileUsageSnapshot {
             user_id: payload.user_id,
             account_id: payload.account_id,
@@ -210,6 +334,7 @@ impl ProfileUsageLoader {
                     .map(|window| UsageWindowSnapshot {
                         used_percent: window.used_percent,
                         reset_at: Some(window.reset_at),
+                        limit_multiplier,
                     })
             }),
             secondary: payload.rate_limit.as_ref().and_then(|rate_limit| {
@@ -219,6 +344,7 @@ impl ProfileUsageLoader {
                     .map(|window| UsageWindowSnapshot {
                         used_percent: window.used_percent,
                         reset_at: Some(window.reset_at),
+                        limit_multiplier,
                     })
             }),
         })
@@ -401,4 +527,68 @@ pub(super) fn usage_matches_identity(
     }
 
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_limit_config_matches_current_codex_limits() {
+        assert_eq!(default_limit_config("plus").effective_multiplier(), 1.0);
+        assert_eq!(default_limit_config("team").effective_multiplier(), 1.0);
+        assert_eq!(default_limit_config("prolite").effective_multiplier(), 10.0);
+        assert_eq!(default_limit_config("pro").effective_multiplier(), 40.0);
+    }
+
+    #[test]
+    fn plan_limit_overrides_can_disable_doubling() {
+        let mut limit_config = default_limit_config("prolite");
+        let overrides = toml::from_str::<CmdConfigFile>(
+            r#"
+            [cmd.codex_usage.plans.prolite]
+            is_doubled = false
+            "#,
+        )
+        .unwrap();
+
+        apply_plan_limit_override(
+            &mut limit_config,
+            overrides.cmd.codex_usage.plans.get("prolite"),
+        );
+
+        assert_eq!(limit_config.effective_multiplier(), 5.0);
+    }
+
+    #[test]
+    fn plan_limit_overrides_can_define_new_plan_weights() {
+        let mut limit_config = default_limit_config("enterprise");
+        let overrides = toml::from_str::<CmdConfigFile>(
+            r#"
+            [cmd.codex_usage.plans.enterprise]
+            multiplier = 50
+            is_doubled = true
+            "#,
+        )
+        .unwrap();
+
+        apply_plan_limit_override(
+            &mut limit_config,
+            overrides.cmd.codex_usage.plans.get("enterprise"),
+        );
+
+        assert_eq!(limit_config.effective_multiplier(), 100.0);
+    }
+
+    #[test]
+    fn known_plan_type_parses_supported_values() {
+        assert_eq!(KnownPlanType::from_str("plus"), Ok(KnownPlanType::Plus));
+        assert_eq!(KnownPlanType::from_str("team"), Ok(KnownPlanType::Team));
+        assert_eq!(
+            KnownPlanType::from_str("prolite"),
+            Ok(KnownPlanType::Prolite)
+        );
+        assert_eq!(KnownPlanType::from_str("pro"), Ok(KnownPlanType::Pro));
+        assert!(KnownPlanType::from_str("enterprise").is_err());
+    }
 }
