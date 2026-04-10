@@ -229,7 +229,8 @@ pub(super) fn format_launch_banner(
     details: &LaunchBannerDetails,
 ) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} - {}  {} {} {} {} {} {} {} {}",
+        "{}\n{} {} {} {} {} {} {} {} {}\n{}",
+        details.label.yellow(),
         "launching".green().bold(),
         "profile".blue().bold(),
         profile.cyan().bold(),
@@ -239,45 +240,67 @@ pub(super) fn format_launch_banner(
         "|".white().dimmed(),
         "resume".blue().bold(),
         groups.resume.cyan().bold(),
-        details.label.yellow(),
-        "5h".blue().bold(),
-        details.five_hour.white().bold(),
-        "reset".blue().bold(),
-        details.five_hour_reset.yellow(),
-        "week".blue().bold(),
-        details.weekly.white().bold(),
-        "reset".blue().bold(),
-        details.weekly_reset.yellow(),
+        details.render_usage_line(),
     )
 }
 
 pub(super) struct LaunchBannerDetails {
     label: String,
-    five_hour: String,
-    five_hour_reset: String,
-    weekly: String,
-    weekly_reset: String,
+    five_hour_compact: String,
+    five_hour_style: LimitStyleKind,
+    weekly_compact: String,
+    weekly_style: LimitStyleKind,
 }
 
 impl LaunchBannerDetails {
     fn fallback() -> Self {
         Self {
             label: "-".into(),
-            five_hour: "-".into(),
-            five_hour_reset: "-".into(),
-            weekly: "-".into(),
-            weekly_reset: "-".into(),
+            five_hour_compact: "-".into(),
+            five_hour_style: LimitStyleKind::Normal,
+            weekly_compact: "-".into(),
+            weekly_style: LimitStyleKind::Normal,
         }
+    }
+
+    fn render_usage_line(&self) -> String {
+        format!(
+            "{}  {}  {}",
+            self.render_usage_segment("5H:", &self.five_hour_compact, self.five_hour_style),
+            "|".white().dimmed(),
+            self.render_usage_segment("Weekly:", &self.weekly_compact, self.weekly_style),
+        )
+    }
+
+    fn render_usage_segment(&self, label: &str, value: &str, style: LimitStyleKind) -> String {
+        format!(
+            "{} {}",
+            label.blue().bold(),
+            render_usage_limit_cell(value, value.len(), style),
+        )
     }
 }
 
 pub(super) fn launch_banner_details(profile: &SavedProfile) -> LaunchBannerDetails {
+    let current_local = Local::now();
+    let current_utc = Utc::now();
+
     LaunchBannerDetails {
         label: saved_profile_label(profile),
-        five_hour: usage_window_percent(&profile.usage, UsageWindowKind::Primary),
-        five_hour_reset: usage_window_reset_compact(&profile.usage, UsageWindowKind::Primary),
-        weekly: usage_window_percent(&profile.usage, UsageWindowKind::Secondary),
-        weekly_reset: usage_window_reset_compact(&profile.usage, UsageWindowKind::Secondary),
+        five_hour_compact: current_usage_window_compact(
+            &profile.usage,
+            UsageWindowKind::Primary,
+            current_local,
+            current_utc,
+        ),
+        five_hour_style: five_hour_limit_style(&profile.usage),
+        weekly_compact: current_usage_window_compact(
+            &profile.usage,
+            UsageWindowKind::Secondary,
+            current_local,
+            current_utc,
+        ),
+        weekly_style: usage_window_style(&profile.usage, UsageWindowKind::Secondary),
     }
 }
 

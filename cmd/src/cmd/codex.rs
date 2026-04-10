@@ -2099,18 +2099,19 @@ mod tests {
         let details = launch_banner_details(&profile);
         let banner = format_launch_banner("a", &groups, &details);
 
+        assert!(banner.starts_with("a@example.com\n"));
         assert!(banner.contains("launching"));
         assert!(banner.contains("profile"));
         assert!(banner.contains("a"));
         assert!(banner.contains("config"));
         assert!(banner.contains("resume"));
         assert!(banner.contains("shared"));
-        assert!(banner.contains("a@example.com"));
-        assert!(banner.contains("5h"));
-        assert!(banner.contains("42%"));
-        assert!(banner.contains("week"));
+        assert!(banner.contains("\n5H:"));
+        assert!(banner.contains("Weekly:"));
+        assert!(banner.contains("  | "));
         assert!(banner.contains("73%"));
-        assert!(banner.contains("reset"));
+        assert!(!banner.contains("\n 42%    "));
+        assert!(!banner.contains("reset"));
     }
 
     #[test]
@@ -2140,10 +2141,11 @@ mod tests {
         let details = launch_banner_details(&profile);
         let banner = format_launch_banner("a", &groups, &details);
         let reset = Local.timestamp_opt(weekly_reset, 0).single().unwrap();
-        let expected_reset = reset.format("%a %-d %b %-I:%M %p").to_string();
+        let expected_reset = reset.format("%a %-I:%M %p").to_string();
 
         assert!(banner.contains(&expected_reset));
         assert!(!banner.contains(" on "));
+        assert!(!banner.contains(&reset.format("%a %-d %b").to_string()));
     }
 
     #[test]

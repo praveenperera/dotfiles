@@ -333,7 +333,7 @@ pub(super) fn colorize_limit_cell(
     }
 }
 
-fn render_usage_limit_cell(value: &str, width: usize, style: LimitStyleKind) -> String {
+pub(super) fn render_usage_limit_cell(value: &str, width: usize, style: LimitStyleKind) -> String {
     let padded = format!("{value:<width$}");
     match style {
         LimitStyleKind::Normal => padded,
