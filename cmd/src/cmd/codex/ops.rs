@@ -5,10 +5,18 @@ pub(super) fn launch(
     profile_or_arg: Option<&OsString>,
     resume_group: Option<&str>,
     config_group: Option<&str>,
+    other: bool,
     args: &[OsString],
 ) -> Result<()> {
     let mut profiles = load_saved_profiles(&profiles_dir()?)?;
-    let target = resolve_launch_target(profile_or_arg, resume_group, config_group, args, &profiles);
+    let target = resolve_launch_target(
+        profile_or_arg,
+        resume_group,
+        config_group,
+        other,
+        args,
+        &profiles,
+    )?;
     enrich_profile_usage(&mut profiles)?;
 
     match target {
@@ -34,9 +42,15 @@ pub(super) fn launch(
         LaunchTarget::Auto {
             resume_group,
             config_group,
+            other,
             args,
         } => {
-            let profile = select_auto_launch_profile(&profiles)?;
+            let excluded_profile = if other {
+                active_profile_name(&profiles)
+            } else {
+                None
+            };
+            let profile = select_auto_launch_profile_except(&profiles, excluded_profile)?;
             let details = launch_banner_details(profile);
             launch_with_profile(
                 &profile.name,
@@ -56,8 +70,6 @@ fn launch_with_profile(
     details: &LaunchBannerDetails,
     args: &[OsString],
 ) -> Result<()> {
-    println!("{}", format_launch_banner(profile, details));
-
     let shared_codex_home = codex_dir()?;
     let profile_home = profile_codex_home(profile)?;
     stdfs::create_dir_all(&profile_home)?;
@@ -68,10 +80,11 @@ fn launch_with_profile(
         ));
     }
 
-    let resume_group = resolve_group_name(resume_group, "shared", "resume")?;
-    let config_group = resolve_group_name(config_group, profile, "config")?;
-    let config_home = prepare_config_group_home(&shared_codex_home, &config_group)?;
-    let resume_home = prepare_resume_group_home(&shared_codex_home, &resume_group)?;
+    let groups = resolve_launch_groups(profile, resume_group, config_group)?;
+    println!("{}", format_launch_banner(profile, &groups, details));
+
+    let config_home = prepare_config_group_home(&shared_codex_home, &groups.config)?;
+    let resume_home = prepare_resume_group_home(&shared_codex_home, &groups.resume)?;
     let launch_home = create_launch_home(&profile_home)?;
     let launch_auth = read_auth_snapshot(&profile_auth)?;
     sync_launch_codex_home(
@@ -102,9 +115,10 @@ pub(super) fn resolve_launch_target(
     profile_or_arg: Option<&OsString>,
     resume_group: Option<&str>,
     config_group: Option<&str>,
+    other: bool,
     args: &[OsString],
     profiles: &[SavedProfile],
-) -> LaunchTarget {
+) -> Result<LaunchTarget> {
     let explicit_profile = profile_or_arg
         .and_then(|value| value.to_str())
         .filter(|profile| {
@@ -114,12 +128,16 @@ pub(super) fn resolve_launch_target(
         });
 
     if let Some(profile) = explicit_profile {
-        return LaunchTarget::Explicit {
+        if other {
+            return Err(eyre!("--other cannot be combined with an explicit profile"));
+        }
+
+        return Ok(LaunchTarget::Explicit {
             profile: profile.into(),
             resume_group: resume_group.map(str::to_owned),
             config_group: config_group.map(str::to_owned),
             args: args.to_vec(),
-        };
+        });
     }
 
     let mut resolved_args = Vec::with_capacity(args.len() + usize::from(profile_or_arg.is_some()));
@@ -128,19 +146,32 @@ pub(super) fn resolve_launch_target(
     }
     resolved_args.extend(args.iter().cloned());
 
-    LaunchTarget::Auto {
+    Ok(LaunchTarget::Auto {
         resume_group: resume_group.map(str::to_owned),
         config_group: config_group.map(str::to_owned),
+        other,
         args: resolved_args,
-    }
+    })
 }
 
+#[cfg(test)]
 pub(super) fn select_auto_launch_profile(profiles: &[SavedProfile]) -> Result<&SavedProfile> {
+    select_auto_launch_profile_except(profiles, None)
+}
+
+pub(super) fn select_auto_launch_profile_except<'a>(
+    profiles: &'a [SavedProfile],
+    excluded_profile: Option<&str>,
+) -> Result<&'a SavedProfile> {
     let now = Utc::now();
     let mut cool_candidates = Vec::new();
     let mut hot_candidates = Vec::new();
 
     for profile in profiles {
+        if excluded_profile.is_some_and(|excluded| excluded == profile.name) {
+            continue;
+        }
+
         let Some(candidate) = launch_candidate(profile, now) else {
             continue;
         };
@@ -160,10 +191,28 @@ pub(super) fn select_auto_launch_profile(profiles: &[SavedProfile]) -> Result<&S
         .or_else(|| hot_candidates.first())
         .map(|candidate| candidate.profile)
         .ok_or_else(|| {
-            eyre!(
-                "No profiles with usable usage data found. Run: cmd codex list or specify a saved profile explicitly"
-            )
+            let target = if excluded_profile.is_some() {
+                "other profiles"
+            } else {
+                "profiles"
+            };
+
+            eyre!("No {target} with usable usage data found. Run: cmd codex list or specify a saved profile explicitly")
         })
+}
+
+fn active_profile_name(profiles: &[SavedProfile]) -> Option<&str> {
+    let active_identity = auth_path()
+        .ok()
+        .and_then(|path| read_auth_identity(&path).ok())?;
+
+    profiles.iter().find_map(|profile| {
+        profile
+            .identity
+            .as_ref()
+            .filter(|identity| is_same_user(&active_identity, identity))
+            .map(|_| profile.name.as_str())
+    })
 }
 
 pub(super) fn saved_profile_label(profile: &SavedProfile) -> String {
@@ -174,12 +223,22 @@ pub(super) fn saved_profile_label(profile: &SavedProfile) -> String {
         .unwrap_or_else(|| "-".into())
 }
 
-pub(super) fn format_launch_banner(profile: &str, details: &LaunchBannerDetails) -> String {
+pub(super) fn format_launch_banner(
+    profile: &str,
+    groups: &LaunchGroups,
+    details: &LaunchBannerDetails,
+) -> String {
     format!(
-        "{} {} {} - {}  {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} - {}  {} {} {} {} {} {} {} {}",
         "launching".green().bold(),
         "profile".blue().bold(),
         profile.cyan().bold(),
+        "|".white().dimmed(),
+        "config".blue().bold(),
+        groups.config.cyan().bold(),
+        "|".white().dimmed(),
+        "resume".blue().bold(),
+        groups.resume.cyan().bold(),
         details.label.yellow(),
         "5h".blue().bold(),
         details.five_hour.white().bold(),
@@ -346,6 +405,51 @@ pub(super) fn list(verbose: bool) -> Result<()> {
     Ok(())
 }
 
+pub(super) fn usage() -> Result<()> {
+    let loader = ProfileUsageLoader::new()?;
+    let auth_path = auth_path()?;
+    let (label, usage) = current_usage_view(&loader, &auth_path)?;
+
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
+    print_current_usage_table(&mut stdout, &label, &usage)?;
+
+    Ok(())
+}
+
+pub(super) fn current_usage_view(
+    loader: &ProfileUsageLoader,
+    auth_path: &Path,
+) -> Result<(String, ProfileUsageState)> {
+    if !auth_path.exists() {
+        return Err(eyre!("No current codex auth found. Run: cmd codex login"));
+    }
+
+    let auth = read_stored_auth(auth_path).wrap_err("Failed to read current codex auth")?;
+    let identity =
+        read_auth_identity(auth_path).wrap_err("Failed to read current codex auth identity")?;
+    let runtime = runtime::current_thread_runtime()?;
+    let result = runtime.block_on(loader.fetch_profile_usage(&auth, Some(&identity)))?;
+
+    match result {
+        UsageFetchResult::Available { usage, .. } => {
+            let label = usage
+                .email
+                .clone()
+                .or_else(|| identity.email.clone())
+                .unwrap_or_else(|| "-".into());
+            Ok((label, ProfileUsageState::Available(usage)))
+        }
+        UsageFetchResult::Unavailable { .. } => {
+            let label = identity.email.clone().unwrap_or_else(|| "-".into());
+            Ok((label, ProfileUsageState::Unavailable))
+        }
+        UsageFetchResult::ReauthNeeded => Err(eyre!(
+            "Current codex auth does not match usage identity. Reauthenticate or switch profiles"
+        )),
+    }
+}
+
 pub(super) fn refresh_profile(profile: &str) -> Result<()> {
     let profile_home = profile_codex_home(profile)?;
     let active_sessions = active_session_markers(&profile_home)?;
@@ -499,6 +603,23 @@ fn resolve_group_name(group: Option<&str>, default: &str, kind: &str) -> Result<
     let group = group.unwrap_or(default);
     validate_group_name(group, kind)?;
     Ok(group.to_string())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LaunchGroups {
+    pub config: String,
+    pub resume: String,
+}
+
+pub fn resolve_launch_groups(
+    profile: &str,
+    resume_group: Option<&str>,
+    config_group: Option<&str>,
+) -> Result<LaunchGroups> {
+    Ok(LaunchGroups {
+        config: resolve_group_name(config_group, profile, "config")?,
+        resume: resolve_group_name(resume_group, "shared", "resume")?,
+    })
 }
 
 fn refresh_profile_auth_if_unchanged(

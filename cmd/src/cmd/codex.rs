@@ -55,12 +55,16 @@ pub enum CodexCmd {
         profile_or_arg: Option<OsString>,
 
         /// Resume-state group to use for session continuity
-        #[arg(long)]
+        #[arg(short = 'r', long)]
         resume_group: Option<String>,
 
         /// Config-state group to use for model and UI preferences
-        #[arg(long)]
+        #[arg(short = 'c', long)]
         config_group: Option<String>,
+
+        /// Auto-select a profile other than the active one
+        #[arg(long)]
+        other: bool,
 
         /// Arguments to pass to codex
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
@@ -84,6 +88,9 @@ pub enum CodexCmd {
         #[arg(short, long)]
         verbose: bool,
     },
+
+    /// Show usage for the current global codex auth
+    Usage,
 
     /// Refresh a saved profile's auth
     #[command(visible_alias = "rp")]
@@ -405,6 +412,7 @@ enum LaunchTarget {
     Auto {
         resume_group: Option<String>,
         config_group: Option<String>,
+        other: bool,
         args: Vec<OsString>,
     },
 }
@@ -427,11 +435,13 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
             profile_or_arg,
             resume_group,
             config_group,
+            other,
             args,
         } => launch(
             profile_or_arg.as_ref(),
             resume_group.as_deref(),
             config_group.as_deref(),
+            other,
             &args,
         ),
         CodexCmd::Login {
@@ -439,6 +449,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
             device_auth,
         } => login(&profile, device_auth),
         CodexCmd::List { verbose } => list(verbose),
+        CodexCmd::Usage => usage(),
         CodexCmd::RefreshProfile { profile } => refresh_profile(&profile),
         CodexCmd::RefreshAll => refresh_all(),
         CodexCmd::Switch { profile } => switch_default_profile(&profile),
@@ -489,6 +500,7 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
         profile_or_arg,
         resume_group,
         config_group,
+        other,
         ..
     } = flags.subcommand
     else {
@@ -503,6 +515,7 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
             profile_or_arg: None,
             resume_group,
             config_group,
+            other,
             args: args[separator_idx + 1..].to_vec(),
         },
     }))
@@ -511,16 +524,17 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
 #[cfg(test)]
 mod tests {
     use super::{
-        active_session_markers, build_profile_rows, create_launch_home, delete_profile_home,
-        format_launch_banner, launch_banner_details, needs_proactive_refresh, parse_auth_identity,
-        parse_jwt_expiration, parse_raw_args, prepare_config_group_home, prepare_resume_group_home,
-        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
-        replace_global_auth_with_profile, resolve_launch_target, save_profile_auth,
-        select_auto_launch_profile, sync_launch_codex_home, sync_login_codex_home,
-        validate_group_name, write_auth_raw_if_unchanged, write_session_marker, AuthIdentity,
-        CodexCmd, LaunchTarget, LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind,
-        ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState, SavedProfile, StoredAuth,
-        UsageFetchResult, UsageWindowSnapshot,
+        active_session_markers, build_profile_rows, create_launch_home, current_usage_view,
+        delete_profile_home, format_launch_banner, launch_banner_details, needs_proactive_refresh,
+        parse_auth_identity, parse_jwt_expiration, parse_raw_args, prepare_config_group_home,
+        prepare_resume_group_home, print_current_usage_table, promote_launch_auth_if_unchanged,
+        read_auth_snapshot, read_stored_auth, replace_global_auth_with_profile,
+        resolve_launch_groups, resolve_launch_target, save_profile_auth,
+        select_auto_launch_profile, select_auto_launch_profile_except, sync_launch_codex_home,
+        sync_login_codex_home, validate_group_name, write_auth_raw_if_unchanged,
+        write_session_marker, AuthIdentity, CodexCmd, LaunchGroups, LaunchTarget, LimitStyleKind,
+        ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot,
+        ProfileUsageState, SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
@@ -701,6 +715,67 @@ mod tests {
         );
 
         assert_eq!(formatted, "Thu 2 Apr 12:30 AM");
+    }
+
+    #[test]
+    fn current_usage_reset_timestamp_uses_weekday_without_date_for_future_secondary_window() {
+        let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
+        let reset_at = Local.with_ymd_and_hms(2026, 4, 2, 0, 30, 0).unwrap();
+
+        let formatted = super::format_current_usage_reset_timestamp(
+            reset_at,
+            captured_at,
+            super::UsageWindowKind::Secondary,
+        );
+
+        assert_eq!(formatted, "Thu 12:30 AM");
+    }
+
+    #[test]
+    fn current_usage_window_compact_includes_pace_and_weekday_reset() {
+        let current_local = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
+        let current_utc = current_local.with_timezone(&Utc);
+        let usage = ProfileUsageState::Available(ProfileUsageSnapshot {
+            user_id: Some("user-1".into()),
+            account_id: Some("acct-1".into()),
+            email: Some("praveen@example.com".into()),
+            plan_type: Some("plus".into()),
+            primary: Some(UsageWindowSnapshot {
+                used_percent: 42.0,
+                reset_at: Some(reset_at_for_elapsed(
+                    current_utc,
+                    super::UsageWindowKind::Primary,
+                    0.5,
+                )),
+                limit_multiplier: 1.0,
+            }),
+            secondary: Some(UsageWindowSnapshot {
+                used_percent: 73.0,
+                reset_at: Some(
+                    Local
+                        .with_ymd_and_hms(2026, 4, 2, 0, 30, 0)
+                        .unwrap()
+                        .timestamp(),
+                ),
+                limit_multiplier: 1.0,
+            }),
+        });
+
+        let primary = super::current_usage_window_compact(
+            &usage,
+            super::UsageWindowKind::Primary,
+            current_local,
+            current_utc,
+        );
+        let weekly = super::current_usage_window_compact(
+            &usage,
+            super::UsageWindowKind::Secondary,
+            current_local,
+            current_utc,
+        );
+
+        assert_eq!(primary, " 42% (-8%) (11:45 AM)");
+        assert_eq!(weekly, " 73% (-4%) (Thu 12:30 AM)");
     }
 
     #[test]
@@ -1537,6 +1612,7 @@ mod tests {
             profile_or_arg,
             resume_group,
             config_group,
+            other,
             args,
         } = subcommand
         else {
@@ -1546,6 +1622,7 @@ mod tests {
         assert_eq!(profile_or_arg, Some(OsString::from("a")));
         assert_eq!(resume_group, None);
         assert_eq!(config_group, None);
+        assert!(!other);
         assert_eq!(
             args,
             vec![OsString::from("--model"), OsString::from("gpt-5.4")]
@@ -1556,9 +1633,9 @@ mod tests {
     fn cmd_parses_launch_with_forced_auto_selection() {
         let cmd = parse_raw_args(&[
             OsString::from("launch"),
-            OsString::from("--resume-group"),
+            OsString::from("-r"),
             OsString::from("shared-work"),
-            OsString::from("--config-group"),
+            OsString::from("-c"),
             OsString::from("cfg-a"),
             OsString::from("--"),
             OsString::from("a"),
@@ -1570,6 +1647,7 @@ mod tests {
             profile_or_arg,
             resume_group,
             config_group,
+            other,
             args,
         } = subcommand
         else {
@@ -1579,7 +1657,47 @@ mod tests {
         assert_eq!(profile_or_arg, None);
         assert_eq!(resume_group.as_deref(), Some("shared-work"));
         assert_eq!(config_group.as_deref(), Some("cfg-a"));
+        assert!(!other);
         assert_eq!(args, vec![OsString::from("a")]);
+    }
+
+    #[test]
+    fn cmd_parses_launch_with_short_group_flags_and_other_without_separator() {
+        let cmd = parse_raw_args(&[
+            OsString::from("launch"),
+            OsString::from("-c"),
+            OsString::from("cfg-a"),
+            OsString::from("-r"),
+            OsString::from("shared-work"),
+            OsString::from("--other"),
+            OsString::from("s"),
+        ])
+        .unwrap();
+
+        let subcommand = cmd.subcommand;
+        let CodexCmd::Launch {
+            profile_or_arg,
+            resume_group,
+            config_group,
+            other,
+            args,
+        } = subcommand
+        else {
+            panic!("expected launch subcommand");
+        };
+
+        assert_eq!(profile_or_arg, Some(OsString::from("s")));
+        assert_eq!(resume_group.as_deref(), Some("shared-work"));
+        assert_eq!(config_group.as_deref(), Some("cfg-a"));
+        assert!(other);
+        assert!(args.is_empty());
+    }
+
+    #[test]
+    fn cmd_parses_usage_subcommand() {
+        let cmd = parse_raw_args(&[OsString::from("usage")]).unwrap();
+
+        assert!(matches!(cmd.subcommand, CodexCmd::Usage));
     }
 
     #[test]
@@ -1592,9 +1710,11 @@ mod tests {
             Some(&profile_or_arg),
             Some("shared-work"),
             Some("cfg-a"),
+            false,
             &args,
             &profiles,
-        );
+        )
+        .unwrap();
 
         assert_eq!(
             target,
@@ -1613,17 +1733,39 @@ mod tests {
         let profile_or_arg = OsString::from("--model");
         let args = vec![OsString::from("gpt-5.4")];
 
-        let target =
-            resolve_launch_target(Some(&profile_or_arg), None, Some("cfg-a"), &args, &profiles);
+        let target = resolve_launch_target(
+            Some(&profile_or_arg),
+            None,
+            Some("cfg-a"),
+            true,
+            &args,
+            &profiles,
+        )
+        .unwrap();
 
         assert_eq!(
             target,
             LaunchTarget::Auto {
                 resume_group: None,
                 config_group: Some("cfg-a".into()),
+                other: true,
                 args: vec![OsString::from("--model"), OsString::from("gpt-5.4")],
             }
         );
+    }
+
+    #[test]
+    fn resolve_launch_target_rejects_other_with_explicit_profile() {
+        let profiles = vec![available_saved_profile("a", 10.0, 20.0)];
+        let profile_or_arg = OsString::from("a");
+        let args = vec![OsString::from("--model"), OsString::from("gpt-5.4")];
+
+        let err = resolve_launch_target(Some(&profile_or_arg), None, None, true, &args, &profiles)
+            .unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("--other cannot be combined with an explicit profile"));
     }
 
     #[test]
@@ -1925,14 +2067,44 @@ mod tests {
     }
 
     #[test]
+    fn select_auto_launch_profile_except_skips_excluded_profile() {
+        let profiles = vec![
+            available_saved_profile("a", 10.0, 20.0),
+            available_saved_profile("b", 15.0, 30.0),
+        ];
+
+        let selected = select_auto_launch_profile_except(&profiles, Some("a")).unwrap();
+
+        assert_eq!(selected.name, "b");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_except_errors_when_only_excluded_profile_is_usable() {
+        let profiles = vec![
+            available_saved_profile("a", 10.0, 20.0),
+            available_saved_profile("b", 100.0, 100.0),
+        ];
+
+        let err = select_auto_launch_profile_except(&profiles, Some("a")).unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("No other profiles with usable usage data found"));
+    }
+
+    #[test]
     fn format_launch_banner_includes_profile_usage_and_reset_times() {
         let profile = available_saved_profile("a", 42.0, 73.0);
+        let groups = resolve_launch_groups("a", None, None).unwrap();
         let details = launch_banner_details(&profile);
-        let banner = format_launch_banner("a", &details);
+        let banner = format_launch_banner("a", &groups, &details);
 
         assert!(banner.contains("launching"));
         assert!(banner.contains("profile"));
         assert!(banner.contains("a"));
+        assert!(banner.contains("config"));
+        assert!(banner.contains("resume"));
+        assert!(banner.contains("shared"));
         assert!(banner.contains("a@example.com"));
         assert!(banner.contains("5h"));
         assert!(banner.contains("42%"));
@@ -1964,13 +2136,40 @@ mod tests {
             },
         );
 
+        let groups = resolve_launch_groups("a", None, None).unwrap();
         let details = launch_banner_details(&profile);
-        let banner = format_launch_banner("a", &details);
+        let banner = format_launch_banner("a", &groups, &details);
         let reset = Local.timestamp_opt(weekly_reset, 0).single().unwrap();
         let expected_reset = reset.format("%a %-d %b %-I:%M %p").to_string();
 
         assert!(banner.contains(&expected_reset));
         assert!(!banner.contains(" on "));
+    }
+
+    #[test]
+    fn resolve_launch_groups_uses_profile_and_shared_defaults() {
+        let groups = resolve_launch_groups("work", None, None).unwrap();
+
+        assert_eq!(
+            groups,
+            LaunchGroups {
+                config: "work".into(),
+                resume: "shared".into(),
+            }
+        );
+    }
+
+    #[test]
+    fn resolve_launch_groups_preserves_explicit_group_names() {
+        let groups = resolve_launch_groups("work", Some("resume-work"), Some("cfg-work")).unwrap();
+
+        assert_eq!(
+            groups,
+            LaunchGroups {
+                config: "cfg-work".into(),
+                resume: "resume-work".into(),
+            }
+        );
     }
 
     fn saved_profile(name: &str, identity: AuthIdentity, usage: ProfileUsageState) -> SavedProfile {
@@ -2128,6 +2327,140 @@ mod tests {
         value: impl Fn(&super::ProfileRow) -> LimitStyleKind,
     ) -> LimitStyleKind {
         value(rows.iter().find(|row| row.profile == profile).unwrap())
+    }
+
+    #[test]
+    fn current_usage_table_only_shows_email_and_limits() {
+        let mut output = Vec::new();
+
+        print_current_usage_table(
+            &mut output,
+            "praveen@example.com",
+            &ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 73.0)),
+        )
+        .unwrap();
+
+        let output = String::from_utf8(output).unwrap();
+        assert!(output.contains("EMAIL"));
+        assert!(output.contains("5 HOUR LIMIT"));
+        assert!(output.contains("WEEKLY LIMIT"));
+        assert!(output.contains("praveen@example.com"));
+        assert!(output.contains(" 42% ("));
+        assert!(output.contains(" 73% ("));
+        assert!(!output.contains("PROFILE"));
+        assert!(!output.contains("TOTAL"));
+        assert!(!output.contains("PLAN"));
+        assert!(!output.contains("STATUS"));
+    }
+
+    #[test]
+    fn current_usage_view_uses_usage_email_and_limits() {
+        let dir = tempdir().unwrap();
+        let auth_path = dir.path().join(".codex").join("auth.json");
+        fs::create_dir_all(auth_path.parent().unwrap()).unwrap();
+        fs::write(&auth_path, auth_json(&ID_1)).unwrap();
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .and(header("authorization", "Bearer access-token"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
+                    "fresh@example.com",
+                    "user-1",
+                    "acct-1",
+                    "plus",
+                    42.0,
+                    73.0,
+                )))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
+                .unwrap();
+        let (label, usage) = current_usage_view(&loader, &auth_path).unwrap();
+
+        assert_eq!(label, "fresh@example.com");
+        let ProfileUsageState::Available(usage) = usage else {
+            panic!("expected available usage");
+        };
+        assert_eq!(usage.email.as_deref(), Some("fresh@example.com"));
+        assert_eq!(usage.plan_type.as_deref(), Some("plus"));
+    }
+
+    #[test]
+    fn current_usage_view_marks_unavailable_when_usage_request_fails() {
+        let dir = tempdir().unwrap();
+        let auth_path = dir.path().join(".codex").join("auth.json");
+        fs::create_dir_all(auth_path.parent().unwrap()).unwrap();
+        fs::write(&auth_path, auth_json(&ID_1)).unwrap();
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .respond_with(ResponseTemplate::new(503))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
+                .unwrap();
+        let (label, usage) = current_usage_view(&loader, &auth_path).unwrap();
+
+        assert_eq!(label, "old@example.com");
+        assert!(matches!(usage, ProfileUsageState::Unavailable));
+    }
+
+    #[test]
+    fn current_usage_view_errors_when_usage_identity_mismatches() {
+        let dir = tempdir().unwrap();
+        let auth_path = dir.path().join(".codex").join("auth.json");
+        fs::create_dir_all(auth_path.parent().unwrap()).unwrap();
+        fs::write(&auth_path, auth_json(&ID_1)).unwrap();
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
+                    "fresh@example.com",
+                    "user-2",
+                    "acct-2",
+                    "plus",
+                    42.0,
+                    73.0,
+                )))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
+                .unwrap();
+        let err = current_usage_view(&loader, &auth_path).unwrap_err();
+
+        assert!(err.to_string().contains("does not match usage identity"));
+    }
+
+    #[test]
+    fn current_usage_view_errors_when_current_auth_is_missing() {
+        let dir = tempdir().unwrap();
+        let auth_path = dir.path().join(".codex").join("auth.json");
+        let loader = ProfileUsageLoader::with_urls("http://localhost/unused").unwrap();
+
+        let err = current_usage_view(&loader, &auth_path).unwrap_err();
+
+        assert!(err.to_string().contains("No current codex auth found"));
     }
 
     fn usage_snapshot(

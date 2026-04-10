@@ -42,6 +42,63 @@ pub(super) fn print_compact_profile_table(rows: &[ProfileRow]) {
     }
 }
 
+pub(super) fn print_current_usage_table(
+    writer: &mut impl Write,
+    label: &str,
+    usage: &ProfileUsageState,
+) -> io::Result<()> {
+    let current_local = Local::now();
+    let current_utc = Utc::now();
+    let five_hour =
+        current_usage_window_compact(usage, UsageWindowKind::Primary, current_local, current_utc);
+    let weekly = current_usage_window_compact(
+        usage,
+        UsageWindowKind::Secondary,
+        current_local,
+        current_utc,
+    );
+
+    let widths = CurrentUsageTableWidths {
+        label: "EMAIL".len().max(label.len()),
+        five_hour: "5 HOUR LIMIT".len().max(five_hour.len()),
+        weekly: "WEEKLY LIMIT".len().max(weekly.len()),
+    };
+
+    writeln!(
+        writer,
+        "{}   {}   {}",
+        format!("{:<label_width$}", "EMAIL", label_width = widths.label)
+            .blue()
+            .bold(),
+        format!(
+            "{:<five_hour_width$}",
+            "5 HOUR LIMIT",
+            five_hour_width = widths.five_hour
+        )
+        .blue()
+        .bold(),
+        format!(
+            "{:<weekly_width$}",
+            "WEEKLY LIMIT",
+            weekly_width = widths.weekly
+        )
+        .blue()
+        .bold(),
+    )?;
+
+    writeln!(
+        writer,
+        "{}   {}   {}",
+        format_args!("{label:<label_width$}", label_width = widths.label),
+        render_usage_limit_cell(&five_hour, widths.five_hour, five_hour_limit_style(usage),),
+        render_usage_limit_cell(
+            &weekly,
+            widths.weekly,
+            usage_window_style(usage, UsageWindowKind::Secondary),
+        ),
+    )
+}
+
 fn compact_profile_header(widths: &CompactProfileTableWidths) -> String {
     format!(
         "{}   {}   {}   {}",
@@ -266,6 +323,18 @@ pub(super) fn colorize_limit_cell(
         };
     }
 
+    match style {
+        LimitStyleKind::Normal => padded,
+        LimitStyleKind::Success => colorize_ansi(&padded, "32", false),
+        LimitStyleKind::Warning => colorize_ansi(&padded, "33", false),
+        LimitStyleKind::Caution => colorize_ansi(&padded, "38;2;255;165;0", false),
+        LimitStyleKind::Error => colorize_ansi(&padded, "31", false),
+        LimitStyleKind::Critical => colorize_ansi(&padded, "31", true),
+    }
+}
+
+fn render_usage_limit_cell(value: &str, width: usize, style: LimitStyleKind) -> String {
+    let padded = format!("{value:<width$}");
     match style {
         LimitStyleKind::Normal => padded,
         LimitStyleKind::Success => colorize_ansi(&padded, "32", false),
@@ -661,6 +730,28 @@ pub(super) fn usage_window_compact(usage: &ProfileUsageState, kind: UsageWindowK
     }
 }
 
+pub fn current_usage_window_compact(
+    usage: &ProfileUsageState,
+    kind: UsageWindowKind,
+    current_local: chrono::DateTime<Local>,
+    current_utc: chrono::DateTime<Utc>,
+) -> String {
+    let Some(window) = usage_window(usage, kind) else {
+        return "-".into();
+    };
+
+    let percent = format_compact_percent(&format!("{:.0}%", window.used_percent));
+    let pace = pace_delta_percent(window, current_utc, kind).map(format_pace_delta);
+    let reset = current_usage_window_reset_compact(window, kind, current_local);
+
+    match (pace.as_deref(), reset.as_str()) {
+        (Some(pace), "-") => format!("{percent} ({pace})"),
+        (Some(pace), _) => format!("{percent} ({pace}) ({reset})"),
+        (None, "-") => percent,
+        (None, _) => format!("{percent} ({reset})"),
+    }
+}
+
 pub(super) fn format_compact_percent(percent: &str) -> String {
     let Some(number) = percent.strip_suffix('%') else {
         return percent.to_string();
@@ -690,6 +781,12 @@ enum TotalPaceStyle {
 struct CompactProfileTotals {
     five_hour: CompactTotalCell,
     weekly: CompactTotalCell,
+}
+
+struct CurrentUsageTableWidths {
+    label: usize,
+    five_hour: usize,
+    weekly: usize,
 }
 
 fn compact_profile_totals(rows: &[ProfileRow]) -> Option<CompactProfileTotals> {
@@ -852,6 +949,22 @@ pub(super) fn usage_window_reset_compact(
         .unwrap_or_else(|| "-".into())
 }
 
+fn current_usage_window_reset_compact(
+    window: &UsageWindowSnapshot,
+    kind: UsageWindowKind,
+    current_local: chrono::DateTime<Local>,
+) -> String {
+    if window.used_percent <= 0.0 {
+        return "-".into();
+    }
+
+    window
+        .reset_at
+        .and_then(|timestamp| Local.timestamp_opt(timestamp, 0).single())
+        .map(|timestamp| format_current_usage_reset_timestamp(timestamp, current_local, kind))
+        .unwrap_or_else(|| "-".into())
+}
+
 fn usage_window(usage: &ProfileUsageState, kind: UsageWindowKind) -> Option<&UsageWindowSnapshot> {
     match usage {
         ProfileUsageState::Available(snapshot) => match kind {
@@ -906,6 +1019,20 @@ pub(super) fn format_reset_timestamp_compact(
         UsageWindowKind::Primary => time,
         UsageWindowKind::Secondary if dt.date_naive() == captured_at.date_naive() => time,
         UsageWindowKind::Secondary => format!("{} {time}", dt.format("%a %-d %b")),
+    }
+}
+
+pub fn format_current_usage_reset_timestamp(
+    dt: chrono::DateTime<Local>,
+    captured_at: chrono::DateTime<Local>,
+    kind: UsageWindowKind,
+) -> String {
+    let time = dt.format("%-I:%M %p").to_string();
+
+    match kind {
+        UsageWindowKind::Primary => time,
+        UsageWindowKind::Secondary if dt.date_naive() == captured_at.date_naive() => time,
+        UsageWindowKind::Secondary => format!("{} {time}", dt.format("%a")),
     }
 }
 
