@@ -70,17 +70,26 @@ alias clh="claude --permission-mode acceptEdits --model haiku"
 alias clpo="claude --permission-mode plan --model opus"
 alias clps="claude --permission-mode plan --model sonnet"
 
+# main codex configs
 alias l="cmd codex usage"
-alias ll="cmd codex launch -c shared"
 alias lll="cmd codex list"
+alias ll="cmd codex launch -c shared"
 alias lla="cmd codex launch -c shared a"
+
+# different configs for main profile
+alias llz="cmd codex launch a -c z"
+alias llq="cmd codex launch a -c w"
+alias lly="cmd codex launch a -c y"
+alias llu="cmd codex launch a -c u"
+alias lli="cmd codex launch a -c i"
+
+# multi account
 alias lls="cmd codex launch s"
 alias lld="cmd codex launch d"
 alias llf="cmd codex launch f"
 alias llg="cmd codex launch g"
 alias llw="cmd codex launch w"
-alias llz="cmd codex launch -c z a"
-alias llq="cmd codex launch -c w a"
+
 alias llo="cmd codex launch --other -c o"
 
 alias oc="opencode"
