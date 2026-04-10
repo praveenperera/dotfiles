@@ -1,30 +1,58 @@
 use super::*;
 use crate::{fsutil, runtime};
 
-pub(super) fn launch(profile_or_arg: Option<&OsString>, args: &[OsString]) -> Result<()> {
+pub(super) fn launch(
+    profile_or_arg: Option<&OsString>,
+    resume_group: Option<&str>,
+    config_group: Option<&str>,
+    args: &[OsString],
+) -> Result<()> {
     let mut profiles = load_saved_profiles(&profiles_dir()?)?;
-    let target = resolve_launch_target(profile_or_arg, args, &profiles);
+    let target = resolve_launch_target(profile_or_arg, resume_group, config_group, args, &profiles);
     enrich_profile_usage(&mut profiles)?;
 
     match target {
-        LaunchTarget::Explicit { profile, args } => {
+        LaunchTarget::Explicit {
+            profile,
+            resume_group,
+            config_group,
+            args,
+        } => {
             let details = profiles
                 .iter()
                 .find(|saved_profile| saved_profile.name == profile)
                 .map(launch_banner_details)
                 .unwrap_or_else(LaunchBannerDetails::fallback);
-            launch_with_profile(&profile, &details, &args)
+            launch_with_profile(
+                &profile,
+                resume_group.as_deref(),
+                config_group.as_deref(),
+                &details,
+                &args,
+            )
         }
-        LaunchTarget::Auto { args } => {
+        LaunchTarget::Auto {
+            resume_group,
+            config_group,
+            args,
+        } => {
             let profile = select_auto_launch_profile(&profiles)?;
             let details = launch_banner_details(profile);
-            launch_with_profile(&profile.name, &details, &args)
+            launch_with_profile(
+                &profile.name,
+                resume_group.as_deref(),
+                config_group.as_deref(),
+                &details,
+                &args,
+            )
         }
     }
 }
 
 fn launch_with_profile(
     profile: &str,
+    resume_group: Option<&str>,
+    config_group: Option<&str>,
     details: &LaunchBannerDetails,
     args: &[OsString],
 ) -> Result<()> {
@@ -32,6 +60,7 @@ fn launch_with_profile(
 
     let shared_codex_home = codex_dir()?;
     let profile_home = profile_codex_home(profile)?;
+    stdfs::create_dir_all(&profile_home)?;
     let profile_auth = profile_home.join("auth.json");
     if !profile_auth.exists() {
         return Err(eyre!(
@@ -39,10 +68,19 @@ fn launch_with_profile(
         ));
     }
 
-    sync_profile_codex_home(&profile_home, &shared_codex_home)?;
+    let resume_group = resolve_group_name(resume_group, "shared", "resume")?;
+    let config_group = resolve_group_name(config_group, profile, "config")?;
+    let config_home = prepare_config_group_home(&shared_codex_home, &config_group)?;
+    let resume_home = prepare_resume_group_home(&shared_codex_home, &resume_group)?;
     let launch_home = create_launch_home(&profile_home)?;
     let launch_auth = read_auth_snapshot(&profile_auth)?;
-    sync_launch_codex_home(&launch_home, &shared_codex_home, &profile_auth)?;
+    sync_launch_codex_home(
+        &launch_home,
+        &shared_codex_home,
+        &profile_auth,
+        &config_home,
+        &resume_home,
+    )?;
     let mut child = codex_command(&launch_home);
     child.args(args);
     let mut child = child.spawn()?;
@@ -62,6 +100,8 @@ fn launch_with_profile(
 
 pub(super) fn resolve_launch_target(
     profile_or_arg: Option<&OsString>,
+    resume_group: Option<&str>,
+    config_group: Option<&str>,
     args: &[OsString],
     profiles: &[SavedProfile],
 ) -> LaunchTarget {
@@ -76,6 +116,8 @@ pub(super) fn resolve_launch_target(
     if let Some(profile) = explicit_profile {
         return LaunchTarget::Explicit {
             profile: profile.into(),
+            resume_group: resume_group.map(str::to_owned),
+            config_group: config_group.map(str::to_owned),
             args: args.to_vec(),
         };
     }
@@ -87,6 +129,8 @@ pub(super) fn resolve_launch_target(
     resolved_args.extend(args.iter().cloned());
 
     LaunchTarget::Auto {
+        resume_group: resume_group.map(str::to_owned),
+        config_group: config_group.map(str::to_owned),
         args: resolved_args,
     }
 }
@@ -247,7 +291,7 @@ pub(super) fn login(profile: &str, device_auth: bool) -> Result<()> {
     let shared_codex_home = codex_dir()?;
     let staged_home = tempfile::tempdir()?;
 
-    sync_profile_codex_home(staged_home.path(), &shared_codex_home)?;
+    sync_login_codex_home(staged_home.path(), &shared_codex_home)?;
 
     codex_command(staged_home.path())
         .arg("logout")
@@ -271,35 +315,11 @@ pub(super) fn login(profile: &str, device_auth: bool) -> Result<()> {
         return Err(eyre!("No auth.json found after login"));
     }
 
-    let identity = read_auth_identity(&auth).wrap_err("Failed to read codex auth identity")?;
-    let profiles_dir = profiles_dir()?;
-    let profiles = load_saved_profiles(&profiles_dir)?;
-    let conflicts = conflicting_profiles(&profiles, profile, &identity);
-
-    let replace_conflicts = if conflicts.is_empty() {
-        false
-    } else {
-        println!(
-            "This OpenAI user is already saved as {}",
-            conflicts.join(", ")
-        );
-        prompt_for_replacement(&conflicts, profile)?
-    };
-
-    let outcome = if conflicts.is_empty() || replace_conflicts {
-        let profile_home = profile_codex_home(profile)?;
-        sync_profile_codex_home(&profile_home, &shared_codex_home)?;
-        save_profile_auth(profile, &auth, &profiles_dir, &conflicts, replace_conflicts)?
-    } else {
-        SaveProfileOutcome::SkippedConflict
-    };
-
-    match outcome {
-        SaveProfileOutcome::Saved => println!("Saved codex profile: {profile}"),
-        SaveProfileOutcome::SkippedConflict => {
-            println!("Skipped saving codex profile: {profile}");
-        }
-    }
+    read_auth_identity(&auth).wrap_err("Failed to read codex auth identity")?;
+    save_profile_auth(profile, &auth, &profiles_dir()?)?;
+    let profile_home = profile_codex_home(profile)?;
+    stdfs::create_dir_all(&profile_home)?;
+    println!("Saved codex profile: {profile}");
 
     Ok(())
 }
@@ -473,6 +493,12 @@ pub(super) fn switch_default_profile(profile: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn resolve_group_name(group: Option<&str>, default: &str, kind: &str) -> Result<String> {
+    let group = group.unwrap_or(default);
+    validate_group_name(group, kind)?;
+    Ok(group.to_string())
 }
 
 fn refresh_profile_auth_if_unchanged(

@@ -1,5 +1,23 @@
 use super::*;
 use crate::fsutil;
+use std::collections::BTreeSet;
+
+const SHARED_GROUP_NAME: &str = "shared";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GroupKind {
+    Config,
+    Resume,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EntryOwner {
+    LocalAuth,
+    Ignored,
+    SharedStatic,
+    ConfigGroup,
+    ResumeGroup,
+}
 
 pub(super) fn codex_dir() -> Result<PathBuf> {
     Ok(fsutil::home_dir()?.join(".codex"))
@@ -11,6 +29,20 @@ pub(super) fn profiles_dir() -> Result<PathBuf> {
 
 pub(super) fn profile_codex_home(profile: &str) -> Result<PathBuf> {
     Ok(profiles_dir()?.join(profile))
+}
+
+pub(super) fn validate_group_name(group: &str, kind: &str) -> Result<()> {
+    if group.is_empty() {
+        return Err(eyre!("{kind} group name cannot be empty"));
+    }
+    if matches!(group, "." | "..") {
+        return Err(eyre!("{kind} group name cannot be '.' or '..'"));
+    }
+    if group.contains('/') || group.contains('\\') {
+        return Err(eyre!("{kind} group name cannot contain path separators"));
+    }
+
+    Ok(())
 }
 
 fn remodex_state_dir() -> Result<PathBuf> {
@@ -134,23 +166,82 @@ pub(super) fn codex_command(codex_home: &Path) -> std::process::Command {
     command
 }
 
-pub(super) fn sync_profile_codex_home(profile_home: &Path, shared_codex_home: &Path) -> Result<()> {
-    stdfs::create_dir_all(profile_home)?;
+pub(super) fn sync_login_codex_home(login_home: &Path, shared_codex_home: &Path) -> Result<()> {
+    stdfs::create_dir_all(login_home)?;
 
     for entry in stdfs::read_dir(shared_codex_home)? {
         let entry = entry?;
-        let name = entry.file_name();
-        let Some(name) = name.to_str() else {
+        let file_name = entry.file_name();
+        let Some(name) = file_name.to_str() else {
             continue;
         };
 
-        if is_profile_local_entry(name) {
+        if !matches!(
+            entry_owner(name),
+            EntryOwner::SharedStatic | EntryOwner::ConfigGroup | EntryOwner::ResumeGroup
+        ) {
             continue;
         }
 
-        let source = entry.path();
-        let target = profile_home.join(name);
-        sync_shared_entry(&source, &target)?;
+        sync_shared_entry(&entry.path(), &login_home.join(name))?;
+    }
+
+    Ok(())
+}
+
+pub(super) fn prepare_config_group_home(shared_codex_home: &Path, group: &str) -> Result<PathBuf> {
+    prepare_group_home(
+        shared_codex_home,
+        &shared_codex_home.join("config-groups"),
+        group,
+        GroupKind::Config,
+    )
+}
+
+pub(super) fn prepare_resume_group_home(shared_codex_home: &Path, group: &str) -> Result<PathBuf> {
+    prepare_group_home(
+        shared_codex_home,
+        &shared_codex_home.join("resume-groups"),
+        group,
+        GroupKind::Resume,
+    )
+}
+
+fn prepare_group_home(
+    shared_codex_home: &Path,
+    groups_dir: &Path,
+    group: &str,
+    kind: GroupKind,
+) -> Result<PathBuf> {
+    validate_group_name(group, kind.label())?;
+    if group == SHARED_GROUP_NAME {
+        return Ok(shared_codex_home.to_path_buf());
+    }
+
+    let group_home = groups_dir.join(group);
+    stdfs::create_dir_all(&group_home)?;
+    seed_group_home(shared_codex_home, &group_home, kind)?;
+    Ok(group_home)
+}
+
+fn seed_group_home(shared_codex_home: &Path, group_home: &Path, kind: GroupKind) -> Result<()> {
+    for entry in stdfs::read_dir(shared_codex_home)? {
+        let entry = entry?;
+        let file_name = entry.file_name();
+        let Some(name) = file_name.to_str() else {
+            continue;
+        };
+
+        if !kind.owns(entry_owner(name)) {
+            continue;
+        }
+
+        let target = group_home.join(name);
+        if path_exists(&target)? {
+            continue;
+        }
+
+        copy_seed_entry(&entry.path(), &target)?;
     }
 
     Ok(())
@@ -160,13 +251,102 @@ pub(super) fn sync_launch_codex_home(
     launch_home: &Path,
     shared_codex_home: &Path,
     profile_auth: &Path,
+    config_home: &Path,
+    resume_home: &Path,
 ) -> Result<()> {
-    sync_profile_codex_home(launch_home, shared_codex_home)?;
+    let mut entry_names = BTreeSet::new();
+    collect_entry_names(shared_codex_home, &mut entry_names)?;
+    collect_entry_names(config_home, &mut entry_names)?;
+    collect_entry_names(resume_home, &mut entry_names)?;
+
+    for name in entry_names {
+        let Some(source_root) =
+            entry_source_root(&name, shared_codex_home, config_home, resume_home)
+        else {
+            continue;
+        };
+
+        let source = source_root.join(&name);
+        if !path_exists(&source)? {
+            continue;
+        }
+
+        sync_shared_entry(&source, &launch_home.join(&name))?;
+    }
+
     copy_auth_file(profile_auth, &launch_home.join("auth.json"))
 }
 
-fn is_profile_local_entry(name: &str) -> bool {
-    matches!(name, "auth.json" | "profiles")
+fn collect_entry_names(root: &Path, entry_names: &mut BTreeSet<String>) -> Result<()> {
+    if !root.exists() {
+        return Ok(());
+    }
+
+    for entry in stdfs::read_dir(root)? {
+        let entry = entry?;
+        let Ok(name) = entry.file_name().into_string() else {
+            continue;
+        };
+        entry_names.insert(name);
+    }
+
+    Ok(())
+}
+
+fn entry_source_root<'a>(
+    name: &str,
+    shared_codex_home: &'a Path,
+    config_home: &'a Path,
+    resume_home: &'a Path,
+) -> Option<&'a Path> {
+    match entry_owner(name) {
+        EntryOwner::LocalAuth | EntryOwner::Ignored => None,
+        EntryOwner::SharedStatic => Some(shared_codex_home),
+        EntryOwner::ConfigGroup => Some(config_home),
+        EntryOwner::ResumeGroup => Some(resume_home),
+    }
+}
+
+fn entry_owner(name: &str) -> EntryOwner {
+    if name == "auth.json" {
+        return EntryOwner::LocalAuth;
+    }
+    if matches!(name, "profiles" | "config-groups" | "resume-groups") {
+        return EntryOwner::Ignored;
+    }
+    if is_config_group_entry(name) {
+        return EntryOwner::ConfigGroup;
+    }
+    if is_resume_group_entry(name) {
+        return EntryOwner::ResumeGroup;
+    }
+
+    EntryOwner::SharedStatic
+}
+
+fn is_config_group_entry(name: &str) -> bool {
+    matches!(
+        name,
+        "config.toml" | ".codex-global-state.json" | "history.jsonl" | ".personality_migration"
+    ) || name.starts_with("config.toml.bak")
+}
+
+fn is_resume_group_entry(name: &str) -> bool {
+    matches!(
+        name,
+        "session_index.jsonl"
+            | "sessions"
+            | "archived_sessions"
+            | "shell_snapshots"
+            | "worktrees"
+            | "memories"
+            | "log"
+    ) || name.starts_with("state_5.sqlite")
+        || is_sqlite_log_entry(name)
+}
+
+fn is_sqlite_log_entry(name: &str) -> bool {
+    name.starts_with("logs_") && name.contains(".sqlite")
 }
 
 fn copy_auth_file(source: &Path, target: &Path) -> Result<()> {
@@ -228,6 +408,29 @@ pub(super) fn notify_remodex_bridge_profile_switch(
     }
 }
 
+fn copy_seed_entry(source: &Path, target: &Path) -> Result<()> {
+    let metadata = stdfs::symlink_metadata(source)?;
+    if metadata.file_type().is_symlink() {
+        let link_target = stdfs::read_link(source)?;
+        fsutil::ensure_parent_dir(target)?;
+        symlink(link_target, target)?;
+        return Ok(());
+    }
+
+    if metadata.is_dir() {
+        stdfs::create_dir_all(target)?;
+        for entry in stdfs::read_dir(source)? {
+            let entry = entry?;
+            copy_seed_entry(&entry.path(), &target.join(entry.file_name()))?;
+        }
+        return Ok(());
+    }
+
+    fsutil::ensure_parent_dir(target)?;
+    stdfs::copy(source, target)?;
+    Ok(())
+}
+
 fn sync_shared_entry(source: &Path, target: &Path) -> Result<()> {
     if symlink_points_to(target, source)? {
         return Ok(());
@@ -245,6 +448,30 @@ fn symlink_points_to(target: &Path, source: &Path) -> Result<bool> {
         Err(err) if err.kind() == ErrorKind::NotFound => Ok(false),
         Err(err) if err.kind() == ErrorKind::InvalidInput => Ok(false),
         Err(err) => Err(err.into()),
+    }
+}
+
+fn path_exists(path: &Path) -> Result<bool> {
+    match stdfs::symlink_metadata(path) {
+        Ok(_) => Ok(true),
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(false),
+        Err(err) => Err(err.into()),
+    }
+}
+
+impl GroupKind {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Config => "config",
+            Self::Resume => "resume",
+        }
+    }
+
+    fn owns(self, owner: EntryOwner) -> bool {
+        match self {
+            Self::Config => owner == EntryOwner::ConfigGroup,
+            Self::Resume => owner == EntryOwner::ResumeGroup,
+        }
     }
 }
 

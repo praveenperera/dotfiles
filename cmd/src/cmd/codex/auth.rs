@@ -163,32 +163,6 @@ pub(super) fn load_saved_profiles(dir: &Path) -> Result<Vec<SavedProfile>> {
     Ok(profiles)
 }
 
-pub(super) fn conflicting_profiles(
-    profiles: &[SavedProfile],
-    requested_profile: &str,
-    identity: &AuthIdentity,
-) -> Vec<String> {
-    profiles
-        .iter()
-        .filter(|profile| profile.name != requested_profile)
-        .filter_map(|profile| {
-            profile
-                .identity
-                .as_ref()
-                .filter(|existing| is_same_user(existing, identity))
-                .map(|_| profile.name.clone())
-        })
-        .collect()
-}
-
-pub(super) fn prompt_for_replacement(
-    conflicts: &[String],
-    requested_profile: &str,
-) -> Result<bool> {
-    let existing = conflicts.join(", ");
-    prompt_for_confirmation(&format!("Replace '{existing}' with '{requested_profile}'?"))
-}
-
 pub(super) fn prompt_for_confirmation(prompt: &str) -> Result<bool> {
     print!("{prompt} [y/N] ");
     io::stdout().flush()?;
@@ -205,25 +179,12 @@ pub(super) fn save_profile_auth(
     profile: &str,
     auth_path: &Path,
     profiles_dir: &Path,
-    conflicts: &[String],
-    replace_conflicts: bool,
-) -> Result<SaveProfileOutcome> {
-    if !conflicts.is_empty() && !replace_conflicts {
-        return Ok(SaveProfileOutcome::SkippedConflict);
-    }
-
-    for conflict in conflicts {
-        let conflict_dir = profiles_dir.join(conflict);
-        if conflict_dir.exists() {
-            stdfs::remove_dir_all(&conflict_dir)?;
-        }
-    }
-
+) -> Result<()> {
     let profile_dir = profiles_dir.join(profile);
     stdfs::create_dir_all(&profile_dir)?;
     stdfs::copy(auth_path, profile_dir.join("auth.json"))?;
 
-    Ok(SaveProfileOutcome::Saved)
+    Ok(())
 }
 
 pub(super) fn is_same_user(left: &AuthIdentity, right: &AuthIdentity) -> bool {

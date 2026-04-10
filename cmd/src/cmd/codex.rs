@@ -54,6 +54,14 @@ pub enum CodexCmd {
         /// Optional profile name, or first codex argument when auto-selecting
         profile_or_arg: Option<OsString>,
 
+        /// Resume-state group to use for session continuity
+        #[arg(long)]
+        resume_group: Option<String>,
+
+        /// Config-state group to use for model and UI preferences
+        #[arg(long)]
+        config_group: Option<String>,
+
         /// Arguments to pass to codex
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<OsString>,
@@ -207,12 +215,6 @@ struct ProfileRow {
     weekly_style: LimitStyleKind,
     weekly_usage: Option<UsageWindowSnapshot>,
     status: ProfileStatus,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SaveProfileOutcome {
-    Saved,
-    SkippedConflict,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -396,9 +398,13 @@ struct AuthSnapshot {
 enum LaunchTarget {
     Explicit {
         profile: String,
+        resume_group: Option<String>,
+        config_group: Option<String>,
         args: Vec<OsString>,
     },
     Auto {
+        resume_group: Option<String>,
+        config_group: Option<String>,
         args: Vec<OsString>,
     },
 }
@@ -419,8 +425,15 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
     match flags.subcommand {
         CodexCmd::Launch {
             profile_or_arg,
+            resume_group,
+            config_group,
             args,
-        } => launch(profile_or_arg.as_ref(), &args),
+        } => launch(
+            profile_or_arg.as_ref(),
+            resume_group.as_deref(),
+            config_group.as_deref(),
+            &args,
+        ),
         CodexCmd::Login {
             profile,
             device_auth,
@@ -434,7 +447,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
 }
 
 fn parse_raw_args(args: &[OsString]) -> Result<Codex> {
-    if let Some(flags) = parse_launch_with_forced_auto_selection(args) {
+    if let Some(flags) = parse_launch_with_forced_auto_selection(args)? {
         return Ok(flags);
     }
 
@@ -452,35 +465,61 @@ fn parse_raw_args(args: &[OsString]) -> Result<Codex> {
     }
 }
 
-fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Option<Codex> {
-    if args.first()?.to_str() != Some("launch") {
-        return None;
+fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<Codex>> {
+    if args.first().and_then(|arg| arg.to_str()) != Some("launch") {
+        return Ok(None);
     }
 
-    if args.get(1)?.to_str() != Some("--") {
-        return None;
+    let Some(separator_idx) = args.iter().position(|arg| arg.to_str() == Some("--")) else {
+        return Ok(None);
+    };
+
+    let launch_prefix = &args[1..separator_idx];
+    let mut parse_args = vec![OsString::from("codex"), OsString::from("launch")];
+    parse_args.extend_from_slice(launch_prefix);
+    let flags = match CodexCli::try_parse_from(parse_args) {
+        Ok(flags) => flags,
+        Err(err) => {
+            let _ = err.print();
+            std::process::exit(err.exit_code());
+        }
+    };
+
+    let CodexCmd::Launch {
+        profile_or_arg,
+        resume_group,
+        config_group,
+        ..
+    } = flags.subcommand
+    else {
+        unreachable!("launch prefix must parse into launch subcommand");
+    };
+    if profile_or_arg.is_some() {
+        return Ok(None);
     }
 
-    Some(Codex {
+    Ok(Some(Codex {
         subcommand: CodexCmd::Launch {
             profile_or_arg: None,
-            args: args[2..].to_vec(),
+            resume_group,
+            config_group,
+            args: args[separator_idx + 1..].to_vec(),
         },
-    })
+    }))
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        active_session_markers, build_profile_rows, conflicting_profiles, create_launch_home,
-        delete_profile_home, format_launch_banner, launch_banner_details, needs_proactive_refresh,
-        parse_auth_identity, parse_jwt_expiration, parse_raw_args,
+        active_session_markers, build_profile_rows, create_launch_home, delete_profile_home,
+        format_launch_banner, launch_banner_details, needs_proactive_refresh, parse_auth_identity,
+        parse_jwt_expiration, parse_raw_args, prepare_config_group_home, prepare_resume_group_home,
         promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
         replace_global_auth_with_profile, resolve_launch_target, save_profile_auth,
-        select_auto_launch_profile, sync_launch_codex_home, sync_profile_codex_home,
-        write_auth_raw_if_unchanged, write_session_marker, AuthIdentity, CodexCmd, LaunchTarget,
-        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
-        ProfileUsageSnapshot, ProfileUsageState, SaveProfileOutcome, SavedProfile, StoredAuth,
+        select_auto_launch_profile, sync_launch_codex_home, sync_login_codex_home,
+        validate_group_name, write_auth_raw_if_unchanged, write_session_marker, AuthIdentity,
+        CodexCmd, LaunchTarget, LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind,
+        ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState, SavedProfile, StoredAuth,
         UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -519,28 +558,7 @@ mod tests {
     }
 
     #[test]
-    fn finds_conflicts_for_matching_user_identity() {
-        let requested = identity("sub-1", "user-1", "acct-1", Some("a@example.com"));
-        let profiles = vec![
-            saved_profile(
-                "a",
-                identity("sub-1", "user-1", "acct-1", Some("a@example.com")),
-                ProfileUsageState::Unchecked,
-            ),
-            saved_profile(
-                "b",
-                identity("sub-2", "user-2", "acct-1", Some("b@example.com")),
-                ProfileUsageState::Unchecked,
-            ),
-        ];
-
-        let conflicts = conflicting_profiles(&profiles, "new", &requested);
-
-        assert_eq!(conflicts, vec!["a".to_string()]);
-    }
-
-    #[test]
-    fn save_profile_auth_skips_when_replacement_is_declined() {
+    fn save_profile_auth_preserves_existing_same_user_profiles() {
         let dir = tempdir().unwrap();
         let profiles_dir = dir.path().join("profiles");
         let old_dir = profiles_dir.join("old");
@@ -558,25 +576,20 @@ mod tests {
         fs::write(old_dir.join("auth.json"), auth_json(&id)).unwrap();
         fs::write(&auth_path, auth_json(&id)).unwrap();
 
-        let outcome = save_profile_auth(
-            "new",
-            &auth_path,
-            &profiles_dir,
-            &["old".to_string()],
-            false,
-        )
-        .unwrap();
+        save_profile_auth("new", &auth_path, &profiles_dir).unwrap();
 
-        assert_eq!(outcome, SaveProfileOutcome::SkippedConflict);
         assert!(old_dir.exists());
-        assert!(!profiles_dir.join("new").exists());
+        assert_eq!(
+            fs::read_to_string(profiles_dir.join("new").join("auth.json")).unwrap(),
+            auth_json(&id)
+        );
     }
 
     #[test]
-    fn save_profile_auth_replaces_conflicting_profiles() {
+    fn save_profile_auth_overwrites_existing_profile_auth() {
         let dir = tempdir().unwrap();
         let profiles_dir = dir.path().join("profiles");
-        let old_dir = profiles_dir.join("old");
+        let profile_dir = profiles_dir.join("new");
         let auth_path = dir.path().join("auth.json");
         let new_auth = auth_json(&TestIdentity {
             subject: "sub-1",
@@ -587,27 +600,12 @@ mod tests {
             auth_provider: None,
         });
 
-        fs::create_dir_all(&old_dir).unwrap();
-        fs::write(
-            old_dir.join("auth.json"),
-            auth_json(&TestIdentity {
-                subject: "sub-1",
-                user_id: "user-1",
-                account_id: "acct-1",
-                email: None,
-                name: None,
-                auth_provider: None,
-            }),
-        )
-        .unwrap();
+        fs::create_dir_all(&profile_dir).unwrap();
+        fs::write(profile_dir.join("auth.json"), "old-auth").unwrap();
         fs::write(&auth_path, &new_auth).unwrap();
 
-        let outcome =
-            save_profile_auth("new", &auth_path, &profiles_dir, &["old".to_string()], true)
-                .unwrap();
+        save_profile_auth("new", &auth_path, &profiles_dir).unwrap();
 
-        assert_eq!(outcome, SaveProfileOutcome::Saved);
-        assert!(!old_dir.exists());
         assert_eq!(
             fs::read_to_string(profiles_dir.join("new").join("auth.json")).unwrap(),
             new_auth
@@ -1195,87 +1193,129 @@ mod tests {
     }
 
     #[test]
-    fn sync_profile_codex_home_links_shared_entries_without_touching_auth() {
+    fn sync_login_codex_home_links_non_local_entries() {
         let dir = tempdir().unwrap();
         let global_codex = dir.path().join(".codex");
-        let profile_home = global_codex.join("profiles").join("a");
+        let login_home = dir.path().join("login");
 
         fs::create_dir_all(global_codex.join("profiles")).unwrap();
+        fs::create_dir_all(global_codex.join("sessions")).unwrap();
         fs::create_dir_all(global_codex.join("skills")).unwrap();
         fs::write(global_codex.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
         fs::write(global_codex.join("AGENTS.md"), "shared").unwrap();
-        fs::create_dir_all(&profile_home).unwrap();
-        fs::write(profile_home.join("auth.json"), "local-auth").unwrap();
+        fs::write(global_codex.join("auth.json"), "shared-auth").unwrap();
 
-        sync_profile_codex_home(&profile_home, &global_codex).unwrap();
+        sync_login_codex_home(&login_home, &global_codex).unwrap();
 
         assert_eq!(
-            fs::read_to_string(profile_home.join("auth.json")).unwrap(),
-            "local-auth"
-        );
-        assert_eq!(
-            fs::read_link(profile_home.join("config.toml")).unwrap(),
+            fs::read_link(login_home.join("config.toml")).unwrap(),
             global_codex.join("config.toml")
         );
         assert_eq!(
-            fs::read_link(profile_home.join("skills")).unwrap(),
+            fs::read_link(login_home.join("skills")).unwrap(),
             global_codex.join("skills")
         );
         assert_eq!(
-            fs::read_link(profile_home.join("AGENTS.md")).unwrap(),
+            fs::read_link(login_home.join("sessions")).unwrap(),
+            global_codex.join("sessions")
+        );
+        assert_eq!(
+            fs::read_link(login_home.join("AGENTS.md")).unwrap(),
             global_codex.join("AGENTS.md")
         );
-        assert!(!profile_home.join("profiles").exists());
+        assert!(!login_home.join("auth.json").exists());
+        assert!(!login_home.join("profiles").exists());
     }
 
     #[test]
-    fn sync_profile_codex_home_replaces_stale_targets() {
+    fn prepare_config_group_home_seeds_only_config_entries() {
         let dir = tempdir().unwrap();
         let global_codex = dir.path().join(".codex");
-        let profile_home = global_codex.join("profiles").join("a");
+        let config_groups = global_codex.join("config-groups");
 
         fs::create_dir_all(global_codex.join("profiles")).unwrap();
-        fs::create_dir_all(global_codex.join("skills")).unwrap();
+        fs::create_dir_all(global_codex.join("sessions")).unwrap();
         fs::write(global_codex.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
-        fs::create_dir_all(&profile_home).unwrap();
-        fs::write(profile_home.join("config.toml"), "stale").unwrap();
-        fs::create_dir_all(profile_home.join("skills")).unwrap();
-        symlink(
-            global_codex.join("config.toml"),
-            profile_home.join("AGENTS.md"),
-        )
-        .unwrap();
-        fs::write(profile_home.join("auth.json"), "local-auth").unwrap();
+        fs::write(global_codex.join("history.jsonl"), "history").unwrap();
+        fs::write(global_codex.join("AGENTS.md"), "shared").unwrap();
 
-        sync_profile_codex_home(&profile_home, &global_codex).unwrap();
+        let config_home = prepare_config_group_home(&global_codex, "work").unwrap();
 
         assert_eq!(
-            fs::read_link(profile_home.join("config.toml")).unwrap(),
-            global_codex.join("config.toml")
+            fs::read_to_string(config_home.join("config.toml")).unwrap(),
+            "model = \"gpt-5.4\""
         );
         assert_eq!(
-            fs::read_link(profile_home.join("skills")).unwrap(),
-            global_codex.join("skills")
+            fs::read_to_string(config_home.join("history.jsonl")).unwrap(),
+            "history"
         );
-        assert_eq!(
-            fs::read_to_string(profile_home.join("auth.json")).unwrap(),
-            "local-auth"
-        );
+        assert!(config_groups.join("work").exists());
+        assert!(!config_home.join("sessions").exists());
+        assert!(!config_home.join("AGENTS.md").exists());
+        assert!(!fs::symlink_metadata(config_home.join("config.toml"))
+            .unwrap()
+            .file_type()
+            .is_symlink());
     }
 
     #[test]
-    fn sync_launch_codex_home_copies_auth_and_links_shared_entries() {
+    fn prepare_resume_group_home_seeds_only_resume_entries() {
+        let dir = tempdir().unwrap();
+        let global_codex = dir.path().join(".codex");
+        let resume_groups = global_codex.join("resume-groups");
+
+        fs::create_dir_all(global_codex.join("profiles")).unwrap();
+        fs::create_dir_all(global_codex.join("sessions")).unwrap();
+        fs::write(global_codex.join("session_index.jsonl"), "index").unwrap();
+        fs::write(global_codex.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
+
+        let resume_home = prepare_resume_group_home(&global_codex, "shared-work").unwrap();
+
+        assert_eq!(
+            fs::read_to_string(resume_home.join("session_index.jsonl")).unwrap(),
+            "index"
+        );
+        assert_eq!(
+            fs::read_dir(resume_home.join("sessions")).unwrap().count(),
+            0
+        );
+        assert!(resume_groups.join("shared-work").exists());
+        assert!(!resume_home.join("config.toml").exists());
+    }
+
+    #[test]
+    fn sync_launch_codex_home_copies_auth_and_links_selected_group_entries() {
         let dir = tempdir().unwrap();
         let global_codex = dir.path().join(".codex");
         let launch_home = dir.path().join("launch");
         let profile_auth = global_codex.join("profiles").join("a").join("auth.json");
+        let config_home = dir.path().join("config-group");
+        let resume_home = dir.path().join("resume-group");
 
         fs::create_dir_all(global_codex.join("profiles").join("a")).unwrap();
         fs::create_dir_all(global_codex.join("skills")).unwrap();
-        fs::write(global_codex.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
+        fs::create_dir_all(&config_home).unwrap();
+        fs::create_dir_all(resume_home.join("sessions")).unwrap();
+        fs::write(global_codex.join("AGENTS.md"), "shared").unwrap();
+        fs::write(global_codex.join("skills").join("skill.txt"), "skill").unwrap();
+        fs::write(config_home.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
+        fs::write(
+            config_home.join(".codex-global-state.json"),
+            "{\"default-service-tier\":\"fast\"}",
+        )
+        .unwrap();
+        fs::write(resume_home.join("session_index.jsonl"), "index").unwrap();
+        fs::write(resume_home.join("state_5.sqlite"), "state").unwrap();
         fs::write(&profile_auth, "profile-auth").unwrap();
 
-        sync_launch_codex_home(&launch_home, &global_codex, &profile_auth).unwrap();
+        sync_launch_codex_home(
+            &launch_home,
+            &global_codex,
+            &profile_auth,
+            &config_home,
+            &resume_home,
+        )
+        .unwrap();
 
         assert_eq!(
             fs::read_to_string(launch_home.join("auth.json")).unwrap(),
@@ -1283,7 +1323,19 @@ mod tests {
         );
         assert_eq!(
             fs::read_link(launch_home.join("config.toml")).unwrap(),
-            global_codex.join("config.toml")
+            config_home.join("config.toml")
+        );
+        assert_eq!(
+            fs::read_link(launch_home.join(".codex-global-state.json")).unwrap(),
+            config_home.join(".codex-global-state.json")
+        );
+        assert_eq!(
+            fs::read_link(launch_home.join("session_index.jsonl")).unwrap(),
+            resume_home.join("session_index.jsonl")
+        );
+        assert_eq!(
+            fs::read_link(launch_home.join("state_5.sqlite")).unwrap(),
+            resume_home.join("state_5.sqlite")
         );
         assert_eq!(
             fs::read_link(launch_home.join("skills")).unwrap(),
@@ -1483,6 +1535,8 @@ mod tests {
         let subcommand = cmd.subcommand;
         let CodexCmd::Launch {
             profile_or_arg,
+            resume_group,
+            config_group,
             args,
         } = subcommand
         else {
@@ -1490,6 +1544,8 @@ mod tests {
         };
 
         assert_eq!(profile_or_arg, Some(OsString::from("a")));
+        assert_eq!(resume_group, None);
+        assert_eq!(config_group, None);
         assert_eq!(
             args,
             vec![OsString::from("--model"), OsString::from("gpt-5.4")]
@@ -1500,6 +1556,10 @@ mod tests {
     fn cmd_parses_launch_with_forced_auto_selection() {
         let cmd = parse_raw_args(&[
             OsString::from("launch"),
+            OsString::from("--resume-group"),
+            OsString::from("shared-work"),
+            OsString::from("--config-group"),
+            OsString::from("cfg-a"),
             OsString::from("--"),
             OsString::from("a"),
         ])
@@ -1508,6 +1568,8 @@ mod tests {
         let subcommand = cmd.subcommand;
         let CodexCmd::Launch {
             profile_or_arg,
+            resume_group,
+            config_group,
             args,
         } = subcommand
         else {
@@ -1515,6 +1577,8 @@ mod tests {
         };
 
         assert_eq!(profile_or_arg, None);
+        assert_eq!(resume_group.as_deref(), Some("shared-work"));
+        assert_eq!(config_group.as_deref(), Some("cfg-a"));
         assert_eq!(args, vec![OsString::from("a")]);
     }
 
@@ -1524,12 +1588,20 @@ mod tests {
         let profile_or_arg = OsString::from("a");
         let args = vec![OsString::from("--model"), OsString::from("gpt-5.4")];
 
-        let target = resolve_launch_target(Some(&profile_or_arg), &args, &profiles);
+        let target = resolve_launch_target(
+            Some(&profile_or_arg),
+            Some("shared-work"),
+            Some("cfg-a"),
+            &args,
+            &profiles,
+        );
 
         assert_eq!(
             target,
             LaunchTarget::Explicit {
                 profile: "a".into(),
+                resume_group: Some("shared-work".into()),
+                config_group: Some("cfg-a".into()),
                 args,
             }
         );
@@ -1541,14 +1613,24 @@ mod tests {
         let profile_or_arg = OsString::from("--model");
         let args = vec![OsString::from("gpt-5.4")];
 
-        let target = resolve_launch_target(Some(&profile_or_arg), &args, &profiles);
+        let target =
+            resolve_launch_target(Some(&profile_or_arg), None, Some("cfg-a"), &args, &profiles);
 
         assert_eq!(
             target,
             LaunchTarget::Auto {
+                resume_group: None,
+                config_group: Some("cfg-a".into()),
                 args: vec![OsString::from("--model"), OsString::from("gpt-5.4")],
             }
         );
+    }
+
+    #[test]
+    fn validate_group_name_rejects_invalid_values() {
+        assert!(validate_group_name("", "config").is_err());
+        assert!(validate_group_name(".", "config").is_err());
+        assert!(validate_group_name("a/b", "resume").is_err());
     }
 
     #[test]
