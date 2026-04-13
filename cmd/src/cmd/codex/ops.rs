@@ -731,3 +731,82 @@ pub(super) fn delete(profile: &str, yes: bool) -> Result<()> {
     println!("Deleted codex profile: {profile}");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn auto_launch_selection_uses_displayed_percent_delta() {
+        let now = Utc::now();
+        let profiles = vec![
+            saved_profile_with_usage(
+                "raw-overpaced",
+                25.0,
+                reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2),
+                50.0,
+                reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5),
+                10.0,
+            ),
+            saved_profile_with_usage(
+                "raw-underpaced",
+                15.0,
+                reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2),
+                50.0,
+                reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5),
+                1.0,
+            ),
+        ];
+
+        let selected = select_auto_launch_profile(&profiles).expect("selected profile");
+
+        assert_eq!(selected.name, "raw-underpaced");
+    }
+
+    fn saved_profile_with_usage(
+        name: &str,
+        five_hour: f64,
+        five_hour_reset_at: i64,
+        weekly: f64,
+        weekly_reset_at: i64,
+        limit_multiplier: f64,
+    ) -> SavedProfile {
+        SavedProfile {
+            name: name.into(),
+            auth_path: PathBuf::from(format!("/tmp/{name}.json")),
+            identity: None,
+            invalid_auth: false,
+            usage: ProfileUsageState::Available(ProfileUsageSnapshot {
+                user_id: None,
+                account_id: None,
+                email: None,
+                plan_type: None,
+                primary: Some(UsageWindowSnapshot {
+                    used_percent: five_hour,
+                    reset_at: Some(five_hour_reset_at),
+                    limit_multiplier,
+                }),
+                secondary: Some(UsageWindowSnapshot {
+                    used_percent: weekly,
+                    reset_at: Some(weekly_reset_at),
+                    limit_multiplier,
+                }),
+            }),
+        }
+    }
+
+    fn reset_at_for_elapsed(
+        now: chrono::DateTime<Utc>,
+        kind: UsageWindowKind,
+        elapsed_fraction: f64,
+    ) -> i64 {
+        let duration = match kind {
+            UsageWindowKind::Primary => chrono::Duration::hours(5),
+            UsageWindowKind::Secondary => chrono::Duration::days(7),
+        };
+        let remaining_seconds =
+            ((1.0 - elapsed_fraction) * duration.num_seconds() as f64).round() as i64;
+
+        (now + chrono::Duration::seconds(remaining_seconds)).timestamp()
+    }
+}

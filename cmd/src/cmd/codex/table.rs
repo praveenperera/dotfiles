@@ -741,7 +741,7 @@ pub fn current_usage_window_compact(
     };
 
     let percent = format_compact_percent(&format!("{:.0}%", window.used_percent));
-    let pace = pace_delta_percent(window, current_utc, kind).map(format_pace_delta);
+    let pace = displayed_pace_delta_percent(window, current_utc, kind).map(format_pace_delta);
     let reset = current_usage_window_reset_compact(window, kind, current_local);
 
     match (pace.as_deref(), reset.as_str()) {
@@ -859,7 +859,8 @@ fn average_delta_percent(
     let deltas = windows
         .iter()
         .filter_map(|window| {
-            pace_delta_percent(window, now, kind).map(|delta| (delta, limit_weight(window)))
+            effective_pace_delta_percent(window, now, kind)
+                .map(|delta| (delta, limit_weight(window)))
         })
         .collect::<Vec<_>>();
 
@@ -875,6 +876,34 @@ pub(super) fn pace_delta_percent(
     now: chrono::DateTime<Utc>,
     kind: UsageWindowKind,
 ) -> Option<f64> {
+    displayed_pace_delta_percent(window, now, kind)
+}
+
+fn displayed_pace_delta_percent(
+    window: &UsageWindowSnapshot,
+    now: chrono::DateTime<Utc>,
+    kind: UsageWindowKind,
+) -> Option<f64> {
+    let ideal_used_percent = ideal_used_percent(window, now, kind)?;
+
+    Some(window.used_percent - ideal_used_percent)
+}
+
+fn effective_pace_delta_percent(
+    window: &UsageWindowSnapshot,
+    now: chrono::DateTime<Utc>,
+    kind: UsageWindowKind,
+) -> Option<f64> {
+    let ideal_used_percent = ideal_used_percent(window, now, kind)?;
+
+    Some(effective_used_percent(window) - ideal_used_percent)
+}
+
+fn ideal_used_percent(
+    window: &UsageWindowSnapshot,
+    now: chrono::DateTime<Utc>,
+    kind: UsageWindowKind,
+) -> Option<f64> {
     let reset_at = window.reset_at?;
     let reset_at = Utc.timestamp_opt(reset_at, 0).single()?;
     let duration = usage_window_duration(kind);
@@ -884,9 +913,8 @@ pub(super) fn pace_delta_percent(
         .num_seconds()
         .clamp(0, duration.num_seconds());
     let elapsed_fraction = elapsed_seconds as f64 / duration.num_seconds() as f64;
-    let ideal_used_percent = elapsed_fraction * 100.0;
 
-    Some(effective_used_percent(window) - ideal_used_percent)
+    Some(elapsed_fraction * 100.0)
 }
 
 fn effective_used_percent(window: &UsageWindowSnapshot) -> f64 {
@@ -1199,6 +1227,86 @@ mod tests {
 
         assert_eq!(totals.five_hour.text, "50% (+15%)");
         assert_eq!(totals.weekly.text, "50% (+15%)");
+    }
+
+    #[test]
+    fn pace_delta_uses_displayed_percent_for_primary_window() {
+        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2);
+        let window = UsageWindowSnapshot {
+            used_percent: 25.0,
+            reset_at: Some(reset_at),
+            limit_multiplier: 10.0,
+        };
+
+        assert_eq!(
+            pace_delta_percent(&window, now, UsageWindowKind::Primary)
+                .map(|delta| delta.round() as i64),
+            Some(5)
+        );
+    }
+
+    #[test]
+    fn pace_delta_uses_displayed_percent_for_primary_window_under_pace() {
+        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2);
+        let window = UsageWindowSnapshot {
+            used_percent: 10.0,
+            reset_at: Some(reset_at),
+            limit_multiplier: 10.0,
+        };
+
+        assert_eq!(
+            pace_delta_percent(&window, now, UsageWindowKind::Primary)
+                .map(|delta| delta.round() as i64),
+            Some(-10)
+        );
+    }
+
+    #[test]
+    fn pace_delta_uses_displayed_percent_for_weekly_window() {
+        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5);
+        let window = UsageWindowSnapshot {
+            used_percent: 55.0,
+            reset_at: Some(reset_at),
+            limit_multiplier: 10.0,
+        };
+
+        assert_eq!(
+            pace_delta_percent(&window, now, UsageWindowKind::Secondary)
+                .map(|delta| delta.round() as i64),
+            Some(5)
+        );
+    }
+
+    #[test]
+    fn current_usage_window_compact_shows_displayed_percent_delta() {
+        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let current_local = now.with_timezone(&Local);
+        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.8);
+        let usage = ProfileUsageState::Available(ProfileUsageSnapshot {
+            user_id: None,
+            account_id: None,
+            email: None,
+            plan_type: Some("prolite".into()),
+            primary: Some(UsageWindowSnapshot {
+                used_percent: 81.0,
+                reset_at: Some(reset_at),
+                limit_multiplier: 10.0,
+            }),
+            secondary: None,
+        });
+        let reset = format_current_usage_reset_timestamp(
+            Local.timestamp_opt(reset_at, 0).single().unwrap(),
+            current_local,
+            UsageWindowKind::Primary,
+        );
+
+        assert_eq!(
+            current_usage_window_compact(&usage, UsageWindowKind::Primary, current_local, now,),
+            format!(" 81% (+1%) ({reset})")
+        );
     }
 
     #[test]
