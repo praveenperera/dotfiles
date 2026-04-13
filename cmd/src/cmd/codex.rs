@@ -525,16 +525,17 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
 mod tests {
     use super::{
         active_session_markers, build_profile_rows, create_launch_home, current_usage_view,
-        delete_profile_home, format_launch_banner, launch_banner_details, needs_proactive_refresh,
-        parse_auth_identity, parse_jwt_expiration, parse_raw_args, prepare_config_group_home,
-        prepare_resume_group_home, print_current_usage_table, promote_launch_auth_if_unchanged,
-        read_auth_snapshot, read_stored_auth, replace_global_auth_with_profile,
-        resolve_launch_groups, resolve_launch_target, save_profile_auth,
-        select_auto_launch_profile, select_auto_launch_profile_except, sync_launch_codex_home,
-        sync_login_codex_home, validate_group_name, write_auth_raw_if_unchanged,
-        write_session_marker, AuthIdentity, CodexCmd, LaunchGroups, LaunchTarget, LimitStyleKind,
-        ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot,
-        ProfileUsageState, SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
+        delete_profile_home, format_launch_banner, launch_banner_details, load_saved_profiles,
+        needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration, parse_raw_args,
+        prepare_config_group_home, prepare_resume_group_home, print_current_usage_table,
+        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
+        replace_global_auth_with_profile, resolve_launch_groups, resolve_launch_target,
+        resolve_usage_auth_path_with_profiles, save_profile_auth, select_auto_launch_profile,
+        select_auto_launch_profile_except, sync_launch_codex_home, sync_login_codex_home,
+        validate_group_name, write_auth_raw_if_unchanged, write_session_marker, AuthIdentity,
+        CodexCmd, LaunchGroups, LaunchTarget, LimitStyleKind, ProfileAuthRefresher,
+        ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState,
+        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
@@ -2395,6 +2396,158 @@ mod tests {
     }
 
     #[test]
+    fn current_usage_resolution_prefers_unique_matching_saved_profile_auth() {
+        let dir = tempdir().unwrap();
+        let global_auth_path = dir.path().join(".codex").join("auth.json");
+        let profile_auth_path = dir
+            .path()
+            .join(".codex")
+            .join("profiles")
+            .join("a")
+            .join("auth.json");
+        let other_auth_path = dir
+            .path()
+            .join(".codex")
+            .join("profiles")
+            .join("b")
+            .join("auth.json");
+        fs::create_dir_all(global_auth_path.parent().unwrap()).unwrap();
+        fs::create_dir_all(profile_auth_path.parent().unwrap()).unwrap();
+        fs::create_dir_all(other_auth_path.parent().unwrap()).unwrap();
+        fs::write(
+            &global_auth_path,
+            auth_json_with_tokens(&ID_1, "old-access", "old-refresh"),
+        )
+        .unwrap();
+        fs::write(
+            &profile_auth_path,
+            auth_json_with_tokens(&ID_1, "fresh-access", "fresh-refresh"),
+        )
+        .unwrap();
+        fs::write(
+            &other_auth_path,
+            auth_json_with_tokens(&ID_2, "other-access", "other-refresh"),
+        )
+        .unwrap();
+
+        let profiles = load_saved_profiles(&dir.path().join(".codex").join("profiles")).unwrap();
+        let resolved = resolve_usage_auth_path_with_profiles(&global_auth_path, &profiles).unwrap();
+        assert_eq!(resolved.path, profile_auth_path);
+        assert!(resolved.warning.is_none());
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .and(header("authorization", "Bearer old-access"))
+                .respond_with(ResponseTemplate::new(503))
+                .mount(&server)
+                .await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .and(header("authorization", "Bearer fresh-access"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
+                    "fresh@example.com",
+                    "user-1",
+                    "acct-1",
+                    "plus",
+                    42.0,
+                    73.0,
+                )))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
+                .unwrap();
+        let (label, usage) = current_usage_view(&loader, &resolved.path).unwrap();
+
+        assert_eq!(label, "fresh@example.com");
+        assert!(matches!(usage, ProfileUsageState::Available(_)));
+    }
+
+    #[test]
+    fn current_usage_resolution_warns_when_no_saved_profile_matches_current_auth() {
+        let dir = tempdir().unwrap();
+        let global_auth_path = dir.path().join(".codex").join("auth.json");
+        let profile_auth_path = dir
+            .path()
+            .join(".codex")
+            .join("profiles")
+            .join("a")
+            .join("auth.json");
+        fs::create_dir_all(global_auth_path.parent().unwrap()).unwrap();
+        fs::create_dir_all(profile_auth_path.parent().unwrap()).unwrap();
+        fs::write(
+            &global_auth_path,
+            auth_json_with_tokens(&ID_1, "old-access", "old-refresh"),
+        )
+        .unwrap();
+        fs::write(
+            &profile_auth_path,
+            auth_json_with_tokens(&ID_2, "other-access", "other-refresh"),
+        )
+        .unwrap();
+
+        let profiles = load_saved_profiles(&dir.path().join(".codex").join("profiles")).unwrap();
+        let resolved = resolve_usage_auth_path_with_profiles(&global_auth_path, &profiles).unwrap();
+
+        assert_eq!(resolved.path, global_auth_path);
+        assert_eq!(
+            resolved.warning.as_deref(),
+            Some("Warning: no saved profile matches current auth, using global auth")
+        );
+    }
+
+    #[test]
+    fn current_usage_resolution_warns_when_multiple_saved_profiles_match_current_auth() {
+        let dir = tempdir().unwrap();
+        let global_auth_path = dir.path().join(".codex").join("auth.json");
+        let profile_a_auth_path = dir
+            .path()
+            .join(".codex")
+            .join("profiles")
+            .join("a")
+            .join("auth.json");
+        let profile_b_auth_path = dir
+            .path()
+            .join(".codex")
+            .join("profiles")
+            .join("b")
+            .join("auth.json");
+        fs::create_dir_all(global_auth_path.parent().unwrap()).unwrap();
+        fs::create_dir_all(profile_a_auth_path.parent().unwrap()).unwrap();
+        fs::create_dir_all(profile_b_auth_path.parent().unwrap()).unwrap();
+        fs::write(
+            &global_auth_path,
+            auth_json_with_tokens(&ID_1, "old-access", "old-refresh"),
+        )
+        .unwrap();
+        fs::write(
+            &profile_a_auth_path,
+            auth_json_with_tokens(&ID_1, "fresh-access", "fresh-refresh"),
+        )
+        .unwrap();
+        fs::write(
+            &profile_b_auth_path,
+            auth_json_with_tokens(&ID_1_ALIAS, "alias-access", "alias-refresh"),
+        )
+        .unwrap();
+
+        let profiles = load_saved_profiles(&dir.path().join(".codex").join("profiles")).unwrap();
+        let resolved = resolve_usage_auth_path_with_profiles(&global_auth_path, &profiles).unwrap();
+
+        assert_eq!(resolved.path, global_auth_path);
+        assert_eq!(
+            resolved.warning.as_deref(),
+            Some("Warning: multiple saved profiles match current auth, using global auth")
+        );
+    }
+
+    #[test]
     fn current_usage_view_marks_unavailable_when_usage_request_fails() {
         let dir = tempdir().unwrap();
         let auth_path = dir.path().join(".codex").join("auth.json");
@@ -2584,6 +2737,24 @@ mod tests {
         user_id: "user-1",
         account_id: "acct-1",
         email: Some("old@example.com"),
+        name: None,
+        auth_provider: Some("google"),
+    };
+
+    const ID_1_ALIAS: TestIdentity = TestIdentity {
+        subject: "sub-1",
+        user_id: "user-1",
+        account_id: "acct-1",
+        email: Some("alias@example.com"),
+        name: None,
+        auth_provider: Some("google"),
+    };
+
+    const ID_2: TestIdentity = TestIdentity {
+        subject: "sub-2",
+        user_id: "user-2",
+        account_id: "acct-2",
+        email: Some("other@example.com"),
         name: None,
         auth_provider: Some("google"),
     };

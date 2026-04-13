@@ -215,6 +215,60 @@ fn active_profile_name(profiles: &[SavedProfile]) -> Option<&str> {
     })
 }
 
+pub(super) struct UsageAuthResolution {
+    pub(super) path: PathBuf,
+    pub(super) warning: Option<String>,
+}
+
+fn resolve_usage_auth_path(global_auth_path: &Path) -> Result<UsageAuthResolution> {
+    let profiles = load_saved_profiles(&profiles_dir()?)?;
+    resolve_usage_auth_path_with_profiles(global_auth_path, &profiles)
+}
+
+pub(super) fn resolve_usage_auth_path_with_profiles(
+    global_auth_path: &Path,
+    profiles: &[SavedProfile],
+) -> Result<UsageAuthResolution> {
+    if !global_auth_path.exists() {
+        return Ok(UsageAuthResolution {
+            path: global_auth_path.to_path_buf(),
+            warning: None,
+        });
+    }
+
+    let active_identity = read_auth_identity(global_auth_path)
+        .wrap_err("Failed to read current codex auth identity")?;
+    let mut matching_paths = profiles
+        .iter()
+        .filter_map(|profile| {
+            profile
+                .identity
+                .as_ref()
+                .filter(|identity| is_same_user(&active_identity, identity))
+                .map(|_| profile.auth_path.clone())
+        })
+        .collect::<Vec<_>>();
+
+    match matching_paths.len() {
+        1 => Ok(UsageAuthResolution {
+            path: matching_paths.pop().expect("single matching path"),
+            warning: None,
+        }),
+        0 => Ok(UsageAuthResolution {
+            path: global_auth_path.to_path_buf(),
+            warning: Some(
+                "Warning: no saved profile matches current auth, using global auth".into(),
+            ),
+        }),
+        _ => Ok(UsageAuthResolution {
+            path: global_auth_path.to_path_buf(),
+            warning: Some(
+                "Warning: multiple saved profiles match current auth, using global auth".into(),
+            ),
+        }),
+    }
+}
+
 pub(super) fn saved_profile_label(profile: &SavedProfile) -> String {
     profile
         .identity
@@ -430,8 +484,11 @@ pub(super) fn list(verbose: bool) -> Result<()> {
 
 pub(super) fn usage() -> Result<()> {
     let loader = ProfileUsageLoader::new()?;
-    let auth_path = auth_path()?;
-    let (label, usage) = current_usage_view(&loader, &auth_path)?;
+    let resolved_auth = resolve_usage_auth_path(&auth_path()?)?;
+    if let Some(warning) = resolved_auth.warning.as_ref() {
+        eprintln!("{}", warning.yellow());
+    }
+    let (label, usage) = current_usage_view(&loader, &resolved_auth.path)?;
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
