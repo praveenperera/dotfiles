@@ -78,11 +78,10 @@ alias lla="cmd codex launch -c shared a"
 
 # different configs for main profile
 alias llz="cmd codex launch a -c z"
-alias llq="cmd codex launch a -c w"
+alias llq="cmd codex launch a -c q"
 alias lly="cmd codex launch a -c y"
 alias llu="cmd codex launch a -c u"
 alias lli="cmd codex launch a -c i"
-alias llp="cmd codex launch a -c p"
 
 # multi account
 alias lls="cmd codex launch s"
@@ -92,6 +91,7 @@ alias llg="cmd codex launch g"
 alias llw="cmd codex launch w"
 
 alias llo="cmd codex launch --other -c o"
+alias llp="cmd codex launch a -c o"
 
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"
