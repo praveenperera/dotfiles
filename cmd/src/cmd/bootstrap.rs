@@ -169,13 +169,11 @@ const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
 struct ManagedDirEntry {
     source: &'static str,
     target: &'static str,
-    legacy_sources: &'static [&'static str],
 }
 
 const CUSTOM_CONFIG_DIR_ENTRIES: &[ManagedDirEntry] = &[ManagedDirEntry {
     source: "agents/skills",
     target: ".codex/skills",
-    legacy_sources: &["claude/skills"],
 }];
 
 const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =

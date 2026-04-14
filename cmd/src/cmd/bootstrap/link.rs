@@ -220,10 +220,7 @@ fn is_managed_link_target(
     dotfiles_dir: &Path,
     entry: &ManagedDirEntry,
 ) -> bool {
-    std::iter::once(entry.source)
-        .chain(entry.legacy_sources.iter().copied())
-        .map(|source| dotfiles_dir.join(source))
-        .any(|managed_root| link_target.starts_with(managed_root))
+    link_target.starts_with(dotfiles_dir.join(entry.source))
 }
 
 pub(super) fn sync_symlink(sh: &Shell, path: &Path, target: &Path) -> Result<SyncSymlinkOutcome> {
@@ -304,43 +301,10 @@ fn create_and_run_file(sh: &Shell, contents: &str, file: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::os::unix::fs::symlink;
 
     use tempfile::tempdir;
 
     use super::{prune_managed_dir_entry, ManagedDirEntry};
-
-    #[test]
-    fn prunes_stale_legacy_managed_links() {
-        let dir = tempdir().unwrap();
-        let dotfiles_dir = dir.path().join("dotfiles");
-        let source_dir = dotfiles_dir.join("agents/skills");
-        let legacy_dir = dotfiles_dir.join("claude/skills");
-        let target_dir = dir.path().join("target");
-        let stale_target = target_dir.join("stale");
-        let kept_target = target_dir.join("keep");
-
-        fs::create_dir_all(&source_dir).unwrap();
-        fs::create_dir_all(&legacy_dir).unwrap();
-        fs::create_dir_all(&target_dir).unwrap();
-        fs::create_dir(source_dir.join("keep")).unwrap();
-        symlink(legacy_dir.join("stale"), &stale_target).unwrap();
-        symlink(source_dir.join("keep"), &kept_target).unwrap();
-
-        let entry = ManagedDirEntry {
-            source: "agents/skills",
-            target: ".codex/skills",
-            legacy_sources: &["claude/skills"],
-        };
-
-        prune_managed_dir_entry(&source_dir, &target_dir, &dotfiles_dir, &entry).unwrap();
-
-        assert!(!stale_target.exists());
-        assert_eq!(
-            fs::read_link(&kept_target).unwrap(),
-            source_dir.join("keep")
-        );
-    }
 
     #[test]
     fn keeps_unmanaged_entries_in_target_dir() {
@@ -357,7 +321,6 @@ mod tests {
         let entry = ManagedDirEntry {
             source: "agents/skills",
             target: ".codex/skills",
-            legacy_sources: &["claude/skills"],
         };
 
         prune_managed_dir_entry(&source_dir, &target_dir, &dotfiles_dir, &entry).unwrap();
