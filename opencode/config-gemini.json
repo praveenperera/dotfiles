@@ -3,10 +3,10 @@
   "default_agent": "plan",
   "agent": {
     "plan": {
-      "model": "opencode/gemini-3-pro"
+      "model": "opencode/gemini-3.1-pro"
     },
     "build": {
-      "model": "opencode/gemini-3-pro"
+      "model": "opencode/gemini-3.1-pro"
     }
   }
 }

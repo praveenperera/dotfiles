@@ -96,6 +96,11 @@ alias llp="cmd codex launch a -c o"
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"
 
+alias ask='opencode run -m openai/gpt-5.4-mini --agent build -'
+alias askp='opencode -m openai/gpt-5.4-mini --agent build'
+alias askn='opencode run -m opencode/gpt-5.4-nano --agent build -'
+alias askpn='opencode -m opencode/gpt-5.4-nano --agent build'
+
 export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 export SHELL=$(which zsh)
 
