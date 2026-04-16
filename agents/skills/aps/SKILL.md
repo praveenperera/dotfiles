@@ -18,13 +18,30 @@ description: Academic paper search CLI (Semantic Scholar, OpenAlex & local libra
 - User wants paper recommendations based on a seed paper
 - User needs to search full-text passages (S2 snippets)
 - User wants to aggregate/analyze publication data (OA group-by)
+- User wants to run a repeatable paper-discovery scan from a manifest
 - User wants to download a paper PDF for local reading
 - User wants to search across downloaded papers (hybrid/semantic/FTS search)
 - User wants to manage their local paper library
 
 ## Quick Reference
 
-### Shared Commands (both `aps s2` and `aps oa`)
+### Top-level Unified Commands
+
+These commands query both Semantic Scholar and OpenAlex unless noted otherwise
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `search <query>` | `s` | Search both backends and merge results |
+| `paper <id>` | `p` | Get merged paper details by DOI, S2 ID, OA ID, or arXiv ID |
+| `citations <id>` | `c` | Get citations from both backends |
+| `references <id>` | `r` | Get references from both backends |
+| `author <query-or-id>` | `a` | Search authors across both backends |
+| `download <id>` | `dl` | Resolve any supported paper ID to a DOI and download the PDF to the local library |
+| `scan --manifest <FILE> --from-date <DATE> --to-date <DATE> --seen-file <FILE>` | | Run a manifest of discovery jobs with date-window and seen-state filtering |
+| `login` | | Save API keys from env vars to `~/.config/aps/` |
+| `status` | | Show current auth status |
+
+### Backend-specific Commands (both `aps s2` and `aps oa`)
 
 | Command | Alias | Description |
 |---------|-------|-------------|
@@ -69,6 +86,10 @@ description: Academic paper search CLI (Semantic Scholar, OpenAlex & local libra
 ### Search for Papers
 
 ```bash
+# merged search across both APIs
+aps search "transformer attention"
+aps search "large language models" --since 2023 --min-citations 100
+
 # keyword search (default limit is 50)
 aps s2 search "transformer attention"
 aps oa search "CRISPR gene editing"
@@ -87,6 +108,10 @@ aps s2 search "transformer attention" --limit 5
 ### Look Up a Specific Paper
 
 ```bash
+# merged details across both APIs
+aps paper ARXIV:1706.03762
+aps paper "10.1038/s41586-020-2308-7"
+
 # by arXiv ID
 aps s2 paper ARXIV:1706.03762
 
@@ -101,6 +126,10 @@ aps s2 match "Attention Is All You Need"
 ### Citations & References
 
 ```bash
+# merged citations/references
+aps citations ARXIV:1706.03762
+aps references W2963403868
+
 # what cites this paper?
 aps s2 citations ARXIV:1706.03762
 aps oa citations W2963403868
@@ -113,6 +142,9 @@ aps oa references W2963403868
 ### Authors
 
 ```bash
+# merged author lookup
+aps author "Geoffrey Hinton"
+
 # search by name
 aps s2 author "Geoffrey Hinton"
 aps oa author "Geoffrey Hinton"
@@ -132,6 +164,29 @@ aps s2 recommend ARXIV:1706.03762 --pool recent
 aps s2 snippets "backpropagation through time"
 ```
 
+### Manifest Scans
+
+`aps scan` runs a manifest of discovery jobs and keeps a caller-managed
+seen-state file. The tool does not choose a default state file location
+for you, so reuse the same `--seen-file` path when you want incremental
+scans and use a different path when you want an independent state set
+
+```bash
+aps scan \
+  --manifest scans/ml.json \
+  --from-date 2026-04-01 \
+  --to-date 2026-04-16 \
+  --seen-file .cache/aps/ml-seen.json
+
+# machine-readable output for automation
+aps scan \
+  --manifest scans/ml.json \
+  --from-date 2026-04-01 \
+  --to-date 2026-04-16 \
+  --seen-file .cache/aps/ml-seen.json \
+  --format json
+```
+
 ### OA-only: Institutions, Topics, Group-by
 
 ```bash
@@ -149,6 +204,10 @@ aps oa group-by publication_year --filter "authorships.institutions.id:I63966007
 ### Local Library (`aps library` / `aps lib`)
 
 ```bash
+# top-level download resolves any supported paper ID to a DOI first
+aps download ARXIV:1706.03762
+aps download W2963403868 --tag transformers
+
 # download a paper by DOI (tries OA sources first, Sci-Hub fallback)
 # automatically chunks and embeds text for semantic search
 aps lib dl "10.1145/3442188.3445922"
