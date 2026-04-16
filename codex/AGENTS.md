@@ -7,7 +7,7 @@
 - Stop puttting Created by claude code into my files, if it has an author use me Praveen Perera
 - All comments should make sense without the context if this particular conversation
 - If creating git commits never co author the commit with claude/codex or add any notes about claude just use my name
-- Follow my commit message style: short capitalized imperative subject, no trailing period, no conventional-commit prefixes unless I ask, and only use a description when needed to explain why or important context
+- Before making a commit, read the [commit message guide](./commit-message-guide.md)
 - Start inline code comments with a lowercase
 - Capitalize higher level doc comments like functions and modules (ex: in rust comments starting with /// instead of //)
 - Don't end comments with a period (periods within comments are fine)
