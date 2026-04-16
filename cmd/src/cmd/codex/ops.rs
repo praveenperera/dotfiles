@@ -71,6 +71,7 @@ fn launch_with_profile(
     args: &[OsString],
 ) -> Result<()> {
     let shared_codex_home = codex_dir()?;
+    let global_auth = auth_path()?;
     let profile_home = profile_codex_home(profile)?;
     stdfs::create_dir_all(&profile_home)?;
     let profile_auth = profile_home.join("auth.json");
@@ -86,11 +87,11 @@ fn launch_with_profile(
     let config_home = prepare_config_group_home(&shared_codex_home, &groups.config)?;
     let resume_home = prepare_resume_group_home(&shared_codex_home, &groups.resume)?;
     let launch_home = create_launch_home(&profile_home)?;
-    let launch_auth = read_auth_snapshot(&profile_auth)?;
+    let launch_auth_mode = resolve_launch_auth_mode(&profile_auth, &global_auth)?;
     sync_launch_codex_home(
         &launch_home,
         &shared_codex_home,
-        &profile_auth,
+        &launch_auth_mode,
         &config_home,
         &resume_home,
     )?;
@@ -107,8 +108,39 @@ fn launch_with_profile(
     };
     let status = child.wait()?;
     fsutil::remove_existing_path(&session_marker_path)?;
-    promote_launch_auth_if_unchanged(&profile_auth, &launch_auth, &launch_home.join("auth.json"))?;
+    if let LaunchAuthMode::ProfileCopy {
+        profile_auth,
+        launch_auth,
+    } = &launch_auth_mode
+    {
+        promote_launch_auth_if_unchanged(
+            profile_auth,
+            launch_auth,
+            &launch_home.join("auth.json"),
+        )?;
+    }
     std::process::exit(status.code().unwrap_or(1));
+}
+
+pub(super) fn resolve_launch_auth_mode(
+    profile_auth: &Path,
+    global_auth: &Path,
+) -> Result<LaunchAuthMode> {
+    let launch_auth = read_auth_snapshot(profile_auth)?;
+    let uses_global_auth = read_auth_identity(global_auth)
+        .map(|global_identity| is_same_user(&global_identity, &launch_auth.identity))
+        .unwrap_or(false);
+
+    if uses_global_auth {
+        return Ok(LaunchAuthMode::GlobalShared {
+            global_auth: global_auth.to_path_buf(),
+        });
+    }
+
+    Ok(LaunchAuthMode::ProfileCopy {
+        profile_auth: profile_auth.to_path_buf(),
+        launch_auth,
+    })
 }
 
 pub(super) fn resolve_launch_target(

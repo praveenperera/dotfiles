@@ -250,7 +250,7 @@ fn seed_group_home(shared_codex_home: &Path, group_home: &Path, kind: GroupKind)
 pub(super) fn sync_launch_codex_home(
     launch_home: &Path,
     shared_codex_home: &Path,
-    profile_auth: &Path,
+    launch_auth_mode: &LaunchAuthMode,
     config_home: &Path,
     resume_home: &Path,
 ) -> Result<()> {
@@ -274,7 +274,7 @@ pub(super) fn sync_launch_codex_home(
         sync_shared_entry(&source, &launch_home.join(&name))?;
     }
 
-    copy_auth_file(profile_auth, &launch_home.join("auth.json"))
+    sync_launch_auth(launch_auth_mode, &launch_home.join("auth.json"))
 }
 
 fn collect_entry_names(root: &Path, entry_names: &mut BTreeSet<String>) -> Result<()> {
@@ -354,6 +354,13 @@ fn copy_auth_file(source: &Path, target: &Path) -> Result<()> {
     fsutil::ensure_parent_dir(target)?;
     stdfs::copy(source, target)?;
     Ok(())
+}
+
+fn sync_launch_auth(launch_auth_mode: &LaunchAuthMode, target: &Path) -> Result<()> {
+    match launch_auth_mode {
+        LaunchAuthMode::GlobalShared { global_auth } => sync_shared_entry(global_auth, target),
+        LaunchAuthMode::ProfileCopy { profile_auth, .. } => copy_auth_file(profile_auth, target),
+    }
 }
 
 pub(super) fn replace_global_auth_with_profile(

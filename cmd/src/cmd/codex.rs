@@ -401,6 +401,17 @@ struct AuthSnapshot {
     identity: AuthIdentity,
 }
 
+#[derive(Debug, Clone)]
+enum LaunchAuthMode {
+    GlobalShared {
+        global_auth: PathBuf,
+    },
+    ProfileCopy {
+        profile_auth: PathBuf,
+        launch_auth: AuthSnapshot,
+    },
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum LaunchTarget {
     Explicit {
@@ -529,13 +540,14 @@ mod tests {
         needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration, parse_raw_args,
         prepare_config_group_home, prepare_resume_group_home, print_current_usage_table,
         promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
-        replace_global_auth_with_profile, resolve_launch_groups, resolve_launch_target,
-        resolve_usage_auth_path_with_profiles, save_profile_auth, select_auto_launch_profile,
-        select_auto_launch_profile_except, sync_launch_codex_home, sync_login_codex_home,
-        validate_group_name, write_auth_raw_if_unchanged, write_session_marker, AuthIdentity,
-        CodexCmd, LaunchGroups, LaunchTarget, LimitStyleKind, ProfileAuthRefresher,
-        ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState,
-        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
+        replace_global_auth_with_profile, resolve_launch_auth_mode, resolve_launch_groups,
+        resolve_launch_target, resolve_usage_auth_path_with_profiles, save_profile_auth,
+        select_auto_launch_profile, select_auto_launch_profile_except, sync_launch_codex_home,
+        sync_login_codex_home, validate_group_name, write_auth_raw_if_unchanged,
+        write_session_marker, AuthIdentity, CodexCmd, LaunchAuthMode, LaunchGroups, LaunchTarget,
+        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
+        ProfileUsageSnapshot, ProfileUsageState, SavedProfile, StoredAuth, UsageFetchResult,
+        UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
@@ -1360,7 +1372,7 @@ mod tests {
     }
 
     #[test]
-    fn sync_launch_codex_home_copies_auth_and_links_selected_group_entries() {
+    fn sync_launch_codex_home_copies_profile_auth_and_links_selected_group_entries() {
         let dir = tempdir().unwrap();
         let global_codex = dir.path().join(".codex");
         let launch_home = dir.path().join("launch");
@@ -1382,12 +1394,16 @@ mod tests {
         .unwrap();
         fs::write(resume_home.join("session_index.jsonl"), "index").unwrap();
         fs::write(resume_home.join("state_5.sqlite"), "state").unwrap();
-        fs::write(&profile_auth, "profile-auth").unwrap();
+        fs::write(&profile_auth, auth_json(&ID_1)).unwrap();
+        let launch_auth_mode = LaunchAuthMode::ProfileCopy {
+            profile_auth: profile_auth.clone(),
+            launch_auth: read_auth_snapshot(&profile_auth).unwrap(),
+        };
 
         sync_launch_codex_home(
             &launch_home,
             &global_codex,
-            &profile_auth,
+            &launch_auth_mode,
             &config_home,
             &resume_home,
         )
@@ -1395,7 +1411,7 @@ mod tests {
 
         assert_eq!(
             fs::read_to_string(launch_home.join("auth.json")).unwrap(),
-            "profile-auth"
+            auth_json(&ID_1)
         );
         assert_eq!(
             fs::read_link(launch_home.join("config.toml")).unwrap(),
@@ -1418,6 +1434,141 @@ mod tests {
             global_codex.join("skills")
         );
         assert!(!launch_home.join("profiles").exists());
+    }
+
+    #[test]
+    fn sync_launch_codex_home_links_global_auth_for_active_launches() {
+        let dir = tempdir().unwrap();
+        let global_codex = dir.path().join(".codex");
+        let launch_home = dir.path().join("launch");
+        let global_auth = global_codex.join("auth.json");
+        let config_home = dir.path().join("config-group");
+        let resume_home = dir.path().join("resume-group");
+
+        fs::create_dir_all(&global_codex).unwrap();
+        fs::create_dir_all(global_codex.join("skills")).unwrap();
+        fs::create_dir_all(&config_home).unwrap();
+        fs::create_dir_all(resume_home.join("sessions")).unwrap();
+        fs::write(&global_auth, auth_json(&ID_1)).unwrap();
+        fs::write(global_codex.join("AGENTS.md"), "shared").unwrap();
+        fs::write(global_codex.join("skills").join("skill.txt"), "skill").unwrap();
+        fs::write(config_home.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
+        fs::write(resume_home.join("session_index.jsonl"), "index").unwrap();
+        let launch_auth_mode = LaunchAuthMode::GlobalShared {
+            global_auth: global_auth.clone(),
+        };
+
+        sync_launch_codex_home(
+            &launch_home,
+            &global_codex,
+            &launch_auth_mode,
+            &config_home,
+            &resume_home,
+        )
+        .unwrap();
+
+        assert_eq!(
+            fs::read_link(launch_home.join("auth.json")).unwrap(),
+            global_auth
+        );
+        assert_eq!(
+            fs::read_link(launch_home.join("config.toml")).unwrap(),
+            config_home.join("config.toml")
+        );
+        assert_eq!(
+            fs::read_link(launch_home.join("session_index.jsonl")).unwrap(),
+            resume_home.join("session_index.jsonl")
+        );
+    }
+
+    #[test]
+    fn resolve_launch_auth_mode_reuses_global_auth_for_same_user() {
+        let dir = tempdir().unwrap();
+        let profile_auth = dir.path().join("profile-auth.json");
+        let global_auth = dir.path().join("global-auth.json");
+        fs::write(
+            &profile_auth,
+            auth_json_with_tokens(&ID_1, "profile-access", "profile-refresh"),
+        )
+        .unwrap();
+        fs::write(
+            &global_auth,
+            auth_json_with_tokens(&ID_1_ALIAS, "global-access", "global-refresh"),
+        )
+        .unwrap();
+
+        let launch_auth_mode = resolve_launch_auth_mode(&profile_auth, &global_auth).unwrap();
+
+        assert!(matches!(
+            launch_auth_mode,
+            LaunchAuthMode::GlobalShared { global_auth: ref path } if *path == global_auth
+        ));
+    }
+
+    #[test]
+    fn resolve_launch_auth_mode_falls_back_to_profile_copy_when_global_auth_missing() {
+        let dir = tempdir().unwrap();
+        let profile_auth = dir.path().join("profile-auth.json");
+        let global_auth = dir.path().join("global-auth.json");
+        let profile_raw = auth_json_with_tokens(&ID_1, "profile-access", "profile-refresh");
+        fs::write(&profile_auth, &profile_raw).unwrap();
+
+        let launch_auth_mode = resolve_launch_auth_mode(&profile_auth, &global_auth).unwrap();
+
+        match launch_auth_mode {
+            LaunchAuthMode::ProfileCopy {
+                profile_auth: path,
+                launch_auth,
+            } => {
+                assert_eq!(path, profile_auth);
+                assert_eq!(launch_auth.raw, profile_raw.into_bytes());
+            }
+            LaunchAuthMode::GlobalShared { .. } => panic!("expected profile copy"),
+        }
+    }
+
+    #[test]
+    fn resolve_launch_auth_mode_falls_back_to_profile_copy_for_different_users() {
+        let dir = tempdir().unwrap();
+        let profile_auth = dir.path().join("profile-auth.json");
+        let global_auth = dir.path().join("global-auth.json");
+        fs::write(
+            &profile_auth,
+            auth_json_with_tokens(&ID_1, "profile-access", "profile-refresh"),
+        )
+        .unwrap();
+        fs::write(
+            &global_auth,
+            auth_json_with_tokens(&ID_2, "global-access", "global-refresh"),
+        )
+        .unwrap();
+
+        let launch_auth_mode = resolve_launch_auth_mode(&profile_auth, &global_auth).unwrap();
+
+        assert!(matches!(
+            launch_auth_mode,
+            LaunchAuthMode::ProfileCopy { profile_auth: ref path, .. } if *path == profile_auth
+        ));
+    }
+
+    #[test]
+    fn resolve_launch_auth_mode_falls_back_to_profile_copy_when_global_auth_is_invalid() {
+        let dir = tempdir().unwrap();
+        let profile_auth = dir.path().join("profile-auth.json");
+        let global_auth = dir.path().join("global-auth.json");
+        fs::write(
+            &profile_auth,
+            auth_json_with_tokens(&ID_1, "profile-access", "profile-refresh"),
+        )
+        .unwrap();
+        fs::write(&global_auth, "{invalid").unwrap();
+
+        let launch_auth_mode = resolve_launch_auth_mode(&profile_auth, &global_auth).unwrap();
+
+        assert!(matches!(
+            launch_auth_mode,
+            LaunchAuthMode::ProfileCopy { profile_auth: ref path, .. } if *path == profile_auth
+        ));
     }
 
     #[test]
