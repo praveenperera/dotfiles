@@ -160,7 +160,8 @@ const CONFIG_FILE_OR_DIR: &[&str] = &[
 const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
     ("nvim", ".config/nvim"),
     ("claude", ".claude"),
-    ("agents/skills", ".agents/skills"),
+    ("agents/AGENTS.md", ".codex/AGENTS.md"),
+    ("agents/AGENTS.md", ".config/opencode/AGENTS.md"),
     ("opencode", ".config/opencode"),
 ];
 
@@ -171,16 +172,12 @@ struct ManagedDirEntry {
 
 const CUSTOM_CONFIG_DIR_ENTRIES: &[ManagedDirEntry] = &[
     ManagedDirEntry {
+        source: "agents",
+        target: ".agents",
+    },
+    ManagedDirEntry {
         source: "agents/skills",
         target: ".codex/skills",
-    },
-    ManagedDirEntry {
-        source: "codex",
-        target: ".codex",
-    },
-    ManagedDirEntry {
-        source: "codex",
-        target: ".config/opencode",
     },
 ];
 
