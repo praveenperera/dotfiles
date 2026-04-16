@@ -495,6 +495,7 @@ pub(super) fn build_profile_rows(
                 return ProfileRow {
                     profile: profile.name.clone(),
                     label: "-".into(),
+                    total_dedupe_key: profile_total_dedupe_key(profile, None),
                     provider: "-".into(),
                     user: "-".into(),
                     account: "-".into(),
@@ -569,6 +570,7 @@ pub(super) fn build_profile_rows(
             ProfileRow {
                 profile: profile.name.clone(),
                 label: best_label(identity),
+                total_dedupe_key: profile_total_dedupe_key(profile, Some(identity)),
                 provider: identity
                     .auth_provider
                     .clone()
@@ -681,6 +683,33 @@ fn usage_plan(usage: &ProfileUsageState) -> String {
             .map(title_case)
             .unwrap_or_else(|| "-".into()),
         _ => "-".into(),
+    }
+}
+
+fn profile_total_dedupe_key(
+    profile: &SavedProfile,
+    identity: Option<&AuthIdentity>,
+) -> Option<String> {
+    usage_email(&profile.usage)
+        .or_else(|| identity.and_then(|identity| identity.email.as_deref()))
+        .and_then(normalize_email)
+}
+
+fn usage_email(usage: &ProfileUsageState) -> Option<&str> {
+    match usage {
+        ProfileUsageState::Available(snapshot) => snapshot.email.as_deref(),
+        ProfileUsageState::Unchecked
+        | ProfileUsageState::ReauthNeeded
+        | ProfileUsageState::Unavailable => None,
+    }
+}
+
+fn normalize_email(email: &str) -> Option<String> {
+    let email = email.trim();
+    if email.is_empty() || email == "-" {
+        None
+    } else {
+        Some(email.to_ascii_lowercase())
     }
 }
 
@@ -797,14 +826,8 @@ fn compact_profile_totals_at(
     rows: &[ProfileRow],
     now: chrono::DateTime<Utc>,
 ) -> Option<CompactProfileTotals> {
-    let five_hour_windows = rows
-        .iter()
-        .filter_map(|row| row.five_hour_usage.clone())
-        .collect::<Vec<_>>();
-    let weekly_windows = rows
-        .iter()
-        .filter_map(|row| row.weekly_usage.clone())
-        .collect::<Vec<_>>();
+    let five_hour_windows = compact_total_windows(rows, UsageWindowKind::Primary);
+    let weekly_windows = compact_total_windows(rows, UsageWindowKind::Secondary);
 
     if five_hour_windows.is_empty() && weekly_windows.is_empty() {
         return None;
@@ -814,6 +837,27 @@ fn compact_profile_totals_at(
         five_hour: compact_total_cell(&five_hour_windows, now, UsageWindowKind::Primary),
         weekly: compact_total_cell(&weekly_windows, now, UsageWindowKind::Secondary),
     })
+}
+
+fn compact_total_windows(rows: &[ProfileRow], kind: UsageWindowKind) -> Vec<UsageWindowSnapshot> {
+    let mut seen = std::collections::HashSet::new();
+
+    rows.iter()
+        .filter_map(|row| {
+            let window = match kind {
+                UsageWindowKind::Primary => row.five_hour_usage.clone(),
+                UsageWindowKind::Secondary => row.weekly_usage.clone(),
+            }?;
+
+            if let Some(email) = row.total_dedupe_key.as_deref() {
+                if !seen.insert(email.to_string()) {
+                    return None;
+                }
+            }
+
+            Some(window)
+        })
+        .collect()
 }
 
 fn compact_total_cell(
@@ -831,7 +875,7 @@ fn compact_total_cell(
     let average_used = weighted_average_percent(
         &windows
             .iter()
-            .map(|window| (effective_used_percent(window), limit_weight(window)))
+            .map(|window| (window.used_percent, limit_weight(window)))
             .collect::<Vec<_>>(),
     );
     let average_delta = average_delta_percent(windows, now, kind);
@@ -859,7 +903,7 @@ fn average_delta_percent(
     let deltas = windows
         .iter()
         .filter_map(|window| {
-            effective_pace_delta_percent(window, now, kind)
+            displayed_pace_delta_percent(window, now, kind)
                 .map(|delta| (delta, limit_weight(window)))
         })
         .collect::<Vec<_>>();
@@ -889,16 +933,6 @@ fn displayed_pace_delta_percent(
     Some(window.used_percent - ideal_used_percent)
 }
 
-fn effective_pace_delta_percent(
-    window: &UsageWindowSnapshot,
-    now: chrono::DateTime<Utc>,
-    kind: UsageWindowKind,
-) -> Option<f64> {
-    let ideal_used_percent = ideal_used_percent(window, now, kind)?;
-
-    Some(effective_used_percent(window) - ideal_used_percent)
-}
-
 fn ideal_used_percent(
     window: &UsageWindowSnapshot,
     now: chrono::DateTime<Utc>,
@@ -915,10 +949,6 @@ fn ideal_used_percent(
     let elapsed_fraction = elapsed_seconds as f64 / duration.num_seconds() as f64;
 
     Some(elapsed_fraction * 100.0)
-}
-
-fn effective_used_percent(window: &UsageWindowSnapshot) -> f64 {
-    window.used_percent / limit_weight(window)
 }
 
 fn limit_weight(window: &UsageWindowSnapshot) -> f64 {
@@ -1169,8 +1199,66 @@ mod tests {
 
         let totals = compact_profile_totals_at(&rows, now).expect("totals");
 
-        assert_eq!(totals.five_hour.text, "2% (-8%)");
-        assert_eq!(totals.weekly.text, "2% (-8%)");
+        assert_eq!(totals.five_hour.text, "10% (0%)");
+        assert_eq!(totals.weekly.text, "10% (0%)");
+    }
+
+    #[test]
+    fn compact_profile_totals_weight_percentages_by_limit_multiplier() {
+        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let rows = vec![
+            profile_row_with_usage_and_multiplier(
+                84.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                84.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                10.0,
+            ),
+            profile_row_with_usage(
+                100.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                100.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+            ),
+        ];
+
+        let totals = compact_profile_totals_at(&rows, now).expect("totals");
+
+        assert_eq!(totals.five_hour.text, "85% (+35%)");
+        assert_eq!(totals.weekly.text, "85% (+35%)");
+    }
+
+    #[test]
+    fn compact_profile_totals_dedupes_duplicate_emails() {
+        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let rows = vec![
+            profile_row_with_usage_and_email(
+                80.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                80.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                "dup@example.com",
+            ),
+            profile_row_with_usage_and_email(
+                20.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                20.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                "dup@example.com",
+            ),
+            profile_row_with_usage_and_email(
+                40.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                40.0,
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                "other@example.com",
+            ),
+        ];
+
+        let totals = compact_profile_totals_at(&rows, now).expect("totals");
+
+        assert_eq!(totals.five_hour.text, "60% (+10%)");
+        assert_eq!(totals.weekly.text, "60% (+10%)");
     }
 
     #[test]
@@ -1370,6 +1458,7 @@ mod tests {
         ProfileRow {
             profile: "p".into(),
             label: "p@example.com".into(),
+            total_dedupe_key: None,
             provider: "-".into(),
             user: "-".into(),
             account: "-".into(),
@@ -1396,10 +1485,24 @@ mod tests {
         }
     }
 
+    fn profile_row_with_usage_and_email(
+        five_hour: f64,
+        five_hour_reset_at: Option<i64>,
+        weekly: f64,
+        weekly_reset_at: Option<i64>,
+        email: &str,
+    ) -> ProfileRow {
+        let mut row =
+            profile_row_with_usage(five_hour, five_hour_reset_at, weekly, weekly_reset_at);
+        row.total_dedupe_key = Some(email.to_ascii_lowercase());
+        row
+    }
+
     fn profile_row_with_usage_missing() -> ProfileRow {
         ProfileRow {
             profile: "p".into(),
             label: "p@example.com".into(),
+            total_dedupe_key: None,
             provider: "-".into(),
             user: "-".into(),
             account: "-".into(),

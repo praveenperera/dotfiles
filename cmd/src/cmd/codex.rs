@@ -207,6 +207,7 @@ struct SavedProfile {
 struct ProfileRow {
     profile: String,
     label: String,
+    total_dedupe_key: Option<String>,
     provider: String,
     user: String,
     account: String,
@@ -1084,6 +1085,7 @@ mod tests {
         let row = super::ProfileRow {
             profile: "a".into(),
             label: "-".into(),
+            total_dedupe_key: None,
             provider: "-".into(),
             user: "-".into(),
             account: "-".into(),
@@ -1119,6 +1121,7 @@ mod tests {
         let row = super::ProfileRow {
             profile: "a".into(),
             label: "-".into(),
+            total_dedupe_key: None,
             provider: "-".into(),
             user: "-".into(),
             account: "-".into(),
@@ -1156,6 +1159,7 @@ mod tests {
         let row = super::ProfileRow {
             profile: "a".into(),
             label: "-".into(),
+            total_dedupe_key: None,
             provider: "-".into(),
             user: "-".into(),
             account: "-".into(),
