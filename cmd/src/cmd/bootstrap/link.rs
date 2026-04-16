@@ -304,7 +304,7 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use super::{prune_managed_dir_entry, ManagedDirEntry};
+    use super::{build_link_specs, prune_managed_dir_entry, ManagedDirEntry};
 
     #[test]
     fn keeps_unmanaged_entries_in_target_dir() {
@@ -326,5 +326,33 @@ mod tests {
         prune_managed_dir_entry(&source_dir, &target_dir, &dotfiles_dir, &entry).unwrap();
 
         assert!(unmanaged_dir.is_dir());
+    }
+
+    #[test]
+    fn includes_codex_support_files_for_managed_targets() {
+        let dir = tempdir().unwrap();
+        let home = dir.path().join("home");
+        let dotfiles_dir = dir.path().join("dotfiles");
+        let codex_dir = dotfiles_dir.join("codex");
+
+        fs::create_dir_all(&home).unwrap();
+        fs::create_dir_all(&codex_dir).unwrap();
+        fs::write(codex_dir.join("AGENTS.md"), "agents").unwrap();
+        fs::write(codex_dir.join("commit-message-guide.md"), "guide").unwrap();
+
+        let specs = build_link_specs(&home, &dotfiles_dir).unwrap();
+
+        assert!(specs.iter().any(|spec| {
+            spec.source == codex_dir.join("AGENTS.md")
+                && spec.target == home.join(".codex/AGENTS.md")
+        }));
+        assert!(specs.iter().any(|spec| {
+            spec.source == codex_dir.join("commit-message-guide.md")
+                && spec.target == home.join(".codex/commit-message-guide.md")
+        }));
+        assert!(specs.iter().any(|spec| {
+            spec.source == codex_dir.join("commit-message-guide.md")
+                && spec.target == home.join(".config/opencode/commit-message-guide.md")
+        }));
     }
 }
