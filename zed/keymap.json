@@ -1,0 +1,18 @@
+[
+  {
+    "context": "vim_mode == normal && !menu",
+    "bindings": {
+      "space f i": "buffer_search::Deploy",
+      "space f f": "file_finder::Toggle",
+      "space f s": "outline::Toggle",
+      "space f shift-s": "project_symbols::Toggle"
+    }
+  },
+  {
+    "context": "EmptyPane || SharedScreen",
+    "bindings": {
+      "space f f": "file_finder::Toggle",
+      "space f shift-s": "project_symbols::Toggle"
+    }
+  }
+]

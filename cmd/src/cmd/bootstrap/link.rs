@@ -148,6 +148,15 @@ fn build_link_specs(home: &Path, dotfiles_dir: &Path) -> Result<Vec<LinkSpec>> {
         target: home.join(dest),
     }));
 
+    let zed_debug_target = match Os::current() {
+        Os::MacOS => home.join("Library/Application Support/Zed/debug.json"),
+        Os::Linux => home.join(".config/zed/debug.json"),
+    };
+    specs.push(LinkSpec {
+        source: dotfiles_dir.join("zed/debug.json"),
+        target: zed_debug_target,
+    });
+
     for entry in CUSTOM_CONFIG_DIR_ENTRIES {
         let src_dir = dotfiles_dir.join(entry.source);
         let dest_dir = home.join(entry.target);
@@ -304,7 +313,7 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use super::{build_link_specs, prune_managed_dir_entry, ManagedDirEntry};
+    use super::{build_link_specs, prune_managed_dir_entry, ManagedDirEntry, Os};
 
     #[test]
     fn keeps_unmanaged_entries_in_target_dir() {
@@ -337,8 +346,15 @@ mod tests {
 
         fs::create_dir_all(&home).unwrap();
         fs::create_dir_all(&agents_dir).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("agents/skills")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("zed/snippets")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("zed/themes")).unwrap();
         fs::write(agents_dir.join("AGENTS.md"), "agents").unwrap();
         fs::write(agents_dir.join("commit-message-guide.md"), "guide").unwrap();
+        fs::write(dotfiles_dir.join("zed/settings.json"), "{}").unwrap();
+        fs::write(dotfiles_dir.join("zed/keymap.json"), "[]").unwrap();
+        fs::write(dotfiles_dir.join("zed/tasks.json"), "[]").unwrap();
+        fs::write(dotfiles_dir.join("zed/debug.json"), "[]").unwrap();
 
         let specs = build_link_specs(&home, &dotfiles_dir).unwrap();
 
@@ -357,6 +373,55 @@ mod tests {
         assert!(specs.iter().any(|spec| {
             spec.source == agents_dir.join("AGENTS.md")
                 && spec.target == home.join(".config/opencode/AGENTS.md")
+        }));
+    }
+
+    #[test]
+    fn includes_zed_config_files() {
+        let dir = tempdir().unwrap();
+        let home = dir.path().join("home");
+        let dotfiles_dir = dir.path().join("dotfiles");
+
+        fs::create_dir_all(&home).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("agents")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("agents/skills")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("zed/snippets")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("zed/themes")).unwrap();
+        fs::write(dotfiles_dir.join("zed/settings.json"), "{}").unwrap();
+        fs::write(dotfiles_dir.join("zed/keymap.json"), "[]").unwrap();
+        fs::write(dotfiles_dir.join("zed/tasks.json"), "[]").unwrap();
+        fs::write(dotfiles_dir.join("zed/debug.json"), "[]").unwrap();
+
+        let specs = build_link_specs(&home, &dotfiles_dir).unwrap();
+
+        assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("zed/settings.json")
+                && spec.target == home.join(".config/zed/settings.json")
+        }));
+        assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("zed/keymap.json")
+                && spec.target == home.join(".config/zed/keymap.json")
+        }));
+        assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("zed/tasks.json")
+                && spec.target == home.join(".config/zed/tasks.json")
+        }));
+        assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("zed/snippets")
+                && spec.target == home.join(".config/zed/snippets")
+        }));
+        assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("zed/themes")
+                && spec.target == home.join(".config/zed/themes")
+        }));
+
+        let expected_debug_target = match Os::current() {
+            Os::MacOS => home.join("Library/Application Support/Zed/debug.json"),
+            Os::Linux => home.join(".config/zed/debug.json"),
+        };
+        assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("zed/debug.json")
+                && spec.target == expected_debug_target
         }));
     }
 }

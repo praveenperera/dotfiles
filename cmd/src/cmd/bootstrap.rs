@@ -159,6 +159,11 @@ const CONFIG_FILE_OR_DIR: &[&str] = &[
 
 const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
     ("nvim", ".config/nvim"),
+    ("zed/settings.json", ".config/zed/settings.json"),
+    ("zed/keymap.json", ".config/zed/keymap.json"),
+    ("zed/tasks.json", ".config/zed/tasks.json"),
+    ("zed/snippets", ".config/zed/snippets"),
+    ("zed/themes", ".config/zed/themes"),
     ("claude", ".claude"),
     ("agents/AGENTS.md", ".codex/AGENTS.md"),
     ("agents/AGENTS.md", ".config/opencode/AGENTS.md"),
