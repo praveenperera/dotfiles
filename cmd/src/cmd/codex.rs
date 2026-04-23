@@ -537,12 +537,12 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
 mod tests {
     use super::{
         active_session_markers, build_profile_rows, create_launch_home, current_usage_view,
-        delete_profile_home, format_launch_banner, launch_banner_details, load_saved_profiles,
-        needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration, parse_raw_args,
-        prepare_config_group_home, prepare_resume_group_home, print_current_usage_table,
-        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
-        replace_global_auth_with_profile, resolve_launch_auth_mode, resolve_launch_groups,
-        resolve_launch_target, resolve_usage_auth_path_with_profiles, save_profile_auth,
+        delete_profile_home, enrich_active_profiles_with_global_auth, format_launch_banner,
+        launch_banner_details, needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration,
+        parse_raw_args, prepare_config_group_home, prepare_resume_group_home,
+        print_current_usage_table, promote_launch_auth_if_unchanged, read_auth_snapshot,
+        read_stored_auth, replace_global_auth_with_profile, resolve_launch_auth_mode,
+        resolve_launch_groups, resolve_launch_target, save_profile_auth,
         select_auto_launch_profile, select_auto_launch_profile_except, sync_launch_codex_home,
         sync_login_codex_home, validate_group_name, write_auth_raw_if_unchanged,
         write_session_marker, AuthIdentity, CodexCmd, LaunchAuthMode, LaunchGroups, LaunchTarget,
@@ -2551,10 +2551,10 @@ mod tests {
     }
 
     #[test]
-    fn current_usage_resolution_prefers_unique_matching_saved_profile_auth() {
+    fn current_usage_view_uses_global_auth_even_when_saved_profile_matches() {
         let dir = tempdir().unwrap();
         let global_auth_path = dir.path().join(".codex").join("auth.json");
-        let profile_auth_path = dir
+        let matching_profile_auth_path = dir
             .path()
             .join(".codex")
             .join("profiles")
@@ -2567,7 +2567,7 @@ mod tests {
             .join("b")
             .join("auth.json");
         fs::create_dir_all(global_auth_path.parent().unwrap()).unwrap();
-        fs::create_dir_all(profile_auth_path.parent().unwrap()).unwrap();
+        fs::create_dir_all(matching_profile_auth_path.parent().unwrap()).unwrap();
         fs::create_dir_all(other_auth_path.parent().unwrap()).unwrap();
         fs::write(
             &global_auth_path,
@@ -2575,7 +2575,7 @@ mod tests {
         )
         .unwrap();
         fs::write(
-            &profile_auth_path,
+            &matching_profile_auth_path,
             auth_json_with_tokens(&ID_1, "fresh-access", "fresh-refresh"),
         )
         .unwrap();
@@ -2584,11 +2584,6 @@ mod tests {
             auth_json_with_tokens(&ID_2, "other-access", "other-refresh"),
         )
         .unwrap();
-
-        let profiles = load_saved_profiles(&dir.path().join(".codex").join("profiles")).unwrap();
-        let resolved = resolve_usage_auth_path_with_profiles(&global_auth_path, &profiles).unwrap();
-        assert_eq!(resolved.path, profile_auth_path);
-        assert!(resolved.warning.is_none());
 
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let server = runtime.block_on(async {
@@ -2618,14 +2613,14 @@ mod tests {
         let loader =
             ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
                 .unwrap();
-        let (label, usage) = current_usage_view(&loader, &resolved.path).unwrap();
+        let (label, usage) = current_usage_view(&loader, &global_auth_path).unwrap();
 
-        assert_eq!(label, "fresh@example.com");
-        assert!(matches!(usage, ProfileUsageState::Available(_)));
+        assert_eq!(label, "old@example.com");
+        assert!(matches!(usage, ProfileUsageState::Unavailable));
     }
 
     #[test]
-    fn current_usage_resolution_warns_when_no_saved_profile_matches_current_auth() {
+    fn current_usage_view_uses_global_auth_when_no_saved_profile_matches() {
         let dir = tempdir().unwrap();
         let global_auth_path = dir.path().join(".codex").join("auth.json");
         let profile_auth_path = dir
@@ -2647,18 +2642,36 @@ mod tests {
         )
         .unwrap();
 
-        let profiles = load_saved_profiles(&dir.path().join(".codex").join("profiles")).unwrap();
-        let resolved = resolve_usage_auth_path_with_profiles(&global_auth_path, &profiles).unwrap();
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .and(header("authorization", "Bearer old-access"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
+                    "fresh@example.com",
+                    "user-1",
+                    "acct-1",
+                    "plus",
+                    42.0,
+                    73.0,
+                )))
+                .mount(&server)
+                .await;
+            server
+        });
 
-        assert_eq!(resolved.path, global_auth_path);
-        assert_eq!(
-            resolved.warning.as_deref(),
-            Some("Warning: no saved profile matches current auth, using global auth")
-        );
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
+                .unwrap();
+        let (label, usage) = current_usage_view(&loader, &global_auth_path).unwrap();
+
+        assert_eq!(label, "fresh@example.com");
+        assert!(matches!(usage, ProfileUsageState::Available(_)));
     }
 
     #[test]
-    fn current_usage_resolution_warns_when_multiple_saved_profiles_match_current_auth() {
+    fn current_usage_view_uses_global_auth_when_multiple_saved_profiles_match() {
         let dir = tempdir().unwrap();
         let global_auth_path = dir.path().join(".codex").join("auth.json");
         let profile_a_auth_path = dir
@@ -2692,14 +2705,92 @@ mod tests {
         )
         .unwrap();
 
-        let profiles = load_saved_profiles(&dir.path().join(".codex").join("profiles")).unwrap();
-        let resolved = resolve_usage_auth_path_with_profiles(&global_auth_path, &profiles).unwrap();
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .and(header("authorization", "Bearer old-access"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
+                    "fresh@example.com",
+                    "user-1",
+                    "acct-1",
+                    "plus",
+                    42.0,
+                    73.0,
+                )))
+                .mount(&server)
+                .await;
+            server
+        });
 
-        assert_eq!(resolved.path, global_auth_path);
-        assert_eq!(
-            resolved.warning.as_deref(),
-            Some("Warning: multiple saved profiles match current auth, using global auth")
-        );
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
+                .unwrap();
+        let (label, usage) = current_usage_view(&loader, &global_auth_path).unwrap();
+
+        assert_eq!(label, "fresh@example.com");
+        assert!(matches!(usage, ProfileUsageState::Available(_)));
+    }
+
+    #[test]
+    fn active_list_profile_uses_global_auth_usage() {
+        let active_auth = read_auth(&ID_1, "global-access", "global-refresh");
+        let active_identity = identity("sub-1", "user-1", "acct-1", Some("old@example.com"));
+        let mut profiles = vec![
+            saved_profile(
+                "a",
+                identity("sub-1", "user-1", "acct-1", Some("profile@example.com")),
+                ProfileUsageState::Available(usage_snapshot(
+                    "plus", "user-1", "acct-1", 80.0, 90.0,
+                )),
+            ),
+            saved_profile(
+                "b",
+                identity("sub-2", "user-2", "acct-2", Some("other@example.com")),
+                ProfileUsageState::Available(usage_snapshot(
+                    "plus", "user-2", "acct-2", 30.0, 40.0,
+                )),
+            ),
+        ];
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .and(header("authorization", "Bearer global-access"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
+                    "global@example.com",
+                    "user-1",
+                    "acct-1",
+                    "pro",
+                    12.0,
+                    34.0,
+                )))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
+                .unwrap();
+        enrich_active_profiles_with_global_auth(
+            &mut profiles,
+            &loader,
+            &active_auth,
+            &active_identity,
+        )
+        .unwrap();
+
+        let rows = build_profile_rows(&profiles, Some(&active_identity));
+
+        assert_eq!(row_field(&rows, "a", |row| row.five_hour.clone()), "12%");
+        assert_eq!(row_field(&rows, "a", |row| row.weekly.clone()), "34%");
+        assert_eq!(row_field(&rows, "a", |row| row.plan.clone()), "Pro");
+        assert_eq!(row_status_text(&rows, "a"), "active");
+        assert_eq!(row_field(&rows, "b", |row| row.five_hour.clone()), "30%");
     }
 
     #[test]

@@ -247,60 +247,6 @@ fn active_profile_name(profiles: &[SavedProfile]) -> Option<&str> {
     })
 }
 
-pub(super) struct UsageAuthResolution {
-    pub(super) path: PathBuf,
-    pub(super) warning: Option<String>,
-}
-
-fn resolve_usage_auth_path(global_auth_path: &Path) -> Result<UsageAuthResolution> {
-    let profiles = load_saved_profiles(&profiles_dir()?)?;
-    resolve_usage_auth_path_with_profiles(global_auth_path, &profiles)
-}
-
-pub(super) fn resolve_usage_auth_path_with_profiles(
-    global_auth_path: &Path,
-    profiles: &[SavedProfile],
-) -> Result<UsageAuthResolution> {
-    if !global_auth_path.exists() {
-        return Ok(UsageAuthResolution {
-            path: global_auth_path.to_path_buf(),
-            warning: None,
-        });
-    }
-
-    let active_identity = read_auth_identity(global_auth_path)
-        .wrap_err("Failed to read current codex auth identity")?;
-    let mut matching_paths = profiles
-        .iter()
-        .filter_map(|profile| {
-            profile
-                .identity
-                .as_ref()
-                .filter(|identity| is_same_user(&active_identity, identity))
-                .map(|_| profile.auth_path.clone())
-        })
-        .collect::<Vec<_>>();
-
-    match matching_paths.len() {
-        1 => Ok(UsageAuthResolution {
-            path: matching_paths.pop().expect("single matching path"),
-            warning: None,
-        }),
-        0 => Ok(UsageAuthResolution {
-            path: global_auth_path.to_path_buf(),
-            warning: Some(
-                "Warning: no saved profile matches current auth, using global auth".into(),
-            ),
-        }),
-        _ => Ok(UsageAuthResolution {
-            path: global_auth_path.to_path_buf(),
-            warning: Some(
-                "Warning: multiple saved profiles match current auth, using global auth".into(),
-            ),
-        }),
-    }
-}
-
 pub(super) fn saved_profile_label(profile: &SavedProfile) -> String {
     profile
         .identity
@@ -499,12 +445,26 @@ pub(super) fn list(verbose: bool) -> Result<()> {
         return Ok(());
     }
 
+    let active_auth = auth_path()
+        .ok()
+        .and_then(|path| read_stored_auth(&path).ok())
+        .and_then(|auth| {
+            stored_auth_identity(&auth)
+                .ok()
+                .map(|identity| (auth, identity))
+        });
+
     enrich_profile_usage(&mut profiles)?;
 
-    let active_identity = auth_path()
-        .ok()
-        .and_then(|path| read_auth_identity(&path).ok());
-    let rows = build_profile_rows(&profiles, active_identity.as_ref());
+    if let Some((auth, identity)) = active_auth.as_ref() {
+        let loader = ProfileUsageLoader::new()?;
+        enrich_active_profiles_with_global_auth(&mut profiles, &loader, auth, identity)?;
+    }
+
+    let rows = build_profile_rows(
+        &profiles,
+        active_auth.as_ref().map(|(_, identity)| identity),
+    );
     if verbose {
         print_verbose_profile_table(&rows);
     } else {
@@ -514,13 +474,55 @@ pub(super) fn list(verbose: bool) -> Result<()> {
     Ok(())
 }
 
+pub(super) fn enrich_active_profiles_with_global_auth(
+    profiles: &mut [SavedProfile],
+    loader: &ProfileUsageLoader,
+    active_auth: &StoredAuth,
+    active_identity: &AuthIdentity,
+) -> Result<()> {
+    if !profiles.iter().any(|profile| {
+        profile
+            .identity
+            .as_ref()
+            .is_some_and(|identity| is_same_user(active_identity, identity))
+    }) {
+        return Ok(());
+    }
+
+    let result =
+        runtime::block_on(loader.fetch_profile_usage(active_auth, Some(active_identity)))??;
+    let (identity, usage) = match result {
+        UsageFetchResult::Available { identity, usage } => (
+            identity.or_else(|| Some(active_identity.clone())),
+            ProfileUsageState::Available(usage),
+        ),
+        UsageFetchResult::ReauthNeeded => (
+            Some(active_identity.clone()),
+            ProfileUsageState::ReauthNeeded,
+        ),
+        UsageFetchResult::Unavailable { identity } => (
+            identity.or_else(|| Some(active_identity.clone())),
+            ProfileUsageState::Unavailable,
+        ),
+    };
+
+    for profile in profiles.iter_mut().filter(|profile| {
+        profile
+            .identity
+            .as_ref()
+            .is_some_and(|identity| is_same_user(active_identity, identity))
+    }) {
+        profile.identity = identity.clone();
+        profile.invalid_auth = false;
+        profile.usage = usage.clone();
+    }
+
+    Ok(())
+}
+
 pub(super) fn usage() -> Result<()> {
     let loader = ProfileUsageLoader::new()?;
-    let resolved_auth = resolve_usage_auth_path(&auth_path()?)?;
-    if let Some(warning) = resolved_auth.warning.as_ref() {
-        eprintln!("{}", warning.yellow());
-    }
-    let (label, usage) = current_usage_view(&loader, &resolved_auth.path)?;
+    let (label, usage) = current_usage_view(&loader, &auth_path()?)?;
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
