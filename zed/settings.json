@@ -1,10 +1,23 @@
 {
+  "project_panel": {
+    "dock": "left"
+  },
+  "outline_panel": {
+    "dock": "left"
+  },
+  "collaboration_panel": {
+    "dock": "left"
+  },
+  "git_panel": {
+    "dock": "left"
+  },
   "agent_servers": {
     "codex-acp": {
       "type": "registry",
     },
   },
   "agent": {
+    "dock": "right",
     "default_model": {
       "provider": "google",
       "model": "gemini-2.5-flash",
@@ -30,7 +43,11 @@
   "edit_predictions": {
     "provider": "zed",
   },
-  "icon_theme": "Zed (Default)",
+  "icon_theme": {
+    "mode": "dark",
+    "light": "Zed (Default)",
+    "dark": "Zed (Default)"
+  },
   "vim_mode": true,
   "ui_font_size": 16,
   "buffer_font_size": 13.5,
