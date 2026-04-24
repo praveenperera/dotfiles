@@ -398,3 +398,5 @@ export MANPAGER="col -b | nvim -MR - "
 
 # if secret zshrc exists, source it
 [ -f ~/.secrets.zsh ] && source ~/.secrets.zsh
+alias sht='/Users/praveen/code/sequence/cloud-project-system/utils/showtime/sht'
+alias showtime='/Users/praveen/code/sequence/cloud-project-system/utils/showtime/sht'
