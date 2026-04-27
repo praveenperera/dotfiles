@@ -95,6 +95,7 @@ alias llp="cmd codex launch a -c o"
 
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"
+alias oca="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-openai.json opencode"
 
 alias ask='opencode run -m openai/gpt-5.4-mini --agent build -'
 alias askp='OPENCODE_CONFIG=~/.config/opencode/config-ask.json opencode'
@@ -398,5 +399,5 @@ export MANPAGER="col -b | nvim -MR - "
 
 # if secret zshrc exists, source it
 [ -f ~/.secrets.zsh ] && source ~/.secrets.zsh
-alias sht='/Users/praveen/code/sequence/cloud-project-system/utils/showtime/sht'
-alias showtime='/Users/praveen/code/sequence/cloud-project-system/utils/showtime/sht'
+
+

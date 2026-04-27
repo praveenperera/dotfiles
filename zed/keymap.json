@@ -1,11 +1,16 @@
 [
   {
-    "context": "vim_mode == normal && !menu",
+    "context": "Editor && VimControl && !VimWaiting && !menu",
+    "use_key_equivalents": true,
     "bindings": {
       "space f i": "buffer_search::Deploy",
       "space f f": "file_finder::Toggle",
       "space f s": "outline::Toggle",
-      "space f shift-s": "project_symbols::Toggle"
+      "space f shift-s": "project_symbols::Toggle",
+      "alt-shift-h": "vim::ResizePaneLeft",
+      "alt-shift-j": "vim::ResizePaneDown",
+      "alt-shift-k": "vim::ResizePaneUp",
+      "alt-shift-l": "vim::ResizePaneRight"
     }
   },
   {
@@ -16,12 +21,28 @@
     }
   },
   {
+    "context": "Editor && !menu",
+    "use_key_equivalents": true,
+    "bindings": {
+      "alt-shift-h": "vim::ResizePaneLeft",
+      "alt-shift-j": "vim::ResizePaneDown",
+      "alt-shift-k": "vim::ResizePaneUp",
+      "alt-shift-l": "vim::ResizePaneRight",
+      "ctrl-alt-h": ["workspace::IncreaseOpenDocksSize", { "px": 0 }],
+      "ctrl-alt-l": ["workspace::DecreaseOpenDocksSize", { "px": 0 }]
+    }
+  },
+  {
     "context": "Workspace",
     "bindings": {
       "alt-h": "workspace::ActivatePaneLeft",
       "alt-j": "workspace::ActivatePaneDown",
       "alt-k": "workspace::ActivatePaneUp",
       "alt-l": "workspace::ActivatePaneRight",
+      "alt-shift-h": "vim::ResizePaneLeft",
+      "alt-shift-j": "vim::ResizePaneDown",
+      "alt-shift-k": "vim::ResizePaneUp",
+      "alt-shift-l": "vim::ResizePaneRight",
       "space t a": ["task::Spawn", { "task_name": "oca" }],
       "space t o": "terminal_panel::ToggleFocus",
       "space t shift-o": "terminal_panel::Toggle",
