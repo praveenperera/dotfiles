@@ -22,6 +22,9 @@
       "alt-j": "workspace::ActivatePaneDown",
       "alt-k": "workspace::ActivatePaneUp",
       "alt-l": "workspace::ActivatePaneRight",
+      "space t a": ["task::Spawn", { "task_name": "oca" }],
+      "space t o": "terminal_panel::ToggleFocus",
+      "space t shift-o": "terminal_panel::Toggle",
       "ctrl-`": "workspace::ToggleRightDock",
       "ctrl-shift-`": "workspace::ToggleBottomDock"
     }

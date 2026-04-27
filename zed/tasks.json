@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "label": "oca",
+    "command": "oca",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true,
+    "show_summary": false,
+    "show_command": false
+  }
+]
