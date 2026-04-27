@@ -11,6 +11,9 @@
   "git_panel": {
     "dock": "left"
   },
+  "terminal": {
+    "dock": "right"
+  },
   "agent_servers": {
     "codex-acp": {
       "type": "registry",

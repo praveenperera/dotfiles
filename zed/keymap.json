@@ -14,5 +14,16 @@
       "space f f": "file_finder::Toggle",
       "space f shift-s": "project_symbols::Toggle"
     }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "alt-h": "workspace::ActivatePaneLeft",
+      "alt-j": "workspace::ActivatePaneDown",
+      "alt-k": "workspace::ActivatePaneUp",
+      "alt-l": "workspace::ActivatePaneRight",
+      "ctrl-`": "workspace::ToggleRightDock",
+      "ctrl-shift-`": "workspace::ToggleBottomDock"
+    }
   }
 ]
