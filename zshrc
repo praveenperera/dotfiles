@@ -72,26 +72,13 @@ alias clps="claude --permission-mode plan --model sonnet"
 
 # main codex configs
 alias l="cmd codex usage"
-alias lll="cmd codex list"
 alias ll="cmd codex launch -c shared"
-alias lla="cmd codex launch -c shared a"
 
-# different configs for main profile
-alias llz="cmd codex launch a -c z"
-alias llq="cmd codex launch a -c q"
-alias lly="cmd codex launch a -c y"
-alias llu="cmd codex launch a -c u"
-alias lli="cmd codex launch a -c i"
+# 
+alias lla="cmd codex launch a -c a"
 
-# multi account
-alias lls="cmd codex launch s"
-alias lld="cmd codex launch d"
-alias llf="cmd codex launch f"
-alias llg="cmd codex launch g"
-alias llw="cmd codex launch w"
-
-alias llo="cmd codex launch --other -c o"
-alias llp="cmd codex launch a -c o"
+# review
+alias llr="cmd codex launch a -c r"
 
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"

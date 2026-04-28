@@ -945,36 +945,66 @@ mod tests {
     }
 
     #[test]
-    fn usage_window_style_uses_expected_bands() {
-        assert_eq!(super::limit_style(49.0), LimitStyleKind::Success);
-        assert_eq!(super::limit_style(50.0), LimitStyleKind::Warning);
-        assert_eq!(super::limit_style(79.0), LimitStyleKind::Warning);
-        assert_eq!(super::limit_style(80.0), LimitStyleKind::Caution);
-        assert_eq!(super::limit_style(90.0), LimitStyleKind::Caution);
-        assert_eq!(super::limit_style(91.0), LimitStyleKind::Error);
-        assert_eq!(super::limit_style(95.0), LimitStyleKind::Error);
-        assert_eq!(super::limit_style(96.0), LimitStyleKind::Critical);
+    fn usage_window_style_uses_run_rate_bands() {
+        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let usage = ProfileUsageState::Available(ProfileUsageSnapshot {
+            user_id: None,
+            account_id: None,
+            email: None,
+            plan_type: Some("prolite".into()),
+            primary: Some(UsageWindowSnapshot {
+                used_percent: 51.0,
+                reset_at: Some(reset_at_for_elapsed(
+                    now,
+                    super::UsageWindowKind::Primary,
+                    0.5,
+                )),
+                limit_multiplier: 10.0,
+            }),
+            secondary: Some(UsageWindowSnapshot {
+                used_percent: 100.0,
+                reset_at: Some(reset_at_for_elapsed(
+                    now,
+                    super::UsageWindowKind::Secondary,
+                    1.0,
+                )),
+                limit_multiplier: 10.0,
+            }),
+        });
+
         assert_eq!(
-            super::usage_window_style(
-                &ProfileUsageState::Unchecked,
-                super::UsageWindowKind::Primary
-            ),
-            LimitStyleKind::Normal
+            super::usage_window_style_at(&usage, super::UsageWindowKind::Primary, now),
+            LimitStyleKind::Success
+        );
+        assert_eq!(
+            super::usage_window_style_at(&usage, super::UsageWindowKind::Secondary, now),
+            LimitStyleKind::Success
         );
     }
 
     #[test]
-    fn five_hour_style_turns_bold_red_when_weekly_displays_hundred() {
-        let usage =
-            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 100.0));
+    fn usage_window_style_is_neutral_without_run_rate() {
+        let usage = ProfileUsageState::Available(ProfileUsageSnapshot {
+            user_id: None,
+            account_id: None,
+            email: None,
+            plan_type: Some("prolite".into()),
+            primary: Some(UsageWindowSnapshot {
+                used_percent: 42.0,
+                reset_at: None,
+                limit_multiplier: 10.0,
+            }),
+            secondary: Some(UsageWindowSnapshot {
+                used_percent: 100.0,
+                reset_at: None,
+                limit_multiplier: 10.0,
+            }),
+        });
 
-        assert_eq!(
-            super::five_hour_limit_style(&usage),
-            LimitStyleKind::Critical
-        );
+        assert_eq!(super::five_hour_limit_style(&usage), LimitStyleKind::Normal);
         assert_eq!(
             super::usage_window_style(&usage, super::UsageWindowKind::Secondary),
-            LimitStyleKind::Critical
+            LimitStyleKind::Normal
         );
     }
 
@@ -1032,14 +1062,14 @@ mod tests {
         );
         assert_eq!(
             row_limit_style(&rows, "a", |row| row.weekly_style),
-            LimitStyleKind::Warning
+            LimitStyleKind::Success
         );
         assert_eq!(row_style(&rows, "a"), ProfileStyleKind::Error);
         assert_eq!(row_style(&rows, "c"), ProfileStyleKind::Normal);
     }
 
     #[test]
-    fn list_rows_force_five_hour_bold_red_when_weekly_is_exhausted() {
+    fn list_rows_style_limits_by_run_rate_when_weekly_is_exhausted() {
         let active = identity("sub-1", "user-1", "acct-1", Some("praveen@example.com"));
         let profiles = vec![saved_profile(
             "a",
@@ -1051,11 +1081,11 @@ mod tests {
 
         assert_eq!(
             row_limit_style(&rows, "a", |row| row.five_hour_style),
-            LimitStyleKind::Critical
+            LimitStyleKind::Success
         );
         assert_eq!(
             row_limit_style(&rows, "a", |row| row.weekly_style),
-            LimitStyleKind::Critical
+            LimitStyleKind::Success
         );
     }
 

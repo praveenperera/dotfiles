@@ -723,20 +723,22 @@ pub(super) fn usage_window_style(
     usage: &ProfileUsageState,
     kind: UsageWindowKind,
 ) -> LimitStyleKind {
+    usage_window_style_at(usage, kind, Utc::now())
+}
+
+pub(super) fn usage_window_style_at(
+    usage: &ProfileUsageState,
+    kind: UsageWindowKind,
+    now: chrono::DateTime<Utc>,
+) -> LimitStyleKind {
     usage_window(usage, kind)
-        .map(|window| limit_style(window.used_percent))
+        .and_then(|window| displayed_pace_delta_percent(window, now, kind))
+        .map(run_rate_style)
         .unwrap_or(LimitStyleKind::Normal)
 }
 
 pub(super) fn five_hour_limit_style(usage: &ProfileUsageState) -> LimitStyleKind {
-    let weekly_exhausted = usage_window(usage, UsageWindowKind::Secondary)
-        .is_some_and(|window| format!("{:.0}", window.used_percent) == "100");
-
-    if weekly_exhausted {
-        LimitStyleKind::Critical
-    } else {
-        usage_window_style(usage, UsageWindowKind::Primary)
-    }
+    usage_window_style(usage, UsageWindowKind::Primary)
 }
 
 pub(super) fn usage_window_reset(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
@@ -1040,17 +1042,13 @@ fn usage_window_snapshot(
     usage_window(usage, kind).cloned()
 }
 
-pub(super) fn limit_style(used_percent: f64) -> LimitStyleKind {
-    if used_percent < 50.0 {
-        LimitStyleKind::Success
-    } else if used_percent < 80.0 {
-        LimitStyleKind::Warning
-    } else if used_percent <= 90.0 {
-        LimitStyleKind::Caution
-    } else if used_percent <= 95.0 {
-        LimitStyleKind::Error
-    } else {
-        LimitStyleKind::Critical
+fn run_rate_style(delta_percent: f64) -> LimitStyleKind {
+    match delta_percent.round() as i64 {
+        ..=1 => LimitStyleKind::Success,
+        2..=5 => LimitStyleKind::Warning,
+        6..=9 => LimitStyleKind::Caution,
+        10..=19 => LimitStyleKind::Error,
+        _ => LimitStyleKind::Critical,
     }
 }
 
