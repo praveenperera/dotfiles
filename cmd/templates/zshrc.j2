@@ -72,13 +72,18 @@ alias clps="claude --permission-mode plan --model sonnet"
 
 # main codex configs
 alias l="cmd codex usage"
-alias ll="cmd codex launch -c shared"
+alias ll="codex"
 
-# 
-alias lla="cmd codex launch a -c a"
+# spark
+alias llq="cmd codex launch a -c q"
+
+# fast / slow
+alias llf="cmd codex launch a -c fast"
+alias lls="cmd codex launch a -c slow"
 
 # review
-alias llr="cmd codex launch a -c r"
+alias llr="cmd codex launch a -c review-high"
+alias llrr="cmd codex launch a -c review-xhigh"
 
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"
