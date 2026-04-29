@@ -434,6 +434,7 @@ const CHATGPT_REFRESH_URL: &str = "https://auth.openai.com/oauth/token";
 const CHATGPT_REFRESH_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 const USAGE_FETCH_CONCURRENCY: usize = 4;
 const USAGE_FETCH_TIMEOUT: Duration = Duration::from_secs(5);
+const LAUNCH_ACTIVE_USAGE_FETCH_TIMEOUT: Duration = Duration::from_millis(250);
 const PROFILE_REFRESH_FALLBACK_DAYS: i64 = 7;
 
 pub fn run_with_args(_sh: &Shell, args: &[OsString]) -> Result<()> {
@@ -537,18 +538,18 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
 mod tests {
     use super::{
         active_session_markers, build_profile_rows, create_launch_home, current_usage_view,
-        delete_profile_home, enrich_active_profiles_with_global_auth, format_launch_banner,
-        launch_banner_details, needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration,
-        parse_raw_args, prepare_config_group_home, prepare_resume_group_home,
-        print_current_usage_table, promote_launch_auth_if_unchanged, read_auth_snapshot,
-        read_stored_auth, replace_global_auth_with_profile, resolve_launch_auth_mode,
-        resolve_launch_groups, resolve_launch_target, save_profile_auth,
-        select_auto_launch_profile, select_auto_launch_profile_except, sync_launch_codex_home,
-        sync_login_codex_home, validate_group_name, write_auth_raw_if_unchanged,
-        write_session_marker, AuthIdentity, CodexCmd, LaunchAuthMode, LaunchGroups, LaunchTarget,
-        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
-        ProfileUsageSnapshot, ProfileUsageState, SavedProfile, StoredAuth, UsageFetchResult,
-        UsageWindowSnapshot,
+        delete_profile_home, enrich_active_profiles_from_global_auth,
+        enrich_active_profiles_with_global_auth, format_launch_banner, launch_banner_details,
+        needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration, parse_raw_args,
+        prepare_config_group_home, prepare_resume_group_home, print_current_usage_table,
+        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
+        replace_global_auth_with_profile, resolve_launch_auth_mode, resolve_launch_groups,
+        resolve_launch_target, save_profile_auth, select_auto_launch_profile,
+        select_auto_launch_profile_except, sync_launch_codex_home, sync_login_codex_home,
+        validate_group_name, write_auth_raw_if_unchanged, write_session_marker, AuthIdentity,
+        CodexCmd, LaunchAuthMode, LaunchGroups, LaunchTarget, LimitStyleKind, ProfileAuthRefresher,
+        ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState,
+        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
@@ -2811,6 +2812,7 @@ mod tests {
             &loader,
             &active_auth,
             &active_identity,
+            false,
         )
         .unwrap();
 
@@ -2821,6 +2823,97 @@ mod tests {
         assert_eq!(row_field(&rows, "a", |row| row.plan.clone()), "Pro");
         assert_eq!(row_status_text(&rows, "a"), "active");
         assert_eq!(row_field(&rows, "b", |row| row.five_hour.clone()), "30%");
+    }
+
+    #[test]
+    fn active_launch_banner_uses_global_auth_usage() {
+        let active_auth = read_auth(&ID_1, "global-access", "global-refresh");
+        let active_identity = identity("sub-1", "user-1", "acct-1", Some("old@example.com"));
+        let mut profiles = vec![saved_profile(
+            "a",
+            identity("sub-1", "user-1", "acct-1", Some("profile@example.com")),
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 80.0, 90.0)),
+        )];
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .and(header("authorization", "Bearer global-access"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(usage_response(
+                    "global@example.com",
+                    "user-1",
+                    "acct-1",
+                    "pro",
+                    12.0,
+                    34.0,
+                )))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
+                .unwrap();
+        enrich_active_profiles_from_global_auth(
+            &mut profiles,
+            &loader,
+            Some(&(active_auth, active_identity)),
+            true,
+        )
+        .unwrap();
+
+        let groups = resolve_launch_groups("a", None, Some("review-high")).unwrap();
+        let details = launch_banner_details(&profiles[0]);
+        let banner = format_launch_banner("a", &groups, &details);
+
+        assert!(banner.contains("5H:  12%"));
+        assert!(banner.contains("Weekly:  34%"));
+        assert!(!banner.contains("80%"));
+        assert!(!banner.contains("90%"));
+    }
+
+    #[test]
+    fn active_launch_banner_preserves_profile_usage_when_global_usage_is_unavailable() {
+        let active_auth = read_auth(&ID_1, "global-access", "global-refresh");
+        let active_identity = identity("sub-1", "user-1", "acct-1", Some("old@example.com"));
+        let mut profiles = vec![saved_profile(
+            "a",
+            identity("sub-1", "user-1", "acct-1", Some("profile@example.com")),
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 80.0, 90.0)),
+        )];
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/usage"))
+                .and(header("authorization", "Bearer global-access"))
+                .respond_with(ResponseTemplate::new(503))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let loader =
+            ProfileUsageLoader::with_urls(format!("{}/backend-api/wham/usage", server.uri()))
+                .unwrap();
+        enrich_active_profiles_from_global_auth(
+            &mut profiles,
+            &loader,
+            Some(&(active_auth, active_identity)),
+            true,
+        )
+        .unwrap();
+
+        let groups = resolve_launch_groups("a", None, Some("review-high")).unwrap();
+        let details = launch_banner_details(&profiles[0]);
+        let banner = format_launch_banner("a", &groups, &details);
+
+        assert!(banner.contains("5H:  80%"));
+        assert!(banner.contains("Weekly:  90%"));
     }
 
     #[test]

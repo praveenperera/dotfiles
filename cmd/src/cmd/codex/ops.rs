@@ -9,6 +9,7 @@ pub(super) fn launch(
     args: &[OsString],
 ) -> Result<()> {
     let mut profiles = load_saved_profiles(&profiles_dir()?)?;
+    let active_auth = active_global_auth();
     let target = resolve_launch_target(
         profile_or_arg,
         resume_group,
@@ -18,6 +19,8 @@ pub(super) fn launch(
         &profiles,
     )?;
     enrich_profile_usage(&mut profiles)?;
+    let loader = ProfileUsageLoader::with_timeout(LAUNCH_ACTIVE_USAGE_FETCH_TIMEOUT)?;
+    enrich_active_profiles_from_global_auth(&mut profiles, &loader, active_auth.as_ref(), true)?;
 
     match target {
         LaunchTarget::Explicit {
@@ -445,21 +448,11 @@ pub(super) fn list(verbose: bool) -> Result<()> {
         return Ok(());
     }
 
-    let active_auth = auth_path()
-        .ok()
-        .and_then(|path| read_stored_auth(&path).ok())
-        .and_then(|auth| {
-            stored_auth_identity(&auth)
-                .ok()
-                .map(|identity| (auth, identity))
-        });
+    let active_auth = active_global_auth();
 
     enrich_profile_usage(&mut profiles)?;
-
-    if let Some((auth, identity)) = active_auth.as_ref() {
-        let loader = ProfileUsageLoader::new()?;
-        enrich_active_profiles_with_global_auth(&mut profiles, &loader, auth, identity)?;
-    }
+    let loader = ProfileUsageLoader::new()?;
+    enrich_active_profiles_from_global_auth(&mut profiles, &loader, active_auth.as_ref(), false)?;
 
     let rows = build_profile_rows(
         &profiles,
@@ -474,11 +467,42 @@ pub(super) fn list(verbose: bool) -> Result<()> {
     Ok(())
 }
 
+fn active_global_auth() -> Option<(StoredAuth, AuthIdentity)> {
+    auth_path()
+        .ok()
+        .and_then(|path| read_stored_auth(&path).ok())
+        .and_then(|auth| {
+            stored_auth_identity(&auth)
+                .ok()
+                .map(|identity| (auth, identity))
+        })
+}
+
+pub(super) fn enrich_active_profiles_from_global_auth(
+    profiles: &mut [SavedProfile],
+    loader: &ProfileUsageLoader,
+    active_auth: Option<&(StoredAuth, AuthIdentity)>,
+    preserve_existing_on_unavailable: bool,
+) -> Result<()> {
+    if let Some((auth, identity)) = active_auth {
+        enrich_active_profiles_with_global_auth(
+            profiles,
+            loader,
+            auth,
+            identity,
+            preserve_existing_on_unavailable,
+        )?;
+    }
+
+    Ok(())
+}
+
 pub(super) fn enrich_active_profiles_with_global_auth(
     profiles: &mut [SavedProfile],
     loader: &ProfileUsageLoader,
     active_auth: &StoredAuth,
     active_identity: &AuthIdentity,
+    preserve_existing_on_unavailable: bool,
 ) -> Result<()> {
     if !profiles.iter().any(|profile| {
         profile
@@ -505,6 +529,9 @@ pub(super) fn enrich_active_profiles_with_global_auth(
             ProfileUsageState::Unavailable,
         ),
     };
+    if preserve_existing_on_unavailable && matches!(usage, ProfileUsageState::Unavailable) {
+        return Ok(());
+    }
 
     for profile in profiles.iter_mut().filter(|profile| {
         profile

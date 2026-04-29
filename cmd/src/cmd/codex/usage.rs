@@ -157,7 +157,11 @@ pub(super) fn parse_jwt_expiration(token: &str) -> Result<Option<chrono::DateTim
 
 impl ProfileUsageLoader {
     pub(super) fn new() -> Result<Self> {
-        let http = HttpClient::builder().timeout(USAGE_FETCH_TIMEOUT).build()?;
+        Self::with_timeout(USAGE_FETCH_TIMEOUT)
+    }
+
+    pub(super) fn with_timeout(timeout: Duration) -> Result<Self> {
+        let http = HttpClient::builder().timeout(timeout).build()?;
         Ok(Self {
             http,
             usage_url: CHATGPT_USAGE_URL.into(),
