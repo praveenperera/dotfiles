@@ -3,7 +3,7 @@ use crate::runtime;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-const DOUBLED_PLAN_TYPES: &[KnownPlanType] = &[KnownPlanType::Prolite, KnownPlanType::Pro];
+const DOUBLED_PLAN_TYPES: &[KnownPlanType] = &[KnownPlanType::Prolite];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum KnownPlanType {
@@ -542,7 +542,7 @@ mod tests {
         assert_eq!(default_limit_config("plus").effective_multiplier(), 1.0);
         assert_eq!(default_limit_config("team").effective_multiplier(), 1.0);
         assert_eq!(default_limit_config("prolite").effective_multiplier(), 10.0);
-        assert_eq!(default_limit_config("pro").effective_multiplier(), 40.0);
+        assert_eq!(default_limit_config("pro").effective_multiplier(), 20.0);
     }
 
     #[test]
