@@ -1,0 +1,4 @@
+interface:
+  display_name: "Refactor Rust"
+  short_description: "Evaluate Rust code for clarity, safety, and readability"
+  default_prompt: "Use $refactor-rust to evaluate and refactor this Rust code."

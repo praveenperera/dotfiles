@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI CLI"
+  short_description: "Review and design LLM-friendly command interfaces"
+  default_prompt: "Use $ai-cli to review this CLI design for agent usability."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tigris"
+  short_description: "Handle object storage tasks with Tigris tooling"
+  default_prompt: "Use $tigris to work with Tigris object storage."

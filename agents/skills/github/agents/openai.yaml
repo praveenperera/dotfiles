@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub"
+  short_description: "Handle GitHub tasks with gh and API-oriented workflows"
+  default_prompt: "Use $github to handle this GitHub task with gh or the API."

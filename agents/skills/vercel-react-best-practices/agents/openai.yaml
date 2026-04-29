@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vercel React Best Practices"
+  short_description: "Optimize React or Next.js work with Vercel guidance"
+  default_prompt: "Use $vercel-react-best-practices to optimize this React or Next.js code."

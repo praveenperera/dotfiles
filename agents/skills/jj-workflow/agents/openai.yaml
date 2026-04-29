@@ -1,0 +1,4 @@
+interface:
+  display_name: "JJ Workflow"
+  short_description: "Plan and execute JJ workflows for version control"
+  default_prompt: "Use $jj-workflow to plan or manage this JJ workflow."

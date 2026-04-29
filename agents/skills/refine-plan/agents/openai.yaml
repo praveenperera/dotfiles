@@ -1,0 +1,4 @@
+interface:
+  display_name: "Refine Plan"
+  short_description: "Gather requirements and tighten your implementation plan"
+  default_prompt: "Use $refine-plan to gather requirements and sharpen this plan."

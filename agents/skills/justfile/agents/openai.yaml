@@ -1,0 +1,4 @@
+interface:
+  display_name: "Justfile"
+  short_description: "Create, edit, and debug justfile automation recipes"
+  default_prompt: "Use $justfile to create, edit, or debug this justfile."

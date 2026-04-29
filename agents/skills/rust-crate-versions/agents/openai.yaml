@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rust Crate Versions"
+  short_description: "Fetch current crate versions from crates.io directly"
+  default_prompt: "Use $rust-crate-versions to fetch latest Rust crate versions."

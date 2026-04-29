@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Review Comments"
+  short_description: "Fetch and act on GitHub review comments quickly"
+  default_prompt: "Use $pr-review-comments to fetch and address PR review feedback."

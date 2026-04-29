@@ -1,0 +1,4 @@
+interface:
+  display_name: "shadcn Base UI"
+  short_description: "Build React UI with shadcn components on Base UI"
+  default_prompt: "Use $shadcn-baseui to build this React UI with shadcn Base UI."

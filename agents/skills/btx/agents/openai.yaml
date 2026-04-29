@@ -1,0 +1,4 @@
+interface:
+  display_name: "BTX"
+  short_description: "Explore external repositories and inspect implementation"
+  default_prompt: "Use $btx to explore this external repository."

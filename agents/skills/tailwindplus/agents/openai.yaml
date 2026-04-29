@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tailwind Plus"
+  short_description: "Select and apply Tailwind Plus components for UI build"
+  default_prompt: "Use $tailwindplus to select or adapt Tailwind Plus components."

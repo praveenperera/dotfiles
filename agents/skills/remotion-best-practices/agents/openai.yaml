@@ -1,0 +1,4 @@
+interface:
+  display_name: "Remotion Best Practices"
+  short_description: "Review Remotion video code against established workflows"
+  default_prompt: "Use $remotion-best-practices to build or review this Remotion video."

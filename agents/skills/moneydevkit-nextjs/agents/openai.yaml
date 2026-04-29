@@ -1,0 +1,4 @@
+interface:
+  display_name: "MoneyDevKit Next.js"
+  short_description: "Add Lightning payments to Next.js with MDK"
+  default_prompt: "Use $moneydevkit-nextjs to add Lightning payments to this Next.js app."

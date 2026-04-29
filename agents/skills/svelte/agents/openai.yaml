@@ -1,0 +1,4 @@
+interface:
+  display_name: "Svelte"
+  short_description: "Work with Svelte 5 and SvelteKit using runes patterns"
+  default_prompt: "Use $svelte to work on this Svelte or SvelteKit code."

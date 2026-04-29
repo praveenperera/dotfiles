@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vercel React Native Skills"
+  short_description: "Apply mobile performance guidance for React Native"
+  default_prompt: "Use $vercel-react-native-skills to improve this React Native or Expo app."
