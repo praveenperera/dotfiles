@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Commit"
+  short_description: "Prepare focused commits with your rules"
+  default_prompt: "Use $git-commit to create a focused commit for my current changes."
