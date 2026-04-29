@@ -42,7 +42,7 @@
     }
   },
   {
-    "context": "Editor && vim_mode == normal && !menu",
+    "context": "Editor && (vim_mode == normal || vim_mode == visual) && !menu",
     "use_key_equivalents": true,
     "bindings": {
       "ctrl-h": "workspace::ActivatePaneLeft",
