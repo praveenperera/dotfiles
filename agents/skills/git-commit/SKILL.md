@@ -17,7 +17,7 @@ commits instead of bundling everything together.
    - `git diff`
 2. Group outstanding changes by logical purpose.
 3. Identify the exact files and hunks that belong to the next commit.
-4. Leave unrelated user changes unstaged and untouched.
+4. Leave changes outside the current logical commit unstaged.
 5. Stage only intended changes, using hunk staging when needed.
 6. Re-check the staged diff before committing:
    - `git diff --cached --stat`
