@@ -72,6 +72,7 @@
       "alt-shift-k": "vim::ResizePaneUp",
       "alt-shift-l": "vim::ResizePaneRight",
       "cmd-shift-d": "pane::SplitDown",
+      "shift-escape": null,
       "ctrl-`": "workspace::ToggleRightDock",
       "ctrl-shift-`": "workspace::ToggleBottomDock"
     }
