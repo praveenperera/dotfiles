@@ -4,6 +4,7 @@
     "use_key_equivalents": true,
     "bindings": {
       "space f i": "buffer_search::Deploy",
+      "space f w": "pane::DeploySearch",
       "space f f": "file_finder::Toggle",
       "space f s": "outline::Toggle",
       "space f shift-s": "project_symbols::Toggle",

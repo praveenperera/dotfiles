@@ -1,4 +1,5 @@
 {
+  "cli_default_open_behavior": "new_window",
   "diff_view_style": "unified",
   "project_panel": {
     "dock": "left"
