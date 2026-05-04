@@ -1,0 +1,133 @@
+model = "gpt-5.5"
+model_auto_compact_token_limit = 233000
+model_reasoning_effort = "medium"
+notify = [
+    "/Users/praveen/.codex/plugins/cache/openai-bundled/computer-use/1.0.770/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient",
+    "turn-ended",
+]
+personality = "pragmatic"
+plan_mode_reasoning_effort = "high"
+sandbox_mode = "danger-full-access"
+suppress_unstable_features_warning = true
+tool_output_token_limit = 25000
+web_search = "live"
+
+[apps.asdk_app_69a089a326dc8191b32a3f2553f5be2c]
+enabled = false
+
+[apps.connector_68df038e0ba48191908c8434991bbac2]
+enabled = false
+
+[apps.connector_76869538009648d5b282a4bb21c3d157]
+enabled = false
+
+[apps.connector_76869538009648d5b282a4bb21c3d157.tools.github_create_pull_request]
+approval_mode = "approve"
+
+[apps.connector_76869538009648d5b282a4bb21c3d157.tools.github_update_issue]
+approval_mode = "approve"
+
+[features]
+apply_patch_freeform = true
+apps = true
+chronicle = false
+collaboration_modes = true
+external_migration = true
+goals = true
+memories = true
+multi_agent = true
+plugins = true
+shell_snapshot = true
+terminal_resize_reflow = true
+unified_exec = true
+
+[marketplaces.openai-bundled]
+last_updated = "2026-05-04T15:55:43Z"
+source = "/Users/praveen/.codex/.tmp/bundled-marketplaces/openai-bundled"
+source_type = "local"
+
+[marketplaces.openai-primary-runtime]
+last_updated = "2026-04-30T16:03:07Z"
+source = "/Users/praveen/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+source_type = "local"
+
+[mcp_servers]
+
+[memories]
+no_memories_if_mcp_or_web_search = true
+
+[notice]
+fast_default_opt_out = true
+"hide_gpt-5.1-codex-max_migration_prompt" = true
+hide_gpt5_1_migration_prompt = true
+hide_rate_limit_model_nudge = true
+
+[notice.external_config_migration_prompts]
+home_last_prompted_at = 1777661924
+
+[notice.model_migrations]
+"gpt-5.2" = "gpt-5.2-codex"
+"gpt-5.2-codex" = "gpt-5.3-codex"
+
+[plugins."browser-use@openai-bundled"]
+enabled = true
+
+[plugins."build-ios-apps@openai-curated"]
+enabled = true
+
+[plugins."build-macos-apps@openai-curated"]
+enabled = true
+
+[plugins."coderabbit@openai-curated"]
+enabled = false
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = false
+
+[plugins."github@openai-curated"]
+enabled = true
+
+[plugins."linear@openai-curated"]
+enabled = false
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = false
+
+[plugins."remotion@openai-curated"]
+enabled = false
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = false
+
+[[skills.config]]
+enabled = false
+name = "presentations:Presentations"
+
+[[skills.config]]
+enabled = false
+name = "spreadsheets:Spreadsheets"
+
+[[skills.config]]
+enabled = false
+name = "linear:linear"
+
+[tui]
+status_line = [
+    "model-with-reasoning",
+    "current-dir",
+    "git-branch",
+    "context-usage",
+    "five-hour-limit",
+    "weekly-limit",
+    "fast-mode",
+]
+theme = "two-dark"
+
+[tui.keymap.editor]
+insert_newline = "alt-enter"
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4

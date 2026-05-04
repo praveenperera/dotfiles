@@ -88,6 +88,7 @@ fn launch_with_profile(
     println!("{}", format_launch_banner(profile, &groups, details));
 
     let config_home = prepare_config_group_home(&shared_codex_home, &groups.config)?;
+    render_config_home(&config_home)?;
     let resume_home = prepare_resume_group_home(&shared_codex_home, &groups.resume)?;
     let launch_home = create_launch_home(&profile_home)?;
     let launch_auth_mode = resolve_launch_auth_mode(&profile_auth, &global_auth)?;
@@ -111,6 +112,7 @@ fn launch_with_profile(
     };
     let status = child.wait()?;
     fsutil::remove_existing_path(&session_marker_path)?;
+    sync_projects_after_launch(&config_home)?;
     if let LaunchAuthMode::ProfileCopy {
         profile_auth,
         launch_auth,

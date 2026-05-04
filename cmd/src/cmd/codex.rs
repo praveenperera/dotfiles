@@ -1,4 +1,5 @@
 mod auth;
+mod config_overlay;
 mod fs;
 mod ops;
 mod table;
@@ -30,6 +31,7 @@ use std::time::Duration;
 use xshell::Shell;
 
 use auth::*;
+use config_overlay::*;
 use fs::*;
 use ops::*;
 use table::*;
@@ -119,6 +121,43 @@ pub enum CodexCmd {
         /// Skip the confirmation prompt
         #[arg(short = 'y', long)]
         yes: bool,
+    },
+
+    /// Manage generated codex config overlays
+    Config {
+        #[command(subcommand)]
+        subcommand: CodexConfigCmd,
+    },
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum CodexConfigCmd {
+    /// Render generated config.toml from base and local overlay
+    Render {
+        /// Config group to render, or shared when omitted
+        group: Option<String>,
+    },
+
+    /// Sync [projects] from generated config.toml into the local overlay
+    SyncProjects {
+        /// Config group to sync, or shared when omitted
+        #[arg(conflicts_with = "all")]
+        group: Option<String>,
+
+        /// Sync all config groups and shared config
+        #[arg(long)]
+        all: bool,
+    },
+
+    /// Split existing config.toml files into base and local overlay files
+    Migrate {
+        /// Config group to migrate, or shared when omitted
+        #[arg(conflicts_with = "all")]
+        group: Option<String>,
+
+        /// Migrate all config groups and shared config
+        #[arg(long)]
+        all: bool,
     },
 }
 
@@ -467,6 +506,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
         CodexCmd::RefreshAll => refresh_all(),
         CodexCmd::Switch { profile } => switch_default_profile(&profile),
         CodexCmd::Delete { profile, yes } => delete(&profile, yes),
+        CodexCmd::Config { subcommand } => run_config_command(subcommand),
     }
 }
 

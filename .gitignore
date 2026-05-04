@@ -45,3 +45,9 @@ opencode/AGENTS.md
 claude/mcp-needs-auth-cache.json
 claude/security_warnings_state_*.json
 /claude/scheduled-tasks
+
+# Codex generated/private config
+/codex/config.toml
+/codex/config.local.toml
+/codex/config-groups/**/config.toml
+/codex/config-groups/**/config.local.toml

@@ -232,7 +232,7 @@ fn seed_group_home(shared_codex_home: &Path, group_home: &Path, kind: GroupKind)
             continue;
         };
 
-        if !kind.owns(entry_owner(name)) {
+        if !kind.seeds(name, entry_owner(name)) {
             continue;
         }
 
@@ -479,6 +479,10 @@ impl GroupKind {
             Self::Config => owner == EntryOwner::ConfigGroup,
             Self::Resume => owner == EntryOwner::ResumeGroup,
         }
+    }
+
+    fn seeds(self, name: &str, owner: EntryOwner) -> bool {
+        self.owns(owner) || matches!(self, Self::Config) && name == "config.base.toml"
     }
 }
 

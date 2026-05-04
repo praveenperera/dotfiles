@@ -13,7 +13,8 @@ use crate::{fsutil, util::has_tool, CMD_TOOLS};
 
 use super::{
     ManagedDirEntry, Os, OsxDefaults, SyncSymlinkOutcome, Zshrc, CONFIG_FILE_OR_DIR,
-    CUSTOM_CONFIG_DIR_ENTRIES, CUSTOM_CONFIG_OR_DIR, DOTFILES, MAC_ONLY_CUSTOM_CONFIG_OR_DIR,
+    CUSTOM_CONFIG_DIR_ENTRIES, CUSTOM_CONFIG_FILE_TREES, CUSTOM_CONFIG_OR_DIR, DOTFILES,
+    MAC_ONLY_CUSTOM_CONFIG_OR_DIR,
 };
 
 struct LinkSpec {
@@ -170,7 +171,40 @@ fn build_link_specs(home: &Path, dotfiles_dir: &Path) -> Result<Vec<LinkSpec>> {
         }
     }
 
+    for tree in CUSTOM_CONFIG_FILE_TREES {
+        let source_root = dotfiles_dir.join(tree.source);
+        let target_root = home.join(tree.target);
+        push_file_tree_link_specs(&mut specs, &source_root, &target_root)?;
+    }
+
     Ok(specs)
+}
+
+fn push_file_tree_link_specs(
+    specs: &mut Vec<LinkSpec>,
+    source_dir: &Path,
+    target_dir: &Path,
+) -> Result<()> {
+    if !source_dir.exists() {
+        return Ok(());
+    }
+
+    for entry in fs::read_dir(source_dir)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let target_path = target_dir.join(entry.file_name());
+        let metadata = fs::symlink_metadata(&source_path)?;
+        if metadata.is_dir() && !metadata.file_type().is_symlink() {
+            push_file_tree_link_specs(specs, &source_path, &target_path)?;
+        } else {
+            specs.push(LinkSpec {
+                source: source_path,
+                target: target_path,
+            });
+        }
+    }
+
+    Ok(())
 }
 
 fn prune_managed_dir_entries(home: &Path, dotfiles_dir: &Path) -> Result<()> {
