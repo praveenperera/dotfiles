@@ -21,6 +21,14 @@
       "type": "registry",
     },
   },
+  "lsp": {
+    "kotlin-lsp": {
+      "binary": {
+        "path": "/Users/praveen/Library/Application Support/Zed/extensions/work/kotlin/kotlin-lsp-262.2310.0/kotlin-lsp.sh",
+        "arguments": ["--stdio"],
+      },
+    },
+  },
   "agent": {
     "dock": "right",
     "default_model": {

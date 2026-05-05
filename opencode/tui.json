@@ -2,6 +2,6 @@
   "$schema": "https://opencode.ai/tui.json",
   "keybinds": {
     "variant_cycle": "ctrl+t",
-    "variant_list": "alt+t"
+    "variant_list": "shift+ctrl+t"
   }
 }
