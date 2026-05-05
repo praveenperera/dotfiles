@@ -1,6 +1,8 @@
 ## GENERAL
 macos-titlebar-style = hidden
 shell-integration-features = ssh-env,ssh-terminfo
+desktop-notifications = true
+bell-features = system,attention,title
 
 ## FONTS
 font-size = 13
