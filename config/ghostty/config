@@ -82,6 +82,8 @@ keybind = cmd+shift+period=text:\x02$
 
 # rename pane
 keybind = ctrl+shift+period=text:\x02.
+keybind = cmd+shift+r=text:\x02.
+keybind = ctrl+shift+r=text:\x1br
 
 # toggle pane name labels
 keybind = ctrl+shift+t=text:\x02P
