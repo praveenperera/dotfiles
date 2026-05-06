@@ -589,6 +589,20 @@ struct NamingContext {
     visible_text: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum PaneNameAction {
+    Named,
+    Renamed,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum CodexThreadNameOutcome {
+    Updated,
+    SessionNotResolved(String),
+    NoThreadId,
+    UpdateFailed(String),
+}
+
 fn name_codex_pane(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
     let pane = read_pane_target(sh, target_pane)?;
     let processes = processes_on_tty(&pane.tty)?;
@@ -596,11 +610,12 @@ fn name_codex_pane(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
         return Err(eyre!("Target pane is not running Codex"));
     }
 
-    let session = resolve_active_codex_session(sh, &processes, &pane.cwd).ok();
-    let context = build_naming_context(&pane, session.as_ref())?;
+    let session = resolve_active_codex_session(sh, &processes, &pane.cwd);
+    let context = build_naming_context(&pane, session.as_ref().ok())?;
     let prompt = build_naming_prompt(&context);
     let launch_home = session
         .as_ref()
+        .ok()
         .map(|session| session.launch_home.as_path());
     let raw_name = run_codex_name_model(&pane.cwd, launch_home, &prompt)
         .wrap_err("Failed to generate pane name")?;
@@ -609,26 +624,11 @@ fn name_codex_pane(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
         .ok_or_else(|| eyre!("Generated pane name was empty"))?;
 
     set_tmux_pane_name(sh, &pane.id, &name)?;
-    let thread_named = session
-        .as_ref()
-        .and_then(|session| {
-            session
-                .thread_id
-                .as_deref()
-                .map(|thread_id| (session, thread_id))
-        })
-        .is_some_and(|(session, thread_id)| {
-            set_codex_thread_name(&session.launch_home, thread_id, &name).is_ok()
-        });
-
-    if thread_named {
-        report_name_result(sh, &format!("Pane and Codex session named: {name}"));
-    } else {
-        report_name_result(
-            sh,
-            &format!("Pane named; Codex session not resolved: {name}"),
-        );
-    }
+    let outcome = match session.as_ref() {
+        Ok(session) => set_codex_thread_name_for_session(session, &name),
+        Err(err) => CodexThreadNameOutcome::SessionNotResolved(err.to_string()),
+    };
+    report_codex_thread_name_result(sh, PaneNameAction::Named, &name, outcome);
 
     Ok(())
 }
@@ -644,31 +644,67 @@ fn rename_pane(sh: &Shell, target_pane: Option<&str>, name: &str) -> Result<()> 
 
     let processes = processes_on_tty(&pane.tty)?;
     if !pane_runs_codex(&pane, &processes) {
+        report_name_result(sh, "Pane renamed; target pane is not running Codex");
         return Ok(());
     }
 
-    let thread_named = resolve_active_codex_session(sh, &processes, &pane.cwd)
-        .ok()
-        .and_then(|session| {
-            session
-                .thread_id
-                .clone()
-                .map(|thread_id| (session.launch_home, thread_id))
-        })
-        .is_some_and(|(launch_home, thread_id)| {
-            set_codex_thread_name(&launch_home, &thread_id, name).is_ok()
-        });
-
-    if thread_named {
-        report_name_result(sh, &format!("Pane and Codex session renamed: {name}"));
-    } else {
-        report_name_result(
-            sh,
-            &format!("Pane renamed; Codex session not resolved: {name}"),
-        );
-    }
+    let session = resolve_active_codex_session(sh, &processes, &pane.cwd);
+    let outcome = match session.as_ref() {
+        Ok(session) => set_codex_thread_name_for_session(session, name),
+        Err(err) => CodexThreadNameOutcome::SessionNotResolved(err.to_string()),
+    };
+    report_codex_thread_name_result(sh, PaneNameAction::Renamed, name, outcome);
 
     Ok(())
+}
+
+fn set_codex_thread_name_for_session(
+    session: &ActiveCodexSession,
+    name: &str,
+) -> CodexThreadNameOutcome {
+    let Some(thread_id) = session.thread_id.as_deref() else {
+        return CodexThreadNameOutcome::NoThreadId;
+    };
+
+    match set_codex_thread_name(&session.launch_home, thread_id, name) {
+        Ok(()) => CodexThreadNameOutcome::Updated,
+        Err(err) => CodexThreadNameOutcome::UpdateFailed(err.to_string()),
+    }
+}
+
+fn report_codex_thread_name_result(
+    sh: &Shell,
+    action: PaneNameAction,
+    name: &str,
+    outcome: CodexThreadNameOutcome,
+) {
+    report_name_result(sh, &codex_thread_name_message(action, name, outcome));
+}
+
+fn codex_thread_name_message(
+    action: PaneNameAction,
+    name: &str,
+    outcome: CodexThreadNameOutcome,
+) -> String {
+    let verb = match action {
+        PaneNameAction::Named => "named",
+        PaneNameAction::Renamed => "renamed",
+    };
+
+    match outcome {
+        CodexThreadNameOutcome::Updated => {
+            format!("Pane and Codex session {verb}: {name}")
+        }
+        CodexThreadNameOutcome::SessionNotResolved(err) => {
+            format!("Pane {verb}; Codex session not resolved: {err}")
+        }
+        CodexThreadNameOutcome::NoThreadId => {
+            format!("Pane {verb}; Codex session has no thread id")
+        }
+        CodexThreadNameOutcome::UpdateFailed(err) => {
+            format!("Pane {verb}; Codex session rename failed: {err}")
+        }
+    }
 }
 
 fn report_name_result(sh: &Shell, message: &str) {
@@ -784,7 +820,7 @@ fn command_looks_like_codex(value: &str) -> bool {
 fn resolve_active_codex_session(
     _sh: &Shell,
     processes: &[PaneProcess],
-    _pane_cwd: &Path,
+    pane_cwd: &Path,
 ) -> Result<ActiveCodexSession> {
     let codex_pids = codex_process_family(processes);
     let markers = active_codex_session_markers()?;
@@ -792,14 +828,89 @@ fn resolve_active_codex_session(
         .into_iter()
         .find(|marker| codex_pids.contains(&marker.pid))
     {
+        let fallback_thread = newest_thread_for_cwd(&marker.launch_home, pane_cwd);
+        let thread_id = marker
+            .thread_id
+            .or_else(|| fallback_thread.as_ref().map(|thread| thread.id.clone()));
+        let rollout_path = marker
+            .rollout_path
+            .or_else(|| fallback_thread.map(|thread| thread.rollout_path));
+
         return Ok(ActiveCodexSession {
             launch_home: marker.launch_home,
-            thread_id: marker.thread_id,
-            rollout_path: marker.rollout_path,
+            thread_id,
+            rollout_path,
         });
     }
 
     Err(eyre!("Codex session marker not found"))
+}
+
+#[derive(Debug, Clone)]
+struct StateThread {
+    id: String,
+    rollout_path: PathBuf,
+}
+
+fn newest_thread_for_cwd(codex_home: &Path, cwd: &Path) -> Option<StateThread> {
+    newest_thread_for_cwd_with_filter(codex_home, cwd, Some(codex_home))
+        .or_else(|| newest_thread_for_cwd_with_filter(codex_home, cwd, None))
+}
+
+fn newest_thread_for_cwd_with_filter(
+    codex_home: &Path,
+    cwd: &Path,
+    rollout_home: Option<&Path>,
+) -> Option<StateThread> {
+    let state_db = codex_home.join("state_5.sqlite");
+    if !state_db.exists() {
+        return None;
+    }
+
+    let mut sql = format!(
+        "select id, rollout_path from threads \
+         where source = 'cli' \
+         and (agent_role is null or agent_role = '') \
+         and cwd = {}",
+        sqlite_quote(cwd.to_str()?)
+    );
+    if let Some(rollout_home) = rollout_home {
+        let sessions_prefix = rollout_home.join("sessions");
+        sql.push_str(&format!(
+            " and rollout_path like {}",
+            sqlite_quote(&format!("{}/%", sessions_prefix.display()))
+        ));
+    }
+    sql.push_str(" order by updated_at_ms desc, updated_at desc limit 1;");
+
+    let output = Command::new("sqlite3")
+        .arg("-separator")
+        .arg("\t")
+        .arg(format!("file:{}?mode=ro", state_db.display()))
+        .arg(sql)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    parse_state_thread(String::from_utf8_lossy(&output.stdout).trim())
+}
+
+fn parse_state_thread(line: &str) -> Option<StateThread> {
+    let (id, rollout_path) = line.split_once('\t')?;
+    if id.is_empty() || rollout_path.is_empty() {
+        return None;
+    }
+
+    Some(StateThread {
+        id: id.to_owned(),
+        rollout_path: PathBuf::from(rollout_path),
+    })
+}
+
+fn sqlite_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
 }
 
 fn codex_process_family(processes: &[PaneProcess]) -> HashSet<u32> {
@@ -1070,39 +1181,29 @@ fn set_tmux_pane_name(sh: &Shell, pane_id: &str, name: &str) -> Result<()> {
 }
 
 fn set_codex_thread_name(codex_home: &Path, thread_id: &str, name: &str) -> Result<()> {
-    let socket = codex_home
-        .join("app-server-control")
-        .join("app-server-control.sock");
-    if !socket.exists() {
-        return Err(eyre!("Codex app-server control socket not found"));
+    let state_db = codex_home.join("state_5.sqlite");
+    if !state_db.exists() {
+        return Err(eyre!("Codex state db not found"));
     }
 
-    let request = serde_json::json!({
-        "id": 1,
-        "method": "thread/name/set",
-        "params": {
-            "threadId": thread_id,
-            "name": name,
-        }
-    });
-    let mut child = Command::new("codex")
-        .args(["app-server", "proxy", "--sock"])
-        .arg(socket)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
-    let mut stdin = child
-        .stdin
-        .take()
-        .ok_or_else(|| eyre!("Failed to open app-server proxy stdin"))?;
-    writeln!(stdin, "{request}")?;
-    drop(stdin);
-    let status = child.wait()?;
-    if status.success() {
-        Ok(())
+    let sql = format!(
+        "update threads set title = {} where id = {}; select changes();",
+        sqlite_quote(name),
+        sqlite_quote(thread_id)
+    );
+    let output = Command::new("sqlite3")
+        .arg(format!("file:{}?mode=rw", state_db.display()))
+        .arg(sql)
+        .output()?;
+    if !output.status.success() {
+        return Err(eyre!("Failed to update Codex thread title"));
+    }
+
+    let changes = String::from_utf8_lossy(&output.stdout);
+    if changes.trim() == "0" {
+        Err(eyre!("Codex thread not found"))
     } else {
-        Err(eyre!("thread/name/set failed with status {status}"))
+        Ok(())
     }
 }
 
@@ -1344,8 +1445,9 @@ impl std::fmt::Display for NotifyKind {
 #[cfg(test)]
 mod tests {
     use super::{
-        order_panes, order_sessions, order_windows, parse_index_list, parse_pane_process,
-        sanitize_generated_name, CodexSessionMarker, PaneEntry, SessionEntry, WindowEntry,
+        codex_thread_name_message, order_panes, order_sessions, order_windows, parse_index_list,
+        parse_pane_process, sanitize_generated_name, CodexSessionMarker, CodexThreadNameOutcome,
+        PaneEntry, PaneNameAction, SessionEntry, WindowEntry,
     };
     use std::path::PathBuf;
 
@@ -1393,6 +1495,45 @@ mod tests {
         assert_eq!(
             marker.rollout_path.as_deref(),
             Some(PathBuf::from("/tmp/launch/sessions/rollout.jsonl").as_path())
+        );
+    }
+
+    #[test]
+    fn codex_thread_name_message_reports_missing_thread_id() {
+        let message = codex_thread_name_message(
+            PaneNameAction::Named,
+            "New Pane Name",
+            CodexThreadNameOutcome::NoThreadId,
+        );
+
+        assert_eq!(message, "Pane named; Codex session has no thread id");
+    }
+
+    #[test]
+    fn codex_thread_name_message_reports_update_failure() {
+        let message = codex_thread_name_message(
+            PaneNameAction::Renamed,
+            "New Pane Name",
+            CodexThreadNameOutcome::UpdateFailed("Codex thread not found".to_owned()),
+        );
+
+        assert_eq!(
+            message,
+            "Pane renamed; Codex session rename failed: Codex thread not found"
+        );
+    }
+
+    #[test]
+    fn codex_thread_name_message_reports_resolution_failure() {
+        let message = codex_thread_name_message(
+            PaneNameAction::Named,
+            "New Pane Name",
+            CodexThreadNameOutcome::SessionNotResolved("Codex session marker not found".to_owned()),
+        );
+
+        assert_eq!(
+            message,
+            "Pane named; Codex session not resolved: Codex session marker not found"
         );
     }
 
