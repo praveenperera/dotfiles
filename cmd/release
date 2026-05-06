@@ -5,7 +5,22 @@ set -e
 . $HOME/.cargo/env
 cargo build --release
 
-mkdir -p $HOME/.local/bin
-# unlink first so we can overwrite even if the binary is currently running (macOS ETXTBSY)
-rm -f $HOME/.local/bin/cmd
-cp target/release/cmd $HOME/.local/bin/cmd
+BIN_DIR="$HOME/.local/bin"
+BIN="$BIN_DIR/cmd"
+OLD_BIN="$BIN.old"
+NEW_BIN="target/release/cmd"
+
+mkdir -p "$BIN_DIR"
+
+if [ -e "$BIN" ]; then
+    mv "$BIN" "$OLD_BIN"
+fi
+
+if ! cp "$NEW_BIN" "$BIN"; then
+    if [ -e "$OLD_BIN" ]; then
+        mv "$OLD_BIN" "$BIN"
+    fi
+    exit 1
+fi
+
+rm -f "$OLD_BIN"

@@ -1,5 +1,5 @@
 use colored::Colorize;
-use eyre::{eyre, Context as _, Result};
+use eyre::{eyre, Result};
 use xshell::{cmd, Shell};
 
 use crate::{fsutil, util::has_tool};
@@ -87,25 +87,15 @@ fn release_cmd(sh: &Shell) -> Result<()> {
         return Ok(());
     }
 
-    let current_path = std::env::current_exe().wrap_err("failed to get current path")?;
-    let current_exe_rename = format!("{}.old", current_path.display());
-
-    std::fs::rename(&current_path, &current_exe_rename)
-        .wrap_err("failed to rename current binary")?;
-
     sh.change_dir(crate::dotfiles_dir()?);
     sh.change_dir("cmd");
 
     if cmd!(sh, "./release").run().is_err() {
         println!("{}", "failed to build cmd binary".red());
-        std::fs::rename(&current_exe_rename, &current_path)
-            .wrap_err("failed to rename current binary")?;
-
         std::process::exit(1);
     }
 
     create_hardlinks(sh)?;
-    sh.remove_path(&current_exe_rename)?;
 
     Ok(())
 }
