@@ -1,6 +1,6 @@
 ---
 name: cloudflare
-description: Comprehensive Cloudflare platform skill covering Workers, Pages, storage (KV, D1, R2), AI (Workers AI, Vectorize, Agents SDK), networking (Tunnel, Spectrum), security (WAF, DDoS), and infrastructure-as-code (Terraform, Pulumi). Use for any Cloudflare development task.
+description: Comprehensive Cloudflare platform skill covering development, deployment, hosting, publishing, setup, and troubleshooting for Workers, Pages, storage (KV, D1, R2), AI (Workers AI, Vectorize, Agents SDK), feature flags (Flagship), networking (Tunnel, Spectrum), security (WAF, DDoS), and infrastructure-as-code (Terraform, Pulumi). Use for any Cloudflare development or deployment task. Biases towards retrieval from Cloudflare docs over pre-trained knowledge.
 references:
   - workers
   - pages
@@ -12,6 +12,35 @@ references:
 # Cloudflare Platform Skill
 
 Consolidated skill for building on the Cloudflare platform. Use decision trees below to find the right product, then load detailed references.
+
+Your knowledge of Cloudflare APIs, types, limits, and pricing may be outdated. Prefer retrieval over pre-training: the references in this skill are starting points, not source of truth.
+
+## Retrieval Sources
+
+Fetch the latest information before citing specific numbers, API signatures, or configuration options. Do not rely on baked-in knowledge or these reference files alone.
+
+| Source | How to retrieve | Use for |
+|--------|----------------|---------|
+| Cloudflare docs | `cloudflare-docs` search tool or `https://developers.cloudflare.com/` | Limits, pricing, API reference, compatibility dates/flags |
+| Workers types | `npm pack @cloudflare/workers-types` or check `node_modules` | Type signatures, binding shapes, handler types |
+| Wrangler config schema | `node_modules/wrangler/config-schema.json` | Config fields, binding shapes, allowed values |
+| Product changelogs | `https://developers.cloudflare.com/changelog/` | Recent changes to limits, features, deprecations |
+
+When a reference file and the docs disagree, trust the docs. This is especially important for numeric limits, pricing tiers, type signatures, and configuration options.
+
+## Deployment Prerequisites
+
+- Verify auth before `wrangler deploy`, `wrangler pages deploy`, or `npm run deploy`:
+
+```bash
+npx wrangler whoami
+```
+
+- If not authenticated, read `./references/wrangler/auth.md`
+- For interactive/local deploys, use `wrangler login`
+- For CI/CD, use `CLOUDFLARE_API_TOKEN`
+- Deployments can take a few minutes, so use appropriate command timeouts
+- If deployment network calls fail due to sandboxing, rerun with `sandbox_permissions=require_escalated`
 
 ## How to Use This Skill
 
@@ -49,6 +78,16 @@ Each product in `./references/<product>/` contains a `README.md` as the entry po
 
 ## Quick Decision Trees
 
+### "I need feature flags"
+
+```
+Need feature flags?
+└─ Feature toggles, targeting rules, percentage rollouts → flagship/
+   ├─ Evaluate in Workers → Flagship binding (env.FLAGS)
+   ├─ Evaluate in Node.js / browser → OpenFeature SDK (@cloudflare/flagship)
+   └─ Manage flags via API → Flagship REST API
+```
+
 ### "I need to run code"
 
 ```
@@ -60,7 +99,10 @@ Need to run code?
 ├─ Long-running multi-step jobs → workflows/
 ├─ Run containers → containers/
 ├─ Multi-tenant (customers deploy code) → workers-for-platforms/
-└─ Scheduled tasks (cron) → cron-triggers/
+├─ Scheduled tasks (cron) → cron-triggers/
+├─ Lightweight edge logic (modify HTTP) → snippets/
+├─ Process Worker execution events (logs/observability) → tail-workers/
+└─ Optimize latency to backend infrastructure → smart-placement/
 ```
 
 ### "I need to store data"
@@ -70,11 +112,13 @@ Need storage?
 ├─ Key-value (config, sessions, cache) → kv/
 ├─ Relational SQL → d1/ (SQLite) or hyperdrive/ (existing Postgres/MySQL)
 ├─ Object/file storage (S3-compatible) → r2/
+├─ Versioned file trees (repos, build outputs, checkpoints) → artifacts/
 ├─ Message queue (async processing) → queues/
 ├─ Vector embeddings (AI/semantic search) → vectorize/
 ├─ Strongly-consistent per-entity state → durable-objects/ (DO storage)
 ├─ Secrets management → secrets-store/
-└─ Streaming ETL to R2 → pipelines/
+├─ Streaming ETL to R2 → pipelines/
+└─ Persistent cache (long-term retention) → cache-reserve/
 ```
 
 ### "I need AI/ML"
@@ -97,6 +141,7 @@ Need networking?
 ├─ WebRTC TURN server → turn/
 ├─ Private network connectivity → network-interconnect/
 ├─ Optimize routing → argo-smart-routing/
+├─ Optimize latency to backend (not user) → smart-placement/
 └─ Real-time video/audio → realtimekit/ or realtime-sfu/
 ```
 
@@ -122,6 +167,17 @@ Need media?
 └─ Third-party script management → zaraz/
 ```
 
+### "I need analytics/metrics data"
+
+```
+Need analytics?
+├─ Query across all Cloudflare products (HTTP, Workers, DNS, etc.) → graphql-api/
+├─ Custom high-cardinality metrics from Workers → analytics-engine/
+├─ Client-side (RUM) performance data → web-analytics/
+├─ Workers Logs and real-time debugging → observability/
+└─ Raw logs (Logpush to external tools) → Cloudflare docs
+```
+
 ### "I need infrastructure-as-code"
 
 ```
@@ -132,6 +188,11 @@ Need IaC?
 ```
 
 ## Product Index
+
+### Feature Flags
+| Product | Entry File |
+|---------|------------|
+| Flagship | `./references/flagship/README.md` |
 
 ### Compute & Runtime
 | Product | Entry File |
@@ -154,6 +215,7 @@ Need IaC?
 | KV | `./references/kv/README.md` |
 | D1 | `./references/d1/README.md` |
 | R2 | `./references/r2/README.md` |
+| Artifacts | `./references/artifacts/README.md` |
 | Queues | `./references/queues/README.md` |
 | Hyperdrive | `./references/hyperdrive/README.md` |
 | DO Storage | `./references/do-storage/README.md` |
@@ -211,6 +273,7 @@ Need IaC?
 | Miniflare | `./references/miniflare/README.md` |
 | C3 | `./references/c3/README.md` |
 | Observability | `./references/observability/README.md` |
+| GraphQL Analytics API | `./references/graphql-api/README.md` |
 | Analytics Engine | `./references/analytics-engine/README.md` |
 | Web Analytics | `./references/web-analytics/README.md` |
 | Sandbox | `./references/sandbox/README.md` |
@@ -232,3 +295,9 @@ Need IaC?
 | Static Assets | `./references/static-assets/README.md` |
 | Bindings | `./references/bindings/README.md` |
 | Cache Reserve | `./references/cache-reserve/README.md` |
+
+## Troubleshooting
+
+### Escalated Network Access
+
+If deployment fails due to network issues such as timeouts, DNS errors, or connection resets, rerun the deploy with escalated permissions by using `sandbox_permissions=require_escalated`.

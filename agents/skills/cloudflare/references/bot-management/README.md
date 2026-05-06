@@ -18,6 +18,29 @@ Bot Management provides multi-tier protection:
 (cf.bot_management.score le 29 and not cf.bot_management.verified_bot) → Managed Challenge
 ```
 
+## What Do You Need?
+
+```txt
+├─ Initial setup → configuration.md
+│   ├─ Free tier → "Bot Fight Mode"
+│   ├─ Pro/Business → "Super Bot Fight Mode"
+│   └─ Enterprise → "Bot Management for Enterprise"
+├─ Workers API integration → api.md
+├─ WAF rules → patterns.md
+├─ Debugging → gotchas.md
+└─ Analytics → api.md#bot-analytics
+```
+
+## Reading Order
+
+| Task | Files to Read |
+|------|---------------|
+| Enable bot protection | README → configuration.md |
+| Workers bot detection | README → api.md |
+| WAF rule templates | README → patterns.md |
+| Debug bot issues | gotchas.md |
+| Advanced analytics | api.md#bot-analytics |
+
 ## Core Concepts
 
 **Bot Scores**: 1-99 (1 = definitely automated, 99 = definitely human). Threshold: <30 indicates bot traffic. Enterprise gets granular 1-99; Pro/Business get groupings only.

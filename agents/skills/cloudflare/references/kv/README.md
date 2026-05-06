@@ -13,6 +13,25 @@ KV provides:
 
 **Use cases:** Config storage, user sessions, feature flags, caching, A/B testing
 
+## When to Use KV
+
+| Need | Recommendation |
+|------|----------------|
+| Strong consistency | → [Durable Objects](../durable-objects/) |
+| SQL queries | → [D1](../d1/) |
+| Object storage (files) | → [R2](../r2/) |
+| High read, low write volume | → KV ✅ |
+| Sub-10ms global reads | → KV ✅ |
+
+**Quick comparison:**
+
+| Feature | KV | D1 | Durable Objects |
+|---------|----|----|-----------------|
+| Consistency | Eventual | Strong | Strong |
+| Read latency | <10ms | ~50ms | <1ms |
+| Write limit | 1/s per key | Unlimited | Unlimited |
+| Use case | Config, cache | Relational data | Coordination |
+
 ## Quick Start
 
 ```bash
@@ -45,6 +64,16 @@ const json = await env.MY_KV.get<Config>("config", "json");
 - **Write visibility:** Immediate in same location, ≤60s globally
 - **Read path:** Eventually consistent
 - **Write rate:** 1 write/second per key (429 on exceed)
+
+## Reading Order
+
+| Task | Files to Read |
+|------|---------------|
+| Quick start | README → configuration.md |
+| Implement feature | README → api.md → patterns.md |
+| Debug issues | gotchas.md → api.md |
+| Batch operations | api.md (bulk section) → patterns.md |
+| Performance tuning | gotchas.md (performance) → patterns.md (caching) |
 
 ## In This Reference
 

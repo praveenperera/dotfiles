@@ -13,6 +13,8 @@ DO Storage provides:
 
 **Use cases:** Stateful coordination, real-time collaboration, counters, sessions, rate limiters
 
+**Billing:** Charged by request, GB-month storage, and rowsRead/rowsWritten for SQL operations
+
 ## Quick Start
 
 ```typescript
@@ -26,8 +28,11 @@ export class Counter extends DurableObject {
   }
   
   async increment(): Promise<number> {
-    this.sql.exec('INSERT OR REPLACE INTO data VALUES (?, ?) RETURNING value', 'counter', 
-      (this.sql.exec('SELECT value FROM data WHERE key = ?', 'counter').one()?.value || 0) + 1);
+    const result = this.sql.exec(
+      'INSERT INTO data VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = value + 1 RETURNING value',
+      'counter', 1
+    ).one();
+    return result?.value || 1;
   }
 }
 ```
@@ -48,12 +53,20 @@ export class Counter extends DurableObject {
 - **PITR** (`getBookmarkForTime()`, `onNextSessionRestoreBookmark()`)
 - **Alarms** (`setAlarm()`, `alarm()` handler)
 
+## Reading Order
+
+**New to DO storage:** configuration.md → api.md → patterns.md → gotchas.md  
+**Building features:** patterns.md → api.md → gotchas.md  
+**Debugging issues:** gotchas.md → api.md  
+**Writing tests:** testing.md
+
 ## In This Reference
 
-- [configuration.md](./configuration.md) - wrangler.jsonc migrations, SQLite vs KV setup
-- [api.md](./api.md) - SQL exec/cursors, KV methods, transactions, alarms, PITR
-- [patterns.md](./patterns.md) - Schema migrations, caching, rate limiting, batch processing
-- [gotchas.md](./gotchas.md) - Concurrency gates, transaction rules, SQL limits, async pitfalls
+- [configuration.md](./configuration.md) - wrangler.jsonc migrations, SQLite vs KV setup, RPC binding
+- [api.md](./api.md) - SQL exec/cursors, KV methods, storage options, transactions, alarms, PITR
+- [patterns.md](./patterns.md) - Schema migrations, caching, rate limiting, batch processing, parent-child coordination
+- [gotchas.md](./gotchas.md) - Concurrency gates, INTEGER precision, transaction rules, SQL limits
+- [testing.md](./testing.md) - vitest-pool-workers setup, testing DOs with SQL/alarms/PITR
 
 ## See Also
 

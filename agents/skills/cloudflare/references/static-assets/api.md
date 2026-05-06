@@ -2,189 +2,198 @@
 
 ## ASSETS Binding
 
-The `ASSETS` binding provides programmatic access to static assets from Worker code.
+The `ASSETS` binding provides access to static assets via the `Fetcher` interface.
 
-### Setup
-
-```jsonc
-// wrangler.jsonc
-{
-  "main": "src/index.ts",
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS"
-  }
-}
-```
-
-### TypeScript Types
+### Type Definition
 
 ```typescript
 interface Env {
   ASSETS: Fetcher;
 }
-```
 
-The `Fetcher` type is built into `@cloudflare/workers-types`.
-
-## `ASSETS.fetch()`
-
-Fetch an asset from the static assets directory.
-
-### Signatures
-
-```typescript
-// Forward incoming request
-env.ASSETS.fetch(request: Request): Promise<Response>
-
-// Fetch by URL string
-env.ASSETS.fetch(url: string): Promise<Response>
-
-// Fetch by URL object
-env.ASSETS.fetch(url: URL): Promise<Response>
-
-// Fetch with request options
-env.ASSETS.fetch(url: string | URL, init?: RequestInit): Promise<Response>
-```
-
-### Examples
-
-**Forward request directly:**
-```typescript
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    return env.ASSETS.fetch(request);
-  }
-};
-```
-
-**Fetch specific asset:**
-```typescript
-// URL string (domain doesn't matter, only path is used)
-const logo = await env.ASSETS.fetch("https://placeholder/logo.png");
-
-// Relative-style path
-const css = await env.ASSETS.fetch("/styles/main.css");
-```
-
-**Fetch with URL object:**
-```typescript
-const url = new URL(request.url);
-url.pathname = "/fallback.html";
-const fallback = await env.ASSETS.fetch(url);
-```
-
-**Fetch with modified request:**
-```typescript
-const url = new URL(request.url);
-url.pathname = "/index.html";
-const newRequest = new Request(url, request);
-return env.ASSETS.fetch(newRequest);
-```
-
-## Response Handling
-
-`ASSETS.fetch()` returns a standard `Response` object:
-
-```typescript
-const response = await env.ASSETS.fetch(request);
-
-// Check status
-if (response.status === 404) {
-  return new Response("Not Found", { status: 404 });
+interface Fetcher {
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
 }
-
-// Read body
-const text = await response.text();
-const json = await response.json();
-const buffer = await response.arrayBuffer();
-
-// Clone for multiple reads
-const cloned = response.clone();
 ```
 
-### Modifying Response Headers
+### Method Signatures
+
+```typescript
+// 1. Forward entire request
+await env.ASSETS.fetch(request);
+
+// 2. String path (hostname ignored, only path matters)
+await env.ASSETS.fetch("https://any-host/path/to/asset.png");
+
+// 3. URL object
+await env.ASSETS.fetch(new URL("/index.html", request.url));
+
+// 4. Constructed Request object
+await env.ASSETS.fetch(new Request(new URL("/logo.png", request.url), {
+  method: "GET",
+  headers: request.headers
+}));
+```
+
+**Key behaviors:**
+
+- Host/origin is ignored for string/URL inputs (only path is used)
+- Method must be GET (others return 405)
+- Request headers pass through (affects response)
+- Returns standard `Response` object
+
+## Request Handling
+
+### Path Resolution
+
+```typescript
+// All resolve to same asset:
+env.ASSETS.fetch("https://example.com/logo.png")
+env.ASSETS.fetch("https://ignored.host/logo.png")
+env.ASSETS.fetch("/logo.png")
+```
+
+Assets are resolved relative to configured `assets.directory`.
+
+### Headers
+
+Request headers that affect response:
+
+| Header | Effect |
+|--------|--------|
+| `Accept-Encoding` | Controls compression (gzip, brotli) |
+| `Range` | Enables partial content (206 responses) |
+| `If-None-Match` | Conditional request via ETag |
+| `If-Modified-Since` | Conditional request via modification date |
+
+Custom headers pass through but don't affect asset serving.
+
+### Method Support
+
+| Method | Supported | Response |
+|--------|-----------|----------|
+| `GET` | ✅ Yes | Asset content |
+| `HEAD` | ✅ Yes | Headers only, no body |
+| `POST`, `PUT`, etc. | ❌ No | 405 Method Not Allowed |
+
+## Response Behavior
+
+### Content-Type Inference
+
+Automatically set based on file extension:
+
+| Extension | Content-Type |
+|-----------|--------------|
+| `.html` | `text/html; charset=utf-8` |
+| `.css` | `text/css` |
+| `.js` | `application/javascript` |
+| `.json` | `application/json` |
+| `.png` | `image/png` |
+| `.jpg`, `.jpeg` | `image/jpeg` |
+| `.svg` | `image/svg+xml` |
+| `.woff2` | `font/woff2` |
+
+### Default Headers
+
+Responses include:
+
+```
+Content-Type: <inferred>
+ETag: "<hash>"
+Cache-Control: public, max-age=3600
+Content-Encoding: br  (if supported and beneficial)
+```
+
+**Cache-Control defaults:**
+
+- 1 hour (`max-age=3600`) for most assets
+- Override via Worker response transformation (see patterns.md:27-35)
+
+### Compression
+
+Automatic compression based on `Accept-Encoding`:
+
+- **Brotli** (`br`): Preferred, best compression
+- **Gzip** (`gzip`): Fallback
+- **None**: If client doesn't support or asset too small
+
+### ETag Generation
+
+ETags are content-based hashes:
+
+```
+ETag: "a3b2c1d4e5f6..."
+```
+
+Used for conditional requests (`If-None-Match`). Returns `304 Not Modified` if match.
+
+## Error Responses
+
+| Status | Condition | Behavior |
+|--------|-----------|----------|
+| `404` | Asset not found | Body depends on `not_found_handling` config |
+| `405` | Non-GET/HEAD method | `{ "error": "Method not allowed" }` |
+| `416` | Invalid Range header | Range not satisfiable |
+
+### 404 Handling
+
+Depends on configuration (see configuration.md:45-52):
+
+```typescript
+// not_found_handling: "single-page-application"
+// Returns /index.html with 200 status
+
+// not_found_handling: "404-page"
+// Returns /404.html if exists, else 404 response
+
+// not_found_handling: "none"
+// Returns 404 response
+```
+
+## Advanced Usage
+
+### Modifying Responses
 
 ```typescript
 const response = await env.ASSETS.fetch(request);
-const modified = new Response(response.body, response);
 
-modified.headers.set("Cache-Control", "public, max-age=31536000");
-modified.headers.set("X-Custom-Header", "value");
-modified.headers.delete("X-Powered-By");
-
-return modified;
-```
-
-### Streaming Response
-
-```typescript
-const response = await env.ASSETS.fetch(request);
-const { readable, writable } = new TransformStream();
-
-response.body?.pipeTo(writable);
-
-return new Response(readable, {
-  headers: response.headers
+// Clone and modify
+return new Response(response.body, {
+  status: response.status,
+  headers: {
+    ...Object.fromEntries(response.headers),
+    'Cache-Control': 'public, max-age=31536000',
+    'X-Custom': 'value'
+  }
 });
 ```
 
-## Error Handling
+See patterns.md:27-35 for full example.
+
+### Error Handling
 
 ```typescript
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    try {
-      const response = await env.ASSETS.fetch(request);
+const response = await env.ASSETS.fetch(request);
 
-      if (response.status === 404) {
-        // Serve custom 404 page
-        return env.ASSETS.fetch("/404.html");
-      }
+if (!response.ok) {
+  // Asset not found or error
+  return new Response('Custom error page', { status: 404 });
+}
 
-      return response;
-    } catch (error) {
-      return new Response("Internal Error", { status: 500 });
-    }
-  }
-};
+return response;
 ```
 
-## Common Patterns
-
-### Conditional Asset Serving
+### Conditional Serving
 
 ```typescript
 const url = new URL(request.url);
 
-if (url.pathname === "/") {
-  // Serve different homepage based on condition
-  const page = isLoggedIn ? "/dashboard.html" : "/index.html";
-  return env.ASSETS.fetch(page);
+// Serve different assets based on conditions
+if (url.pathname === '/') {
+  return env.ASSETS.fetch('/index.html');
 }
 
 return env.ASSETS.fetch(request);
 ```
 
-### Asset with Custom MIME Type
-
-```typescript
-const response = await env.ASSETS.fetch("/data.json");
-const modified = new Response(response.body, response);
-modified.headers.set("Content-Type", "application/json; charset=utf-8");
-return modified;
-```
-
-### Proxy to Assets with Path Rewrite
-
-```typescript
-const url = new URL(request.url);
-
-// /v2/docs/intro → /docs/intro
-if (url.pathname.startsWith("/v2/")) {
-  url.pathname = url.pathname.replace("/v2", "");
-  return env.ASSETS.fetch(url);
-}
-
-return env.ASSETS.fetch(request);
-```
+See patterns.md for complete patterns.

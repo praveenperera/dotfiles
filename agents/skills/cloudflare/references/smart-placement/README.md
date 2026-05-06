@@ -13,12 +13,40 @@ Smart Placement automatically analyzes Worker request duration across Cloudflare
 - Backend infrastructure is geographically concentrated
 - Request duration dominated by backend latency rather than network latency from user
 - Running backend logic in Workers (APIs, data aggregation, SSR with DB calls)
+- Worker uses `fetch` handler (not RPC methods)
 
 **Do NOT enable for:**
 - Workers serving only static content or cached responses
 - Workers without significant backend communication
 - Pure edge logic (auth checks, redirects, simple transformations)
 - Workers without fetch event handlers
+- Workers with RPC methods or named entrypoints (only `fetch` handlers are affected)
+- Pages/Assets Workers with `run_worker_first = true` (degrades asset serving)
+
+### Decision Tree
+
+```
+Does your Worker have a fetch handler?
+├─ No → Smart Placement won't work (skip)
+└─ Yes
+   │
+   Does it make multiple backend calls (DB/API)?
+   ├─ No → Don't enable (won't help)
+   └─ Yes
+      │
+      Is backend geographically concentrated?
+      ├─ No (globally distributed) → Probably won't help
+      └─ Yes or uncertain
+         │
+         Does it serve static assets with run_worker_first=true?
+         ├─ Yes → Don't enable (will hurt performance)
+         └─ No → Enable Smart Placement
+            │
+            After 15min, check placement_status
+            ├─ SUCCESS → Monitor metrics
+            ├─ INSUFFICIENT_INVOCATIONS → Need more traffic
+            └─ UNSUPPORTED_APPLICATION → Disable (hurting performance)
+```
 
 ### Key Architecture Pattern
 
@@ -35,14 +63,18 @@ This maintains fast, reactive frontends while optimizing backend latency.
 
 ## Quick Start
 
-```toml
-# wrangler.toml
-[placement]
-mode = "smart"
-hint = "wnam"  # Optional: West North America
+```jsonc
+// wrangler.jsonc
+{
+  "placement": {
+    "mode": "smart"  // or "off" to explicitly disable
+  }
+}
 ```
 
 Deploy and wait 15 minutes for analysis. Check status via API or dashboard metrics.
+
+**To disable:** Set `"mode": "off"` or remove `placement` field entirely (both equivalent).
 
 ## Requirements
 
@@ -76,9 +108,24 @@ curl -H "Authorization: Bearer $TOKEN" \
 wrangler tail your-worker-name --header cf-placement
 ```
 
+## Reading Order
+
+**First time?** Start here:
+1. This README - understand core concepts and when to use Smart Placement
+2. [configuration.md](./configuration.md) - set up wrangler.jsonc and understand limitations
+3. [patterns.md](./patterns.md) - see practical examples for your use case
+4. [api.md](./api.md) - monitor and verify Smart Placement is working
+5. [gotchas.md](./gotchas.md) - troubleshoot common issues
+
+**Quick lookup:**
+- "Should I enable Smart Placement?" → See "When to Use" above
+- "How do I configure it?" → [configuration.md](./configuration.md)
+- "How do I split frontend/backend?" → [patterns.md](./patterns.md)
+- "Why isn't it working?" → [gotchas.md](./gotchas.md)
+
 ## In This Reference
 
-- [configuration.md](./configuration.md) - wrangler.toml setup, placement hints, dashboard config
+- [configuration.md](./configuration.md) - wrangler.jsonc setup, mode values, validation rules
 - [api.md](./api.md) - Placement Status API, cf-placement header, monitoring
 - [patterns.md](./patterns.md) - Frontend/backend split, database workers, SSR patterns
 - [gotchas.md](./gotchas.md) - Troubleshooting INSUFFICIENT_INVOCATIONS, performance issues

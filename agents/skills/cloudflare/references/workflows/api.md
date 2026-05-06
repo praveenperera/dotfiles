@@ -15,15 +15,49 @@ await step.sleep('description', 5000); // ms
 await step.sleepUntil('description', Date.parse('2024-12-31'));
 
 // step.waitForEvent()
-const data = await step.waitForEvent<PayloadType>('wait', {type: 'webhook-type', timeout: '24h'}); // Default 24h, max 365d
+const data = await step.waitForEvent<PayloadType>('wait', {type: 'webhook-type', timeout: '24h'});
 try { const event = await step.waitForEvent('wait', { type: 'approval', timeout: '1h' }); } catch (e) { /* Timeout */ }
+```
+
+## WorkflowStepContext
+
+The `WorkflowStepContext` is passed as the first argument to the `step.do()` callback. It provides runtime information about the current step execution.
+
+```typescript
+type WorkflowStepContext = {
+  step: {
+    name: string;   // Step name as passed to step.do()
+    count: number;  // How many times step.do() called with this name in current run (1-indexed)
+  };
+  attempt: number;  // Current attempt number (1-indexed): 1 = first try, 2 = first retry, etc.
+  config: WorkflowStepConfig; // Resolved config for this step, including runtime defaults
+};
+```
+
+**Use cases:**
+```typescript
+// Adjust behavior based on retry attempt
+await step.do('call api', { retries: { limit: 3, delay: '5 seconds', backoff: 'exponential' } }, async (ctx) => {
+  if (ctx.attempt > 1) console.log(`Retry attempt ${ctx.attempt} for step "${ctx.step.name}"`);
+  const res = await fetch('https://api.example.com/data');
+  if (!res.ok) throw new Error(`API failed (attempt ${ctx.attempt})`);
+  return res.json();
+});
+
 ```
 
 ## Instance Management
 
 ```typescript
 // Create single
-const instance = await env.MY_WORKFLOW.create({id: crypto.randomUUID(), params: { userId: 'user123' }}); // id optional, auto-generated if omitted
+const instance = await env.MY_WORKFLOW.create({id: crypto.randomUUID(), params: { userId: 'user123' }}); // id optional, auto-generated if omitted; throws if ID already exists within retention period
+
+// Create with custom retention (check docs for default per plan)
+const instance = await env.MY_WORKFLOW.create({
+  id: crypto.randomUUID(),
+  params: { userId: 'user123' },
+  retention: '30 days'  // Override default retention period
+});
 
 // Batch (max 100, idempotent: skips existing IDs)
 const instances = await env.MY_WORKFLOW.createBatch([{id: 'user1', params: {name: 'John'}}, {id: 'user2', params: {name: 'Jane'}}]);
@@ -84,6 +118,78 @@ await step.do('charge', async () => {
 });
 ```
 
+## Type Constraints
+
+Params and step returns must be `Rpc.Serializable<T>`:
+
+```typescript
+// ✅ Valid types
+type ValidParams = {
+  userId: string;
+  count: number;
+  tags: string[];
+  metadata: Record<string, unknown>;
+};
+
+// ❌ Invalid types
+type InvalidParams = {
+  callback: () => void;      // Functions not serializable
+  symbol: symbol;            // Symbols not serializable
+  circular: any;             // Circular references not allowed
+};
+
+// Step returns follow same rules
+const result = await step.do('fetch', async () => {
+  return { userId: '123', data: [1, 2, 3] }; // ✅ Plain object
+});
+
+// ✅ ReadableStream<Uint8Array> for large binary output (bypasses non-stream step result size limit)
+const stream = await step.do('read from R2', async () => {
+  const obj = await this.env.BUCKET.get('large-file.csv');
+  return obj.body; // Return the ReadableStream directly
+});
+```
+
+## Sleep & Scheduling
+
+```typescript
+// Relative
+await step.sleep('wait 1 hour', '1 hour');
+await step.sleep('wait 30 days', '30 days');
+await step.sleep('wait 5s', 5000); // ms
+
+// Absolute
+await step.sleepUntil('launch date', Date.parse('24 Oct 2024 13:00:00 UTC'));
+await step.sleepUntil('deadline', new Date('2024-12-31T23:59:59Z'));
+```
+
+Units: second, minute, hour, day, week, month, year.
+Sleeping instances don't count toward concurrency.
+
+## Parameters
+
+**Pass from Worker:**
+```typescript
+const instance = await env.MY_WORKFLOW.create({
+  id: crypto.randomUUID(),
+  params: { userId: 'user123', email: 'user@example.com' }
+});
+```
+
+**Access in Workflow:**
+```typescript
+async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
+  const userId = event.payload.userId;
+  const instanceId = event.instanceId;
+  const createdAt = event.timestamp;
+}
+```
+
+**CLI Trigger:**
+```bash
+npx wrangler workflows trigger my-workflow '{"userId":"user123"}'
+```
+
 ## Wrangler CLI
 
 ```bash
@@ -107,19 +213,6 @@ curl "https://api.cloudflare.com/client/v4/accounts/{account_id}/workflows/{work
 
 # Send Event
 curl -X POST "https://api.cloudflare.com/client/v4/accounts/{account_id}/workflows/{workflow_name}/instances/{instance_id}/events" -H "Authorization: Bearer {token}" -d '{"type":"approval","payload":{"approved":true}}'
-```
-
-## Bindings
-
-```typescript
-type Env = {MY_WORKFLOW: Workflow; KV: KVNamespace; DB: D1Database; BUCKET: R2Bucket; AI: Ai; VECTORIZE: VectorizeIndex;};
-
-await step.do('use bindings', async () => {
-  const kv = await this.env.KV.get('key');
-  const db = await this.env.DB.prepare('SELECT * FROM users').first();
-  const file = await this.env.BUCKET.get('file.txt');
-  const ai = await this.env.AI.run('@cf/meta/llama-2-7b-chat-int8', { prompt: 'Hi' });
-});
 ```
 
 See: [configuration.md](./configuration.md), [patterns.md](./patterns.md)

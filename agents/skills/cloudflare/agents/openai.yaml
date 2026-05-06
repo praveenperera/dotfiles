@@ -1,4 +1,6 @@
 interface:
   display_name: "Cloudflare"
-  short_description: "Guide Cloudflare platform tasks from Workers to storage"
-  default_prompt: "Use $cloudflare to help build or debug this Cloudflare project."
+  short_description: "Build, deploy, and debug Cloudflare platform projects"
+  icon_small: "./assets/cloudflare-small.svg"
+  icon_large: "./assets/cloudflare.png"
+  default_prompt: "Use $cloudflare to build, deploy, or debug this Cloudflare project."

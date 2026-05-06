@@ -1,127 +1,81 @@
 # Gotchas & Debugging
 
-## Timeout Issues
+## Common Errors
 
-### Step Timeout
-- **Default**: 10 min/attempt
-- **CPU Limit**: 30s default, max 5min (wrangler.toml `limits.cpu_ms = 300_000`)
+### "Step Timeout"
 
-```typescript
-await step.do('long operation', {timeout: '30 minutes'}, async () => { /* ... */ });
-```
+**Cause:** Step execution exceeding the default or configured timeout  
+**Solution:** Set custom timeout with `step.do('long operation', {timeout: '30 minutes'}, async () => {...})` or increase CPU limit via `limits.cpu_ms` in wrangler.jsonc
 
-### waitForEvent Timeout
-- **Default**: 24h, **Max**: 365d, **Throws on timeout**
+### "waitForEvent Timeout"
 
-```typescript
-try {
-  const event = await step.waitForEvent('wait', { type: 'approval', timeout: '1h' });
-} catch (e) { /* Timeout - proceed with default */ }
-```
+**Cause:** Event not received within timeout period (check docs for default/max)  
+**Solution:** Wrap in try-catch to handle timeout gracefully and proceed with default behavior
 
-## Limits
+### "Non-Deterministic Step Names"
 
-| Limit | Free | Paid |
-|-------|------|------|
-| CPU per step | 10ms | 30s (default), 5min (max) |
-| Step state | 1 MiB | 1 MiB |
-| Instance state | 100 MB | 1 GB |
-| Steps per workflow | 1,024 | 1,024 |
-| Executions/day | 100k | Unlimited |
-| Concurrent instances | 25 | 10k |
-| State retention | 3d | 30d |
+**Cause:** Using dynamic values like `Date.now()` in step names causes replay issues  
+**Solution:** Use deterministic values like `event.instanceId` for step names
 
-Note: `step.sleep()` doesn't count toward step limit
+### "State Lost in Variables"
 
-## Debugging
+**Cause:** Using module-level or local variables to store state which is lost on hibernation  
+**Solution:** Return values from `step.do()` which are automatically persisted: `const total = await step.do('step 1', async () => 10)`
 
-### Logs
-```typescript
-await step.do('process', async () => {
-  console.log('Logged once per successful step'); // ✅
-  return result;
-});
-console.log('Outside step'); // ⚠️ May duplicate on restart
-```
+### "Non-Deterministic Conditionals"
 
-### Instance Status
-```bash
-npx wrangler workflows instances describe my-workflow instance-id
-```
+**Cause:** Using non-deterministic logic (like `Date.now()`) outside steps in conditionals  
+**Solution:** Move non-deterministic operations inside steps: `const isLate = await step.do('check', async () => Date.now() > deadline)`
 
-```typescript
-const instance = await env.MY_WORKFLOW.get('instance-id');
-const status = await instance.status();
-// status: queued | running | paused | errored | terminated | complete | waiting | waitingForPause | unknown
-```
+### "Large Step Returns Exceeding Limit"
 
-## Common Pitfalls
+**Cause:** Returning data exceeding the per-step return size limit  
+**Solution:** Store large data in R2 and return only reference: `{ key: 'r2-object-key' }`. Alternatively, return a `ReadableStream<Uint8Array>` for large binary output
 
-### Non-Deterministic Step Names
-```typescript
-// ❌ BAD: await step.do(`step-${Date.now()}`, ...)
-// ✅ GOOD: await step.do(`step-${event.instanceId}`, ...)
-```
+### "Step Exceeded CPU Limit But Ran for a Short Time"
 
-### State in Variables
-```typescript
-// ❌ BAD: let total = 0; await step.do('step 1', async () => { total += 10; }); // Lost on hibernation
-// ✅ GOOD: const total = await step.do('step 1', async () => 10); // Persisted
-```
+**Cause:** Confusion between CPU time (active compute) and wall-clock time (includes I/O waits)  
+**Solution:** Network requests, database queries, and sleeps don't count toward CPU. The CPU limit refers to active processing time only
 
-### Non-Deterministic Conditionals
-```typescript
-// ❌ BAD: if (Date.now() > deadline) { await step.do(...) }
-// ✅ GOOD: const isLate = await step.do('check', async () => Date.now() > deadline); if (isLate) { await step.do(...) }
-```
+### "Idempotency Violation"
 
-### Large Step Returns
-```typescript
-// ❌ BAD: return await fetchHugeDataset(); // 5 MiB
-// ✅ GOOD: Store in R2, return { key }
-```
+**Cause:** Step operations not idempotent, causing duplicate charges or actions on retry  
+**Solution:** Check if operation already completed before executing (e.g., check if customer already charged)
 
-### Idempotency Ignored
-```typescript
-// ❌ BAD: await step.do('charge', async () => await chargeCustomer(...)); // Charges on retry
-// ✅ GOOD: Check if already charged first
-```
+### "Instance ID Collision"
 
-### Instance ID Collision
-```typescript
-// ❌ BAD: await env.MY_WORKFLOW.create({ id: userId, params: {} }); // Reuses IDs
-// ✅ GOOD: await env.MY_WORKFLOW.create({ id: `${userId}-${Date.now()}`, params: {} });
-```
+**Cause:** Reusing instance IDs causing conflicts  
+**Solution:** Use unique IDs with timestamp: `await env.MY_WORKFLOW.create({ id: \`${userId}-${Date.now()}\`, params: {} })`
 
-### Missing await
-```typescript
-// ❌ BAD: step.do('task', ...); // Fire-and-forget
-// ✅ GOOD: await step.do('task', ...);
-```
+### "Instance Data Disappeared After Completion"
 
-## Pricing
+**Cause:** Completed/errored instances are automatically deleted after the retention period (differs by plan)  
+**Solution:** Export critical data to KV/R2/D1 before workflow completes
 
-| Metric | Free | Paid |
-|--------|------|------|
-| Requests | 100k/day | 10M/mo + $0.30/M |
-| CPU time | 10ms/invoke | 30M CPU-ms/mo + $0.02/M CPU-ms |
-| Storage | 1 GB | 1 GB/mo + $0.20/GB-mo |
+### "Missing await on step.do"
 
-Storage: Includes all instances (running/errored/sleeping/completed). Retention: 3d (Free), 30d (Paid)
+**Cause:** Forgetting to await step.do() causing fire-and-forget behavior  
+**Solution:** Always await step operations: `await step.do('task', ...)`
 
-## TypeScript Types
+### "Provided event type is invalid"
 
-```typescript
-import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent, NonRetryableError } from 'cloudflare:workers';
+**Cause:** Using unsupported characters in `waitForEvent` type (e.g. `.`)  
+**Solution:** Type only supports letters, digits, `-`, and `_`. Pattern: `^[a-zA-Z0-9_][a-zA-Z0-9-_]*$`
 
-interface Env { MY_WORKFLOW: Workflow<MyParams>; KV: KVNamespace; DB: D1Database; }
+## Limits & Pricing
 
-export class MyWorkflow extends WorkflowEntrypoint<Env, MyParams> {
-  async run(event: WorkflowEvent<MyParams>, step: WorkflowStep) {
-    const user = await step.do('fetch', async () => await this.env.KV.get<User>(`user:${event.payload.userId}`, { type: 'json' }));
-  }
-}
-```
+Limits and pricing change over time. **Always fetch the latest values** from the official docs before citing specific numbers:
+
+- **Limits:** https://developers.cloudflare.com/workflows/reference/limits/
+- **Pricing:** https://developers.cloudflare.com/workflows/reference/pricing/
+
+Key areas to check: CPU time per step, max steps per workflow, concurrent instance limits, step return size, event payload size, instance creation rate, subrequest limits, state retention period, and name/ID length constraints.
+
+**Behavioral notes** (stable, not subject to number changes):
+- `step.sleep()` and `step.waitForEvent()` don't count toward the max steps limit
+- Instances in `waiting` state (sleeping, waiting for event, waiting for retry) don't count toward the concurrent instance limit
+- CPU time is active processing only — network I/O, DB queries, and sleeps are wall-clock time, not CPU time
+- `waitForEvent` type and workflow/instance names follow pattern `^[a-zA-Z0-9_][a-zA-Z0-9-_]*$`
 
 ## References
 

@@ -13,19 +13,13 @@ Multi-tenant platform with isolated customer code execution at scale.
 
 **NOT for general Workers** - only for Workers for Platforms architecture.
 
-## Architecture
+## Quick Start
 
-**4 Components:**
-1. **Dispatch Namespace** - Container for unlimited customer Workers, automatic isolation, untrusted mode
-2. **Dynamic Dispatch Worker** - Entry point, routes requests, enforces platform logic (auth, limits, validation)
-3. **User Workers** - Customer code in isolated sandboxes, API-deployed, optional bindings (KV/D1/R2/DO)
-4. **Outbound Worker** (optional) - Intercepts external fetch, controls egress, logs subrequests
+**One-click deploy:** [Platform Starter Kit](https://github.com/cloudflare/workers-for-platforms-example) deploys complete WfP setup with dispatch namespace, dispatch worker, and user worker example.
 
-**Request Flow:**
-```
-Request → Dispatch Worker → Determines user Worker → env.DISPATCHER.get("customer") 
-→ User Worker executes (Outbound Worker for external fetch) → Response → Dispatch Worker → Client
-```
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-for-platforms-example)
+
+**Manual setup:** See [configuration.md](./configuration.md) for namespace creation and dispatch worker configuration.
 
 ## Key Features
 
@@ -37,12 +31,59 @@ Request → Dispatch Worker → Determines user Worker → env.DISPATCHER.get("c
 - Static assets support
 - Tags for bulk operations
 
-## Quick Start
+## Architecture
 
-See [configuration.md](./configuration.md), [api.md](./api.md), [patterns.md](./patterns.md), [gotchas.md](./gotchas.md)
+**4 Components:**
+1. **Dispatch Namespace** - Container for unlimited customer Workers, automatic isolation (untrusted mode by default - no request.cf access, no shared cache)
+2. **Dynamic Dispatch Worker** - Entry point, routes requests, enforces platform logic (auth, limits, validation)
+3. **User Workers** - Customer code in isolated sandboxes, API-deployed, optional bindings (KV/D1/R2/DO)
+4. **Outbound Worker** (optional) - Intercepts external fetch, controls egress, logs subrequests (blocks TCP socket connect() API)
 
-## Refs
+**Request Flow:**
+```
+Request → Dispatch Worker → Determines user Worker → env.DISPATCHER.get("customer") 
+→ User Worker executes (Outbound Worker for external fetch) → Response → Dispatch Worker → Client
+```
 
-- [Docs](https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/)
-- [Starter Kit](https://github.com/cloudflare/templates/tree/main/worker-publisher-template)
-- [VibeSDK](https://github.com/cloudflare/vibesdk)
+## Decision Trees
+
+### When to Use Workers for Platforms
+```
+Need to run code?
+├─ Your code only → Regular Workers
+├─ Customer/AI code → Workers for Platforms
+└─ Untrusted code in sandbox → Workers for Platforms OR Sandbox API
+```
+
+### Routing Strategy Selection
+```
+Hostname routing needed?
+├─ Subdomains only (*.saas.com) → `*.saas.com/*` route + subdomain extraction
+├─ Custom domains → `*/*` wildcard + Cloudflare for SaaS + KV/metadata routing
+└─ Path-based (/customer/app) → Any route + path parsing
+```
+
+### Isolation Mode Selection
+```
+Worker mode?
+├─ Running customer code → Untrusted (default)
+├─ Need request.cf geolocation → Trusted mode
+├─ Internal platform, controlled code → Trusted mode with cache key prefixes
+└─ Maximum isolation → Untrusted + unique resources per customer
+```
+
+## In This Reference
+
+| File | Purpose | When to Read |
+|------|---------|--------------|
+| [configuration.md](./configuration.md) | Namespace setup, dispatch worker config | First-time setup, changing limits |
+| [api.md](./api.md) | User worker API, dispatch API, outbound worker | Deploying workers, SDK integration |
+| [patterns.md](./patterns.md) | Multi-tenancy, routing, egress control | Planning architecture, scaling |
+| [gotchas.md](./gotchas.md) | Limits, isolation issues, best practices | Debugging, production prep |
+
+## See Also
+- [workers](../workers/) - Core Workers runtime documentation
+- [durable-objects](../durable-objects/) - Stateful multi-tenant patterns
+- [sandbox](../sandbox/) - Alternative for untrusted code execution
+- [Reference Architecture: Programmable Platforms](https://developers.cloudflare.com/reference-architecture/diagrams/serverless/programmable-platforms/)
+- [Reference Architecture: AI Vibe Coding Platform](https://developers.cloudflare.com/reference-architecture/diagrams/ai/ai-vibe-coding-platform/)

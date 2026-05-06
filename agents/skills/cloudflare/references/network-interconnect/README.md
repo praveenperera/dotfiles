@@ -29,7 +29,7 @@ Private, high-performance connectivity to Cloudflare's network. **Enterprise-onl
 - Enterprise plan
 - IPv4 /24+ or IPv6 /48+ prefixes
 - BGP ASN for v1
-- See [locations PDF](https://developers.cloudflare.com/network-interconnect/static/cni-locations-30-10-2025.pdf)
+- See [locations PDF](https://developers.cloudflare.com/network-interconnect/static/cni-locations-2026-01.pdf)
 
 ## Specs
 
@@ -52,9 +52,48 @@ Private, high-performance connectivity to Cloudflare's network. **Enterprise-onl
 
 2-4 weeks typical. Steps: request → config review → order connection → configure → test → enable health checks → activate → monitor.
 
-## See Also
-
+## In This Reference
 - [configuration.md](./configuration.md) - BGP, routing, setup
 - [api.md](./api.md) - API endpoints, SDKs
 - [patterns.md](./patterns.md) - HA, hybrid cloud, failover
 - [gotchas.md](./gotchas.md) - Troubleshooting, limits
+
+## Reading Order by Task
+
+| Task | Files to Load |
+|------|---------------|
+| Initial setup | README → configuration.md → api.md |
+| Create interconnect via API | api.md → gotchas.md |
+| Design HA architecture | patterns.md → README |
+| Troubleshoot connection | gotchas.md → configuration.md |
+| Cloud integration (AWS/GCP) | configuration.md → patterns.md |
+| Monitor + alerts | configuration.md |
+
+## Automation Boundary
+
+**API-Automatable:**
+- List/create/delete interconnects (Direct, Partner)
+- List available slots
+- Get interconnect status
+- Download LOA PDF
+- Create/update CNI objects (BGP config)
+- Query settings
+
+**Requires Account Team:**
+- Initial request approval
+- AWS Direct Connect setup (send LOA+VLAN to CF)
+- GCP Cloud Interconnect final activation
+- Partner interconnect acceptance (Equinix, Megaport)
+- VLAN assignment (v1)
+- Configuration document generation (v1)
+- Escalations + troubleshooting support
+
+**Cannot Be Automated:**
+- Physical cross-connect installation (Direct)
+- Partner portal operations (virtual circuit ordering)
+- AWS/GCP portal operations
+- Maintenance window coordination
+
+## See Also
+- [tunnel](../tunnel/) - Alternative for private network connectivity
+- [spectrum](../spectrum/) - Layer 4 proxy for TCP/UDP traffic

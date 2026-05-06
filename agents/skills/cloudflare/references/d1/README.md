@@ -20,7 +20,7 @@ D1 is Cloudflare's managed, serverless database with:
 wrangler d1 create <database-name>
 
 # Execute migration
-wrangler d1 execute <db-name> --remote --file=./migrations/0001_schema.sql
+wrangler d1 migrations apply <db-name> --remote
 
 # Local development
 wrangler dev
@@ -46,15 +46,41 @@ const results = await env.DB.batch([
 ]);
 ```
 
+## Sessions API (Paid Plans)
+
+```typescript
+// Create long-running session for analytics/migrations (up to 15 minutes)
+const session = env.DB.withSession();
+try {
+  await session.prepare('CREATE INDEX idx_heavy ON large_table(column)').run();
+  await session.prepare('ANALYZE').run();
+} finally {
+  session.close(); // Always close to release resources
+}
+```
+
+## Read Replication (Paid Plans)
+
+```typescript
+// Read from nearest replica for lower latency (automatic failover)
+const user = await env.DB_REPLICA.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+
+// Writes always go to primary
+await env.DB.prepare('UPDATE users SET last_login = ? WHERE id = ?').bind(Date.now(), userId).run();
+```
+
 ## Platform Limits
 
-| Limit | Value |
-|-------|-------|
-| Database size | 10 GB per database |
-| Row size | 1 MB maximum |
-| Query timeout | 30 seconds |
-| Batch size | 10,000 statements |
-| Time Travel retention | 30 days |
+| Limit | Free Tier | Paid Plans |
+|-------|-----------|------------|
+| Database size | 500 MB | 10 GB per database |
+| Row size | 1 MB max | 1 MB max |
+| Query timeout | 30 seconds | 30 seconds |
+| Batch size | 1,000 statements | 10,000 statements |
+| Time Travel retention | 7 days | 30 days |
+| Read replicas | Not available | Yes (paid add-on) |
+
+**Pricing**: $0.001 per million rows read + $1.00 per million rows written + $0.75/GB storage/month (includes free monthly allowance; no per-database fee)
 
 ## CLI Commands
 
@@ -64,29 +90,44 @@ wrangler d1 create <db-name>
 wrangler d1 list
 wrangler d1 delete <db-name>
 
-# Execute queries
-wrangler d1 execute <db-name> --remote --command="SELECT * FROM users"
-wrangler d1 execute <db-name> --local --file=./migrations/0001_schema.sql
+# Migrations
+wrangler d1 migrations create <db-name> <migration-name>    # Create new migration file
+wrangler d1 migrations apply <db-name> --remote             # Apply pending migrations
+wrangler d1 migrations apply <db-name> --local              # Apply locally
+wrangler d1 migrations list <db-name> --remote              # Show applied migrations
 
-# Backups
-wrangler d1 export <db-name> --remote --output=./backup.sql
-wrangler d1 time-travel restore <db-name> --timestamp="2024-01-15T14:30:00Z"
+# Direct SQL execution
+wrangler d1 execute <db-name> --remote --command="SELECT * FROM users"
+wrangler d1 execute <db-name> --local --file=./schema.sql
+
+# Backups & Import/Export
+wrangler d1 export <db-name> --remote --output=./backup.sql  # Full export with schema
+wrangler d1 export <db-name> --remote --no-schema --output=./data.sql  # Data only
+wrangler d1 time-travel restore <db-name> --timestamp="2024-01-15T14:30:00Z"  # Point-in-time recovery
 
 # Development
 wrangler dev --persist-to=./.wrangler/state
 ```
 
+## Reading Order
+
+**Start here**: Quick Start above → configuration.md (setup) → api.md (queries)
+
+**Common tasks**:
+- First time setup: configuration.md → Run migrations
+- Adding queries: api.md → Prepared statements
+- Pagination/caching: patterns.md
+- Production optimization: Read Replication + Sessions API (this file)
+- Debugging: gotchas.md
+
 ## In This Reference
 
-- [configuration.md](./configuration.md) - wrangler.toml setup, TypeScript types, binding configuration
-- [api.md](./api.md) - D1Database API, prepared statements, batch operations, testing
-- [patterns.md](./patterns.md) - Pagination, bulk operations, caching, multi-tenant patterns
-- [gotchas.md](./gotchas.md) - SQL injection prevention, error handling, performance pitfalls
+- [configuration.md](./configuration.md) - wrangler.jsonc setup, migrations, TypeScript types, ORMs, local dev
+- [api.md](./api.md) - Query methods (.all/.first/.run/.raw), batch, sessions, read replicas, error handling
+- [patterns.md](./patterns.md) - Pagination, bulk operations, caching, multi-tenant, sessions, analytics
+- [gotchas.md](./gotchas.md) - SQL injection, limits by plan tier, performance, common errors
 
 ## See Also
 
 - [workers](../workers/) - Worker runtime and fetch handler patterns
-- [kv](../kv/) - Workers KV for caching D1 results
-- [r2](../r2/) - R2 for storing binary data instead of D1 BLOBs
-- [queues](../queues/) - Queue writes to D1 for high-throughput scenarios
-- [durable-objects](../durable-objects/) - Coordinate D1 writes with strong consistency
+- [hyperdrive](../hyperdrive/) - Connection pooling for external databases

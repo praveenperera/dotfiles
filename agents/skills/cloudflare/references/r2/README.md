@@ -46,12 +46,46 @@ if (object) return new Response(object.body);
 - **Standard**: Frequent access, low latency reads
 - **InfrequentAccess**: 30-day minimum storage, retrieval fees, lower storage cost
 
+## Event Notifications
+
+R2 integrates with Cloudflare Queues for reactive workflows:
+
+```typescript
+// wrangler.jsonc
+{
+  "event_notifications": [{
+    "queue": "r2-notifications",
+    "actions": ["PutObject", "DeleteObject"]
+  }]
+}
+
+// Consumer
+async queue(batch: MessageBatch, env: Env) {
+  for (const message of batch.messages) {
+    const event = message.body; // { action, bucket, object, timestamps }
+    if (event.action === 'PutObject') {
+      // Process upload: thumbnail generation, virus scan, etc.
+    }
+  }
+}
+```
+
+## Reading Order
+
+**First-time users:** README → configuration.md → api.md → patterns.md  
+**Specific tasks:**
+- Setup: configuration.md
+- Client uploads: patterns.md (presigned URLs)
+- Public static site: patterns.md (public access + custom domain)
+- Processing uploads: README (event notifications) + queues reference
+- Debugging: gotchas.md
+
 ## In This Reference
 
-- [configuration.md](./configuration.md) - wrangler.jsonc bindings, S3 SDK setup, location hints
-- [api.md](./api.md) - Workers API methods, multipart uploads, conditional requests
-- [patterns.md](./patterns.md) - Streaming, caching, presigned URLs, storage transitions
-- [gotchas.md](./gotchas.md) - List truncation, etag format, checksum limits, multipart pitfalls
+- [configuration.md](./configuration.md) - Bindings, S3 SDK, CORS, lifecycles, token scopes
+- [api.md](./api.md) - Workers API, multipart, conditional requests, presigned URLs
+- [patterns.md](./patterns.md) - Streaming, caching, client uploads, public buckets
+- [gotchas.md](./gotchas.md) - List truncation, etag format, stream length, S3 SDK region
 
 ## See Also
 

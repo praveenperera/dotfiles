@@ -4,11 +4,20 @@
 
 ## Core Principles
 
-- **Provider-first**: Use Terraform provider for ALL infrastructure - never mix with wrangler.toml for the same resources
+- **Provider-first**: Use Terraform provider for ALL infrastructure - never mix with wrangler.jsonc for the same resources
 - **State management**: Always use remote state (S3, Terraform Cloud, etc.) for team environments
 - **Modular architecture**: Create reusable modules for common patterns (zones, workers, pages)
 - **Version pinning**: Always pin provider version with `~>` for predictable upgrades
 - **Secret management**: Use variables + environment vars for sensitive data - never hardcode API tokens
+
+## Provider Version
+
+| Version | Status | Notes |
+|---------|--------|-------|
+| 5.x | Current | Auto-generated from OpenAPI, breaking changes from v4 |
+| 4.x | Legacy | Manual maintenance, deprecated |
+
+**Critical:** v5 renamed many resources (`cloudflare_record` → `cloudflare_dns_record`, `cloudflare_worker_*` → `cloudflare_workers_*`). See [gotchas.md](./gotchas.md#v5-breaking-changes) for migration details.
 
 ## Provider Setup
 
@@ -42,17 +51,7 @@ provider "cloudflare" {
    
 3. **User Service Key**: `user_service_key` for Origin CA certificates
 
-### Backend Configuration
 
-```hcl
-terraform {
-  backend "s3" {
-    bucket = "terraform-state"
-    key    = "cloudflare/terraform.tfstate"
-    region = "us-east-1"
-  }
-}
-```
 
 ## Quick Reference: Common Commands
 
@@ -68,9 +67,36 @@ terraform fmt -recursive  # Format code
 terraform validate      # Validate configuration
 ```
 
-## See Also
+## Import Existing Resources
 
-- [Configuration Reference](./configuration.md) - Resources for zones, DNS, workers, KV, R2, D1, Pages, rulesets
-- [API Reference](./api.md) - Data sources for existing resources
-- [Patterns & Use Cases](./patterns.md) - Architecture patterns, multi-env setup, CI/CD integration
-- [Troubleshooting & Best Practices](./gotchas.md) - Common issues, security, best practices
+Use cf-terraforming to generate configs from existing Cloudflare resources:
+
+```bash
+# Install
+brew install cloudflare/cloudflare/cf-terraforming
+
+# Generate HCL from existing resources
+cf-terraforming generate --resource-type cloudflare_dns_record --zone <zone-id>
+
+# Import into Terraform state
+cf-terraforming import --resource-type cloudflare_dns_record --zone <zone-id>
+```
+
+## Reading Order
+
+1. Start with [README.md](./README.md) for provider setup and authentication
+2. Review [configuration.md](./configuration.md) for resource configurations
+3. Check [api.md](./api.md) for data sources and existing resource queries
+4. See [patterns.md](./patterns.md) for multi-environment and CI/CD patterns
+5. Read [gotchas.md](./gotchas.md) for state drift, v5 breaking changes, and troubleshooting
+
+## In This Reference
+- [configuration.md](./configuration.md) - Resources for zones, DNS, workers, KV, R2, D1, Pages, rulesets
+- [api.md](./api.md) - Data sources for existing resources
+- [patterns.md](./patterns.md) - Architecture patterns, multi-env setup, CI/CD integration
+- [gotchas.md](./gotchas.md) - Common issues, security, best practices
+
+## See Also
+- [pulumi](../pulumi/) - Alternative IaC tool for Cloudflare
+- [wrangler](../wrangler/) - CLI deployment alternative
+- [workers](../workers/) - Worker runtime documentation

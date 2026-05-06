@@ -47,16 +47,31 @@ export class MyWorkflow extends WorkflowEntrypoint<Env, Params> {
 
 - **Durability**: Failed steps don't re-run successful ones
 - **Retries**: Configurable backoff (constant/linear/exponential)
-- **Events**: `waitForEvent()` for webhooks/approvals (timeout: 1h → 365d)
-- **Sleep**: `sleep()` / `sleepUntil()` for scheduling (max 365d)
+- **Events**: `waitForEvent()` for webhooks/approvals (configurable timeout)
+- **Sleep**: `sleep()` / `sleepUntil()` for scheduling
 - **Parallel**: `Promise.all()` for concurrent steps
 - **Idempotency**: Check-then-execute patterns
 
-## Further Reading
+## Retrieval
 
-- [configuration.md](./configuration.md) - wrangler.toml, step config
-- [api.md](./api.md) - Step APIs, instance management
-- [patterns.md](./patterns.md) - Common workflows, orchestration
-- [gotchas.md](./gotchas.md) - Timeouts, limits, debugging
+These reference files cover API shapes, code patterns, and debugging — things that are stable. For **limits, pricing, and other values that change**, always fetch the latest from the official docs:
 
-[Official Docs](https://developers.cloudflare.com/workflows/)
+- **Limits:** https://developers.cloudflare.com/workflows/reference/limits/
+- **Pricing:** https://developers.cloudflare.com/workflows/reference/pricing/
+- **Workers API:** https://developers.cloudflare.com/workflows/build/workers-api/
+
+## Reading Order
+
+**Getting Started:** configuration.md → api.md → patterns.md  
+**Troubleshooting:** gotchas.md
+
+## In This Reference
+- [configuration.md](./configuration.md) - wrangler.jsonc setup, step config, bindings
+- [api.md](./api.md) - Step APIs, instance management, sleep/parameters
+- [patterns.md](./patterns.md) - Common workflows, testing, orchestration
+- [gotchas.md](./gotchas.md) - Timeouts, limits, debugging strategies
+
+## See Also
+- [durable-objects](../durable-objects/) - Alternative stateful approach
+- [queues](../queues/) - Message-driven workflows
+- [workers](../workers/) - Entry point for workflow instances

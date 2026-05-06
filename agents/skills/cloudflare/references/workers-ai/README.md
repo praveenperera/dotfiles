@@ -1,116 +1,197 @@
-# Cloudflare Workers AI Skill
+# Cloudflare Workers AI
 
-A comprehensive OpenCode skill for working with Cloudflare Workers AI.
+Expert guidance for Cloudflare Workers AI - serverless GPU-powered AI inference at the edge.
 
-## What This Skill Covers
+## Overview
 
-This skill focuses **exclusively on Cloudflare Workers AI** - the serverless AI inference platform. It does NOT cover the broader Cloudflare platform (Workers, Pages, CDN, etc.) unless directly related to Workers AI usage.
+Workers AI provides:
+- 50+ pre-trained models (LLMs, embeddings, image generation, speech-to-text, translation)
+- Native Workers binding (no external API calls)
+- Pay-per-use pricing (neurons consumed per inference)
+- OpenAI-compatible REST API
+- Streaming support for text generation
+- Function calling with compatible models
 
-### Topics Included
+**Architecture**: Inference runs on Cloudflare's GPU network. Models load on first request (cold start 1-3s), subsequent requests are faster.
 
-- **Core Concepts**: Bindings, model invocation patterns, naming conventions
-- **Task-Specific Implementations**: Text generation, embeddings, image generation, speech recognition, translation, etc.
-- **REST API Usage**: Authentication, endpoints, OpenAI compatibility
-- **Wrangler Integration**: Setup, configuration, deployment
-- **Pricing & Limits**: Neurons, rate limits, cost optimization
-- **Common Patterns**: RAG, streaming, batch processing, error handling
-- **AI Gateway**: Caching, rate limiting, analytics integration
-- **Function Calling**: Both traditional and embedded approaches
-- **Model Selection**: Guidelines for choosing the right model
-- **TypeScript Support**: Types, interfaces, best practices
+## Quick Start
 
-## How to Use This Skill
+```typescript
+interface Env {
+  AI: Ai;
+}
 
-### Installation
-
-1. Place `README.md` in your OpenCode skills directory
-2. Load the skill when working on Workers AI projects
-
-### When to Load This Skill
-
-Load this skill when:
-- Implementing AI inference in Cloudflare Workers
-- Building RAG systems with Workers AI + Vectorize
-- Optimizing Workers AI costs or performance
-- Debugging Workers AI integration issues
-- Setting up AI Gateway with Workers AI
-- Implementing function calling with LLMs
-
-### Example Usage
-
-```bash
-# In OpenCode CLI
-load-skill cloudflare-workers-ai
-
-# Then ask questions like:
-"How do I implement streaming with Workers AI?"
-"What's the best embedding model for semantic search?"
-"Show me how to do RAG with Vectorize"
-"How do I handle rate limits?"
+export default {
+  async fetch(request: Request, env: Env) {
+    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      messages: [{ role: 'user', content: 'What is Cloudflare?' }]
+    });
+    return Response.json(response);
+  }
+};
 ```
 
-## Skill Structure
+```bash
+# Setup - add binding to wrangler.jsonc
+wrangler dev --remote  # Must use --remote for AI
+wrangler deploy
+```
 
-The skill is organized into these sections:
+## Model Selection Decision Tree
 
-1. **Overview** - What Workers AI is and when to use this skill
-2. **Core Concepts** - Bindings, invocation patterns, model naming
-3. **Task-Specific Patterns** - Code examples for each AI task type
-4. **REST API** - Using Workers AI via HTTP endpoints
-5. **Wrangler CLI** - Setup, config, deployment
-6. **Pricing & Neurons** - Cost model and optimization
-7. **Rate Limits** - Per-task and per-model limits
-8. **RAG Pattern** - Complete retrieval-augmented generation example
-9. **AI Gateway** - Integration patterns
-10. **Common Patterns** - Error handling, streaming, batching, etc.
-11. **Model Selection** - Choosing the right model
-12. **Debugging** - Monitoring and troubleshooting
-13. **Common Issues** - Known problems and solutions
-14. **Pages Integration** - Using Workers AI in Pages Functions
-15. **Advanced Topics** - LoRA adapters
-16. **Architecture Patterns** - System design approaches
+### Text Generation (Chat/Completion)
 
-## Key Features
+**Quality Priority**:
+- **Best quality**: `@cf/meta/llama-3.1-70b-instruct` (expensive, ~2000 neurons)
+- **Balanced**: `@cf/meta/llama-3.1-8b-instruct` (good quality, ~200 neurons)
+- **Fastest/cheapest**: `@cf/mistral/mistral-7b-instruct-v0.1` (~50 neurons)
 
-- ✅ **Complete Code Examples**: Every pattern has working code
-- ✅ **TypeScript First**: Proper typing for all examples
-- ✅ **Real-World Patterns**: RAG, streaming, batch processing
-- ✅ **Cost Optimization**: Pricing info and model selection guidance
-- ✅ **Troubleshooting**: Common issues and solutions
-- ✅ **Best Practices**: Error handling, type safety, monitoring
+**Function Calling**:
+- Use `@cf/meta/llama-3.1-8b-instruct` or `@cf/meta/llama-3.1-70b-instruct` (native tool support)
 
-## What's NOT Covered
+**Code Generation**:
+- Use `@cf/deepseek-ai/deepseek-coder-6.7b-instruct` (specialized for code)
 
-This skill does NOT cover:
-- General Cloudflare Workers programming (use Workers skill)
-- Cloudflare Pages (unless specifically Workers AI integration)
-- Cloudflare CDN, DNS, security features
-- Vectorize (unless in context of Workers AI RAG)
-- D1, KV, R2, Durable Objects (unless AI-specific usage)
+### Embeddings (Semantic Search/RAG)
 
-## Maintenance
+**English text**:
+- **Best**: `@cf/baai/bge-large-en-v1.5` (1024 dims, highest quality)
+- **Balanced**: `@cf/baai/bge-base-en-v1.5` (768 dims, good quality)
+- **Fast**: `@cf/baai/bge-small-en-v1.5` (384 dims, lower quality but fast)
 
-To keep this skill up to date:
-- Check official docs: https://developers.cloudflare.com/workers-ai/
-- Monitor model catalog: https://developers.cloudflare.com/workers-ai/models/
-- Track pricing changes: https://developers.cloudflare.com/workers-ai/platform/pricing/
+**Multilingual**:
+- Use `@hf/sentence-transformers/paraphrase-multilingual-minilm-l12-v2`
 
-## Contributing
+### Image Generation
 
-Found an issue or want to improve this skill?
-1. Test changes against official Cloudflare Workers AI docs
-2. Verify code examples work with latest Wrangler
-3. Update pricing/limits if changed
-4. Add new model examples as they're released
+- **Stable Diffusion**: `@cf/stabilityai/stable-diffusion-xl-base-1.0` (~10,000 neurons)
+- **Portraits**: `@cf/lykon/dreamshaper-8-lcm` (optimized for faces)
 
-## Version History
+### Other Tasks
 
-- **v1.0** (2026-01-11): Initial comprehensive skill
-  - Full coverage of Workers AI API
-  - Code patterns for all task types
-  - Pricing, limits, troubleshooting
-  - RAG, streaming, function calling examples
+- **Speech-to-text**: `@cf/openai/whisper`
+- **Translation**: `@cf/meta/m2m100-1.2b` (100 languages)
+- **Image classification**: `@cf/microsoft/resnet-50`
 
-## License
+## SDK Approach Decision Tree
 
-This skill documentation is provided as-is for use with OpenCode.
+### Native Binding (Recommended)
+
+**When**: Building Workers/Pages with TypeScript  
+**Why**: Zero external dependencies, best performance, native types
+
+```typescript
+await env.AI.run(model, input);
+```
+
+### REST API
+
+**When**: External services, non-Workers environments, testing  
+**Why**: Standard HTTP, works anywhere
+
+```bash
+curl https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/run/@cf/meta/llama-3.1-8b-instruct \
+  -H "Authorization: Bearer <API_TOKEN>" \
+  -d '{"messages":[{"role":"user","content":"Hello"}]}'
+```
+
+### Vercel AI SDK Integration
+
+**When**: Using Vercel AI SDK features (streaming UI, tool calling abstractions)  
+**Why**: Unified interface across providers
+
+```typescript
+import { openai } from '@ai-sdk/openai';
+
+const model = openai('model-name', {
+  baseURL: 'https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1',
+  headers: { Authorization: 'Bearer <API_TOKEN>' }
+});
+```
+
+## RAG vs Direct Generation
+
+### Use RAG (Vectorize + Workers AI) When:
+- Answering questions about specific documents/data
+- Need factual accuracy from known corpus
+- Context exceeds model's window (>4K tokens)
+- Building knowledge base chat
+
+### Use Direct Generation When:
+- Creative writing, brainstorming
+- General knowledge questions
+- Small context fits in prompt (<4K tokens)
+- Cost optimization (RAG adds embedding + vector search costs)
+
+## Platform Limits
+
+| Limit | Free Tier | Paid Plans |
+|-------|-----------|------------|
+| Neurons/day | 10,000 | Pay per use |
+| Rate limit | Varies by model | Higher (contact support) |
+| Context window | Model dependent (2K-8K) | Same |
+| Streaming | ✅ Supported | ✅ Supported |
+| Function calling | ✅ Supported (select models) | ✅ Supported |
+
+**Pricing**: Free 10K neurons/day, then pay per neuron consumed (varies by model)
+
+## Common Tasks
+
+```typescript
+// Streaming text generation
+const stream = await env.AI.run(model, { messages, stream: true });
+for await (const chunk of stream) {
+  console.log(chunk.response);
+}
+
+// Embeddings for RAG
+const { data } = await env.AI.run('@cf/baai/bge-base-en-v1.5', {
+  text: ['Query text', 'Document 1', 'Document 2']
+});
+
+// Function calling
+const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+  messages: [{ role: 'user', content: 'What is the weather?' }],
+  tools: [{
+    type: 'function',
+    function: { name: 'getWeather', parameters: { ... } }
+  }]
+});
+```
+
+## Development Workflow
+
+```bash
+# Always use --remote for AI (local doesn't have models)
+wrangler dev --remote
+
+# Deploy to production
+wrangler deploy
+
+# View model catalog
+# https://developers.cloudflare.com/workers-ai/models/
+```
+
+## Reading Order
+
+**Start here**: Quick Start above → configuration.md (setup)
+
+**Common tasks**:
+- First time setup: configuration.md → Add binding + deploy
+- Choose model: Model Selection Decision Tree (above) → api.md
+- Build RAG: patterns.md → Vectorize integration
+- Optimize costs: Model Selection + gotchas.md (rate limits)
+- Debugging: gotchas.md → Common errors
+
+## In This Reference
+
+- [configuration.md](./configuration.md) - wrangler.jsonc setup, TypeScript types, bindings, environment variables
+- [api.md](./api.md) - env.AI.run(), streaming, function calling, REST API, response types
+- [patterns.md](./patterns.md) - RAG with Vectorize, prompt engineering, batching, error handling, caching
+- [gotchas.md](./gotchas.md) - Deprecated @cloudflare/ai package, rate limits, pricing, common errors
+
+## See Also
+
+- [vectorize](../vectorize/) - Vector database for RAG patterns
+- [ai-gateway](../ai-gateway/) - Caching, rate limiting, analytics for AI requests
+- [workers](../workers/) - Worker runtime and fetch handler patterns

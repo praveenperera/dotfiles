@@ -1,7 +1,5 @@
 # Cloudflare Pages
 
-> **Note:** For new static sites, SPAs, and SSG projects, consider using [Workers Static Assets](../static-assets/) instead. Workers is now the recommended approach with broader feature access (Durable Objects, Cron Triggers, Queues) and active development. Pages remains supported for existing projects but won't receive many new features.
-
 JAMstack platform for full-stack apps on Cloudflare's global network.
 
 ## Key Features
@@ -10,7 +8,8 @@ JAMstack platform for full-stack apps on Cloudflare's global network.
 - **Preview deployments**: Unique URL per branch/PR
 - **Pages Functions**: File-based serverless routing (Workers runtime)
 - **Static + dynamic**: Smart asset caching + edge compute
-- **Framework optimized**: Next.js, SvelteKit, Remix, Astro, Nuxt, Qwik
+- **Smart Placement**: Automatic function optimization based on traffic patterns
+- **Framework optimized**: SvelteKit, Astro, Nuxt, Qwik, Solid Start
 
 ## Deployment Methods
 
@@ -64,12 +63,23 @@ npx wrangler pages deployment tail --project-name=my-project
 - [Framework Guides](https://developers.cloudflare.com/pages/framework-guides/)
 - [Discord #functions](https://discord.com/channels/595317990191398933/910978223968518144)
 
+## Reading Order
+
+**New to Pages?** Start here:
+1. README.md (you are here) - Overview & quick start
+2. [configuration.md](./configuration.md) - Project setup, wrangler.jsonc, bindings
+3. [api.md](./api.md) - Functions API, routing, context
+4. [patterns.md](./patterns.md) - Common implementations
+5. [gotchas.md](./gotchas.md) - Troubleshooting & pitfalls
+
+**Quick reference?** Jump to relevant file above.
+
 ## In This Reference
 
-- [configuration.md](./configuration.md) - wrangler.jsonc, build, env vars
-- [api.md](./api.md) - Functions API, bindings, context
-- [patterns.md](./patterns.md) - Full-stack patterns, frameworks
-- [gotchas.md](./gotchas.md) - Build issues, limits, debugging
+- [configuration.md](./configuration.md) - wrangler.jsonc, build, env vars, Smart Placement
+- [api.md](./api.md) - Functions API, bindings, context, advanced mode
+- [patterns.md](./patterns.md) - Full-stack patterns, framework integration
+- [gotchas.md](./gotchas.md) - Build issues, limits, debugging, framework warnings
 
 ## See Also
 

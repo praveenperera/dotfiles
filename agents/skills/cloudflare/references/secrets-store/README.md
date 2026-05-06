@@ -11,8 +11,13 @@ Account-level encrypted secret management for Workers and AI Gateway.
 
 - **Store**: Container (1/account in beta)
 - **Secret**: String ≤1024 bytes
-- **Scopes**: Permission boundaries (`workers`, `ai-gateway`)
+- **Scopes**: Permission boundaries controlling access
+  - `workers`: For Workers runtime access
+  - `ai-gateway`: For AI Gateway access
+  - Secrets must have correct scope for binding to work
 - **Bindings**: Connect secrets via `env` object
+
+**Regional Availability**: Global except China Network (unavailable)
 
 ### Access Control
 
@@ -43,16 +48,27 @@ API Token permissions: `Account Secrets Store Edit/Read`
 - Simple single-Worker project
 - No cross-Worker sharing needed
 
-## Files
+## In This Reference
+
+### Reading Order by Task
+
+| Task | Start Here | Then Read |
+|------|------------|-----------|
+| Quick overview | README.md | - |
+| First-time setup | README.md → configuration.md | api.md |
+| Add secret to Worker | configuration.md | api.md |
+| Implement access pattern | api.md | patterns.md |
+| Debug errors | gotchas.md | api.md |
+| Secret rotation | patterns.md | configuration.md |
+| Best practices | gotchas.md | patterns.md |
+
+### Files
 
 - [configuration.md](./configuration.md) - Wrangler commands, binding config
 - [api.md](./api.md) - Binding API, get/put/delete operations
 - [patterns.md](./patterns.md) - Rotation, encryption, access control
 - [gotchas.md](./gotchas.md) - Security issues, limits, best practices
 
-## References
-
-- [Docs](https://developers.cloudflare.com/secrets-store/)
-- [Workers Integration](https://developers.cloudflare.com/secrets-store/integrations/workers/)
-- [API Reference](https://developers.cloudflare.com/api/resources/secrets_store/)
-- [Wrangler Commands](https://developers.cloudflare.com/workers/wrangler/commands/#secrets-store)
+## See Also
+- [workers](../workers/) - Worker bindings integration
+- [wrangler](../wrangler/) - CLI secret management commands

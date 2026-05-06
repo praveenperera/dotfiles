@@ -24,34 +24,18 @@ Programmatic management of Cloudflare resources: Workers, Pages, D1, KV, R2, DNS
 
 ## Authentication
 
-Three methods (mutually exclusive):
-
-**1. API Token (Recommended)**
 ```typescript
 import * as cloudflare from "@pulumi/cloudflare";
 
-const provider = new cloudflare.Provider("cf", {
-    apiToken: process.env.CLOUDFLARE_API_TOKEN,
-});
-```
-Env: `CLOUDFLARE_API_TOKEN`
+// API Token (recommended): CLOUDFLARE_API_TOKEN env
+const provider = new cloudflare.Provider("cf", { apiToken: process.env.CLOUDFLARE_API_TOKEN });
 
-**2. API Key (Legacy)**
-```typescript
-const provider = new cloudflare.Provider("cf", {
-    apiKey: process.env.CLOUDFLARE_API_KEY,
-    email: process.env.CLOUDFLARE_EMAIL,
-});
-```
-Env: `CLOUDFLARE_API_KEY`, `CLOUDFLARE_EMAIL`
+// API Key (legacy): CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL env
+const provider = new cloudflare.Provider("cf", { apiKey: process.env.CLOUDFLARE_API_KEY, email: process.env.CLOUDFLARE_EMAIL });
 
-**3. API User Service Key**
-```typescript
-const provider = new cloudflare.Provider("cf", {
-    apiUserServiceKey: process.env.CLOUDFLARE_API_USER_SERVICE_KEY,
-});
+// API User Service Key: CLOUDFLARE_API_USER_SERVICE_KEY env
+const provider = new cloudflare.Provider("cf", { apiUserServiceKey: process.env.CLOUDFLARE_API_USER_SERVICE_KEY });
 ```
-Env: `CLOUDFLARE_API_USER_SERVICE_KEY`
 
 ## Setup
 
@@ -74,15 +58,7 @@ config:
 ```typescript
 import * as pulumi from "@pulumi/pulumi";
 import * as cloudflare from "@pulumi/cloudflare";
-
-const config = new pulumi.Config("cloudflare");
-const accountId = config.require("accountId");
-```
-
-## Essential Imports
-```typescript
-import * as pulumi from "@pulumi/pulumi";
-import * as cloudflare from "@pulumi/cloudflare";
+const accountId = new pulumi.Config("cloudflare").require("accountId");
 ```
 
 ## Common Resource Types
@@ -103,5 +79,22 @@ import * as cloudflare from "@pulumi/cloudflare";
 - `name`/`title` - Resource identifier
 - `*Bindings` - Connect resources to Workers
 
----
-See: [configuration.md](./configuration.md), [api.md](./api.md), [patterns.md](./patterns.md), [gotchas.md](./gotchas.md)
+## Reading Order
+
+| Order | File | What | When to Read |
+|-------|------|------|--------------|
+| 1 | [configuration.md](./configuration.md) | Resource config for Workers/KV/D1/R2/Queues/Pages | First time setup, resource reference |
+| 2 | [patterns.md](./patterns.md) | Architecture patterns, multi-env, component resources | Building complex apps, best practices |
+| 3 | [api.md](./api.md) | Outputs, dependencies, imports, dynamic providers | Advanced features, integrations |
+| 4 | [gotchas.md](./gotchas.md) | Common errors, troubleshooting, limits | Debugging, deployment issues |
+
+## In This Reference
+- [configuration.md](./configuration.md) - Provider config, stack setup, Workers/bindings
+- [api.md](./api.md) - Resource types, Workers script, KV/D1/R2/queues/Pages
+- [patterns.md](./patterns.md) - Multi-env, secrets, CI/CD, stack management
+- [gotchas.md](./gotchas.md) - State issues, deployment failures, limits
+
+## See Also
+- [terraform](../terraform/) - Alternative IaC for Cloudflare
+- [wrangler](../wrangler/) - CLI deployment alternative
+- [workers](../workers/) - Worker runtime documentation

@@ -37,7 +37,7 @@ export default {
 {
   "name": "my-sandbox-worker",
   "main": "src/index.ts",
-  "compatibility_date": "2024-01-01",
+  "compatibility_date": "2025-01-01", // Use current date for new projects
   
   "containers": [{
     "class_name": "Sandbox",
@@ -59,7 +59,7 @@ export default {
 
 **Dockerfile**:
 ```dockerfile
-FROM docker.io/cloudflare/sandbox:latest
+FROM docker.io/cloudflare/sandbox:0.7.0
 RUN pip3 install --no-cache-dir pandas numpy matplotlib
 EXPOSE 8080 3000  # Required for wrangler dev
 ```
@@ -72,6 +72,9 @@ EXPOSE 8080 3000  # Required for wrangler dev
 - `sandbox.startProcess(command, options)` → Background process
 - `sandbox.exposePort(port, options)` → Get preview URL
 - `sandbox.createSession(options)` → Isolated session
+- `sandbox.wsConnect(request, port)` → WebSocket proxy
+- `sandbox.destroy()` → Terminate container
+- `sandbox.mountBucket(bucket, path, options)` → Mount S3 storage
 
 ## Critical Rules
 
@@ -81,10 +84,13 @@ EXPOSE 8080 3000  # Required for wrangler dev
 - `normalizeId: true` for preview URLs
 - Retry on `CONTAINER_NOT_READY`
 
-## Resources
+## In This Reference
+- [configuration.md](./configuration.md) - Config, CLI, environment setup
+- [api.md](./api.md) - Programmatic API, testing patterns
+- [patterns.md](./patterns.md) - Common workflows, CI/CD integration
+- [gotchas.md](./gotchas.md) - Issues, limits, best practices
 
-- [Configuration](./configuration.md) - Config, CLI, environment
-- [API Reference](./api.md) - Programmatic API, testing
-- [Patterns](./patterns.md) - Common workflows, CI/CD
-- [Gotchas](./gotchas.md) - Issues, limits, best practices
-- [Official Docs](https://developers.cloudflare.com/sandbox/)
+## See Also
+- [durable-objects](../durable-objects/) - Sandbox runs on DO infrastructure
+- [containers](../containers/) - Container runtime fundamentals
+- [workers](../workers/) - Entry point for sandbox requests

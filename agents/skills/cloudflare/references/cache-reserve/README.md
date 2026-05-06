@@ -2,6 +2,16 @@
 
 **Persistent cache storage built on R2 for long-term content retention**
 
+## Smart Shield Integration
+
+Cache Reserve is part of **Smart Shield**, Cloudflare's comprehensive security and performance suite:
+
+- **Smart Shield Advanced tier**: Includes 2TB Cache Reserve storage
+- **Standalone purchase**: Available separately if not using Smart Shield
+- **Migration**: Existing standalone customers can migrate to Smart Shield bundles
+
+**Decision**: Already on Smart Shield Advanced? Cache Reserve is included. Otherwise evaluate standalone purchase vs Smart Shield upgrade.
+
 ## Overview
 
 Cache Reserve is Cloudflare's persistent, large-scale cache storage layer built on R2. It acts as the ultimate upper-tier cache, storing cacheable content for extended periods (30+ days) to maximize cache hits, reduce origin egress fees, and shield origins from repeated requests for long-tail content.
@@ -37,6 +47,19 @@ Origin Server
 3. **On subsequent request**: If edge cache misses but Cache Reserve hits → content restored to edge caches
 4. **Retention**: Assets remain in Cache Reserve for 30 days since last access (configurable via TTL)
 
+## When to Use Cache Reserve
+
+```
+Need persistent caching?
+├─ High origin egress costs → Cache Reserve ✓
+├─ Long-tail content (archives, media libraries) → Cache Reserve ✓
+├─ Already using Smart Shield Advanced → Included! ✓
+├─ Video streaming with seeking (range requests) → ✗ Not supported
+├─ Dynamic/personalized content → ✗ Use edge cache only
+├─ Need per-request cache control from Workers → ✗ Use R2 directly
+└─ Frequently updated content (< 10hr lifetime) → ✗ Not eligible
+```
+
 ## Asset Eligibility
 
 Cache Reserve only stores assets meeting **ALL** criteria:
@@ -45,6 +68,22 @@ Cache Reserve only stores assets meeting **ALL** criteria:
 - Minimum 10-hour TTL (36000 seconds)
 - `Content-Length` header present
 - Original files only (not transformed images)
+
+### Eligibility Checklist
+
+Use this checklist to verify if an asset is eligible:
+
+- [ ] Zone has Cache Reserve enabled
+- [ ] Zone has Tiered Cache enabled (required)
+- [ ] Asset TTL ≥ 10 hours (36,000 seconds)
+- [ ] `Content-Length` header present on origin response
+- [ ] No `Set-Cookie` header (or uses private directive)
+- [ ] `Vary` header is NOT `*` (can be `Accept-Encoding`)
+- [ ] Not an image transformation variant (original images OK)
+- [ ] Not a range request (no HTTP 206 support)
+- [ ] Not O2O (Orange-to-Orange) proxied request
+
+**All boxes must be checked for Cache Reserve eligibility.**
 
 ### Not Eligible
 
@@ -55,6 +94,7 @@ Cache Reserve only stores assets meeting **ALL** criteria:
 - Responses with `Vary: *` header
 - Assets from R2 public buckets on same zone
 - O2O (Orange-to-Orange) setup requests
+- **Range requests** (video seeking, partial content downloads)
 
 ## Quick Start
 
@@ -65,8 +105,8 @@ https://dash.cloudflare.com/caching/cache-reserve
 ```
 
 **Prerequisites:**
-- Paid Cache Reserve plan required
-- Tiered Cache strongly recommended
+- Paid Cache Reserve plan or Smart Shield Advanced required
+- Tiered Cache required for optimal performance
 
 ## Essential Commands
 
@@ -85,9 +125,23 @@ curl -X PATCH "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/cache/cache_r
 curl -I https://example.com/asset.jpg | grep -i cache
 ```
 
-## See Also
+## In This Reference
 
-- [Configuration](./configuration.md) - Setup, API, and Cache Rules
-- [API Reference](./api.md) - Purging, monitoring, and management APIs
-- [Patterns](./patterns.md) - Best practices and architecture patterns
-- [Gotchas](./gotchas.md) - Common issues, troubleshooting, limits
+| Task | Files |
+|------|-------|
+| Evaluate if Cache Reserve fits your use case | README.md (this file) |
+| Enable Cache Reserve for your zone | README.md + [configuration.md](./configuration.md) |
+| Use with Workers (understand limitations) | [api.md](./api.md) |
+| Setup via SDKs or IaC (TypeScript, Python, Terraform) | [configuration.md](./configuration.md) |
+| Optimize costs and debug issues | [patterns.md](./patterns.md) + [gotchas.md](./gotchas.md) |
+| Understand eligibility and troubleshoot | [gotchas.md](./gotchas.md) → [patterns.md](./patterns.md) |
+
+**Files:**
+- [configuration.md](./configuration.md) - Setup, API, SDKs, and Cache Rules
+- [api.md](./api.md) - Purging, monitoring, Workers integration
+- [patterns.md](./patterns.md) - Best practices, cost optimization, debugging
+- [gotchas.md](./gotchas.md) - Common issues, limitations, troubleshooting
+
+## See Also
+- [r2](../r2/) - Cache Reserve built on R2 storage
+- [workers](../workers/) - Workers integration with Cache API

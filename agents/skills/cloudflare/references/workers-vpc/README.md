@@ -1,90 +1,54 @@
-# Cloudflare Workers VPC Skill
+# Workers VPC Connectivity
 
-Expert guidance for connecting Cloudflare Workers to private networks (AWS/Azure/GCP/on-prem) using TCP Sockets, Cloudflare Tunnel, and related technologies.
+Connect Cloudflare Workers to private networks and internal infrastructure using TCP Sockets.
 
-## What is Workers VPC Connectivity?
+## Overview
 
-Workers VPC connectivity enables Workers to communicate with resources in private networks through:
+Workers VPC connectivity enables outbound TCP connections from Workers to private resources in AWS, Azure, GCP, on-premises datacenters, or any private network. This is achieved through the **TCP Sockets API** (`cloudflare:sockets`), which provides low-level network access for custom protocols and services.
 
-1. **TCP Sockets API** (`connect()`) - Direct outbound TCP connections from Workers
-2. **Cloudflare Tunnel** - Secure connections to private networks without exposing public IPs
-3. **Hyperdrive** - Optimized connections to external databases with pooling
-4. **Smart Placement** - Automatic Worker placement near backend services
+**Key capabilities:**
+- Direct TCP connections to private IPs and hostnames
+- TLS/StartTLS support for encrypted connections
+- Integration with Cloudflare Tunnel for secure private network access
+- Full control over wire protocols (database protocols, SSH, MQTT, custom TCP)
 
-## Core APIs
+**Note:** This reference documents the TCP Sockets API. For the newer Workers VPC Services product (HTTP-only service bindings with built-in SSRF protection), refer to separate documentation when available. VPC Services is currently in beta (2025+).
 
-### TCP Sockets (`connect()`)
+## Quick Decision: Which Technology?
 
-Create outbound TCP connections to private resources:
+Need private network connectivity from Workers?
+
+| Requirement | Use | Why |
+|------------|-----|-----|
+| HTTP/HTTPS APIs in private network | VPC Services (beta, separate docs) | SSRF-safe, declarative bindings |
+| PostgreSQL/MySQL databases | [Hyperdrive](../hyperdrive/) | Connection pooling, caching, optimized |
+| Custom TCP protocols (SSH, MQTT, proprietary) | **TCP Sockets (this doc)** | Full protocol control |
+| Simple HTTP with lowest latency | TCP Sockets + [Smart Placement](../smart-placement/) | Manual optimization |
+| Expose on-prem to internet (inbound) | [Cloudflare Tunnel](../tunnel/) | Not Worker-specific |
+
+## When to Use TCP Sockets
+
+**Use TCP Sockets when you need:**
+- ✅ Direct control over wire protocols (e.g., Postgres wire protocol, SSH, Redis RESP)
+- ✅ Non-HTTP protocols (MQTT, SMTP, custom binary protocols)
+- ✅ StartTLS or custom TLS negotiation
+- ✅ Streaming binary data over TCP
+
+**Don't use TCP Sockets when:**
+- ❌ You just need HTTP/HTTPS (use `fetch()` or VPC Services)
+- ❌ You need PostgreSQL/MySQL (use Hyperdrive for pooling)
+- ❌ You need WebSocket (use native Workers WebSocket)
+
+## Quick Start
 
 ```typescript
 import { connect } from 'cloudflare:sockets';
 
 export default {
   async fetch(req: Request): Promise<Response> {
-    const socket = connect({
-      hostname: "internal-db.private.com",
-      port: 5432
-    }, {
-      secureTransport: "starttls" // or "on" for immediate TLS
-    });
-
-    // Get readable/writable streams
-    const writer = socket.writable.getWriter();
-    const reader = socket.readable.getReader();
-
-    // Write data
-    const encoder = new TextEncoder();
-    await writer.write(encoder.encode("QUERY\r\n"));
-    await writer.close();
-
-    // Read response
-    const { value } = await reader.read();
-    
-    await socket.close();
-    return new Response(value);
-  }
-};
-```
-
-### SocketOptions
-
-```typescript
-interface SocketOptions {
-  secureTransport?: "off" | "on" | "starttls"; // Default: "off"
-  allowHalfOpen?: boolean; // Default: false
-}
-
-interface SocketAddress {
-  hostname: string; // e.g., "db.private.net"
-  port: number;     // e.g., 5432
-}
-```
-
-### Socket Interface
-
-```typescript
-interface Socket {
-  readable: ReadableStream<Uint8Array>;
-  writable: WritableStream<Uint8Array>;
-  opened: Promise<SocketInfo>;
-  closed: Promise<void>;
-  close(): Promise<void>;
-  startTls(): Socket; // Upgrade to TLS
-}
-```
-
-## Common Use Cases
-
-### 1. Connect to Internal Database
-
-```typescript
-import { connect } from 'cloudflare:sockets';
-
-export default {
-  async fetch(req: Request) {
+    // Connect to private service
     const socket = connect(
-      { hostname: "10.0.1.50", port: 5432 },
+      { hostname: "db.internal.company.net", port: 5432 },
       { secureTransport: "on" }
     );
 
@@ -92,12 +56,13 @@ export default {
       await socket.opened; // Wait for connection
       
       const writer = socket.writable.getWriter();
-      await writer.write(new TextEncoder().encode("SELECT 1\n"));
+      await writer.write(new TextEncoder().encode("QUERY\r\n"));
       await writer.close();
 
-      return new Response(socket.readable);
-    } catch (error) {
-      return new Response(`Connection failed: ${error}`, { status: 500 });
+      const reader = socket.readable.getReader();
+      const { value } = await reader.read();
+      
+      return new Response(value);
     } finally {
       await socket.close();
     }
@@ -105,475 +70,58 @@ export default {
 };
 ```
 
-### 2. StartTLS Pattern (Opportunistic TLS)
+## Architecture Pattern: Workers + Tunnel
 
-Many databases require starting insecure then upgrading:
-
-```typescript
-import { connect } from 'cloudflare:sockets';
-
-const socket = connect(
-  { hostname: "postgres.internal", port: 5432 },
-  { secureTransport: "starttls" }
-);
-
-// Initially insecure connection
-const writer = socket.writable.getWriter();
-await writer.write(new TextEncoder().encode("STARTTLS\n"));
-
-// Upgrade to TLS
-const secureSocket = socket.startTls();
-
-// Now use secureSocket for encrypted communication
-const secureWriter = secureSocket.writable.getWriter();
-await secureWriter.write(new TextEncoder().encode("AUTH\n"));
-```
-
-### 3. SSH/MQTT/SMTP Protocols
-
-```typescript
-// SSH connection example
-import { connect } from 'cloudflare:sockets';
-
-export default {
-  async fetch(req: Request) {
-    const socket = connect(
-      { hostname: "bastion.internal", port: 22 },
-      { secureTransport: "on" }
-    );
-
-    const writer = socket.writable.getWriter();
-    const reader = socket.readable.getReader();
-
-    // SSH handshake
-    await writer.write(new TextEncoder().encode("SSH-2.0-CloudflareWorker\r\n"));
-
-    // Read server response
-    const { value } = await reader.read();
-    const response = new TextDecoder().decode(value);
-
-    await socket.close();
-    return new Response(response);
-  }
-};
-```
-
-### 4. Connection with Error Handling
-
-```typescript
-import { connect } from 'cloudflare:sockets';
-
-async function connectToPrivateService(
-  host: string,
-  port: number,
-  data: string
-): Promise<string> {
-  let socket: ReturnType<typeof connect> | null = null;
-
-  try {
-    socket = connect({ hostname: host, port }, { secureTransport: "on" });
-    
-    await socket.opened; // Throws if connection fails
-
-    const writer = socket.writable.getWriter();
-    await writer.write(new TextEncoder().encode(data));
-    await writer.close();
-
-    const reader = socket.readable.getReader();
-    const chunks: Uint8Array[] = [];
-    
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-    }
-
-    const combined = new Uint8Array(
-      chunks.reduce((acc, chunk) => acc + chunk.length, 0)
-    );
-    let offset = 0;
-    chunks.forEach(chunk => {
-      combined.set(chunk, offset);
-      offset += chunk.length;
-    });
-
-    return new TextDecoder().decode(combined);
-  } catch (error) {
-    throw new Error(`Socket error: ${error}`);
-  } finally {
-    if (socket) await socket.close();
-  }
-}
-```
-
-## Integration with Cloudflare Tunnel
-
-Connect Workers to private networks via Cloudflare Tunnel:
-
-### Architecture Pattern
+Most private network connectivity combines TCP Sockets with Cloudflare Tunnel:
 
 ```
-Worker → TCP Socket → Cloudflare Tunnel → Private Network
+┌─────────┐     ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│ Worker  │────▶│ TCP Socket  │────▶│   Tunnel     │────▶│   Private   │
+│         │     │ (this API)  │     │ (cloudflared)│     │   Network   │
+└─────────┘     └─────────────┘     └──────────────┘     └─────────────┘
 ```
 
-### Setup
+1. Worker opens TCP socket to Tunnel hostname
+2. Tunnel endpoint routes to private IP
+3. Response flows back through Tunnel to Worker
 
-1. **Install cloudflared in your private network:**
+See [configuration.md](./configuration.md) for Tunnel setup details.
 
-```bash
-# On private network server
-cloudflared tunnel create my-private-network
-cloudflared tunnel route ip add 10.0.0.0/24 my-private-network
-```
+## Reading Order
 
-2. **Configure tunnel:**
+1. **Start here (README.md)** - Overview and decision guide
+2. **[api.md](./api.md)** - Socket interface, types, methods
+3. **[configuration.md](./configuration.md)** - Wrangler setup, Tunnel integration
+4. **[patterns.md](./patterns.md)** - Real-world examples (databases, protocols, error handling)
+5. **[gotchas.md](./gotchas.md)** - Limits, blocked ports, common errors
 
-```yaml
-# config.yml
-tunnel: <TUNNEL_ID>
-credentials-file: /path/to/credentials.json
+## Key Limits
 
-ingress:
-  - hostname: db.internal.example.com
-    service: tcp://10.0.1.50:5432
-  - hostname: api.internal.example.com
-    service: http://10.0.1.100:8080
-  - service: http_status:404
-```
+| Limit | Value |
+|-------|-------|
+| Max concurrent sockets per request | 6 |
+| Blocked destinations | Cloudflare IPs, localhost, port 25 |
+| Scope requirement | Must create in handler (not global) |
 
-3. **Connect from Worker:**
-
-```typescript
-import { connect } from 'cloudflare:sockets';
-
-export default {
-  async fetch(req: Request) {
-    // Connect through Tunnel to private resource
-    const socket = connect({
-      hostname: "db.internal.example.com",
-      port: 5432
-    }, {
-      secureTransport: "on"
-    });
-
-    // Use socket...
-  }
-};
-```
-
-## Wrangler Configuration
-
-### Enable TCP Sockets
-
-```toml
-# wrangler.toml
-name = "private-network-worker"
-main = "src/index.ts"
-compatibility_date = "2024-01-01"
-
-# No special configuration needed - TCP sockets are available by default
-# in Workers runtime
-
-[env.production]
-routes = [
-  { pattern = "api.example.com/*", zone_name = "example.com" }
-]
-```
-
-### Environment Variables for Endpoints
-
-```toml
-[vars]
-DB_HOST = "10.0.1.50"
-DB_PORT = "5432"
-API_HOST = "internal-api.private.net"
-API_PORT = "8080"
-```
-
-```typescript
-interface Env {
-  DB_HOST: string;
-  DB_PORT: string;
-}
-
-export default {
-  async fetch(req: Request, env: Env) {
-    const socket = connect({
-      hostname: env.DB_HOST,
-      port: parseInt(env.DB_PORT)
-    });
-    // ...
-  }
-};
-```
-
-## Smart Placement
-
-Auto-locate Workers near backend services:
-
-```toml
-# wrangler.toml
-[placement]
-mode = "smart"
-```
-
-```typescript
-export default {
-  async fetch(req: Request, env: Env, ctx: ExecutionContext) {
-    // Worker automatically runs closest to your backend
-    const socket = connect({ hostname: "backend.internal", port: 8080 });
-    // Minimized latency to private network
-  }
-};
-```
-
-## Hyperdrive for Databases
-
-For PostgreSQL/MySQL, use Hyperdrive instead of raw TCP sockets:
-
-```toml
-# wrangler.toml
-[[hyperdrive]]
-binding = "DB"
-id = "<HYPERDRIVE_ID>"
-```
-
-```typescript
-import { Client } from 'pg';
-
-interface Env {
-  DB: Hyperdrive;
-}
-
-export default {
-  async fetch(req: Request, env: Env) {
-    const client = new Client({
-      connectionString: env.DB.connectionString
-    });
-    
-    await client.connect();
-    const result = await client.query('SELECT * FROM users');
-    await client.end();
-
-    return Response.json(result.rows);
-  }
-};
-```
-
-## Limits and Considerations
-
-### TCP Socket Limits
-
-- **Max simultaneous connections:** 6 per Worker execution
-- **Blocked destinations:**
-  - Cloudflare IPs
-  - `localhost` / `127.0.0.1`
-  - Port 25 (SMTP - use Email Workers instead)
-  - Cannot connect back to the calling Worker (loop detection)
-- **Scope:** Sockets must be created in handlers (fetch/scheduled/queue), not global scope
-
-### Performance
-
-```typescript
-// ❌ BAD: Creating socket in global scope
-// import { connect } from 'cloudflare:sockets';
-// const globalSocket = connect({ hostname: "db", port: 5432 }); // ERROR
-
-// ✅ GOOD: Create in handler
-export default {
-  async fetch(req: Request) {
-    const socket = connect({ hostname: "db", port: 5432 });
-    // Use socket
-    await socket.close();
-  }
-};
-```
-
-### Security
-
-```typescript
-// Validate destinations
-function isAllowedHost(hostname: string): boolean {
-  const allowed = [
-    'internal-db.company.com',
-    'api.private.net',
-    /^10\.0\.1\.\d+$/ // Private subnet regex
-  ];
-  
-  return allowed.some(pattern => 
-    pattern instanceof RegExp 
-      ? pattern.test(hostname)
-      : pattern === hostname
-  );
-}
-
-export default {
-  async fetch(req: Request) {
-    const url = new URL(req.url);
-    const target = url.searchParams.get('target');
-    
-    if (!target || !isAllowedHost(target)) {
-      return new Response('Forbidden', { status: 403 });
-    }
-    
-    const socket = connect({ hostname: target, port: 443 });
-    // ...
-  }
-};
-```
-
-## Common Errors
-
-### `proxy request failed, cannot connect to the specified address`
-
-**Cause:** Attempting to connect to disallowed address (Cloudflare IPs, localhost, blocked IPs)
-
-**Solution:** Use public internet addresses or properly configured Tunnel endpoints
-
-### `TCP Loop detected`
-
-**Cause:** Worker connecting back to itself
-
-**Solution:** Ensure destination is external service, not the Worker's own URL
-
-### `Connections to port 25 are prohibited`
-
-**Cause:** Attempting SMTP on port 25
-
-**Solution:** Use [Email Workers](https://developers.cloudflare.com/email-routing/email-workers/)
-
-### `socket is not open`
-
-**Cause:** Trying to read/write after socket closed
-
-**Solution:** Check socket state, use try/finally with close()
-
-## Testing
-
-### Local Development with Wrangler
-
-```bash
-wrangler dev
-```
-
-### Test TCP Connection
-
-```typescript
-// test.ts
-import { connect } from 'cloudflare:sockets';
-
-export default {
-  async fetch(req: Request) {
-    const socket = connect({ hostname: "google.com", port: 80 });
-    
-    const writer = socket.writable.getWriter();
-    await writer.write(
-      new TextEncoder().encode("GET / HTTP/1.0\r\n\r\n")
-    );
-    await writer.close();
-
-    return new Response(socket.readable, {
-      headers: { "Content-Type": "text/plain" }
-    });
-  }
-};
-```
+See [gotchas.md](./gotchas.md) for complete limits and troubleshooting.
 
 ## Best Practices
 
-1. **Always close sockets:**
-   ```typescript
-   const socket = connect(...);
-   try {
-     // Use socket
-   } finally {
-     await socket.close();
-   }
-   ```
+1. **Always close sockets** - Use try/finally blocks
+2. **Validate destinations** - Prevent SSRF by allowlisting hosts
+3. **Use Hyperdrive for databases** - Better performance than raw TCP
+4. **Prefer fetch() for HTTP** - Only use TCP when necessary
+5. **Combine with Smart Placement** - Reduce latency to private networks
 
-2. **Use Hyperdrive for databases** - Better performance, connection pooling
+## Related Technologies
 
-3. **Validate destinations** - Prevent connections to unintended hosts
-
-4. **Handle errors gracefully:**
-   ```typescript
-   try {
-     const socket = connect(...);
-     await socket.opened;
-     // Use socket
-   } catch (error) {
-     console.error('Socket error:', error);
-     return new Response('Service unavailable', { status: 503 });
-   }
-   ```
-
-5. **Use Smart Placement** for latency-sensitive applications
-
-6. **Prefer fetch() for HTTP** - Use TCP sockets only when necessary
-
-## Real-World Patterns
-
-### Multi-Protocol Gateway
-
-```typescript
-import { connect } from 'cloudflare:sockets';
-
-interface Protocol {
-  connect(host: string, port: number): Promise<string>;
-}
-
-class SSHProtocol implements Protocol {
-  async connect(host: string, port: number): Promise<string> {
-    const socket = connect({ hostname: host, port }, { secureTransport: "on" });
-    // SSH implementation
-    await socket.close();
-    return "SSH connection established";
-  }
-}
-
-class PostgresProtocol implements Protocol {
-  async connect(host: string, port: number): Promise<string> {
-    const socket = connect(
-      { hostname: host, port },
-      { secureTransport: "starttls" }
-    );
-    
-    // Postgres wire protocol
-    const secureSocket = socket.startTls();
-    await secureSocket.close();
-    return "Postgres connection established";
-  }
-}
-
-export default {
-  async fetch(req: Request) {
-    const url = new URL(req.url);
-    const protocol = url.pathname.slice(1); // /ssh or /postgres
-    
-    const protocols: Record<string, Protocol> = {
-      ssh: new SSHProtocol(),
-      postgres: new PostgresProtocol()
-    };
-    
-    const handler = protocols[protocol];
-    if (!handler) {
-      return new Response('Unknown protocol', { status: 400 });
-    }
-    
-    const result = await handler.connect('internal.net', 22);
-    return new Response(result);
-  }
-};
-```
+- **[Hyperdrive](../hyperdrive/)** - PostgreSQL/MySQL with connection pooling
+- **[Cloudflare Tunnel](../tunnel/)** - Secure private network access
+- **[Smart Placement](../smart-placement/)** - Auto-locate Workers near backends
+- **VPC Services (beta)** - HTTP-only service bindings with SSRF protection (separate docs)
 
 ## Reference
 
-- [TCP Sockets Documentation](https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/)
-- [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-- [Hyperdrive](https://developers.cloudflare.com/hyperdrive/)
-- [Smart Placement](https://developers.cloudflare.com/workers/configuration/smart-placement/)
-- [Email Workers](https://developers.cloudflare.com/email-routing/email-workers/)
-
----
-
-This skill focuses exclusively on connecting Workers to private networks and VPCs. For general Workers development, see the `cloudflare-workers` skill.
+- [TCP Sockets API Documentation](https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/)
+- [Connect to databases guide](https://developers.cloudflare.com/workers/tutorials/connect-to-postgres/)
+- [Cloudflare Tunnel setup](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)

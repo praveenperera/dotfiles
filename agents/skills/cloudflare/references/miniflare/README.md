@@ -11,12 +11,47 @@ Local simulator for Cloudflare Workers development/testing. Runs Workers in work
 
 ## When to Use
 
-- Integration tests for Workers
-- Advanced use cases requiring fine-grained control
+**Decision tree for testing Workers:**
+
+```
+Need to test Workers?
+│
+├─ Unit tests for business logic only?
+│  └─ getPlatformProxy (Vitest/Jest) → [patterns.md](./patterns.md#getplatformproxy)
+│     Fast, no HTTP, direct binding access
+│
+├─ Integration tests with full runtime?
+│  ├─ Single Worker?
+│  │  └─ Miniflare API → [Quick Start](#quick-start)
+│  │     Full control, programmatic access
+│  │
+│  ├─ Multiple Workers + service bindings?
+│  │  └─ Miniflare workers array → [configuration.md](./configuration.md#multiple-workers)
+│  │     Shared storage, inter-worker calls
+│  │
+│  └─ Vitest test runner integration?
+│     └─ vitest-pool-workers → [patterns.md](./patterns.md#vitest-pool-workers)
+│        Full Workers env in Vitest
+│
+└─ Local dev server?
+   └─ wrangler dev (not Miniflare)
+      Hot reload, automatic config
+```
+
+**Use Miniflare for:**
+- Integration tests with full Worker runtime
 - Testing bindings/storage locally
 - Multiple Workers with service bindings
+- Programmatic event dispatch (fetch, queue, scheduled)
 
-**Note:** Most users should use Wrangler. Miniflare for advanced testing.
+**Use getPlatformProxy for:**
+- Fast unit tests of business logic
+- Testing without HTTP overhead
+- Vitest/Jest environments
+
+**Use Wrangler for:**
+- Local development workflow
+- Production deployments
 
 ## Setup
 
@@ -50,15 +85,21 @@ console.log(await res.text()); // Hello Miniflare!
 await mf.dispose();
 ```
 
+## Reading Order
+
+**New to Miniflare?** Start here:
+1. [Quick Start](#quick-start) - Running in 2 minutes
+2. [When to Use](#when-to-use) - Choose your testing approach
+3. [patterns.md](./patterns.md) - Testing patterns (getPlatformProxy, Vitest, node:test)
+4. [configuration.md](./configuration.md) - Configure bindings, storage, multiple workers
+
+**Troubleshooting:**
+- [gotchas.md](./gotchas.md) - Common errors and debugging
+
+**API reference:**
+- [api.md](./api.md) - Complete method reference
+
 ## See Also
-
-- [configuration.md](./configuration.md) - Config options, bindings, wrangler.toml
-- [api.md](./api.md) - Programmatic API, methods, event dispatching
-- [patterns.md](./patterns.md) - Testing patterns, CI, mocking
-- [gotchas.md](./gotchas.md) - Compatibility issues, limits, debugging
-
-## Resources
-
-- [Miniflare Docs](https://developers.cloudflare.com/workers/testing/miniflare/)
-- [Miniflare GitHub](https://github.com/cloudflare/workers-sdk/tree/main/packages/miniflare)
-- [Vitest Integration](https://developers.cloudflare.com/workers/testing/vitest-integration/) (recommended)
+- [wrangler](../wrangler/) - CLI tool that embeds Miniflare for `wrangler dev`
+- [workerd](../workerd/) - Runtime that powers Miniflare
+- [workers](../workers/) - Workers runtime API documentation

@@ -24,16 +24,29 @@ wrangler queues consumer add my-queue my-worker
 // Producer
 await env.MY_QUEUE.send({ userId: 123, action: 'notify' });
 
-// Consumer
+// Consumer (with proper error handling)
 export default {
   async queue(batch: MessageBatch, env: Env): Promise<void> {
     for (const msg of batch.messages) {
-      await process(msg.body);
-      msg.ack();
+      try {
+        await process(msg.body);
+        msg.ack();
+      } catch (error) {
+        msg.retry({ delaySeconds: 60 });
+      }
     }
   }
 };
 ```
+
+## Critical Warnings
+
+**Before using Queues, understand these production mistakes:**
+
+1. **Uncaught errors retry ENTIRE batch** (not just failed message). Always use per-message try/catch.
+2. **Messages not ack'd/retry'd will auto-retry forever** until max_retries. Always explicitly handle each message.
+
+See [gotchas.md](./gotchas.md) for detailed solutions.
 
 ## Core Operations
 
@@ -55,12 +68,26 @@ export default {
 - 5,000 msgs/second per queue
 - 4-14 day retention (configurable)
 
+## Reading Order
+
+**New to Queues?** Start here:
+1. [configuration.md](./configuration.md) - Set up queues, bindings, consumers
+2. [api.md](./api.md) - Send messages, handle batches, ack/retry patterns
+3. [patterns.md](./patterns.md) - Real-world examples and integrations
+4. [gotchas.md](./gotchas.md) - Critical warnings and troubleshooting
+
+**Task-based routing:**
+- Setup queue → [configuration.md](./configuration.md)
+- Send/receive messages → [api.md](./api.md)
+- Implement specific pattern → [patterns.md](./patterns.md)
+- Debug/troubleshoot → [gotchas.md](./gotchas.md)
+
 ## In This Reference
 
-- [configuration.md](./configuration.md) - wrangler.jsonc setup, producer/consumer config, DLQ
-- [api.md](./api.md) - Send/batch methods, queue handler, ack/retry, pull API
-- [patterns.md](./patterns.md) - Async tasks, buffering, rate limiting, event workflows
-- [gotchas.md](./gotchas.md) - Idempotency, retry limits, content types, cost optimization
+- [configuration.md](./configuration.md) - wrangler.jsonc setup, producer/consumer config, DLQ, content types
+- [api.md](./api.md) - Send/batch methods, queue handler, ack/retry rules, type-safe patterns
+- [patterns.md](./patterns.md) - Async tasks, buffering, rate limiting, D1/Workflows/DO integrations
+- [gotchas.md](./gotchas.md) - Critical batch error handling, idempotency, error classification
 
 ## See Also
 
