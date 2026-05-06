@@ -477,9 +477,6 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
             }
         }
         "Name Pane with Codex" => {
-            cmd!(sh, "tmux display-message 'Naming Codex pane...'")
-                .quiet()
-                .run()?;
             let command = "cmd tmux name-codex-pane";
             cmd!(sh, "tmux run-shell -b {command}").quiet().run()?;
         }
@@ -552,6 +549,7 @@ struct PaneTarget {
     tty: String,
     cwd: PathBuf,
     current_command: String,
+    current_name: String,
     visible_text: String,
 }
 
@@ -605,13 +603,25 @@ enum CodexThreadNameOutcome {
 
 fn name_codex_pane(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
     let pane = read_pane_target(sh, target_pane)?;
+    let previous_name = pane.current_name.clone();
+    set_tmux_pane_name(sh, &pane.id, "renaming...")?;
+
+    if let Err(err) = name_codex_pane_after_progress(sh, &pane) {
+        set_tmux_pane_name(sh, &pane.id, &previous_name).ok();
+        return Err(err);
+    }
+
+    Ok(())
+}
+
+fn name_codex_pane_after_progress(sh: &Shell, pane: &PaneTarget) -> Result<()> {
     let processes = processes_on_tty(&pane.tty)?;
-    if !pane_runs_codex(&pane, &processes) {
+    if !pane_runs_codex(pane, &processes) {
         return Err(eyre!("Target pane is not running Codex"));
     }
 
     let session = resolve_active_codex_session(sh, &processes, &pane.cwd);
-    let context = build_naming_context(&pane, session.as_ref().ok())?;
+    let context = build_naming_context(pane, session.as_ref().ok())?;
     let prompt = build_naming_prompt(&context);
     let launch_home = session
         .as_ref()
@@ -620,7 +630,7 @@ fn name_codex_pane(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
     let raw_name = run_codex_name_model(&pane.cwd, launch_home, &prompt)
         .wrap_err("Failed to generate pane name")?;
     let name = sanitize_generated_name(&raw_name)
-        .or_else(|| fallback_pane_name(&pane))
+        .or_else(|| fallback_pane_name(pane))
         .ok_or_else(|| eyre!("Generated pane name was empty"))?;
 
     set_tmux_pane_name(sh, &pane.id, &name)?;
@@ -628,7 +638,9 @@ fn name_codex_pane(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
         Ok(session) => set_codex_thread_name_for_session(session, &name),
         Err(err) => CodexThreadNameOutcome::SessionNotResolved(err.to_string()),
     };
-    report_codex_thread_name_result(sh, PaneNameAction::Named, &name, outcome);
+    if !matches!(outcome, CodexThreadNameOutcome::Updated) {
+        report_codex_thread_name_result(sh, PaneNameAction::Named, &name, outcome);
+    }
 
     Ok(())
 }
@@ -723,7 +735,7 @@ fn report_name_result(sh: &Shell, message: &str) {
 
 fn read_pane_target(sh: &Shell, target_pane: Option<&str>) -> Result<PaneTarget> {
     let format = format!(
-        "#{{pane_id}}{FIELD_SEP}#{{pane_tty}}{FIELD_SEP}#{{pane_current_path}}{FIELD_SEP}#{{pane_current_command}}"
+        "#{{pane_id}}{FIELD_SEP}#{{pane_tty}}{FIELD_SEP}#{{pane_current_path}}{FIELD_SEP}#{{pane_current_command}}{FIELD_SEP}#{{@pane_name}}"
     );
     let output = if let Some(target) = target_pane {
         cmd!(sh, "tmux display-message -p -t {target} {format}")
@@ -751,6 +763,7 @@ fn read_pane_target(sh: &Shell, target_pane: Option<&str>) -> Result<PaneTarget>
         .map(PathBuf::from)
         .ok_or_else(|| eyre!("Failed to read tmux pane cwd"))?;
     let current_command = parts.next().unwrap_or_default().to_owned();
+    let current_name = parts.next().unwrap_or_default().to_owned();
     let visible_text = capture_visible_pane_text(sh, &id);
 
     Ok(PaneTarget {
@@ -758,6 +771,7 @@ fn read_pane_target(sh: &Shell, target_pane: Option<&str>) -> Result<PaneTarget>
         tty,
         cwd,
         current_command,
+        current_name,
         visible_text,
     })
 }
