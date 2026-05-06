@@ -106,9 +106,34 @@ pub(super) fn write_session_marker(
         pid,
         started_at: Utc::now(),
         launch_home: launch_home.to_path_buf(),
+        thread_id: None,
+        rollout_path: None,
     };
     stdfs::write(&marker_path, serde_json::to_vec_pretty(&marker)?)?;
     Ok(marker_path)
+}
+
+pub(super) fn update_session_marker_thread(
+    marker_path: &Path,
+    thread_id: String,
+    rollout_path: PathBuf,
+) -> Result<bool> {
+    if !marker_path.exists() {
+        return Ok(false);
+    }
+
+    let mut marker = read_session_marker(marker_path)?;
+    marker.thread_id = Some(thread_id);
+    marker.rollout_path = Some(rollout_path);
+
+    let parent = marker_path
+        .parent()
+        .ok_or_else(|| eyre!("Session marker path has no parent"))?;
+    let temp = tempfile::NamedTempFile::new_in(parent)?;
+    stdfs::write(temp.path(), serde_json::to_vec_pretty(&marker)?)?;
+    temp.persist(marker_path)?;
+
+    Ok(true)
 }
 
 pub(super) fn active_session_markers(profile_home: &Path) -> Result<Vec<SessionMarker>> {

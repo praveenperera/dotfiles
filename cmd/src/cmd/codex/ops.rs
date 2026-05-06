@@ -110,7 +110,10 @@ fn launch_with_profile(
             return Err(err);
         }
     };
+    let thread_capture =
+        start_session_marker_thread_capture(session_marker_path.clone(), launch_home.clone());
     let status = child.wait()?;
+    thread_capture.stop();
     fsutil::remove_existing_path(&session_marker_path)?;
     sync_projects_after_launch(&config_home)?;
     if let LaunchAuthMode::ProfileCopy {
@@ -125,6 +128,114 @@ fn launch_with_profile(
         )?;
     }
     std::process::exit(status.code().unwrap_or(1));
+}
+
+const THREAD_CAPTURE_TIMEOUT: Duration = Duration::from_secs(10);
+const THREAD_CAPTURE_POLL_INTERVAL: Duration = Duration::from_millis(100);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct CapturedThread {
+    pub(super) id: String,
+    pub(super) rollout_path: PathBuf,
+}
+
+struct SessionMarkerThreadCapture {
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    handle: std::thread::JoinHandle<()>,
+}
+
+impl SessionMarkerThreadCapture {
+    fn stop(self) {
+        self.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        self.handle.join().ok();
+    }
+}
+
+fn start_session_marker_thread_capture(
+    marker_path: PathBuf,
+    launch_home: PathBuf,
+) -> SessionMarkerThreadCapture {
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let thread_stop = stop.clone();
+    let handle = std::thread::spawn(move || {
+        let Some(thread) = wait_for_launch_thread(&launch_home, &thread_stop) else {
+            return;
+        };
+        update_session_marker_thread(&marker_path, thread.id, thread.rollout_path).ok();
+    });
+
+    SessionMarkerThreadCapture { stop, handle }
+}
+
+fn wait_for_launch_thread(
+    launch_home: &Path,
+    stop: &std::sync::atomic::AtomicBool,
+) -> Option<CapturedThread> {
+    let deadline = std::time::Instant::now() + THREAD_CAPTURE_TIMEOUT;
+    loop {
+        if let Some(thread) = capture_launch_thread(launch_home) {
+            return Some(thread);
+        }
+        if stop.load(std::sync::atomic::Ordering::Relaxed) || std::time::Instant::now() >= deadline
+        {
+            return None;
+        }
+        std::thread::sleep(THREAD_CAPTURE_POLL_INTERVAL);
+    }
+}
+
+fn capture_launch_thread(launch_home: &Path) -> Option<CapturedThread> {
+    let state_db = launch_home.join("state_5.sqlite");
+    if !state_db.exists() {
+        return None;
+    }
+
+    let sessions_prefix = launch_home.join("sessions");
+    let sessions_prefix = sessions_prefix.to_str()?;
+    let output = std::process::Command::new("sqlite3")
+        .arg(format!("file:{}?mode=ro", state_db.display()))
+        .arg(format!(
+            "select id || char(31) || rollout_path from threads \
+             where source = 'cli' \
+             and (agent_role is null or agent_role = '') \
+             and rollout_path like {} \
+             order by created_at_ms asc, created_at asc;",
+            sqlite_quote(&format!("{sessions_prefix}/%"))
+        ))
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    parse_captured_threads(&String::from_utf8_lossy(&output.stdout))
+}
+
+pub(super) fn parse_captured_threads(output: &str) -> Option<CapturedThread> {
+    let threads = output
+        .lines()
+        .filter_map(parse_captured_thread)
+        .collect::<Vec<_>>();
+    match threads.as_slice() {
+        [thread] => Some(thread.clone()),
+        _ => None,
+    }
+}
+
+fn parse_captured_thread(line: &str) -> Option<CapturedThread> {
+    let (id, rollout_path) = line.split_once('\x1f')?;
+    if id.is_empty() || rollout_path.is_empty() {
+        return None;
+    }
+
+    Some(CapturedThread {
+        id: id.to_owned(),
+        rollout_path: PathBuf::from(rollout_path),
+    })
+}
+
+fn sqlite_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
 }
 
 pub(super) fn resolve_launch_auth_mode(

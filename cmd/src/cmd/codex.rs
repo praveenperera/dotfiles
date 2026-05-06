@@ -327,6 +327,10 @@ struct SessionMarker {
     pid: u32,
     started_at: chrono::DateTime<Utc>,
     launch_home: PathBuf,
+    #[serde(default)]
+    thread_id: Option<String>,
+    #[serde(default)]
+    rollout_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -473,7 +477,7 @@ const CHATGPT_REFRESH_URL: &str = "https://auth.openai.com/oauth/token";
 const CHATGPT_REFRESH_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 const USAGE_FETCH_CONCURRENCY: usize = 4;
 const USAGE_FETCH_TIMEOUT: Duration = Duration::from_secs(5);
-const LAUNCH_ACTIVE_USAGE_FETCH_TIMEOUT: Duration = Duration::from_millis(250);
+const LAUNCH_ACTIVE_USAGE_FETCH_TIMEOUT: Duration = Duration::from_millis(400);
 const PROFILE_REFRESH_FALLBACK_DAYS: i64 = 7;
 
 pub fn run_with_args(_sh: &Shell, args: &[OsString]) -> Result<()> {
@@ -580,16 +584,17 @@ mod tests {
         active_session_markers, build_profile_rows, create_launch_home, current_usage_view,
         delete_profile_home, enrich_active_profiles_from_global_auth,
         enrich_active_profiles_with_global_auth, format_launch_banner, launch_banner_details,
-        needs_proactive_refresh, parse_auth_identity, parse_jwt_expiration, parse_raw_args,
-        prepare_config_group_home, prepare_resume_group_home, print_current_usage_table,
-        promote_launch_auth_if_unchanged, read_auth_snapshot, read_stored_auth,
-        replace_global_auth_with_profile, resolve_launch_auth_mode, resolve_launch_groups,
-        resolve_launch_target, save_profile_auth, select_auto_launch_profile,
-        select_auto_launch_profile_except, sync_launch_codex_home, sync_login_codex_home,
-        validate_group_name, write_auth_raw_if_unchanged, write_session_marker, AuthIdentity,
-        CodexCmd, LaunchAuthMode, LaunchGroups, LaunchTarget, LimitStyleKind, ProfileAuthRefresher,
+        needs_proactive_refresh, parse_auth_identity, parse_captured_threads, parse_jwt_expiration,
+        parse_raw_args, prepare_config_group_home, prepare_resume_group_home,
+        print_current_usage_table, promote_launch_auth_if_unchanged, read_auth_snapshot,
+        read_stored_auth, replace_global_auth_with_profile, resolve_launch_auth_mode,
+        resolve_launch_groups, resolve_launch_target, save_profile_auth,
+        select_auto_launch_profile, select_auto_launch_profile_except, sync_launch_codex_home,
+        sync_login_codex_home, update_session_marker_thread, validate_group_name,
+        write_auth_raw_if_unchanged, write_session_marker, AuthIdentity, CapturedThread, CodexCmd,
+        LaunchAuthMode, LaunchGroups, LaunchTarget, LimitStyleKind, ProfileAuthRefresher,
         ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState,
-        SavedProfile, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
+        SavedProfile, SessionMarker, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
@@ -967,6 +972,58 @@ mod tests {
         assert!(rollout_dir.exists());
         assert!(rollout_path.exists());
         assert!(!stale_marker.exists());
+    }
+
+    #[test]
+    fn session_marker_reads_old_json_without_thread_fields() {
+        let marker = serde_json::from_str::<SessionMarker>(
+            r#"{"pid":1,"started_at":"2026-05-06T19:47:49Z","launch_home":"/tmp/launch"}"#,
+        )
+        .unwrap();
+
+        assert_eq!(marker.pid, 1);
+        assert_eq!(marker.thread_id, None);
+        assert_eq!(marker.rollout_path, None);
+    }
+
+    #[test]
+    fn update_session_marker_thread_adds_captured_thread() {
+        let dir = tempdir().unwrap();
+        let profile_home = dir.path().join("profiles").join("a");
+        let marker_path = write_session_marker(&profile_home, 42, dir.path()).unwrap();
+        let rollout_path = dir.path().join("sessions").join("rollout.jsonl");
+
+        let updated =
+            update_session_marker_thread(&marker_path, "thread-1".into(), rollout_path.clone())
+                .unwrap();
+        let marker =
+            serde_json::from_slice::<SessionMarker>(&fs::read(&marker_path).unwrap()).unwrap();
+
+        assert!(updated);
+        assert_eq!(marker.thread_id.as_deref(), Some("thread-1"));
+        assert_eq!(marker.rollout_path.as_deref(), Some(rollout_path.as_path()));
+    }
+
+    #[test]
+    fn parse_captured_threads_returns_one_exact_candidate() {
+        let output = "thread-1\u{1f}/tmp/launch/sessions/rollout.jsonl\n";
+
+        let captured = parse_captured_threads(output);
+
+        assert_eq!(
+            captured,
+            Some(CapturedThread {
+                id: "thread-1".into(),
+                rollout_path: Path::new("/tmp/launch/sessions/rollout.jsonl").to_path_buf(),
+            })
+        );
+    }
+
+    #[test]
+    fn parse_captured_threads_rejects_multiple_candidates() {
+        let output = "thread-1\u{1f}/tmp/launch/sessions/one.jsonl\nthread-2\u{1f}/tmp/launch/sessions/two.jsonl\n";
+
+        assert_eq!(parse_captured_threads(output), None);
     }
 
     #[test]
