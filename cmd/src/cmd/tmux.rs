@@ -653,7 +653,9 @@ fn rename_pane(sh: &Shell, target_pane: Option<&str>, name: &str) -> Result<()> 
         Ok(session) => set_codex_thread_name_for_session(session, name),
         Err(err) => CodexThreadNameOutcome::SessionNotResolved(err.to_string()),
     };
-    report_codex_thread_name_result(sh, PaneNameAction::Renamed, name, outcome);
+    if !matches!(outcome, CodexThreadNameOutcome::Updated) {
+        report_codex_thread_name_result(sh, PaneNameAction::Renamed, name, outcome);
+    }
 
     Ok(())
 }
