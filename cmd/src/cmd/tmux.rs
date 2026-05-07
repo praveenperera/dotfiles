@@ -647,16 +647,15 @@ fn name_codex_pane_after_progress(sh: &Shell, pane: &PaneTarget) -> Result<()> {
 
 fn rename_pane(sh: &Shell, target_pane: Option<&str>, name: &str) -> Result<()> {
     let name = name.trim();
+    let pane = read_pane_target(sh, target_pane)?;
     if name.is_empty() {
+        clear_tmux_pane_name(sh, &pane.id)?;
         return Ok(());
     }
 
-    let pane = read_pane_target(sh, target_pane)?;
     set_tmux_pane_name(sh, &pane.id, name)?;
-
     let processes = processes_on_tty(&pane.tty)?;
     if !pane_runs_codex(&pane, &processes) {
-        report_name_result(sh, "Pane renamed; target pane is not running Codex");
         return Ok(());
     }
 
@@ -1035,17 +1034,50 @@ fn user_requests_from_rollout(path: &Path) -> Vec<String> {
             .and_then(serde_json::Value::as_str)
             .filter(|role| *role == "user")?;
 
-        let text = payload
-            .get("content")
-            .and_then(serde_json::Value::as_array)
-            .into_iter()
-            .flatten()
-            .filter_map(|item| item.get("text").or_else(|| item.get("input_text")))
-            .filter_map(serde_json::Value::as_str)
-            .collect::<Vec<_>>()
-            .join("\n");
+        let text = human_user_request_text(payload)?;
         (!text.trim().is_empty()).then(|| text.trim().to_owned())
     })
+}
+
+fn human_user_request_text(payload: &serde_json::Value) -> Option<String> {
+    let text = payload
+        .get("content")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|item| item.get("text").or_else(|| item.get("input_text")))
+        .filter_map(serde_json::Value::as_str)
+        .filter(|text| !is_injected_context_text(text))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    (!text.trim().is_empty()).then(|| text.trim().to_owned())
+}
+
+fn is_injected_context_text(text: &str) -> bool {
+    let text = text.trim_start();
+    if text.starts_with("# AGENTS.md instructions for ") && text.contains("\n<INSTRUCTIONS>") {
+        return true;
+    }
+
+    [
+        "<environment_context>",
+        "</environment_context>",
+        "<skill>",
+        "</skill>",
+        "## Memory",
+        "<permissions instructions>",
+        "</permissions instructions>",
+        "<collaboration_mode>",
+        "</collaboration_mode>",
+        "<skills_instructions>",
+        "</skills_instructions>",
+        "<plugins_instructions>",
+        "</plugins_instructions>",
+        "</INSTRUCTIONS>",
+    ]
+    .iter()
+    .any(|prefix| text.starts_with(prefix))
 }
 
 fn read_rollout_lines<T>(
@@ -1103,12 +1135,12 @@ fn build_naming_prompt(context: &NamingContext) -> String {
         prompt.push_str(&format!("git branch: {branch}\n"));
     }
     if let Some(first) = &context.first_user_request {
-        prompt.push_str("\nfirst user request:\n");
+        prompt.push_str("\ninitial human request:\n");
         prompt.push_str(first);
         prompt.push('\n');
     }
     if !context.recent_user_requests.is_empty() {
-        prompt.push_str("\nrecent user requests:\n");
+        prompt.push_str("\nrecent human requests, prefer these for the title:\n");
         for request in &context.recent_user_requests {
             prompt.push_str("- ");
             prompt.push_str(&request.replace('\n', "\n  "));
@@ -1191,6 +1223,13 @@ fn fallback_pane_name(pane: &PaneTarget) -> Option<String> {
 
 fn set_tmux_pane_name(sh: &Shell, pane_id: &str, name: &str) -> Result<()> {
     cmd!(sh, "tmux set -p -t {pane_id} @pane_name {name}")
+        .quiet()
+        .run()?;
+    Ok(())
+}
+
+fn clear_tmux_pane_name(sh: &Shell, pane_id: &str) -> Result<()> {
+    cmd!(sh, "tmux set -pu -t {pane_id} @pane_name")
         .quiet()
         .run()?;
     Ok(())
@@ -1461,11 +1500,38 @@ impl std::fmt::Display for NotifyKind {
 #[cfg(test)]
 mod tests {
     use super::{
-        codex_thread_name_message, order_panes, order_sessions, order_windows, parse_index_list,
-        parse_pane_process, sanitize_generated_name, CodexSessionMarker, CodexThreadNameOutcome,
-        PaneEntry, PaneNameAction, SessionEntry, WindowEntry,
+        build_naming_context, codex_thread_name_message, order_panes, order_sessions,
+        order_windows, parse_index_list, parse_pane_process, sanitize_generated_name,
+        user_requests_from_rollout, ActiveCodexSession, CodexSessionMarker, CodexThreadNameOutcome,
+        PaneEntry, PaneNameAction, PaneTarget, SessionEntry, WindowEntry,
     };
+    use std::io::Write;
     use std::path::PathBuf;
+
+    fn rollout_file(lines: &[serde_json::Value]) -> tempfile::NamedTempFile {
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        for line in lines {
+            writeln!(file, "{line}").unwrap();
+        }
+        file
+    }
+
+    fn user_message(texts: &[&str]) -> serde_json::Value {
+        serde_json::json!({
+            "type": "response_item",
+            "payload": {
+                "type": "message",
+                "role": "user",
+                "content": texts
+                    .iter()
+                    .map(|text| serde_json::json!({
+                        "type": "input_text",
+                        "text": text,
+                    }))
+                    .collect::<Vec<_>>(),
+            },
+        })
+    }
 
     #[test]
     fn parses_pane_process_with_ps_spacing() {
@@ -1485,6 +1551,88 @@ mod tests {
                 .unwrap();
 
         assert_eq!(name, "Implement Codex Pane Session Auto Naming");
+    }
+
+    #[test]
+    fn rollout_user_requests_skip_injected_context() {
+        let file = rollout_file(&[
+            user_message(&[
+                "# AGENTS.md instructions for /Users/praveen/code/dotfiles\n\n<INSTRUCTIONS>\nread first\n</INSTRUCTIONS>",
+                "<environment_context>\n  <cwd>/Users/praveen/code/dotfiles</cwd>\n</environment_context>",
+            ]),
+            user_message(&[
+                "i have $cloudflare and $cloudflare-deploy what is the differences between the 2 skills i need to conslidate",
+            ]),
+            user_message(&["<skill>\n<name>cloudflare</name>\n---\n# Cloudflare\n</skill>"]),
+            user_message(&["how are both installed?"]),
+        ]);
+
+        assert_eq!(
+            user_requests_from_rollout(file.path()),
+            vec![
+                "i have $cloudflare and $cloudflare-deploy what is the differences between the 2 skills i need to conslidate",
+                "how are both installed?"
+            ]
+        );
+    }
+
+    #[test]
+    fn rollout_user_requests_preserve_real_text_next_to_context_segments() {
+        let file = rollout_file(&[user_message(&[
+            "<skill>\n<name>cloudflare</name>\n</skill>",
+            "does it have everything we need?",
+            "<plugins_instructions>\nplugin setup\n</plugins_instructions>",
+        ])]);
+
+        assert_eq!(
+            user_requests_from_rollout(file.path()),
+            vec!["does it have everything we need?"]
+        );
+    }
+
+    #[test]
+    fn rollout_user_requests_skip_injected_context_closing_tags() {
+        let file = rollout_file(&[user_message(&[
+            "</environment_context>",
+            "what happened after this?",
+            "</skills_instructions>",
+            "</plugins_instructions>",
+        ])]);
+
+        assert_eq!(
+            user_requests_from_rollout(file.path()),
+            vec!["what happened after this?"]
+        );
+    }
+
+    #[test]
+    fn naming_context_uses_visible_text_when_rollout_has_only_context() {
+        let file = rollout_file(&[
+            user_message(&[
+                "# AGENTS.md instructions for /Users/praveen/code/dotfiles\n\n<INSTRUCTIONS>\nread first\n</INSTRUCTIONS>",
+                "<environment_context>\n  <cwd>/Users/praveen/code/dotfiles</cwd>\n</environment_context>",
+            ]),
+            user_message(&["<skill>\n<name>cloudflare</name>\n</skill>"]),
+        ]);
+        let pane = PaneTarget {
+            id: "%1".to_owned(),
+            tty: "/dev/ttys001".to_owned(),
+            cwd: PathBuf::from("/tmp"),
+            current_command: "codex".to_owned(),
+            current_name: String::new(),
+            visible_text: "visible task text".to_owned(),
+        };
+        let session = ActiveCodexSession {
+            launch_home: PathBuf::from("/tmp/codex-home"),
+            thread_id: Some("thread-1".to_owned()),
+            rollout_path: Some(file.path().to_path_buf()),
+        };
+
+        let context = build_naming_context(&pane, Some(&session)).unwrap();
+
+        assert_eq!(context.first_user_request, None);
+        assert!(context.recent_user_requests.is_empty());
+        assert_eq!(context.visible_text.as_deref(), Some("visible task text"));
     }
 
     #[test]
