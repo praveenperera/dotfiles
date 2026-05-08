@@ -40,6 +40,35 @@ Only proceed if Findings First identified structural issues that warrant action.
 
 Spawn an agent focused exclusively on structural refactoring. Do not touch style in this pass. Clarity over brevity — explicit code is often better than overly compact.
 
+### Data-first domain modeling
+
+Before extracting helpers or splitting modules, identify the core domain data, invariants, and state transitions. Within the confirmed scope, refactors should usually improve the shape of the data model before optimizing control flow. Prefer reshaping data types so valid states are natural and invalid states are unrepresentable, rather than spreading validation and branching across functions.
+
+Look for places where the code is compensating for a weak model: primitive obsession, boolean state, loosely related parameters, duplicated validation, sentinel values, optional fields that only make sense in some states, impossible branches, or comments that explain invariants the types do not enforce. Move those facts into types so callers must provide valid domain values and invalid combinations are hard or impossible to construct.
+
+Refactors should consolidate the current understanding of the problem space. Code often represents several layers of past understanding: old assumptions, newer edge cases, compatibility branches, duplicated checks, and patches added after the model proved incomplete. Do not preserve that drift by adding another bandaid. If the domain model is wrong or split across competing representations, propose the fuller reshape that would make the final model explicit, simpler to follow, and easier to verify. Ask before rewriting public APIs, changing persisted formats, removing compatibility paths, or broadening beyond the requested scope. If a behavior change would make the model much simpler or more correct, explain the tradeoff and ask the user before applying it.
+
+Prefer:
+- Newtypes for domain primitives (`UserId`, `EmailAddress`, `PackageWeight`) instead of raw `String`, `Uuid`, `i64`, or `f64`
+- Value objects with private fields and smart constructors / `TryFrom` when construction has invariants
+- Enums with payloads for mutually exclusive states instead of `status` fields plus flags/options
+- Aggregate-root methods for business transitions, so invariants are checked in one consistency boundary
+- Parsing/validation at system boundaries, converting loose external data into precise internal types before business logic runs
+- Replacing parallel historical representations with one canonical internal representation
+- Typestate only when the state transition is part of the API protocol and compile-time sequencing is worth the extra type complexity
+
+Refactoring heuristic:
+1. Identify the invariant the code keeps re-checking
+2. Name the domain concept that owns that invariant
+3. Find older assumptions or duplicate representations that conflict with the current understanding
+4. Introduce the smallest type that can carry the proof
+5. Parse into that type as early as practical
+6. Move behavior and transitions onto the type or aggregate
+7. Delete now-redundant checks, flags, impossible branches, and comments that merely restate the type
+8. Preserve external behavior unless the user explicitly approves a correctness or compatibility change
+
+Avoid turning every rule into type-level machinery. If the state depends on persisted/runtime data or would make ordinary code much harder to read, use a runtime enum plus focused constructors and transition methods.
+
 ### Module splitting
 - Use line count as a heuristic, not a trigger — large modules may warrant splitting by concern, but too many tiny files can make code harder to follow
 - Use Rust 2018+ layout: `module_name.rs` + `module_name/nested.rs`, never `mod.rs`
@@ -111,3 +140,4 @@ Spawn a separate agent focused on style and conventions. Always runs if Pass 1 r
 - When refactoring code that calls external crates, read the dependency source to verify behavior — use `/rust-crate-source` or `/btx`, or check `~/.cargo/registry/src/`
 - When code has documented assumptions, trace the data flow backwards to verify callers satisfy them
 - Refactoring is an opportunity to catch correctness bugs — question the logic, not just the structure
+- Avoid bandaid refactors that preserve a known-wrong model. Churn is acceptable only inside confirmed scope, with preserved external behavior, when it consolidates the domain model, removes competing representations, and leaves the code simpler, more correct, and easier to trace
