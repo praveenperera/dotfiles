@@ -35,6 +35,7 @@
 - `#[act_zero_ext::into_actor_result]` on `fn foo()` generates: public async `foo() -> ActorResult<T>` wrapper + private `do_foo()` with original logic
 - Prefer structs with methods over freestanding functions to encapsulate state and provide a cleaner API
 - Use named imports (`use foo::{Bar, Baz}`) instead of wildcard imports (`use foo::*`)
+- Keep test-only functions, types, and modules out of production code paths; put them under `mod tests` or a dedicated `mod test_support`, using `#[cfg(test)]` only to gate those test modules
 
 # Build Verification
 
