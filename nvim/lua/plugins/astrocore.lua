@@ -18,6 +18,9 @@ return {
             virtual_text = true,
             underline = true,
         },
+        autocmds = {
+            neotree_start = false,
+        },
         -- vim options can be configured here
         options = {
             opt = {

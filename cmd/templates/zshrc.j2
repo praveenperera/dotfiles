@@ -70,7 +70,7 @@ alias clh="claude --permission-mode acceptEdits --model haiku"
 alias clpo="claude --permission-mode plan --model opus"
 alias clps="claude --permission-mode plan --model sonnet"
 
-# main codex configs
+# codex
 alias l="cmd codex usage"
 alias ll="cmd codex launch a -c shared"
 
