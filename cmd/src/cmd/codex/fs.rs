@@ -507,7 +507,7 @@ impl GroupKind {
     }
 
     fn seeds(self, name: &str, owner: EntryOwner) -> bool {
-        self.owns(owner) || matches!(self, Self::Config) && name == "config.base.toml"
+        self.owns(owner) || matches!(self, Self::Config) && name == "config.toml"
     }
 }
 

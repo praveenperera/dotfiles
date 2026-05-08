@@ -1,5 +1,4 @@
 mod auth;
-mod config_overlay;
 mod fs;
 mod ops;
 mod table;
@@ -31,7 +30,6 @@ use std::time::Duration;
 use xshell::Shell;
 
 use auth::*;
-use config_overlay::*;
 use fs::*;
 use ops::*;
 use table::*;
@@ -60,7 +58,7 @@ pub enum CodexCmd {
         #[arg(short = 'r', long)]
         resume_group: Option<String>,
 
-        /// Config-state group to use for model and UI preferences
+        /// Config group to use for model and UI preferences
         #[arg(short = 'c', long)]
         config_group: Option<String>,
 
@@ -121,43 +119,6 @@ pub enum CodexCmd {
         /// Skip the confirmation prompt
         #[arg(short = 'y', long)]
         yes: bool,
-    },
-
-    /// Manage generated codex config overlays
-    Config {
-        #[command(subcommand)]
-        subcommand: CodexConfigCmd,
-    },
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum CodexConfigCmd {
-    /// Render generated config.toml from base and local overlay
-    Render {
-        /// Config group to render, or shared when omitted
-        group: Option<String>,
-    },
-
-    /// Sync [projects] from generated config.toml into the local overlay
-    SyncProjects {
-        /// Config group to sync, or shared when omitted
-        #[arg(conflicts_with = "all")]
-        group: Option<String>,
-
-        /// Sync all config groups and shared config
-        #[arg(long)]
-        all: bool,
-    },
-
-    /// Split existing config.toml files into base and local overlay files
-    Migrate {
-        /// Config group to migrate, or shared when omitted
-        #[arg(conflicts_with = "all")]
-        group: Option<String>,
-
-        /// Migrate all config groups and shared config
-        #[arg(long)]
-        all: bool,
     },
 }
 
@@ -510,7 +471,6 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
         CodexCmd::RefreshAll => refresh_all(),
         CodexCmd::Switch { profile } => switch_default_profile(&profile),
         CodexCmd::Delete { profile, yes } => delete(&profile, yes),
-        CodexCmd::Config { subcommand } => run_config_command(subcommand),
     }
 }
 
@@ -598,6 +558,7 @@ mod tests {
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
+    use clap::Parser;
     use serde_json::json;
     use std::os::unix::fs::symlink;
     use std::path::Path;
@@ -1448,6 +1409,31 @@ mod tests {
     }
 
     #[test]
+    fn prepare_resume_group_home_seeds_only_resume_entries() {
+        let dir = tempdir().unwrap();
+        let global_codex = dir.path().join(".codex");
+        let resume_groups = global_codex.join("resume-groups");
+
+        fs::create_dir_all(global_codex.join("profiles")).unwrap();
+        fs::create_dir_all(global_codex.join("sessions")).unwrap();
+        fs::write(global_codex.join("session_index.jsonl"), "index").unwrap();
+        fs::write(global_codex.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
+
+        let resume_home = prepare_resume_group_home(&global_codex, "shared-work").unwrap();
+
+        assert_eq!(
+            fs::read_to_string(resume_home.join("session_index.jsonl")).unwrap(),
+            "index"
+        );
+        assert_eq!(
+            fs::read_dir(resume_home.join("sessions")).unwrap().count(),
+            0
+        );
+        assert!(resume_groups.join("shared-work").exists());
+        assert!(!resume_home.join("config.toml").exists());
+    }
+
+    #[test]
     fn prepare_config_group_home_seeds_only_config_entries() {
         let dir = tempdir().unwrap();
         let global_codex = dir.path().join(".codex");
@@ -1472,35 +1458,7 @@ mod tests {
         assert!(config_groups.join("work").exists());
         assert!(!config_home.join("sessions").exists());
         assert!(!config_home.join("AGENTS.md").exists());
-        assert!(!fs::symlink_metadata(config_home.join("config.toml"))
-            .unwrap()
-            .file_type()
-            .is_symlink());
-    }
-
-    #[test]
-    fn prepare_resume_group_home_seeds_only_resume_entries() {
-        let dir = tempdir().unwrap();
-        let global_codex = dir.path().join(".codex");
-        let resume_groups = global_codex.join("resume-groups");
-
-        fs::create_dir_all(global_codex.join("profiles")).unwrap();
-        fs::create_dir_all(global_codex.join("sessions")).unwrap();
-        fs::write(global_codex.join("session_index.jsonl"), "index").unwrap();
-        fs::write(global_codex.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
-
-        let resume_home = prepare_resume_group_home(&global_codex, "shared-work").unwrap();
-
-        assert_eq!(
-            fs::read_to_string(resume_home.join("session_index.jsonl")).unwrap(),
-            "index"
-        );
-        assert_eq!(
-            fs::read_dir(resume_home.join("sessions")).unwrap().count(),
-            0
-        );
-        assert!(resume_groups.join("shared-work").exists());
-        assert!(!resume_home.join("config.toml").exists());
+        assert!(!config_home.join("config.base.toml").exists());
     }
 
     #[test]
@@ -1985,6 +1943,13 @@ mod tests {
     }
 
     #[test]
+    fn cmd_rejects_config_overlay_subcommand() {
+        let err = super::CodexCli::try_parse_from(["codex", "config"]).unwrap_err();
+
+        assert_eq!(err.kind(), clap::error::ErrorKind::InvalidSubcommand);
+    }
+
+    #[test]
     fn resolve_launch_target_treats_matching_profile_as_explicit() {
         let profiles = vec![available_saved_profile("a", 10.0, 20.0)];
         let profile_or_arg = OsString::from("a");
@@ -2433,7 +2398,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_launch_groups_uses_profile_and_shared_defaults() {
+    fn resolve_launch_groups_uses_profile_config_and_shared_resume_by_default() {
         let groups = resolve_launch_groups("work", None, None).unwrap();
 
         assert_eq!(
@@ -2962,7 +2927,7 @@ mod tests {
         )
         .unwrap();
 
-        let groups = resolve_launch_groups("a", None, Some("review-high")).unwrap();
+        let groups = resolve_launch_groups("a", None, None).unwrap();
         let details = launch_banner_details(&profiles[0]);
         let banner = format_launch_banner("a", &groups, &details);
 
@@ -3005,7 +2970,7 @@ mod tests {
         )
         .unwrap();
 
-        let groups = resolve_launch_groups("a", None, Some("review-high")).unwrap();
+        let groups = resolve_launch_groups("a", None, None).unwrap();
         let details = launch_banner_details(&profiles[0]);
         let banner = format_launch_banner("a", &groups, &details);
 

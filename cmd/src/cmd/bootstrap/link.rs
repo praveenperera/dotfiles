@@ -408,6 +408,12 @@ mod tests {
             spec.source == agents_dir.join("AGENTS.md")
                 && spec.target == home.join(".config/opencode/AGENTS.md")
         }));
+        assert!(!specs
+            .iter()
+            .any(|spec| spec.target == home.join(".codex/config.base.toml")));
+        assert!(!specs
+            .iter()
+            .any(|spec| spec.target == home.join(".codex/config-groups")));
     }
 
     #[test]

@@ -166,7 +166,6 @@ const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
     ("zed/themes", ".config/zed/themes"),
     ("claude", ".claude"),
     ("agents/AGENTS.md", ".codex/AGENTS.md"),
-    ("codex/config.base.toml", ".codex/config.base.toml"),
     ("agents/AGENTS.md", ".config/opencode/AGENTS.md"),
     ("opencode", ".config/opencode"),
 ];
@@ -187,10 +186,7 @@ const CUSTOM_CONFIG_DIR_ENTRIES: &[ManagedDirEntry] = &[
     },
 ];
 
-const CUSTOM_CONFIG_FILE_TREES: &[ManagedDirEntry] = &[ManagedDirEntry {
-    source: "codex/config-groups",
-    target: ".codex/config-groups",
-}];
+const CUSTOM_CONFIG_FILE_TREES: &[ManagedDirEntry] = &[];
 
 const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
     &[("gpg-agent.conf", ".gnupg/gpg-agent.conf")];
