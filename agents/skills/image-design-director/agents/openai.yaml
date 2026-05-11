@@ -1,0 +1,4 @@
+interface:
+  display_name: "Image Design Director"
+  short_description: "Beautiful UI concepts with Image Gen"
+  default_prompt: "Use $image-design-director to create a beautiful Image Gen UI concept for my app or website."
