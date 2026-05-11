@@ -1,4 +1,5 @@
 pub mod cmd;
+pub mod codex_voice;
 pub mod crates_io;
 pub mod encrypt;
 pub mod fsutil;
@@ -19,6 +20,7 @@ pub type Tool = (&'static str, fn(&Shell, &[OsString]) -> Result<()>);
 pub const CMD_TOOLS: &[Tool] = &[
     ("btx", better_context::run),
     ("cmd", cmd::run),
+    ("codex-voice", codex_voice::run),
     ("file", file::run),
     ("notf", cmd::tmux::notify_run),
     ("pr-context", pr_context::run),
