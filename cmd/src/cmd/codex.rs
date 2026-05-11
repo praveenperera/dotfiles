@@ -92,6 +92,10 @@ pub enum CodexCmd {
     /// Show usage for the current global codex auth
     Usage,
 
+    /// Show saved usage samples from the last 24 hours
+    #[command(visible_alias = "uh")]
+    UsageHistory,
+
     /// Refresh a saved profile's auth
     #[command(visible_alias = "rp")]
     RefreshProfile {
@@ -283,6 +287,12 @@ struct UsageWindowSnapshot {
     limit_multiplier: f64,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct UsageRunRates {
+    primary: Option<f64>,
+    secondary: Option<f64>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct SessionMarker {
     pid: u32,
@@ -447,6 +457,8 @@ pub fn run_with_args(_sh: &Shell, args: &[OsString]) -> Result<()> {
 }
 
 pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
+    spawn_usage_history_prune();
+
     match flags.subcommand {
         CodexCmd::Launch {
             profile_or_arg,
@@ -467,6 +479,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
         } => login(&profile, device_auth),
         CodexCmd::List { verbose } => list(verbose),
         CodexCmd::Usage => usage(),
+        CodexCmd::UsageHistory => usage_history(),
         CodexCmd::RefreshProfile { profile } => refresh_profile(&profile),
         CodexCmd::RefreshAll => refresh_all(),
         CodexCmd::Switch { profile } => switch_default_profile(&profile),
@@ -554,7 +567,8 @@ mod tests {
         write_auth_raw_if_unchanged, write_session_marker, AuthIdentity, CapturedThread, CodexCmd,
         LaunchAuthMode, LaunchGroups, LaunchTarget, LimitStyleKind, ProfileAuthRefresher,
         ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState,
-        SavedProfile, SessionMarker, StoredAuth, UsageFetchResult, UsageWindowSnapshot,
+        SavedProfile, SessionMarker, StoredAuth, UsageFetchResult, UsageRunRates,
+        UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
@@ -1943,6 +1957,13 @@ mod tests {
     }
 
     #[test]
+    fn cmd_parses_usage_history_subcommand() {
+        let cmd = parse_raw_args(&[OsString::from("usage-history")]).unwrap();
+
+        assert!(matches!(cmd.subcommand, CodexCmd::UsageHistory));
+    }
+
+    #[test]
     fn cmd_rejects_config_overlay_subcommand() {
         let err = super::CodexCli::try_parse_from(["codex", "config"]).unwrap_err();
 
@@ -2581,23 +2602,35 @@ mod tests {
     }
 
     #[test]
-    fn current_usage_table_only_shows_email_and_limits() {
+    fn current_usage_table_shows_usage_summary_above_email_and_limits() {
         let mut output = Vec::new();
+        let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
 
         print_current_usage_table(
             &mut output,
             "praveen@example.com",
             &ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 73.0)),
+            captured_at,
+            UsageRunRates {
+                primary: Some(4.5),
+                secondary: None,
+            },
         )
         .unwrap();
 
         let output = String::from_utf8(output).unwrap();
+        assert!(output.contains("Time: 9:15 AM"));
         assert!(output.contains("EMAIL"));
         assert!(output.contains("5 HOUR LIMIT"));
         assert!(output.contains("WEEKLY LIMIT"));
+        assert!(output.contains("5H rate: +4.5%/h"));
+        assert!(output.contains("Week rate: -"));
         assert!(output.contains("praveen@example.com"));
         assert!(output.contains(" 42% ("));
         assert!(output.contains(" 73% ("));
+        assert!(!output.contains("TIME"));
+        assert!(!output.contains("5H RATE"));
+        assert!(!output.contains("WEEK RATE"));
         assert!(!output.contains("PROFILE"));
         assert!(!output.contains("TOTAL"));
         assert!(!output.contains("PLAN"));

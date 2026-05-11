@@ -72,6 +72,7 @@ alias clps="claude --permission-mode plan --model sonnet"
 
 # codex
 alias l="cmd codex usage"
+alias luh="cmd codex usage-history"
 alias ll="cmd codex launch a -c shared"
 
 # spark

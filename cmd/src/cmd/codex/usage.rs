@@ -1,9 +1,12 @@
 use super::*;
+use crate::fsutil;
 use crate::runtime;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::str::FromStr;
 
 const DOUBLED_PLAN_TYPES: &[KnownPlanType] = &[KnownPlanType::Prolite];
+pub(super) const USAGE_HISTORY_RETENTION_DAYS: i64 = 14;
+const USAGE_HISTORY_DISPLAY_HOURS: i64 = 24;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum KnownPlanType {
@@ -79,6 +82,30 @@ struct PlanLimitOverride {
     is_doubled: Option<bool>,
 }
 
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub(super) struct UsageHistory {
+    samples: Vec<UsageHistorySample>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub(super) struct UsageHistorySample {
+    captured_at: chrono::DateTime<Utc>,
+    label: String,
+    user_id: Option<String>,
+    account_id: Option<String>,
+    email: Option<String>,
+    plan_type: Option<String>,
+    primary: Option<UsageHistoryWindow>,
+    secondary: Option<UsageHistoryWindow>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub(super) struct UsageHistoryWindow {
+    used_percent: f64,
+    reset_at: Option<i64>,
+    limit_multiplier: f64,
+}
+
 fn effective_limit_multiplier(plan_type: Option<&str>) -> f64 {
     let Some(plan_type) = plan_type else {
         return 1.0;
@@ -121,6 +148,365 @@ fn apply_plan_limit_override(
         if let Some(is_doubled) = override_config.is_doubled {
             limit_config.is_doubled = is_doubled;
         }
+    }
+}
+
+pub(super) fn usage_history_cache_path() -> Result<PathBuf> {
+    Ok(usage_history_cache_path_from_env(
+        std::env::var_os("XDG_CACHE_HOME"),
+        fsutil::home_dir()?,
+    ))
+}
+
+fn usage_history_cache_path_from_env(
+    xdg_cache_home: Option<std::ffi::OsString>,
+    home: PathBuf,
+) -> PathBuf {
+    let base = xdg_cache_home
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or(home.join(".cache"));
+
+    base.join("cmd").join("codex-usage-history.json")
+}
+
+pub(super) fn load_usage_history(path: &Path) -> UsageHistory {
+    stdfs::read(path)
+        .ok()
+        .and_then(|raw| serde_json::from_slice::<UsageHistory>(&raw).ok())
+        .unwrap_or_default()
+}
+
+pub(super) fn save_usage_history(path: &Path, history: &UsageHistory) -> Result<()> {
+    fsutil::ensure_parent_dir(path)?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| eyre!("usage history path has no parent"))?;
+    let temp = tempfile::NamedTempFile::new_in(parent)?;
+    stdfs::write(temp.path(), serde_json::to_vec_pretty(history)?)?;
+    temp.persist(path)?;
+
+    Ok(())
+}
+
+pub(super) fn record_usage_sample(path: &Path, sample: UsageHistorySample) -> Result<()> {
+    let mut history = load_usage_history(path);
+    push_usage_sample(&mut history, sample);
+    save_usage_history(path, &history)
+}
+
+fn push_usage_sample(history: &mut UsageHistory, sample: UsageHistorySample) {
+    history.samples.push(sample);
+}
+
+pub(super) fn prune_usage_history(history: &mut UsageHistory, cutoff: chrono::DateTime<Utc>) {
+    history
+        .samples
+        .retain(|sample| sample.captured_at >= cutoff);
+}
+
+pub(super) fn spawn_usage_history_prune() {
+    let Ok(path) = usage_history_cache_path() else {
+        return;
+    };
+
+    std::thread::spawn(move || {
+        let _ = prune_usage_history_file(&path, Utc::now());
+    });
+}
+
+fn prune_usage_history_file(path: &Path, now: chrono::DateTime<Utc>) -> Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
+
+    let mut history = load_usage_history(path);
+    let original_len = history.samples.len();
+    prune_usage_history(
+        &mut history,
+        now - chrono::Duration::days(USAGE_HISTORY_RETENTION_DAYS),
+    );
+
+    if history.samples.len() != original_len {
+        save_usage_history(path, &history)?;
+    }
+
+    Ok(())
+}
+
+pub(super) fn usage_history_sample(
+    label: &str,
+    usage: &ProfileUsageState,
+    captured_at: chrono::DateTime<Utc>,
+) -> Option<UsageHistorySample> {
+    let ProfileUsageState::Available(snapshot) = usage else {
+        return None;
+    };
+
+    Some(UsageHistorySample {
+        captured_at,
+        label: label.into(),
+        user_id: snapshot.user_id.clone(),
+        account_id: snapshot.account_id.clone(),
+        email: snapshot.email.clone(),
+        plan_type: snapshot.plan_type.clone(),
+        primary: snapshot.primary.as_ref().map(UsageHistoryWindow::from),
+        secondary: snapshot.secondary.as_ref().map(UsageHistoryWindow::from),
+    })
+}
+
+pub(super) fn usage_run_rates(
+    history: &UsageHistory,
+    current: &UsageHistorySample,
+) -> UsageRunRates {
+    let Some(previous) = history
+        .samples
+        .iter()
+        .rev()
+        .find(|sample| usage_samples_match(sample, current))
+    else {
+        return UsageRunRates::default();
+    };
+
+    UsageRunRates {
+        primary: window_run_rate(
+            previous.primary.as_ref(),
+            current.primary.as_ref(),
+            previous,
+            current,
+        ),
+        secondary: window_run_rate(
+            previous.secondary.as_ref(),
+            current.secondary.as_ref(),
+            previous,
+            current,
+        ),
+    }
+}
+
+fn usage_samples_match(previous: &UsageHistorySample, current: &UsageHistorySample) -> bool {
+    if let (Some(previous), Some(current)) = (&previous.account_id, &current.account_id) {
+        return previous == current;
+    }
+
+    if let (Some(previous), Some(current)) = (&previous.user_id, &current.user_id) {
+        return previous == current;
+    }
+
+    if let (Some(previous), Some(current)) = (&previous.email, &current.email) {
+        return previous.eq_ignore_ascii_case(current);
+    }
+
+    false
+}
+
+fn window_run_rate(
+    previous_window: Option<&UsageHistoryWindow>,
+    current_window: Option<&UsageHistoryWindow>,
+    previous: &UsageHistorySample,
+    current: &UsageHistorySample,
+) -> Option<f64> {
+    let previous_window = previous_window?;
+    let current_window = current_window?;
+    if previous_window.reset_at != current_window.reset_at {
+        return None;
+    }
+
+    let elapsed_hours = current
+        .captured_at
+        .signed_duration_since(previous.captured_at)
+        .num_seconds() as f64
+        / 3600.0;
+    if elapsed_hours <= 0.0 {
+        return None;
+    }
+
+    Some((current_window.used_percent - previous_window.used_percent) / elapsed_hours)
+}
+
+impl From<&UsageWindowSnapshot> for UsageHistoryWindow {
+    fn from(window: &UsageWindowSnapshot) -> Self {
+        Self {
+            used_percent: window.used_percent,
+            reset_at: window.reset_at,
+            limit_multiplier: window.limit_multiplier,
+        }
+    }
+}
+
+pub(super) fn print_usage_history(
+    writer: &mut impl Write,
+    history: &UsageHistory,
+    now: chrono::DateTime<Utc>,
+) -> io::Result<()> {
+    let rows = usage_history_rows(history, now);
+    if rows.is_empty() {
+        writeln!(writer, "No usage history from the last 24 hours")?;
+        return Ok(());
+    }
+
+    let widths = UsageHistoryWidths {
+        captured_at: "TIME".len().max(
+            rows.iter()
+                .map(|row| row.captured_at.len())
+                .max()
+                .unwrap_or_default(),
+        ),
+        label: "EMAIL".len().max(
+            rows.iter()
+                .map(|row| row.label.len())
+                .max()
+                .unwrap_or_default(),
+        ),
+        primary: "5 HOUR LIMIT".len().max(
+            rows.iter()
+                .map(|row| row.primary.len())
+                .max()
+                .unwrap_or_default(),
+        ),
+        secondary: "WEEKLY LIMIT".len().max(
+            rows.iter()
+                .map(|row| row.secondary.len())
+                .max()
+                .unwrap_or_default(),
+        ),
+    };
+
+    writeln!(
+        writer,
+        "{}   {}   {}   {}",
+        format!("{:<width$}", "TIME", width = widths.captured_at)
+            .blue()
+            .bold(),
+        format!("{:<width$}", "EMAIL", width = widths.label)
+            .blue()
+            .bold(),
+        format!("{:<width$}", "5 HOUR LIMIT", width = widths.primary)
+            .blue()
+            .bold(),
+        format!("{:<width$}", "WEEKLY LIMIT", width = widths.secondary)
+            .blue()
+            .bold(),
+    )?;
+
+    for row in rows {
+        writeln!(
+            writer,
+            "{:<captured_at_width$}   {:<label_width$}   {:<primary_width$}   {}",
+            row.captured_at,
+            row.label,
+            row.primary,
+            row.secondary,
+            captured_at_width = widths.captured_at,
+            label_width = widths.label,
+            primary_width = widths.primary,
+        )?;
+    }
+
+    Ok(())
+}
+
+fn usage_history_rows(history: &UsageHistory, now: chrono::DateTime<Utc>) -> Vec<UsageHistoryRow> {
+    let cutoff = now - chrono::Duration::hours(USAGE_HISTORY_DISPLAY_HOURS);
+    let mut seen = HashSet::new();
+    let mut samples = history
+        .samples
+        .iter()
+        .filter(|sample| sample.captured_at >= cutoff)
+        .collect::<Vec<_>>();
+    samples.sort_by_key(|sample| sample.captured_at);
+
+    samples
+        .into_iter()
+        .filter(|sample| seen.insert(sample.dedupe_key()))
+        .map(UsageHistoryRow::from)
+        .collect()
+}
+
+#[derive(Debug)]
+struct UsageHistoryWidths {
+    captured_at: usize,
+    label: usize,
+    primary: usize,
+    secondary: usize,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct UsageHistoryRow {
+    captured_at: String,
+    label: String,
+    primary: String,
+    secondary: String,
+}
+
+impl From<&UsageHistorySample> for UsageHistoryRow {
+    fn from(sample: &UsageHistorySample) -> Self {
+        Self {
+            captured_at: format_history_timestamp(sample.captured_at.with_timezone(&Local)),
+            label: sample.email.clone().unwrap_or_else(|| sample.label.clone()),
+            primary: sample
+                .primary
+                .as_ref()
+                .map(format_history_window)
+                .unwrap_or_else(|| "-".into()),
+            secondary: sample
+                .secondary
+                .as_ref()
+                .map(format_history_window)
+                .unwrap_or_else(|| "-".into()),
+        }
+    }
+}
+
+fn format_history_timestamp(captured_at: chrono::DateTime<Local>) -> String {
+    captured_at.format("%a %-I:%M %p").to_string()
+}
+
+fn format_history_window(window: &UsageHistoryWindow) -> String {
+    match window.reset_at.and_then(|reset_at| {
+        Local
+            .timestamp_opt(reset_at, 0)
+            .single()
+            .map(|reset_at| reset_at.format("%a %-I:%M %p").to_string())
+    }) {
+        Some(reset_at) => format!("{:>3}% ({reset_at})", window.used_percent.round() as i64),
+        None => format!("{:>3}%", window.used_percent.round() as i64),
+    }
+}
+
+impl UsageHistorySample {
+    fn dedupe_key(&self) -> String {
+        format!(
+            "{}\n{}\n{}\n{}\n{}",
+            self.account_id
+                .as_deref()
+                .or(self.user_id.as_deref())
+                .or(self.email.as_deref())
+                .unwrap_or(&self.label),
+            self.plan_type.as_deref().unwrap_or_default(),
+            self.primary
+                .as_ref()
+                .map(UsageHistoryWindow::dedupe_key)
+                .unwrap_or_default(),
+            self.secondary
+                .as_ref()
+                .map(UsageHistoryWindow::dedupe_key)
+                .unwrap_or_default(),
+            self.label,
+        )
+    }
+}
+
+impl UsageHistoryWindow {
+    fn dedupe_key(&self) -> String {
+        format!(
+            "{:.3}:{}:{:.3}",
+            self.used_percent,
+            self.reset_at
+                .map(|reset_at| reset_at.to_string())
+                .unwrap_or_default(),
+            self.limit_multiplier,
+        )
     }
 }
 
@@ -594,5 +980,157 @@ mod tests {
         );
         assert_eq!(KnownPlanType::from_str("pro"), Ok(KnownPlanType::Pro));
         assert!(KnownPlanType::from_str("enterprise").is_err());
+    }
+
+    #[test]
+    fn usage_history_cache_path_uses_xdg_cache_home() {
+        let path = usage_history_cache_path_from_env(
+            Some(std::ffi::OsString::from("/tmp/cache")),
+            PathBuf::from("/home/praveen"),
+        );
+
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/cache/cmd/codex-usage-history.json")
+        );
+    }
+
+    #[test]
+    fn usage_history_cache_path_falls_back_to_home_cache() {
+        let path = usage_history_cache_path_from_env(None, PathBuf::from("/home/praveen"));
+
+        assert_eq!(
+            path,
+            PathBuf::from("/home/praveen/.cache/cmd/codex-usage-history.json")
+        );
+    }
+
+    #[test]
+    fn usage_history_prunes_samples_older_than_two_weeks() {
+        let now = Utc.with_ymd_and_hms(2026, 5, 8, 12, 0, 0).unwrap();
+        let mut history = UsageHistory::default();
+
+        push_usage_sample(
+            &mut history,
+            sample_at(now - chrono::Duration::days(15), "acct-1", 1.0),
+        );
+        push_usage_sample(
+            &mut history,
+            sample_at(now - chrono::Duration::days(14), "acct-1", 2.0),
+        );
+        push_usage_sample(&mut history, sample_at(now, "acct-1", 3.0));
+        prune_usage_history(
+            &mut history,
+            now - chrono::Duration::days(USAGE_HISTORY_RETENTION_DAYS),
+        );
+
+        assert_eq!(history.samples.len(), 2);
+        assert_eq!(
+            history.samples[0].primary.as_ref().unwrap().used_percent,
+            2.0
+        );
+        assert_eq!(
+            history.samples[1].primary.as_ref().unwrap().used_percent,
+            3.0
+        );
+    }
+
+    #[test]
+    fn usage_history_rows_show_last_24_hours_without_duplicates() {
+        let now = Utc.with_ymd_and_hms(2026, 5, 8, 12, 0, 0).unwrap();
+        let duplicate = sample_at(now - chrono::Duration::hours(2), "acct-1", 10.0);
+        let changed = sample_at(now - chrono::Duration::hours(1), "acct-1", 12.0);
+        let history = UsageHistory {
+            samples: vec![
+                sample_at(now - chrono::Duration::hours(25), "acct-1", 8.0),
+                duplicate.clone(),
+                duplicate,
+                changed,
+            ],
+        };
+
+        let rows = usage_history_rows(&history, now);
+
+        assert_eq!(rows.len(), 2);
+        assert!(rows[0].primary.starts_with(" 10% ("));
+        assert!(rows[1].primary.starts_with(" 12% ("));
+    }
+
+    #[test]
+    fn usage_run_rate_uses_previous_matching_sample() {
+        let now = Utc.timestamp_opt(1_000, 0).single().unwrap();
+        let previous = sample_at(now, "acct-1", 10.0);
+        let current = sample_at(now + chrono::Duration::minutes(30), "acct-1", 13.0);
+        let history = UsageHistory {
+            samples: vec![previous],
+        };
+
+        let rates = usage_run_rates(&history, &current);
+
+        assert_eq!(rates.primary, Some(6.0));
+    }
+
+    #[test]
+    fn usage_run_rate_skips_different_identity() {
+        let now = Utc.timestamp_opt(1_000, 0).single().unwrap();
+        let previous = sample_at(now, "acct-1", 10.0);
+        let current = sample_at(now + chrono::Duration::minutes(30), "acct-2", 13.0);
+        let history = UsageHistory {
+            samples: vec![previous],
+        };
+
+        let rates = usage_run_rates(&history, &current);
+
+        assert_eq!(rates.primary, None);
+    }
+
+    #[test]
+    fn usage_run_rate_skips_changed_reset_window() {
+        let now = Utc.timestamp_opt(1_000, 0).single().unwrap();
+        let previous = sample_at(now, "acct-1", 10.0);
+        let mut current = sample_at(now + chrono::Duration::minutes(30), "acct-1", 13.0);
+        current.primary.as_mut().unwrap().reset_at = Some(10_000);
+        let history = UsageHistory {
+            samples: vec![previous],
+        };
+
+        let rates = usage_run_rates(&history, &current);
+
+        assert_eq!(rates.primary, None);
+    }
+
+    #[test]
+    fn usage_run_rate_skips_non_positive_elapsed_time() {
+        let now = Utc.timestamp_opt(1_000, 0).single().unwrap();
+        let previous = sample_at(now, "acct-1", 10.0);
+        let current = sample_at(now, "acct-1", 13.0);
+        let history = UsageHistory {
+            samples: vec![previous],
+        };
+
+        let rates = usage_run_rates(&history, &current);
+
+        assert_eq!(rates.primary, None);
+    }
+
+    fn sample_at(
+        captured_at: chrono::DateTime<Utc>,
+        account_id: &str,
+        used_percent: f64,
+    ) -> UsageHistorySample {
+        UsageHistorySample {
+            captured_at,
+            label: "praveen@example.com".into(),
+            user_id: Some("user-1".into()),
+            account_id: Some(account_id.into()),
+            email: Some("praveen@example.com".into()),
+            plan_type: Some("plus".into()),
+            primary: Some(UsageHistoryWindow {
+                used_percent,
+                reset_at: Some(5_000),
+                limit_multiplier: 1.0,
+            }),
+            secondary: None,
+        }
     }
 }

@@ -661,10 +661,50 @@ pub(super) fn enrich_active_profiles_with_global_auth(
 pub(super) fn usage() -> Result<()> {
     let loader = ProfileUsageLoader::new()?;
     let (label, usage) = current_usage_view(&loader, &auth_path()?)?;
+    let captured_at = Utc::now();
+    let sample = usage_history_sample(&label, &usage, captured_at);
+    let rates = sample
+        .as_ref()
+        .and_then(|sample| {
+            let path = usage_history_cache_path().ok()?;
+            let history = load_usage_history(&path);
+            Some(usage_run_rates(&history, sample))
+        })
+        .unwrap_or_default();
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
-    print_current_usage_table(&mut stdout, &label, &usage)?;
+    print_current_usage_table(
+        &mut stdout,
+        &label,
+        &usage,
+        captured_at.with_timezone(&Local),
+        rates,
+    )?;
+
+    if let Some(sample) = sample {
+        if let Ok(path) = usage_history_cache_path() {
+            let _ = record_usage_sample(&path, sample);
+        }
+    }
+
+    Ok(())
+}
+
+pub(super) fn usage_history() -> Result<()> {
+    let path = usage_history_cache_path()?;
+    let loader = ProfileUsageLoader::new()?;
+    let (label, usage) = current_usage_view(&loader, &auth_path()?)?;
+    let now = Utc::now();
+    if let Some(sample) = usage_history_sample(&label, &usage, now) {
+        let _ = record_usage_sample(&path, sample);
+    }
+
+    let history = load_usage_history(&path);
+
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
+    print_usage_history(&mut stdout, &history, now)?;
 
     Ok(())
 }

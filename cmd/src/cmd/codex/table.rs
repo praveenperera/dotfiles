@@ -46,9 +46,12 @@ pub(super) fn print_current_usage_table(
     writer: &mut impl Write,
     label: &str,
     usage: &ProfileUsageState,
+    captured_at: chrono::DateTime<Local>,
+    rates: UsageRunRates,
 ) -> io::Result<()> {
-    let current_local = Local::now();
-    let current_utc = Utc::now();
+    let current_local = captured_at;
+    let current_utc = captured_at.with_timezone(&Utc);
+    let time = current_local.format("%-I:%M %p").to_string();
     let five_hour =
         current_usage_window_compact(usage, UsageWindowKind::Primary, current_local, current_utc);
     let weekly = current_usage_window_compact(
@@ -57,12 +60,20 @@ pub(super) fn print_current_usage_table(
         current_local,
         current_utc,
     );
+    let five_hour_rate = format_hourly_run_rate(rates.primary);
+    let weekly_rate = format_daily_run_rate(rates.secondary);
 
     let widths = CurrentUsageTableWidths {
         label: "EMAIL".len().max(label.len()),
         five_hour: "5 HOUR LIMIT".len().max(five_hour.len()),
         weekly: "WEEKLY LIMIT".len().max(weekly.len()),
     };
+
+    writeln!(
+        writer,
+        "Time: {time}   5H rate: {five_hour_rate}   Week rate: {weekly_rate}"
+    )?;
+    writeln!(writer)?;
 
     writeln!(
         writer,
@@ -982,6 +993,40 @@ fn format_pace_delta(delta: f64) -> String {
     }
 }
 
+fn format_hourly_run_rate(rate: Option<f64>) -> String {
+    format_run_rate(rate, "%/h")
+}
+
+fn format_daily_run_rate(rate: Option<f64>) -> String {
+    format_run_rate(rate.map(|rate| rate * 24.0), "%/d")
+}
+
+fn format_run_rate(rate: Option<f64>, unit: &str) -> String {
+    let Some(rate) = rate else {
+        return "-".into();
+    };
+
+    let rounded = if rate.abs() < 10.0 {
+        (rate * 10.0).round() / 10.0
+    } else {
+        rate.round()
+    };
+
+    if rounded > 0.0 {
+        format!("+{}{}", format_rate_number(rounded), unit)
+    } else {
+        format!("{}{}", format_rate_number(rounded), unit)
+    }
+}
+
+fn format_rate_number(value: f64) -> String {
+    if value.fract() == 0.0 {
+        format!("{value:.0}")
+    } else {
+        format!("{value:.1}")
+    }
+}
+
 fn total_pace_style(delta: Option<f64>) -> TotalPaceStyle {
     let Some(delta) = delta else {
         return TotalPaceStyle::OnPace;
@@ -1393,6 +1438,20 @@ mod tests {
             current_usage_window_compact(&usage, UsageWindowKind::Primary, current_local, now,),
             format!(" 81% (+1%) ({reset})")
         );
+    }
+
+    #[test]
+    fn format_hourly_run_rate_keeps_decimal_for_small_rates() {
+        assert_eq!(format_hourly_run_rate(Some(0.44)), "+0.4%/h");
+        assert_eq!(format_hourly_run_rate(Some(-1.25)), "-1.3%/h");
+        assert_eq!(format_hourly_run_rate(Some(12.4)), "+12%/h");
+        assert_eq!(format_hourly_run_rate(None), "-");
+    }
+
+    #[test]
+    fn format_daily_run_rate_converts_hourly_rate_to_daily() {
+        assert_eq!(format_daily_run_rate(Some(0.44)), "+11%/d");
+        assert_eq!(format_daily_run_rate(Some(-0.05)), "-1.2%/d");
     }
 
     #[test]
