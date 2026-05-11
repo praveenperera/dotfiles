@@ -5,16 +5,17 @@ description: Use only when the user explicitly invokes $image-design-director or
 
 # Image Design Director
 
-Use this skill to direct Image Gen toward polished digital UI concepts and then turn the accepted concept into a practical design handoff. Keep Image Gen usage deliberate: this skill exists to improve visual direction, not to spend image generations accidentally.
+Use this skill to direct Image Gen toward polished digital UI concepts and then turn the accepted concept into a practical design handoff. Keep triggering conservative, but once the user explicitly invokes this skill or asks for Image Gen UI design, proceed decisively.
 
 ## Trigger and Quota Rules
 
 - Use this skill only after explicit invocation with `$image-design-director` or an explicit request to use Image Gen/image-gen for UI design.
 - Do not trigger this skill for ordinary frontend tasks such as building an app, fixing spacing, refactoring components, or restyling a screen when the user did not ask for Image Gen.
-- If image generation is not clearly authorized, draft the Image Gen brief, concept criteria, and planned image count without calling the image tool.
-- Generate one strong concept by default when generation is authorized and the user did not request alternatives.
-- Before generating more than one image, state the planned count and wait for approval.
-- If the user asks to explore concepts without giving a number, ask for the exact count before calling Image Gen.
+- Treat explicit invocation of `$image-design-director` or an explicit Image Gen UI design request as authorization to generate one concept immediately.
+- Generate one strong concept by default when the user did not request alternatives.
+- If the user asks to explore directions, options, variations, or concepts without giving a number, generate 3 concepts by default.
+- Generate the exact requested count when the user gives one.
+- Before generating more than 3 images, state the planned count and wait for approval unless the user explicitly requested that count.
 - In Plan Mode, do not call Image Gen unless the user explicitly asks to generate now or explicitly invokes this skill for concept generation.
 
 ## Core Workflow
@@ -25,8 +26,9 @@ Use this skill to direct Image Gen toward polished digital UI concepts and then 
 4. Write a natural design-director brief, not a generic template. Include the requested surface, audience, exact visible content, structure, interaction model, visual system, implementation constraints, and negative constraints.
 5. Generate the complete requested surface. For multi-section pages, dense apps, tools, dashboards, native interfaces, or game screens, use separate section/state/detail concepts when a single image would make text, controls, spacing, or assets unreadable.
 6. Reject weak concepts before handoff: header-only concepts for full surfaces, cluttered or generic layouts, unreadable text, impractical assets, filler metrics, repetitive card stacks, and visual systems that cannot be implemented cleanly.
-7. Ask the user to approve or choose a concept before treating it as the source of truth.
-8. Extract a handoff spec from the accepted concept: visible copy, layout, palette, typography, spacing, component families, icon treatment, asset needs, interaction states, responsive behavior, and unresolved details.
+7. After generation, extract quick notes about each concept's direction, strengths, tradeoffs, and implementation implications.
+8. Ask the user to approve or choose a concept before treating it as the implementation source of truth.
+9. Extract a handoff spec from the accepted concept: visible copy, layout, palette, typography, spacing, component families, icon treatment, asset needs, interaction states, responsive behavior, and unresolved details.
 
 ## Concepting Standards
 
