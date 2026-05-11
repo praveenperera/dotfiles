@@ -6,7 +6,14 @@ const API_BASE: &str = "https://crates.io/api/v1/crates";
 
 #[derive(Debug, Deserialize)]
 struct CrateResponse {
+    #[serde(rename = "crate")]
+    crate_info: CrateInfo,
     versions: Vec<Version>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CrateInfo {
+    max_stable_version: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -46,11 +53,71 @@ impl CratesIoClient {
 
         let crate_data: CrateResponse = response.json().await?;
 
-        crate_data
-            .versions
-            .iter()
-            .find(|v| !v.yanked && (pre || !v.num.contains('-')))
-            .map(|v| v.num.clone())
+        select_version(&crate_data, pre)
             .ok_or_else(|| eyre!("no non-yanked versions found for '{}'", crate_name))
+    }
+}
+
+fn select_version(crate_data: &CrateResponse, pre: bool) -> Option<String> {
+    if !pre {
+        if let Some(version) = crate_data.crate_info.max_stable_version.as_ref() {
+            return Some(version.clone());
+        }
+    }
+
+    crate_data
+        .versions
+        .iter()
+        .find(|v| !v.yanked && (pre || !v.num.contains('-')))
+        .map(|v| v.num.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn response(max_stable_version: Option<&str>, versions: &[(&str, bool)]) -> CrateResponse {
+        CrateResponse {
+            crate_info: CrateInfo {
+                max_stable_version: max_stable_version.map(str::to_string),
+            },
+            versions: versions
+                .iter()
+                .map(|(num, yanked)| Version {
+                    num: (*num).to_string(),
+                    yanked: *yanked,
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn uses_max_stable_version_for_default_selection() {
+        let crate_data = response(
+            Some("3.0.0"),
+            &[("2.4.0", false), ("3.0.0", false), ("3.0.0-rc.2", false)],
+        );
+
+        assert_eq!(select_version(&crate_data, false).as_deref(), Some("3.0.0"));
+    }
+
+    #[test]
+    fn falls_back_to_first_non_yanked_stable_version() {
+        let crate_data = response(
+            None,
+            &[("3.0.0-rc.2", false), ("2.4.0", true), ("2.3.0", false)],
+        );
+
+        assert_eq!(select_version(&crate_data, false).as_deref(), Some("2.3.0"));
+    }
+
+    #[test]
+    fn pre_selection_uses_first_non_yanked_version() {
+        let crate_data = response(Some("3.0.0"), &[("3.1.0-alpha.1", false), ("3.0.0", false)]);
+
+        assert_eq!(
+            select_version(&crate_data, true).as_deref(),
+            Some("3.1.0-alpha.1")
+        );
     }
 }
