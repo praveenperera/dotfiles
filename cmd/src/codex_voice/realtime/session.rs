@@ -59,11 +59,22 @@ impl VoiceSession {
         let mut pre_marker_buffer = String::new();
         let mut saw_final_marker = false;
         let mut audio_tick = tokio::time::interval(AUDIO_PUMP_INTERVAL);
+        let mut assistant_audio_started = false;
+        let mut assistant_response_done = true;
 
         loop {
             tokio::select! {
                 _ = audio_tick.tick() => {
                     let pcm = microphone.take_pcm16();
+                    let speaker_has_pending_audio = speaker.has_pending_audio();
+                    if !should_send_microphone(
+                        assistant_audio_started,
+                        assistant_response_done,
+                        speaker_has_pending_audio,
+                    ) {
+                        continue;
+                    }
+                    assistant_audio_started = false;
                     if !pcm.is_empty() {
                         let bytes = pcm.iter().flat_map(|sample| sample.to_le_bytes()).collect::<Vec<_>>();
                         let audio = STANDARD.encode(bytes);
@@ -80,7 +91,9 @@ impl VoiceSession {
                         &mut final_prompt,
                         &mut pre_marker_buffer,
                         &mut saw_final_marker,
-                    )? {
+                        &mut assistant_audio_started,
+                        &mut assistant_response_done,
+                    ).await? {
                         break;
                     }
                 }
@@ -97,12 +110,14 @@ impl VoiceSession {
     }
 }
 
-fn handle_server_event(
+async fn handle_server_event(
     text: &str,
     speaker: &Speaker,
     final_prompt: &mut String,
     pre_marker_buffer: &mut String,
     saw_final_marker: &mut bool,
+    assistant_audio_started: &mut bool,
+    assistant_response_done: &mut bool,
 ) -> Result<bool> {
     let event =
         serde_json::from_str::<ServerEvent>(text).wrap_err("Failed to parse Realtime event")?;
@@ -119,10 +134,12 @@ fn handle_server_event(
         ServerEventKind::ResponseOutputAudioDelta | ServerEventKind::ResponseAudioDelta
     ) {
         if let Some(delta) = event.delta.as_deref() {
+            *assistant_audio_started = true;
+            *assistant_response_done = false;
             let bytes = STANDARD
                 .decode(delta.as_bytes())
                 .wrap_err("Failed to decode Realtime audio")?;
-            speaker.push_pcm16(&bytes);
+            speaker.push_pcm16(&bytes).await;
         }
     }
 
@@ -138,7 +155,19 @@ fn handle_server_event(
         }
     }
 
+    if event.kind == ServerEventKind::ResponseDone {
+        *assistant_response_done = true;
+    }
+
     Ok(*saw_final_marker && event.kind == ServerEventKind::ResponseDone)
+}
+
+fn should_send_microphone(
+    assistant_audio_started: bool,
+    assistant_response_done: bool,
+    speaker_has_pending_audio: bool,
+) -> bool {
+    !assistant_audio_started || (assistant_response_done && !speaker_has_pending_audio)
 }
 
 fn capture_final_prompt(
@@ -172,7 +201,7 @@ fn capture_final_prompt(
 
 #[cfg(test)]
 mod tests {
-    use super::capture_final_prompt;
+    use super::{capture_final_prompt, should_send_microphone};
 
     #[test]
     fn captures_prompt_after_marker_without_network() {
@@ -225,5 +254,25 @@ mod tests {
         );
         assert!(saw_marker);
         assert_eq!(prompt, " Keep UTF-8 safe");
+    }
+
+    #[test]
+    fn sends_microphone_before_assistant_audio_starts() {
+        assert!(should_send_microphone(false, true, false));
+    }
+
+    #[test]
+    fn gates_microphone_while_assistant_response_is_active() {
+        assert!(!should_send_microphone(true, false, false));
+    }
+
+    #[test]
+    fn gates_microphone_while_assistant_audio_is_queued_after_done() {
+        assert!(!should_send_microphone(true, true, true));
+    }
+
+    #[test]
+    fn resumes_microphone_after_assistant_audio_is_done_and_drained() {
+        assert!(should_send_microphone(true, true, false));
     }
 }
