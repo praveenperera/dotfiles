@@ -1,6 +1,9 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+use std::{
+    cell::RefCell,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
 use color_eyre::eyre::{eyre, Result, WrapErr};
@@ -8,10 +11,17 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     SampleFormat, Stream,
 };
+use ringbuf::{
+    traits::{Consumer, Observer, Producer, Split},
+    HeapCons, HeapProd, HeapRb,
+};
+
+const INPUT_BUFFER_SECONDS: usize = 2;
+const OUTPUT_BUFFER_SECONDS: usize = 8;
 
 pub struct Microphone {
     _stream: Stream,
-    buffer: Arc<Mutex<Vec<i16>>>,
+    samples: RefCell<HeapCons<i16>>,
     sample_rate: u32,
     channels: usize,
 }
@@ -27,24 +37,31 @@ impl Microphone {
             .wrap_err("Failed to read default input audio config")?;
         let sample_rate = config.sample_rate();
         let channels = usize::from(config.channels());
-        let buffer = Arc::new(Mutex::new(Vec::new()));
-        let stream = build_input_stream(&device, &config, Arc::clone(&buffer))?;
+        let (producer, consumer) = HeapRb::new(audio_buffer_capacity(
+            sample_rate,
+            channels,
+            INPUT_BUFFER_SECONDS,
+        ))
+        .split();
+        let stream = build_input_stream(&device, &config, producer)?;
         stream.play().wrap_err("Failed to start microphone")?;
         Ok(Self {
             _stream: stream,
-            buffer,
+            samples: RefCell::new(consumer),
             sample_rate,
             channels,
         })
     }
 
     pub fn take_pcm16(&self) -> Vec<i16> {
-        let Ok(mut buffer) = self.buffer.lock() else {
+        let Ok(mut samples) = self.samples.try_borrow_mut() else {
             return Vec::new();
         };
-        let samples = std::mem::take(&mut *buffer);
+        let mut buffer = vec![0; samples.occupied_len()];
+        let read = samples.pop_slice(&mut buffer);
+        buffer.truncate(read);
         resample_mono(
-            &downmix_to_mono(&samples, self.channels),
+            &downmix_to_mono(&buffer, self.channels),
             self.sample_rate,
             24_000,
         )
@@ -53,7 +70,7 @@ impl Microphone {
 
 pub struct Speaker {
     _stream: Stream,
-    samples: Arc<Mutex<Vec<i16>>>,
+    samples: RefCell<HeapProd<i16>>,
     active: Arc<AtomicBool>,
     sample_rate: u32,
     channels: usize,
@@ -70,14 +87,18 @@ impl Speaker {
             .wrap_err("Failed to read default output audio config")?;
         let sample_rate = config.sample_rate();
         let channels = usize::from(config.channels());
-        let samples = Arc::new(Mutex::new(Vec::new()));
+        let (producer, consumer) = HeapRb::new(audio_buffer_capacity(
+            sample_rate,
+            channels,
+            OUTPUT_BUFFER_SECONDS,
+        ))
+        .split();
         let active = Arc::new(AtomicBool::new(true));
-        let stream =
-            build_output_stream(&device, &config, Arc::clone(&samples), Arc::clone(&active))?;
+        let stream = build_output_stream(&device, &config, consumer, Arc::clone(&active))?;
         stream.play().wrap_err("Failed to start speaker")?;
         Ok(Self {
             _stream: stream,
-            samples,
+            samples: RefCell::new(producer),
             active,
             sample_rate,
             channels,
@@ -90,9 +111,9 @@ impl Speaker {
             .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]))
             .collect::<Vec<_>>();
         let resampled = resample_mono(&decoded, 24_000, self.sample_rate);
-        let mut interleaved = interleave_mono(&resampled, self.channels);
-        if let Ok(mut samples) = self.samples.lock() {
-            samples.append(&mut interleaved);
+        let interleaved = interleave_mono(&resampled, self.channels);
+        if let Ok(mut samples) = self.samples.try_borrow_mut() {
+            push_available(&mut samples, &interleaved);
         }
     }
 }
@@ -106,27 +127,31 @@ impl Drop for Speaker {
 fn build_input_stream(
     device: &cpal::Device,
     config: &cpal::SupportedStreamConfig,
-    buffer: Arc<Mutex<Vec<i16>>>,
+    mut samples: HeapProd<i16>,
 ) -> Result<Stream> {
     let stream_config = config.config();
     let err_fn = |err| tracing::error!("Input audio stream error: {err}");
     match config.sample_format() {
         SampleFormat::I16 => device.build_input_stream(
             &stream_config,
-            move |data: &[i16], _| append_i16(data.iter().copied(), &buffer),
+            move |data: &[i16], _| {
+                push_available(&mut samples, data);
+            },
             err_fn,
             None,
         ),
         SampleFormat::U16 => device.build_input_stream(
             &stream_config,
-            move |data: &[u16], _| append_i16(data.iter().map(u16_to_i16), &buffer),
+            move |data: &[u16], _| {
+                samples.push_iter(data.iter().map(u16_to_i16));
+            },
             err_fn,
             None,
         ),
         SampleFormat::F32 => device.build_input_stream(
             &stream_config,
             move |data: &[f32], _| {
-                append_i16(data.iter().map(|sample| f32_to_i16(*sample)), &buffer)
+                samples.push_iter(data.iter().map(|sample| f32_to_i16(*sample)));
             },
             err_fn,
             None,
@@ -139,7 +164,7 @@ fn build_input_stream(
 fn build_output_stream(
     device: &cpal::Device,
     config: &cpal::SupportedStreamConfig,
-    samples: Arc<Mutex<Vec<i16>>>,
+    mut samples: HeapCons<i16>,
     active: Arc<AtomicBool>,
 ) -> Result<Stream> {
     let stream_config = config.config();
@@ -147,19 +172,19 @@ fn build_output_stream(
     match config.sample_format() {
         SampleFormat::I16 => device.build_output_stream(
             &stream_config,
-            move |data: &mut [i16], _| fill_output(data, &samples, &active, |sample| sample),
+            move |data: &mut [i16], _| fill_output(data, &mut samples, &active, |sample| sample),
             err_fn,
             None,
         ),
         SampleFormat::U16 => device.build_output_stream(
             &stream_config,
-            move |data: &mut [u16], _| fill_output(data, &samples, &active, i16_to_u16),
+            move |data: &mut [u16], _| fill_output(data, &mut samples, &active, i16_to_u16),
             err_fn,
             None,
         ),
         SampleFormat::F32 => device.build_output_stream(
             &stream_config,
-            move |data: &mut [f32], _| fill_output(data, &samples, &active, i16_to_f32),
+            move |data: &mut [f32], _| fill_output(data, &mut samples, &active, i16_to_f32),
             err_fn,
             None,
         ),
@@ -168,10 +193,12 @@ fn build_output_stream(
     .wrap_err("Failed to build speaker stream")
 }
 
-fn append_i16(samples: impl Iterator<Item = i16>, buffer: &Arc<Mutex<Vec<i16>>>) {
-    if let Ok(mut buffer) = buffer.lock() {
-        buffer.extend(samples);
-    }
+fn audio_buffer_capacity(sample_rate: u32, channels: usize, seconds: usize) -> usize {
+    (sample_rate as usize * channels * seconds).max(1)
+}
+
+fn push_available(samples: &mut HeapProd<i16>, incoming: &[i16]) -> usize {
+    samples.push_slice(incoming)
 }
 
 fn downmix_to_mono(samples: &[i16], channels: usize) -> Vec<i16> {
@@ -218,7 +245,7 @@ fn resample_mono(samples: &[i16], from_rate: u32, to_rate: u32) -> Vec<i16> {
 
 fn fill_output<T>(
     output: &mut [T],
-    samples: &Arc<Mutex<Vec<i16>>>,
+    samples: &mut HeapCons<i16>,
     active: &Arc<AtomicBool>,
     convert: impl Fn(i16) -> T,
 ) where
@@ -229,12 +256,8 @@ fn fill_output<T>(
         return;
     }
 
-    let mut source = samples.lock().ok();
     for item in output {
-        let sample = source
-            .as_mut()
-            .and_then(|samples| (!samples.is_empty()).then(|| samples.remove(0)))
-            .unwrap_or_default();
+        let sample = samples.try_pop().unwrap_or_default();
         *item = convert(sample);
     }
 }
@@ -253,4 +276,44 @@ fn i16_to_u16(sample: i16) -> u16 {
 
 fn i16_to_f32(sample: i16) -> f32 {
     sample as f32 / i16::MAX as f32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drains_microphone_ring_buffer() {
+        let (mut producer, mut consumer) = HeapRb::new(8).split();
+        assert_eq!(producer.push_slice(&[10, 20, 30]), 3);
+
+        let mut buffer = vec![0; consumer.occupied_len()];
+        let read = consumer.pop_slice(&mut buffer);
+        buffer.truncate(read);
+
+        assert_eq!(buffer, [10, 20, 30]);
+        assert_eq!(consumer.occupied_len(), 0);
+    }
+
+    #[test]
+    fn fills_silence_on_output_underrun() {
+        let active = Arc::new(AtomicBool::new(true));
+        let (mut producer, mut consumer) = HeapRb::new(4).split();
+        assert_eq!(producer.push_slice(&[1, -2]), 2);
+        let mut output = [0; 4];
+
+        fill_output(&mut output, &mut consumer, &active, |sample| sample);
+
+        assert_eq!(output, [1, -2, 0, 0]);
+    }
+
+    #[test]
+    fn drops_overflow_without_growing_buffer() {
+        let (mut producer, consumer) = HeapRb::new(3).split();
+
+        assert_eq!(push_available(&mut producer, &[1, 2, 3, 4, 5]), 3);
+
+        assert_eq!(producer.vacant_len(), 0);
+        assert_eq!(consumer.occupied_len(), 3);
+    }
 }
