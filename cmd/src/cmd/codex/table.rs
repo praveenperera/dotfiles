@@ -726,7 +726,7 @@ fn normalize_email(email: &str) -> Option<String> {
 
 pub(super) fn usage_window_percent(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
     usage_window(usage, kind)
-        .map(|window| format!("{:.0}%", window.used_percent))
+        .map(|window| format_usage_percent(window.used_percent))
         .unwrap_or_else(|| "-".into())
 }
 
@@ -782,7 +782,7 @@ pub fn current_usage_window_compact(
         return "-".into();
     };
 
-    let percent = format_compact_percent(&format!("{:.0}%", window.used_percent));
+    let percent = format_compact_percent(&format_usage_percent(window.used_percent));
     let pace = displayed_pace_delta_percent(window, current_utc, kind).map(format_pace_delta);
     let reset = current_usage_window_reset_compact(window, kind, current_local);
 
@@ -800,6 +800,14 @@ pub(super) fn format_compact_percent(percent: &str) -> String {
     };
 
     format!("{number:>3}%")
+}
+
+pub(super) fn format_usage_percent(used_percent: f64) -> String {
+    if used_percent.fract() == 0.0 {
+        format!("{used_percent:.0}%")
+    } else {
+        format!("{used_percent:.2}%")
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -976,7 +984,7 @@ fn usage_window_duration(kind: UsageWindowKind) -> chrono::Duration {
 }
 
 fn format_total_cell(used_percent: f64, pace_delta: Option<f64>) -> String {
-    let used_percent = format!("{used_percent:.0}%");
+    let used_percent = format_usage_percent(used_percent);
 
     match pace_delta {
         Some(pace_delta) => format!("{used_percent} ({})", format_pace_delta(pace_delta)),
@@ -1267,8 +1275,8 @@ mod tests {
 
         let totals = compact_profile_totals_at(&rows, now).expect("totals");
 
-        assert_eq!(totals.five_hour.text, "85% (+35%)");
-        assert_eq!(totals.weekly.text, "85% (+35%)");
+        assert_eq!(totals.five_hour.text, "85.45% (+35%)");
+        assert_eq!(totals.weekly.text, "85.45% (+35%)");
     }
 
     #[test]
@@ -1438,6 +1446,42 @@ mod tests {
             current_usage_window_compact(&usage, UsageWindowKind::Primary, current_local, now,),
             format!(" 81% (+1%) ({reset})")
         );
+    }
+
+    #[test]
+    fn current_usage_window_compact_shows_fractional_percent_and_reset() {
+        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let current_local = now.with_timezone(&Local);
+        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.01);
+        let usage = ProfileUsageState::Available(ProfileUsageSnapshot {
+            user_id: None,
+            account_id: None,
+            email: None,
+            plan_type: Some("plus".into()),
+            primary: Some(UsageWindowSnapshot {
+                used_percent: 0.42,
+                reset_at: Some(reset_at),
+                limit_multiplier: 1.0,
+            }),
+            secondary: None,
+        });
+        let reset = format_current_usage_reset_timestamp(
+            Local.timestamp_opt(reset_at, 0).single().unwrap(),
+            current_local,
+            UsageWindowKind::Primary,
+        );
+
+        assert_eq!(
+            current_usage_window_compact(&usage, UsageWindowKind::Primary, current_local, now,),
+            format!("0.42% (-1%) ({reset})")
+        );
+    }
+
+    #[test]
+    fn format_usage_percent_keeps_two_decimals_for_fractional_values() {
+        assert_eq!(format_usage_percent(0.42), "0.42%");
+        assert_eq!(format_usage_percent(12.5), "12.50%");
+        assert_eq!(format_usage_percent(12.0), "12%");
     }
 
     #[test]

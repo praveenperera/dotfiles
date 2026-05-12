@@ -463,14 +463,15 @@ fn format_history_timestamp(captured_at: chrono::DateTime<Local>) -> String {
 }
 
 fn format_history_window(window: &UsageHistoryWindow) -> String {
+    let percent = format_compact_percent(&format_usage_percent(window.used_percent));
     match window.reset_at.and_then(|reset_at| {
         Local
             .timestamp_opt(reset_at, 0)
             .single()
             .map(|reset_at| reset_at.format("%a %-I:%M %p").to_string())
     }) {
-        Some(reset_at) => format!("{:>3}% ({reset_at})", window.used_percent.round() as i64),
-        None => format!("{:>3}%", window.used_percent.round() as i64),
+        Some(reset_at) => format!("{percent} ({reset_at})"),
+        None => percent,
     }
 }
 
@@ -1054,6 +1055,19 @@ mod tests {
         assert_eq!(rows.len(), 2);
         assert!(rows[0].primary.starts_with(" 10% ("));
         assert!(rows[1].primary.starts_with(" 12% ("));
+    }
+
+    #[test]
+    fn usage_history_rows_show_fractional_usage() {
+        let now = Utc.with_ymd_and_hms(2026, 5, 8, 12, 0, 0).unwrap();
+        let history = UsageHistory {
+            samples: vec![sample_at(now - chrono::Duration::hours(1), "acct-1", 0.42)],
+        };
+
+        let rows = usage_history_rows(&history, now);
+
+        assert_eq!(rows.len(), 1);
+        assert!(rows[0].primary.starts_with("0.42% ("));
     }
 
     #[test]

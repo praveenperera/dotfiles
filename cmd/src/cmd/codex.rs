@@ -865,10 +865,32 @@ mod tests {
     }
 
     #[test]
+    fn usage_window_reset_shows_primary_reset_for_fractional_window() {
+        let usage =
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 0.42, 73.0));
+
+        let formatted = super::usage_window_reset(&usage, super::UsageWindowKind::Primary);
+
+        assert_ne!(formatted, "-");
+    }
+
+    #[test]
+    fn usage_window_compact_shows_fractional_percent_and_reset() {
+        let usage =
+            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 0.42, 73.0));
+
+        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::Primary);
+
+        assert!(formatted.starts_with("0.42% ("));
+        assert!(formatted.ends_with(')'));
+    }
+
+    #[test]
     fn format_compact_percent_right_aligns_numeric_part() {
         assert_eq!(super::format_compact_percent("0%"), "  0%");
         assert_eq!(super::format_compact_percent("42%"), " 42%");
         assert_eq!(super::format_compact_percent("100%"), "100%");
+        assert_eq!(super::format_compact_percent("0.42%"), "0.42%");
     }
 
     #[test]
