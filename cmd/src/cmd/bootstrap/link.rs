@@ -46,7 +46,11 @@ pub(crate) fn config(sh: &Shell) -> Result<()> {
 
 pub(super) fn create_hardlinks(sh: &Shell) -> Result<()> {
     let home = fsutil::home_dir()?;
-    let cmd_path = home.join(".local/bin/cmd");
+    create_hardlinks_in_bin_dir(sh, &home.join(".local/bin"))
+}
+
+pub(super) fn create_hardlinks_in_bin_dir(sh: &Shell, bin_dir: &Path) -> Result<()> {
+    let cmd_path = bin_dir.join("cmd");
     if !sh.path_exists(&cmd_path) {
         return Ok(());
     }
@@ -56,7 +60,7 @@ pub(super) fn create_hardlinks(sh: &Shell) -> Result<()> {
             continue;
         }
 
-        let tool_path = home.join(format!(".local/bin/{tool}"));
+        let tool_path = bin_dir.join(tool);
         fsutil::remove_existing_path(&tool_path)?;
         sh.hard_link(&cmd_path, &tool_path)?;
     }

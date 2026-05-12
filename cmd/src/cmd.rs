@@ -30,7 +30,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     }
 
     match flags.subcommand {
-        MainCmd::Release { project } => bootstrap::release(sh, project),
+        MainCmd::Release(args) => bootstrap::release(sh, args),
         MainCmd::Config => bootstrap::config(sh),
 
         MainCmd::Bootstrap { mode } => {

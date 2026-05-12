@@ -81,6 +81,7 @@ fi
 tar -xzf "$ASSET_NAME"
 chmod +x cmd
 mv cmd "$CMD_PATH"
+"$CMD_PATH" release --link-installed
 
 # cleanup
 rm -rf "$TMP_DIR"

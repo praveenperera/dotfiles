@@ -219,8 +219,8 @@ pub fn config(sh: &Shell) -> Result<()> {
     link::config(sh)
 }
 
-pub fn release(sh: &Shell, project: Option<String>) -> Result<()> {
-    release::release(sh, project)
+pub fn release(sh: &Shell, args: crate::cmd::main_cmd::ReleaseArgs) -> Result<()> {
+    release::release(sh, args)
 }
 
 #[cfg(test)]

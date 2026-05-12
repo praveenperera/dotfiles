@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Clone, Args)]
@@ -47,6 +49,20 @@ pub struct PrContextArgs {
     pub format: crate::pr_context::OutputFormat,
 }
 
+#[derive(Debug, Clone, Args)]
+pub struct ReleaseArgs {
+    /// Local project name (e.g., "jju")
+    pub project: Option<String>,
+
+    /// Install the given built cmd binary and refresh hardlinks
+    #[arg(long, hide = true, value_name = "PATH")]
+    pub install_built: Option<PathBuf>,
+
+    /// Refresh hardlinks for the installed cmd binary
+    #[arg(long, hide = true)]
+    pub link_installed: bool,
+}
+
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "cmd",
@@ -72,10 +88,7 @@ pub enum MainCmd {
     },
 
     /// Release/update cmd binary, or release a local project
-    Release {
-        /// Local project name (e.g., "jju")
-        project: Option<String>,
-    },
+    Release(#[command(flatten)] ReleaseArgs),
 
     /// Configure dotfiles
     #[command(visible_alias = "cfg")]
