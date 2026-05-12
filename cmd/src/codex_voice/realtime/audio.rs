@@ -231,14 +231,25 @@ fn resample_mono(samples: &[i16], from_rate: u32, to_rate: u32) -> Vec<i16> {
         return samples.to_vec();
     }
 
+    if samples.len() == 1 {
+        return vec![samples[0]];
+    }
+
     let output_len = samples.len() * to_rate as usize / from_rate as usize;
+    if output_len == 0 {
+        return Vec::new();
+    }
+
+    let ratio = from_rate as f64 / to_rate as f64;
     (0..output_len)
         .map(|index| {
-            let source_index = index * from_rate as usize / to_rate as usize;
-            samples
-                .get(source_index)
-                .copied()
-                .unwrap_or_else(|| *samples.last().unwrap_or(&0))
+            let position = index as f64 * ratio;
+            let left_index = position.floor() as usize;
+            let right_index = (left_index + 1).min(samples.len() - 1);
+            let fraction = position - left_index as f64;
+            let left = samples[left_index] as f64;
+            let right = samples[right_index] as f64;
+            (left + (right - left) * fraction).round() as i16
         })
         .collect()
 }

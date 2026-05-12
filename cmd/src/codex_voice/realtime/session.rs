@@ -159,8 +159,14 @@ fn capture_final_prompt(
         final_prompt.push_str(prompt);
         pre_marker_buffer.clear();
     } else if pre_marker_buffer.len() > MARKER.len() {
-        let keep_from = pre_marker_buffer.len() - MARKER.len();
-        pre_marker_buffer.replace_range(..keep_from, "");
+        while pre_marker_buffer.len() > MARKER.len() {
+            let first_char_len = pre_marker_buffer
+                .chars()
+                .next()
+                .map(char::len_utf8)
+                .unwrap_or_default();
+            pre_marker_buffer.replace_range(..first_char_len, "");
+        }
     }
 }
 
@@ -198,5 +204,26 @@ mod tests {
         );
         assert!(saw_marker);
         assert_eq!(prompt, " Keep going");
+    }
+
+    #[test]
+    fn trims_pre_marker_buffer_on_character_boundaries() {
+        let mut prompt = String::new();
+        let mut buffer = String::new();
+        let mut saw_marker = false;
+        capture_final_prompt(
+            "Discuss café résumé before ",
+            &mut prompt,
+            &mut buffer,
+            &mut saw_marker,
+        );
+        capture_final_prompt(
+            "FINAL_PROMPT: Keep UTF-8 safe",
+            &mut prompt,
+            &mut buffer,
+            &mut saw_marker,
+        );
+        assert!(saw_marker);
+        assert_eq!(prompt, " Keep UTF-8 safe");
     }
 }
