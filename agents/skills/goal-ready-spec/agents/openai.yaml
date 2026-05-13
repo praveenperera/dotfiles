@@ -1,0 +1,4 @@
+interface:
+  display_name: "Goal-Ready Spec"
+  short_description: "Turn discussions into guarded, auditable implementation specs."
+  default_prompt: "Use $goal-ready-spec to create a goal-ready implementation spec with architecture guardrails, acceptance criteria, and a completion audit checklist."
