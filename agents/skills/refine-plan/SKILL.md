@@ -34,11 +34,12 @@ Ask non-obvious, probing questions - not surface-level questions:
 
 1. Ask 1-4 probing questions at a time using AskUserQuestion
 2. Incorporate answers into your understanding
-3. Repeat until you have comprehensive understanding
-4. Do NOT stop interviewing prematurely - thorough exploration is important
+3. If refining an existing file such as `spec.md`, update that file with the new answers and clarified decisions before asking the next question round
+4. Repeat until you have comprehensive understanding
+5. Do NOT stop interviewing prematurely - thorough exploration is important
 
 ## Important
 
-- Do NOT create any spec files or other files
+- When an existing file is the working plan/spec, keep it current after every question/answer round
 - Just conduct the interview and provide context
 - Let the caller decide what to do with the gathered information
