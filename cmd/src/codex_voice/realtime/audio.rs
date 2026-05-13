@@ -12,10 +12,7 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     SampleFormat, Stream,
 };
-use ringbuf::{
-    traits::{Consumer, Observer, Producer, Split},
-    HeapCons, HeapProd, HeapRb,
-};
+use rtrb::{Consumer, Producer, RingBuffer};
 
 const INPUT_BUFFER_SECONDS: usize = 2;
 const OUTPUT_BUFFER_SECONDS: usize = 8;
@@ -23,7 +20,7 @@ const PLAYBACK_BACKPRESSURE_WAIT: Duration = Duration::from_millis(5);
 
 pub struct Microphone {
     _stream: Stream,
-    samples: RefCell<HeapCons<i16>>,
+    samples: RefCell<Consumer<i16>>,
     sample_rate: u32,
     channels: usize,
 }
@@ -39,12 +36,11 @@ impl Microphone {
             .wrap_err("Failed to read default input audio config")?;
         let sample_rate = config.sample_rate();
         let channels = usize::from(config.channels());
-        let (producer, consumer) = HeapRb::new(audio_buffer_capacity(
+        let (producer, consumer) = RingBuffer::new(audio_buffer_capacity(
             sample_rate,
             channels,
             INPUT_BUFFER_SECONDS,
-        ))
-        .split();
+        ));
         let stream = build_input_stream(&device, &config, producer)?;
         stream.play().wrap_err("Failed to start microphone")?;
         Ok(Self {
@@ -59,8 +55,9 @@ impl Microphone {
         let Ok(mut samples) = self.samples.try_borrow_mut() else {
             return Vec::new();
         };
-        let mut buffer = vec![0; samples.occupied_len()];
-        let read = samples.pop_slice(&mut buffer);
+        let mut buffer = vec![0; samples.slots()];
+        let (read, _) = samples.pop_partial_slice(&mut buffer);
+        let read = read.len();
         buffer.truncate(read);
         resample_mono(
             &downmix_to_mono(&buffer, self.channels),
@@ -72,10 +69,11 @@ impl Microphone {
 
 pub struct Speaker {
     _stream: Stream,
-    samples: RefCell<HeapProd<i16>>,
+    samples: RefCell<Producer<i16>>,
     active: Arc<AtomicBool>,
     stats: Arc<AudioStats>,
     resampler: RefCell<StreamingResampler>,
+    buffer_capacity: usize,
     sample_rate: u32,
     channels: usize,
 }
@@ -91,12 +89,8 @@ impl Speaker {
             .wrap_err("Failed to read default output audio config")?;
         let sample_rate = config.sample_rate();
         let channels = usize::from(config.channels());
-        let (producer, consumer) = HeapRb::new(audio_buffer_capacity(
-            sample_rate,
-            channels,
-            OUTPUT_BUFFER_SECONDS,
-        ))
-        .split();
+        let buffer_capacity = audio_buffer_capacity(sample_rate, channels, OUTPUT_BUFFER_SECONDS);
+        let (producer, consumer) = RingBuffer::new(buffer_capacity);
         let active = Arc::new(AtomicBool::new(true));
         let stats = Arc::new(AudioStats::default());
         let stream = build_output_stream(
@@ -116,6 +110,7 @@ impl Speaker {
             active,
             stats,
             resampler: RefCell::new(StreamingResampler::new(24_000, sample_rate)),
+            buffer_capacity,
             sample_rate,
             channels,
         })
@@ -134,7 +129,7 @@ impl Speaker {
     pub fn has_pending_audio(&self) -> bool {
         self.samples
             .try_borrow()
-            .is_ok_and(|samples| samples.occupied_len() > 0)
+            .is_ok_and(|samples| samples.slots() < self.buffer_capacity)
     }
 
     async fn push_all(&self, incoming: &[i16]) {
@@ -167,7 +162,9 @@ impl Speaker {
 
     fn queued_seconds(&self) -> f64 {
         self.samples.try_borrow().map_or(0.0, |samples| {
-            samples.occupied_len() as f64 / self.channels as f64 / self.sample_rate as f64
+            (self.buffer_capacity - samples.slots()) as f64
+                / self.channels as f64
+                / self.sample_rate as f64
         })
     }
 }
@@ -181,7 +178,7 @@ impl Drop for Speaker {
 fn build_input_stream(
     device: &cpal::Device,
     config: &cpal::SupportedStreamConfig,
-    mut samples: HeapProd<i16>,
+    mut samples: Producer<i16>,
 ) -> Result<Stream> {
     let stream_config = config.config();
     let err_fn = |err| tracing::error!("Input audio stream error: {err}");
@@ -197,7 +194,7 @@ fn build_input_stream(
         SampleFormat::U16 => device.build_input_stream(
             &stream_config,
             move |data: &[u16], _| {
-                samples.push_iter(data.iter().map(u16_to_i16));
+                push_iter_available(&mut samples, data.iter().map(u16_to_i16));
             },
             err_fn,
             None,
@@ -205,7 +202,7 @@ fn build_input_stream(
         SampleFormat::F32 => device.build_input_stream(
             &stream_config,
             move |data: &[f32], _| {
-                samples.push_iter(data.iter().map(|sample| f32_to_i16(*sample)));
+                push_iter_available(&mut samples, data.iter().map(|sample| f32_to_i16(*sample)));
             },
             err_fn,
             None,
@@ -218,7 +215,7 @@ fn build_input_stream(
 fn build_output_stream(
     device: &cpal::Device,
     config: &cpal::SupportedStreamConfig,
-    mut samples: HeapCons<i16>,
+    mut samples: Consumer<i16>,
     active: Arc<AtomicBool>,
     stats: Arc<AudioStats>,
 ) -> Result<Stream> {
@@ -258,11 +255,26 @@ fn audio_buffer_capacity(sample_rate: u32, channels: usize, seconds: usize) -> u
     (sample_rate as usize * channels * seconds).max(1)
 }
 
-fn push_available(samples: &mut HeapProd<i16>, incoming: &[i16]) -> usize {
-    samples.push_slice(incoming)
+fn push_available(samples: &mut Producer<i16>, incoming: &[i16]) -> usize {
+    let (written, _) = samples.push_partial_slice(incoming);
+    written.len()
 }
 
-fn push_next_available(samples: &mut HeapProd<i16>, incoming: &[i16], written: usize) -> usize {
+fn push_iter_available(
+    samples: &mut Producer<i16>,
+    incoming: impl IntoIterator<Item = i16>,
+) -> usize {
+    let mut written = 0;
+    for sample in incoming {
+        if samples.push(sample).is_err() {
+            break;
+        }
+        written += 1;
+    }
+    written
+}
+
+fn push_next_available(samples: &mut Producer<i16>, incoming: &[i16], written: usize) -> usize {
     written + push_available(samples, &incoming[written..])
 }
 
@@ -380,7 +392,7 @@ struct AudioStats {
 
 fn fill_output<T>(
     output: &mut [T],
-    samples: &mut HeapCons<i16>,
+    samples: &mut Consumer<i16>,
     active: &Arc<AtomicBool>,
     stats: &AudioStats,
     convert: impl Fn(i16) -> T,
@@ -393,7 +405,7 @@ fn fill_output<T>(
     }
 
     for item in output {
-        let sample = samples.try_pop().unwrap_or_else(|| {
+        let sample = samples.pop().unwrap_or_else(|_| {
             stats.underruns.fetch_add(1, Ordering::Relaxed);
             0
         });
@@ -423,23 +435,24 @@ mod tests {
 
     #[test]
     fn drains_microphone_ring_buffer() {
-        let (mut producer, mut consumer) = HeapRb::new(8).split();
-        assert_eq!(producer.push_slice(&[10, 20, 30]), 3);
+        let (mut producer, mut consumer) = RingBuffer::new(8);
+        assert_eq!(push_available(&mut producer, &[10, 20, 30]), 3);
 
-        let mut buffer = vec![0; consumer.occupied_len()];
-        let read = consumer.pop_slice(&mut buffer);
+        let mut buffer = vec![0; consumer.slots()];
+        let (read, _) = consumer.pop_partial_slice(&mut buffer);
+        let read = read.len();
         buffer.truncate(read);
 
         assert_eq!(buffer, [10, 20, 30]);
-        assert_eq!(consumer.occupied_len(), 0);
+        assert_eq!(consumer.slots(), 0);
     }
 
     #[test]
     fn fills_silence_on_output_underrun() {
         let active = Arc::new(AtomicBool::new(true));
         let stats = AudioStats::default();
-        let (mut producer, mut consumer) = HeapRb::new(4).split();
-        assert_eq!(producer.push_slice(&[1, -2]), 2);
+        let (mut producer, mut consumer) = RingBuffer::new(4);
+        assert_eq!(push_available(&mut producer, &[1, -2]), 2);
         let mut output = [0; 4];
 
         fill_output(&mut output, &mut consumer, &active, &stats, |sample| sample);
@@ -450,26 +463,28 @@ mod tests {
 
     #[test]
     fn preserves_order_when_playback_push_waits_for_space() {
-        let (mut producer, consumer) = HeapRb::new(3).split();
+        let (mut producer, consumer) = RingBuffer::new(3);
         let incoming = [1, 2, 3, 4, 5];
         let mut written = 0;
 
         written = push_next_available(&mut producer, &incoming, written);
         assert_eq!(written, 3);
 
-        assert_eq!(producer.vacant_len(), 0);
-        assert_eq!(consumer.occupied_len(), 3);
+        assert_eq!(producer.slots(), 0);
+        assert_eq!(consumer.slots(), 3);
 
         let mut consumer = consumer;
         let mut output = [0; 2];
-        assert_eq!(consumer.pop_slice(&mut output), 2);
+        let (read, _) = consumer.pop_partial_slice(&mut output);
+        assert_eq!(read.len(), 2);
         assert_eq!(output, [1, 2]);
 
         written = push_next_available(&mut producer, &incoming, written);
         assert_eq!(written, incoming.len());
 
         let mut output = [0; 3];
-        assert_eq!(consumer.pop_slice(&mut output), 3);
+        let (read, _) = consumer.pop_partial_slice(&mut output);
+        assert_eq!(read.len(), 3);
         assert_eq!(output, [3, 4, 5]);
     }
 
