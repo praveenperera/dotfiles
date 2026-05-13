@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::{Component, Path, PathBuf};
 
 use clap::Subcommand;
@@ -28,6 +29,9 @@ pub enum SyncCmd {
     Icloud {
         /// Local file or directory to sync (e.g., _plans or ~/.codex/config.toml)
         path: String,
+
+        /// Shared iCloud source name to use instead of the git root directory name
+        source: Option<String>,
     },
 }
 
@@ -40,7 +44,7 @@ pub fn run_with_flags(sh: &Shell, flags: Sync) -> Result<()> {
                 memory::sync(sh)
             }
         }
-        SyncCmd::Icloud { path } => icloud_sync(sh, &path),
+        SyncCmd::Icloud { path, source } => icloud_sync(sh, &path, source.as_deref()),
     }
 }
 
@@ -53,37 +57,53 @@ fn git_root(sh: &Shell) -> Result<PathBuf> {
     Ok(PathBuf::from(output.trim()))
 }
 
-fn icloud_sync(sh: &Shell, path: &str) -> Result<()> {
+fn icloud_sync(sh: &Shell, path: &str, source: Option<&str>) -> Result<()> {
     let requested_path = expand_user_path(path)?;
     let root = git_root(sh)?;
-    let local_path = if requested_path.is_absolute() {
+    let local_path = if requested_path == Path::new(".") {
+        root.clone()
+    } else if requested_path.is_absolute() {
         requested_path
     } else {
         root.join(requested_path)
     };
 
     if local_path.is_dir() {
-        return icloud_sync_dir(sh, &root, &local_path);
+        return icloud_sync_dir(sh, &root, &local_path, source);
+    }
+
+    if source.is_some() {
+        return Err(eyre!(
+            "refusing to use an iCloud source name for file sync: {path}\n\
+             source names change the shared directory target, but file syncs use a stable path under iCloud Drive/dotfiles\n\
+             run without the source name, or sync a directory instead"
+        ));
     }
 
     let icloud_target = icloud_file_target(&icloud_drive()?, &fsutil::home_dir()?, &local_path)?;
     icloud_sync_file(sh, &local_path, &icloud_target)
 }
 
-fn icloud_sync_dir(sh: &Shell, root: &Path, local_path: &Path) -> Result<()> {
-    // strip leading _ if present for iCloud category name
+fn icloud_sync_dir(sh: &Shell, root: &Path, local_path: &Path, source: Option<&str>) -> Result<()> {
     let dir_name = local_path
         .file_name()
         .ok_or_else(|| eyre!("invalid directory: {}", local_path.display()))?
         .to_string_lossy();
 
-    let category = dir_name.strip_prefix('_').unwrap_or(&dir_name);
+    let category = if local_path == root {
+        "repos"
+    } else {
+        dir_name.strip_prefix('_').unwrap_or(&dir_name)
+    };
 
-    let project_name = root
-        .file_name()
-        .ok_or_else(|| eyre!("could not determine project name from git root"))?
-        .to_string_lossy()
-        .to_string();
+    let project_name = match source {
+        Some(source) => validate_source_name(source)?,
+        None => root
+            .file_name()
+            .ok_or_else(|| eyre!("could not determine project name from git root"))?
+            .to_string_lossy()
+            .to_string(),
+    };
 
     let icloud_target = icloud_drive()?.join(category).join(&project_name);
 
@@ -91,13 +111,27 @@ fn icloud_sync_dir(sh: &Shell, root: &Path, local_path: &Path) -> Result<()> {
         return Err(eyre!("directory does not exist: {}", local_path.display()));
     }
 
+    let target_has_content = sh.path_exists(&icloud_target) && !is_empty_dir(&icloud_target)?;
     sh.create_dir(&icloud_target)?;
 
     if local_path.is_symlink() {
+        ensure_symlink_target(local_path, &icloud_target)?;
         // already symlinked, just rsync contents
         info!("{} (already symlinked, syncing)", dir_name);
         rsync_two_way(sh, local_path, &icloud_target)?;
     } else {
+        if target_has_content && !is_empty_dir(local_path)? {
+            return Err(eyre!(
+                "refusing to merge two non-empty directories\n\
+                 local directory: {}\n\
+                 iCloud target: {}\n\
+                 continuing could overwrite files in the shared iCloud source\n\
+                 move the local directory aside, empty it before linking, or choose a new source name",
+                local_path.display(),
+                icloud_target.display()
+            ));
+        }
+
         // first time: copy contents, remove dir, create symlink
         rsync_two_way(sh, local_path, &icloud_target)?;
         sh.remove_path(local_path)?;
@@ -122,8 +156,21 @@ fn icloud_sync_file(sh: &Shell, local_path: &Path, icloud_target: &Path) -> Resu
     fsutil::ensure_parent_dir(icloud_target)?;
 
     if local_path.is_symlink() {
+        ensure_symlink_target(local_path, icloud_target)?;
         info!("{} (already symlinked)", local_path.display());
     } else {
+        if sh.path_exists(icloud_target) && !files_match(local_path, icloud_target)? {
+            return Err(eyre!(
+                "refusing to overwrite an existing iCloud file with different contents\n\
+                 local file: {}\n\
+                 iCloud file: {}\n\
+                 continuing would replace the shared copy\n\
+                 compare the files manually, remove the stale iCloud file, or update the local file to match",
+                local_path.display(),
+                icloud_target.display(),
+            ));
+        }
+
         std::fs::copy(local_path, icloud_target)?;
         sh.remove_path(local_path)?;
         std::os::unix::fs::symlink(icloud_target, local_path)?;
@@ -173,6 +220,64 @@ fn syncable_component(component: Component<'_>) -> Option<PathBuf> {
 
     let value = value.to_string_lossy();
     Some(PathBuf::from(value.strip_prefix('.').unwrap_or(&value)))
+}
+
+fn validate_source_name(source: &str) -> Result<String> {
+    let path = Path::new(source);
+    let mut components = path.components();
+    let Some(Component::Normal(value)) = components.next() else {
+        return Err(eyre!(
+            "invalid iCloud source name: {source}\n\
+             use a plain name like `cove`; absolute paths, `.` and `..` are not valid source names"
+        ));
+    };
+
+    if components.next().is_some() {
+        return Err(eyre!(
+            "invalid iCloud source name: {source}\n\
+             source names cannot contain path separators because they select one shared folder name\n\
+             use a plain name like `cove`"
+        ));
+    }
+
+    Ok(value.to_string_lossy().to_string())
+}
+
+fn ensure_symlink_target(path: &Path, expected_target: &Path) -> Result<()> {
+    let target = fs::read_link(path)?;
+    if target == expected_target {
+        return Ok(());
+    }
+
+    Err(eyre!(
+        "refusing to sync an existing symlink that points at a different target\n\
+         local symlink: {}\n\
+         current target: {}\n\
+         expected iCloud target: {}\n\
+         continuing would sync the wrong shared source\n\
+         remove or update the symlink if this location should use the expected target",
+        path.display(),
+        target.display(),
+        expected_target.display()
+    ))
+}
+
+fn is_empty_dir(path: &Path) -> Result<bool> {
+    Ok(fs::read_dir(path)?.next().is_none())
+}
+
+fn files_match(left: &Path, right: &Path) -> Result<bool> {
+    let left_metadata = fs::metadata(left)?;
+    let right_metadata = fs::metadata(right)?;
+    if !left_metadata.is_file() || !right_metadata.is_file() {
+        return Ok(false);
+    }
+
+    if left_metadata.len() != right_metadata.len() {
+        return Ok(false);
+    }
+
+    Ok(fs::read(left)? == fs::read(right)?)
 }
 
 fn rsync_two_way(sh: &Shell, local: &Path, icloud: &Path) -> Result<()> {
