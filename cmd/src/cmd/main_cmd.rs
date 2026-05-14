@@ -165,7 +165,7 @@ pub enum MainCmd {
         subcommand: crate::cmd::file::FileCmd,
     },
 
-    /// Sync directories and AI memories via iCloud
+    /// Sync files and directories via iCloud
     #[command(arg_required_else_help = true)]
     Sync {
         #[command(subcommand)]

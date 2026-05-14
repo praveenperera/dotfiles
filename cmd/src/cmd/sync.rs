@@ -7,7 +7,6 @@ use eyre::{eyre, Result};
 use log::info;
 use xshell::{cmd, Shell};
 
-use crate::cmd::memory;
 use crate::fsutil;
 
 #[derive(Debug, Clone)]
@@ -17,13 +16,6 @@ pub struct Sync {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum SyncCmd {
-    /// Sync AI memories (Claude/Codex) via iCloud
-    Memory {
-        /// Run initial setup instead of syncing
-        #[arg(long)]
-        setup: bool,
-    },
-
     /// Sync a local file or directory to iCloud Drive and symlink back
     #[command(arg_required_else_help = true)]
     Icloud {
@@ -37,13 +29,6 @@ pub enum SyncCmd {
 
 pub fn run_with_flags(sh: &Shell, flags: Sync) -> Result<()> {
     match flags.subcommand {
-        SyncCmd::Memory { setup } => {
-            if setup {
-                memory::setup(sh)
-            } else {
-                memory::sync(sh)
-            }
-        }
         SyncCmd::Icloud { path, source } => icloud_sync(sh, &path, source.as_deref()),
     }
 }

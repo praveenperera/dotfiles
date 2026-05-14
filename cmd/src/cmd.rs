@@ -6,7 +6,6 @@ pub mod file;
 pub mod gcloud;
 pub mod generate;
 pub mod main_cmd;
-pub mod memory;
 pub mod secrets;
 pub mod sync;
 pub mod terraform;
