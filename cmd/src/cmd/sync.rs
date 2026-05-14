@@ -49,7 +49,7 @@ pub fn run_with_flags(sh: &Shell, flags: Sync) -> Result<()> {
 }
 
 fn icloud_drive() -> Result<PathBuf> {
-    Ok(fsutil::home_dir()?.join("Library/Mobile Documents/com~apple~CloudDocs"))
+    Ok(fsutil::home_dir()?.join("Library/Mobile Documents/com~apple~CloudDocs/local_sync"))
 }
 
 fn git_root(sh: &Shell) -> Result<PathBuf> {
@@ -75,7 +75,7 @@ fn icloud_sync(sh: &Shell, path: &str, source: Option<&str>) -> Result<()> {
     if source.is_some() {
         return Err(eyre!(
             "refusing to use an iCloud source name for file sync: {path}\n\
-             source names change the shared directory target, but file syncs use a stable path under iCloud Drive/dotfiles\n\
+             source names change the shared directory target, but file syncs use a stable path under iCloud Drive/local_sync/dotfiles\n\
              run without the source name, or sync a directory instead"
         ));
     }
@@ -346,16 +346,16 @@ mod tests {
     #[test]
     fn codex_config_file_syncs_to_stable_icloud_dotfiles_path() {
         let target = icloud_file_target(
-            Path::new("/Users/praveen/Library/Mobile Documents/com~apple~CloudDocs"),
-            Path::new("/Users/praveen"),
-            Path::new("/Users/praveen/.codex/config.toml"),
+            Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync"),
+            Path::new("~"),
+            Path::new("~/.codex/config.toml"),
         )
         .unwrap();
 
         assert_eq!(
             target,
             Path::new(
-                "/Users/praveen/Library/Mobile Documents/com~apple~CloudDocs/dotfiles/codex/config.toml"
+                "~/Library/Mobile Documents/com~apple~CloudDocs/local_sync/dotfiles/codex/config.toml"
             )
         );
     }
@@ -363,9 +363,9 @@ mod tests {
     #[test]
     fn directory_sync_uses_git_root_name_by_default() {
         let target = IcloudDirTarget::resolve(
-            Path::new("/Users/praveen/Library/Mobile Documents/com~apple~CloudDocs"),
-            Path::new("/Users/praveen/code/bitcoinppl/cove-wk1"),
-            Path::new("/Users/praveen/code/bitcoinppl/cove-wk1/_plans"),
+            Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync"),
+            Path::new("~/code/bitcoinppl/cove-wk1"),
+            Path::new("~/code/bitcoinppl/cove-wk1/_plans"),
             None,
         )
         .unwrap();
@@ -374,16 +374,16 @@ mod tests {
         assert_eq!(target.source.as_str(), "cove-wk1");
         assert_eq!(
             target.path,
-            Path::new("/Users/praveen/Library/Mobile Documents/com~apple~CloudDocs/plans/cove-wk1")
+            Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync/plans/cove-wk1")
         );
     }
 
     #[test]
     fn directory_sync_source_overrides_git_root_name() {
         let target = IcloudDirTarget::resolve(
-            Path::new("/Users/praveen/Library/Mobile Documents/com~apple~CloudDocs"),
-            Path::new("/Users/praveen/code/bitcoinppl/cove-wk1"),
-            Path::new("/Users/praveen/code/bitcoinppl/cove-wk1/_plans"),
+            Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync"),
+            Path::new("~/code/bitcoinppl/cove-wk1"),
+            Path::new("~/code/bitcoinppl/cove-wk1/_plans"),
             Some("cove"),
         )
         .unwrap();
@@ -392,16 +392,16 @@ mod tests {
         assert_eq!(target.source.as_str(), "cove");
         assert_eq!(
             target.path,
-            Path::new("/Users/praveen/Library/Mobile Documents/com~apple~CloudDocs/plans/cove")
+            Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync/plans/cove")
         );
     }
 
     #[test]
     fn git_root_directory_sync_uses_repos_category() {
         let target = IcloudDirTarget::resolve(
-            Path::new("/Users/praveen/Library/Mobile Documents/com~apple~CloudDocs"),
-            Path::new("/Users/praveen/code/bitcoinppl/cove-wk1"),
-            Path::new("/Users/praveen/code/bitcoinppl/cove-wk1"),
+            Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync"),
+            Path::new("~/code/bitcoinppl/cove-wk1"),
+            Path::new("~/code/bitcoinppl/cove-wk1"),
             Some("cove"),
         )
         .unwrap();
@@ -410,7 +410,7 @@ mod tests {
         assert_eq!(target.source.as_str(), "cove");
         assert_eq!(
             target.path,
-            Path::new("/Users/praveen/Library/Mobile Documents/com~apple~CloudDocs/repos/cove")
+            Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync/repos/cove")
         );
     }
 

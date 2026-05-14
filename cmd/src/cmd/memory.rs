@@ -8,7 +8,8 @@ use xshell::Shell;
 use crate::fsutil;
 
 fn icloud_memories_dir() -> Result<PathBuf> {
-    Ok(fsutil::home_dir()?.join("Library/Mobile Documents/com~apple~CloudDocs/dotfiles/memories"))
+    Ok(fsutil::home_dir()?
+        .join("Library/Mobile Documents/com~apple~CloudDocs/local_sync/dotfiles/memories"))
 }
 
 fn claude_projects_dir() -> Result<PathBuf> {
