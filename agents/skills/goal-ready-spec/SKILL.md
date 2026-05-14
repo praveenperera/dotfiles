@@ -19,9 +19,10 @@ Do not use this skill for ordinary planning, brainstorming, outlining, refining,
 4. Treat architecture, ownership, lifecycle, state placement, API shape, generated-file expectations, and test requirements as first-class requirements when they are binding.
 5. Identify any binding requirement where the user asked for a specific component, module, actor, manager, owner, or data model. Mark these as "no equivalent substitution" requirements.
 6. Front-load clarification during spec creation. Ask focused questions and incorporate the answers before finalizing whenever missing information would prevent a clear, executable, faithful spec. Only leave non-blocking uncertainty in Risks and Open Questions.
-7. Write the spec to `_plans/<short-slug>/spec.md`, the progress checkpoint to `_plans/<short-slug>/progress.md`, and the audit checklist to `_plans/<short-slug>/audit.md`. This skill is for the repo-local `_plans` workflow; do not produce an unfixed chat-only spec unless the user explicitly asks for that fallback.
-8. The `_plans/<short-slug>/` folder is the goal's durable working area. Start with only `spec.md`, `progress.md`, and `audit.md`. Add supporting phase, decision, context, or evidence files only when the work is large enough that splitting them improves context management. Prefer small, named files with clear purposes over copying large context into the main spec.
-9. Before finalizing, audit the spec against the source request and confirm every binding material requirement appears in an acceptance criterion, completion criterion, or completion-audit item.
+7. Preserve the original spec or plan text as `_plans/<short-slug>/original-spec.md` before rewriting it into the goal-ready contract. If the source was only provided in chat, copy the relevant source text into that file so later agents can audit the transformed spec against the original.
+8. Write the goal-ready spec to `_plans/<short-slug>/spec.md`, the progress checkpoint to `_plans/<short-slug>/progress.md`, and the audit checklist to `_plans/<short-slug>/audit.md`. This skill is for the repo-local `_plans` workflow; do not produce an unfixed chat-only spec unless the user explicitly asks for that fallback.
+9. The `_plans/<short-slug>/` folder is the goal's durable working area. Start with `original-spec.md`, `spec.md`, `progress.md`, and `audit.md`. Add supporting phase, decision, context, or evidence files only when the work is large enough that splitting them improves context management. Prefer small, named files with clear purposes over copying large context into the main spec.
+10. Before finalizing, audit the spec against the source request and confirm every binding material requirement appears in an acceptance criterion, completion criterion, or completion-audit item.
 
 ## Required Spec Sections
 
@@ -64,8 +65,9 @@ Use this structure unless the user asks for a different format:
 - The recommended `/goal` objective should stay short and point to the spec path or title rather than embedding the whole implementation contract.
 - Plan-folder files must support progressive disclosure: put the smallest durable contract in `spec.md`, progress and evidence in `audit.md`, and bulky analysis or context in separate files that are linked from the relevant section.
 - Do not instruct the execution agent to load every file in `_plans/<short-slug>/` on every continuation. It should load the index/controlling sections first, then only the referenced detail files needed for the next action or completion decision.
-- Default to exactly three files: `spec.md`, `progress.md`, and `audit.md`. Add `phases/`, `decisions/`, `context/`, or other supporting files only when the spec is large, naturally phase-oriented, or would otherwise overload context.
+- Default to exactly four files: `original-spec.md`, `spec.md`, `progress.md`, and `audit.md`. Add `phases/`, `decisions/`, `context/`, or other supporting files only when the spec is large, naturally phase-oriented, or would otherwise overload context.
 - Required files must always have these roles:
+  - `original-spec.md`: original user-provided spec, plan, or source text preserved before goal-ready rewriting
   - `spec.md`: controlling contract, index, scope, requirements, architecture, verification, completion criteria, and recommended goal objective
   - `progress.md`: short resume checkpoint, active focus, completed phase summaries, next action, blockers, and read-next guidance
   - `audit.md`: completion evidence, verification results, deviations, residual risk, and final proof checklist
@@ -89,6 +91,7 @@ Every generated spec must include a section like this, adapted to the concrete p
 This plan lives in `_plans/<short-slug>/`. Use this folder as the durable working area for the goal:
 
 - `spec.md`: controlling implementation contract and index of any supporting files
+- `original-spec.md`: original source spec or plan text preserved before goal-ready rewriting
 - `progress.md`: compact current state, active phase, next action, blockers, and what to read next
 - `audit.md`: completion evidence and verification state only
 - additional phase, decision, context, or evidence files may be created only when useful for context management
