@@ -1,6 +1,6 @@
 ---
 name: goal-ready-spec
-description: Use when turning a chat, rough plan, design discussion, or requirements dump into a goal-ready implementation spec for Codex or another agent. Trigger on requests for a full spec, execution-ready plan, goal-ready plan, guarded implementation plan, or a plan that must preserve architecture, ownership, state placement, acceptance criteria, and completion-audit guardrails.
+description: Use only when the user explicitly invokes $goal-ready-spec or specifically asks to make a spec goal-ready. Creates guarded, auditable implementation specs for Codex or another agent.
 ---
 
 # Goal-Ready Spec
@@ -8,6 +8,8 @@ description: Use when turning a chat, rough plan, design discussion, or requirem
 ## Overview
 
 Create specs that an execution agent can follow without replacing explicit requirements with merely equivalent behavior. The goal is to collaborate with the user until the spec is clear, executable, and faithful to their intent, not to finish a spec in one pass. The output must make architectural ownership, state location, scope boundaries, verification commands, and completion evidence auditable before any goal is marked complete.
+
+Do not use this skill for ordinary planning, brainstorming, outlining, refining, reviewing, or implementation-plan requests unless the user explicitly invokes `$goal-ready-spec` or specifically asks to make the spec goal-ready.
 
 ## Workflow
 
