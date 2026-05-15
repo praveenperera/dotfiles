@@ -40,6 +40,7 @@ pub(crate) fn config(sh: &Shell) -> Result<()> {
     install_vscode_extensions(sh)?;
     create_gitconfig_local(sh)?;
     create_hardlinks(sh)?;
+    refresh_registered_packs(sh);
     reload_configs(sh);
 
     Ok(())
@@ -81,6 +82,12 @@ fn reload_configs(sh: &Shell) {
         .is_ok()
     {
         println!("{}", "reloaded tmux config".green());
+    }
+}
+
+fn refresh_registered_packs(sh: &Shell) {
+    if let Err(err) = crate::cmd::pack::refresh_registered_packs(sh) {
+        println!("{} {err}", "failed to refresh registered packs:".yellow());
     }
 }
 

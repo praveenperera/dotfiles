@@ -179,7 +179,7 @@ pub enum MainCmd {
         subcommand: crate::cmd::mcp::McpCmd,
     },
 
-    /// Add reusable project packs of skills, MCPs, and Codex plugins
+    /// Add reusable project packs of skills and MCPs
     #[command(arg_required_else_help = true)]
     Pack {
         #[command(subcommand)]
@@ -305,5 +305,32 @@ mod tests {
         };
 
         assert!(matches!(subcommand, PackCmd::Add { packs } if packs == ["web", "native"]));
+    }
+
+    #[test]
+    fn parses_pack_refresh_all() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("pack"),
+            OsString::from("refresh"),
+            OsString::from("--all"),
+        ])
+        .unwrap();
+
+        let MainCmd::Pack { subcommand } = cmd.subcommand else {
+            panic!("expected pack command");
+        };
+
+        assert!(matches!(subcommand, PackCmd::Refresh { all: true }));
+    }
+
+    #[test]
+    fn parses_pack_refresh_current() {
+        let cmd = Cmd::from_args(&[OsString::from("pack"), OsString::from("refresh")]).unwrap();
+
+        let MainCmd::Pack { subcommand } = cmd.subcommand else {
+            panic!("expected pack command");
+        };
+
+        assert!(matches!(subcommand, PackCmd::Refresh { all: false }));
     }
 }

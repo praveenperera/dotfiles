@@ -1,2 +1,2 @@
 description = "macOS app development"
-plugins = ["build-macos-apps@openai-curated"]
+plugin_sources = ["build-macos-apps@openai-curated"]

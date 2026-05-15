@@ -31,8 +31,20 @@ struct SkillEntry {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SkillSource {
+    pub name: String,
+    pub path: PathBuf,
+    pub refresh_existing_symlink: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum LinkPlan {
     Link {
+        name: String,
+        source: PathBuf,
+        target: PathBuf,
+    },
+    RefreshLink {
         name: String,
         source: PathBuf,
         target: PathBuf,
@@ -90,9 +102,35 @@ pub fn add_skills_by_name(sh: &Shell, selected_skills: &[String]) -> Result<Skil
 
     let project_skills_dir = crate::dotfiles_dir()?.join("agents/project-skills");
     let available_skills = list_project_skills(&project_skills_dir)?;
+    let sources = selected_skills
+        .iter()
+        .map(|name| {
+            let source = available_skills
+                .iter()
+                .find(|skill| skill.name == *name)
+                .ok_or_else(|| eyre!("project skill not found: {name}"))?;
+            Ok(SkillSource {
+                name: name.clone(),
+                path: source.path.clone(),
+                refresh_existing_symlink: false,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    add_skill_sources(sh, &sources)
+}
+
+pub fn add_skill_sources(sh: &Shell, sources: &[SkillSource]) -> Result<SkillInstallSummary> {
+    if sources.is_empty() {
+        return Ok(SkillInstallSummary {
+            linked: Vec::new(),
+            skipped: Vec::new(),
+        });
+    }
+
     let git_root = git_root(sh)?;
     let target_skills_dir = git_root.join(".agents/skills");
-    let plan = plan_skill_links(&available_skills, selected_skills, &target_skills_dir)?;
+    let plan = plan_skill_links(sources, &target_skills_dir)?;
 
     fs::create_dir_all(&target_skills_dir).wrap_err_with(|| {
         format!(
@@ -111,7 +149,13 @@ pub fn add_skills_by_name(sh: &Shell, selected_skills: &[String]) -> Result<Skil
                 name,
                 source,
                 target,
+            }
+            | LinkPlan::RefreshLink {
+                name,
+                source,
+                target,
             } => {
+                crate::fsutil::remove_existing_path(&target)?;
                 create_symlink(&source, &target).wrap_err_with(|| {
                     format!(
                         "failed to link skill {name} from {} to {}",
@@ -240,31 +284,31 @@ fn select_skills(sh: &Shell, available_skills: &[SkillEntry]) -> Result<Vec<Stri
         .collect())
 }
 
-fn plan_skill_links(
-    available_skills: &[SkillEntry],
-    selected_skills: &[String],
-    target_skills_dir: &Path,
-) -> Result<Vec<LinkPlan>> {
+fn plan_skill_links(sources: &[SkillSource], target_skills_dir: &Path) -> Result<Vec<LinkPlan>> {
     let mut plan = Vec::new();
 
-    for name in selected_skills {
-        let source = available_skills
-            .iter()
-            .find(|skill| skill.name == *name)
-            .ok_or_else(|| eyre!("project skill not found: {name}"))?
-            .path
-            .clone();
-        let target = target_skills_dir.join(name);
+    for source in sources {
+        let target = target_skills_dir.join(&source.name);
 
         if path_exists(&target)? {
-            plan.push(LinkPlan::SkipExisting {
-                name: name.clone(),
-                target,
-            });
+            if source.refresh_existing_symlink
+                && fs::symlink_metadata(&target)?.file_type().is_symlink()
+            {
+                plan.push(LinkPlan::RefreshLink {
+                    name: source.name.clone(),
+                    source: source.path.clone(),
+                    target,
+                });
+            } else {
+                plan.push(LinkPlan::SkipExisting {
+                    name: source.name.clone(),
+                    target,
+                });
+            }
         } else {
             plan.push(LinkPlan::Link {
-                name: name.clone(),
-                source,
+                name: source.name.clone(),
+                source: source.path.clone(),
                 target,
             });
         }
@@ -295,7 +339,7 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{list_project_skills, plan_skill_links, LinkPlan};
+    use super::{list_project_skills, plan_skill_links, LinkPlan, SkillSource};
 
     #[test]
     fn lists_project_skills_with_skill_files() {
@@ -324,13 +368,13 @@ mod tests {
         let target_dir = dir.path().join("target");
         std::fs::create_dir_all(source_dir.join("alpha")).unwrap();
 
-        let available = vec![super::SkillEntry {
+        let sources = vec![SkillSource {
             name: "alpha".to_string(),
             path: source_dir.join("alpha"),
+            refresh_existing_symlink: false,
         }];
-        let selected = vec!["alpha".to_string()];
 
-        let plan = plan_skill_links(&available, &selected, &target_dir).unwrap();
+        let plan = plan_skill_links(&sources, &target_dir).unwrap();
 
         assert_eq!(
             plan,
@@ -350,13 +394,13 @@ mod tests {
         std::fs::create_dir_all(source_dir.join("alpha")).unwrap();
         std::fs::create_dir_all(target_dir.join("alpha")).unwrap();
 
-        let available = vec![super::SkillEntry {
+        let sources = vec![SkillSource {
             name: "alpha".to_string(),
             path: source_dir.join("alpha"),
+            refresh_existing_symlink: false,
         }];
-        let selected = vec!["alpha".to_string()];
 
-        let plan = plan_skill_links(&available, &selected, &target_dir).unwrap();
+        let plan = plan_skill_links(&sources, &target_dir).unwrap();
 
         assert_eq!(
             plan,
@@ -367,11 +411,33 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
-    fn errors_for_unknown_skill() {
+    fn refreshes_existing_symlink_targets_when_requested() {
         let dir = tempfile::tempdir().unwrap();
-        let err = plan_skill_links(&[], &["missing".to_string()], dir.path()).unwrap_err();
+        let source_dir = dir.path().join("source");
+        let old_source_dir = dir.path().join("old-source");
+        let target_dir = dir.path().join("target");
+        std::fs::create_dir_all(source_dir.join("alpha")).unwrap();
+        std::fs::create_dir_all(&old_source_dir).unwrap();
+        std::fs::create_dir_all(&target_dir).unwrap();
+        std::os::unix::fs::symlink(&old_source_dir, target_dir.join("alpha")).unwrap();
 
-        assert!(err.to_string().contains("project skill not found: missing"));
+        let sources = vec![SkillSource {
+            name: "alpha".to_string(),
+            path: source_dir.join("alpha"),
+            refresh_existing_symlink: true,
+        }];
+
+        let plan = plan_skill_links(&sources, &target_dir).unwrap();
+
+        assert_eq!(
+            plan,
+            [LinkPlan::RefreshLink {
+                name: "alpha".to_string(),
+                source: source_dir.join("alpha"),
+                target: target_dir.join("alpha"),
+            }]
+        );
     }
 }
