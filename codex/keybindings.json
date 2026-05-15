@@ -1,0 +1,14 @@
+[
+  {
+    "command": "globalDictationHold",
+    "key": "Command+F2"
+  },
+  {
+    "command": "globalDictationToggle",
+    "key": "Command+F3"
+  },
+  {
+    "command": "composer.openModelPicker",
+    "key": "Ctrl+Shift+M"
+  }
+]

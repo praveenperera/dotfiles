@@ -469,6 +469,10 @@ mod tests {
                 && spec.target == home.join(".codex/AGENTS.md")
         }));
         assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("codex/keybindings.json")
+                && spec.target == home.join(".codex/keybindings.json")
+        }));
+        assert!(specs.iter().any(|spec| {
             spec.source == agents_dir.join("AGENTS.md")
                 && spec.target == home.join(".config/opencode/AGENTS.md")
         }));

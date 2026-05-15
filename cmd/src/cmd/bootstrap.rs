@@ -166,6 +166,7 @@ const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
     ("zed/themes", ".config/zed/themes"),
     ("claude", ".claude"),
     ("agents/AGENTS.md", ".codex/AGENTS.md"),
+    ("codex/keybindings.json", ".codex/keybindings.json"),
     ("agents/AGENTS.md", ".config/opencode/AGENTS.md"),
     ("opencode", ".config/opencode"),
 ];
