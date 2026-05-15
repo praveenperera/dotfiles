@@ -5,5 +5,7 @@
     "<C-h>": false,
     "<C-l>": false
   },
-  "workbench.editor.openSideBySideDirection": "right"
+  "workbench.editor.openSideBySideDirection": "right",
+  "chatgpt.openOnStartup": true,
+  "diffEditor.renderSideBySide": false
 }

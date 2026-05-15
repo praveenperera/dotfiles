@@ -8,5 +8,49 @@
     "key": "ctrl+h",
     "command": "workbench.action.focusActiveEditorGroup",
     "when": "webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView'"
+  },
+  {
+    "key": "cmd+h",
+    "command": "workbench.view.scm",
+    "when": "editorTextFocus && activeEditorGroupIndex == 1"
+  },
+  {
+    "key": "cmd+h",
+    "command": "workbench.action.focusFirstEditorGroup",
+    "when": "!editorTextFocus || activeEditorGroupIndex != 1"
+  },
+  {
+    "key": "cmd+l",
+    "command": "chatgpt.openSidebar",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "cmd+l",
+    "command": "workbench.action.focusFirstEditorGroup",
+    "when": "sideBarFocus && activeViewlet == 'workbench.view.scm'"
+  },
+  {
+    "key": "cmd+g",
+    "command": "workbench.view.scm"
+  },
+  {
+    "key": "ctrl+j",
+    "command": "workbench.action.compareEditor.nextChange",
+    "when": "textCompareEditorVisible"
+  },
+  {
+    "key": "cmd+j",
+    "command": "workbench.action.compareEditor.nextChange",
+    "when": "textCompareEditorVisible"
+  },
+  {
+    "key": "ctrl+k",
+    "command": "workbench.action.compareEditor.previousChange",
+    "when": "textCompareEditorVisible"
+  },
+  {
+    "key": "cmd+k",
+    "command": "workbench.action.compareEditor.previousChange",
+    "when": "textCompareEditorVisible"
   }
 ]
