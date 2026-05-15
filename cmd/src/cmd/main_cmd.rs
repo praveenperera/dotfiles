@@ -179,6 +179,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::mcp::McpCmd,
     },
 
+    /// Add reusable project packs of skills, MCPs, and Codex plugins
+    #[command(arg_required_else_help = true)]
+    Pack {
+        #[command(subcommand)]
+        subcommand: crate::cmd::pack::PackCmd,
+    },
+
     /// Sync files and directories via iCloud
     #[command(arg_required_else_help = true)]
     Sync {
@@ -214,6 +221,7 @@ mod tests {
 
     use super::{Cmd, MainCmd};
     use crate::cmd::mcp::McpCmd;
+    use crate::cmd::pack::PackCmd;
     use crate::cmd::skill::SkillCmd;
 
     #[test]
@@ -269,5 +277,33 @@ mod tests {
         };
 
         assert!(matches!(subcommand, McpCmd::Add { mcps } if mcps == ["xcodebuildmcp"]));
+    }
+
+    #[test]
+    fn parses_pack_add_without_names() {
+        let cmd = Cmd::from_args(&[OsString::from("pack"), OsString::from("add")]).unwrap();
+
+        let MainCmd::Pack { subcommand } = cmd.subcommand else {
+            panic!("expected pack command");
+        };
+
+        assert!(matches!(subcommand, PackCmd::Add { packs } if packs.is_empty()));
+    }
+
+    #[test]
+    fn parses_pack_add_with_names() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("pack"),
+            OsString::from("add"),
+            OsString::from("web"),
+            OsString::from("native"),
+        ])
+        .unwrap();
+
+        let MainCmd::Pack { subcommand } = cmd.subcommand else {
+            panic!("expected pack command");
+        };
+
+        assert!(matches!(subcommand, PackCmd::Add { packs } if packs == ["web", "native"]));
     }
 }

@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs;
 use std::io::ErrorKind;
@@ -36,6 +37,18 @@ enum MergeStatus {
     SkippedExisting,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct McpInstallSummary {
+    pub added: Vec<String>,
+    pub skipped: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PluginInstallSummary {
+    pub enabled: Vec<String>,
+    pub skipped: Vec<String>,
+}
+
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     let flags = Mcp::parse_from(args);
     run_with_flags(sh, flags)
@@ -61,47 +74,98 @@ fn add_mcps(sh: &Shell, requested_mcps: &[String]) -> Result<()> {
         return Ok(());
     }
 
+    let summary = add_mcps_by_name(sh, &selected_mcps)?;
+    print_mcp_summary(&summary);
+
+    Ok(())
+}
+
+pub fn add_mcps_by_name(sh: &Shell, selected_mcps: &[String]) -> Result<McpInstallSummary> {
+    if selected_mcps.is_empty() {
+        return Ok(McpInstallSummary {
+            added: Vec::new(),
+            skipped: Vec::new(),
+        });
+    }
+
+    let project_mcps_dir = crate::dotfiles_dir()?.join("agents/project-mcps");
+    let available_mcps = list_project_mcps(&project_mcps_dir)?;
     let git_root = git_root(sh)?;
     let config_path = git_root.join(".codex/config.toml");
     let mut config = read_project_config(&config_path)?;
-    let mut added = Vec::new();
-    let mut skipped = Vec::new();
+    let mut summary = McpInstallSummary {
+        added: Vec::new(),
+        skipped: Vec::new(),
+    };
 
     for name in selected_mcps {
         let entry = available_mcps
             .iter()
-            .find(|entry| entry.name == name)
+            .find(|entry| entry.name == *name)
             .ok_or_else(|| eyre!("project MCP not found: {name}"))?;
         let snippet = read_mcp_snippet(entry)?;
 
         match merge_mcp_server(&mut config, snippet.name.as_str(), snippet.value)? {
-            MergeStatus::Added => added.push(snippet.name),
-            MergeStatus::SkippedExisting => skipped.push(snippet.name),
+            MergeStatus::Added => summary.added.push(snippet.name),
+            MergeStatus::SkippedExisting => summary.skipped.push(snippet.name),
         }
     }
 
-    if !added.is_empty() {
-        if let Some(parent) = config_path.parent() {
-            fs::create_dir_all(parent).wrap_err_with(|| {
-                format!(
-                    "failed to create project Codex config directory: {}",
-                    parent.display()
-                )
-            })?;
-        }
-        fs::write(&config_path, toml::to_string_pretty(&config)?).wrap_err_with(|| {
-            format!(
-                "failed to write project Codex config: {}",
-                config_path.display()
-            )
-        })?;
-        println!("Added MCPs: {}", added.join(", "));
-    }
-    if !skipped.is_empty() {
-        println!("Skipped existing MCPs: {}", skipped.join(", "));
+    if !summary.added.is_empty() {
+        write_project_config(&config_path, &config)?;
     }
 
-    Ok(())
+    Ok(summary)
+}
+
+pub fn project_mcp_names() -> Result<BTreeSet<String>> {
+    let project_mcps_dir = crate::dotfiles_dir()?.join("agents/project-mcps");
+    Ok(list_project_mcps(&project_mcps_dir)?
+        .into_iter()
+        .map(|mcp| mcp.name)
+        .collect())
+}
+
+pub fn enable_plugins_by_name(
+    sh: &Shell,
+    selected_plugins: &[String],
+) -> Result<PluginInstallSummary> {
+    if selected_plugins.is_empty() {
+        return Ok(PluginInstallSummary {
+            enabled: Vec::new(),
+            skipped: Vec::new(),
+        });
+    }
+
+    let git_root = git_root(sh)?;
+    let config_path = git_root.join(".codex/config.toml");
+    let mut config = read_project_config(&config_path)?;
+    let mut summary = PluginInstallSummary {
+        enabled: Vec::new(),
+        skipped: Vec::new(),
+    };
+
+    for plugin in selected_plugins {
+        match merge_plugin_enabled(&mut config, plugin)? {
+            MergeStatus::Added => summary.enabled.push(plugin.clone()),
+            MergeStatus::SkippedExisting => summary.skipped.push(plugin.clone()),
+        }
+    }
+
+    if !summary.enabled.is_empty() {
+        write_project_config(&config_path, &config)?;
+    }
+
+    Ok(summary)
+}
+
+fn print_mcp_summary(summary: &McpInstallSummary) {
+    if !summary.added.is_empty() {
+        println!("Added MCPs: {}", summary.added.join(", "));
+    }
+    if !summary.skipped.is_empty() {
+        println!("Skipped existing MCPs: {}", summary.skipped.join(", "));
+    }
 }
 
 fn git_root(sh: &Shell) -> Result<PathBuf> {
@@ -246,6 +310,24 @@ fn read_project_config(config_path: &Path) -> Result<Value> {
     }
 }
 
+fn write_project_config(config_path: &Path, config: &Value) -> Result<()> {
+    if let Some(parent) = config_path.parent() {
+        fs::create_dir_all(parent).wrap_err_with(|| {
+            format!(
+                "failed to create project Codex config directory: {}",
+                parent.display()
+            )
+        })?;
+    }
+    fs::write(config_path, toml::to_string_pretty(config)?).wrap_err_with(|| {
+        format!(
+            "failed to write project Codex config: {}",
+            config_path.display()
+        )
+    })?;
+    Ok(())
+}
+
 fn merge_mcp_server(config: &mut Value, name: &str, server: Value) -> Result<MergeStatus> {
     let root = config
         .as_table_mut()
@@ -264,9 +346,34 @@ fn merge_mcp_server(config: &mut Value, name: &str, server: Value) -> Result<Mer
     Ok(MergeStatus::Added)
 }
 
+fn merge_plugin_enabled(config: &mut Value, name: &str) -> Result<MergeStatus> {
+    let root = config
+        .as_table_mut()
+        .ok_or_else(|| eyre!("project Codex config root must be a TOML table"))?;
+    let plugins = root
+        .entry("plugins".to_string())
+        .or_insert_with(|| Value::Table(Map::new()))
+        .as_table_mut()
+        .ok_or_else(|| eyre!("project Codex config plugins entry must be a TOML table"))?;
+    let plugin = plugins
+        .entry(name.to_string())
+        .or_insert_with(|| Value::Table(Map::new()))
+        .as_table_mut()
+        .ok_or_else(|| eyre!("project Codex config plugin entry must be a TOML table"))?;
+
+    if plugin.get("enabled").and_then(Value::as_bool) == Some(true) {
+        return Ok(MergeStatus::SkippedExisting);
+    }
+
+    plugin.insert("enabled".to_string(), Value::Boolean(true));
+    Ok(MergeStatus::Added)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{list_project_mcps, merge_mcp_server, parse_mcp_snippet, MergeStatus};
+    use super::{
+        list_project_mcps, merge_mcp_server, merge_plugin_enabled, parse_mcp_snippet, MergeStatus,
+    };
 
     #[test]
     fn lists_project_mcp_snippets() {
@@ -371,5 +478,58 @@ mod tests {
                 .and_then(toml::Value::as_str),
             Some("existing")
         );
+    }
+
+    #[test]
+    fn enables_plugin() {
+        let mut config = toml::Value::Table(toml::map::Map::new());
+
+        let status = merge_plugin_enabled(&mut config, "build-ios-apps@openai-curated").unwrap();
+
+        assert_eq!(status, MergeStatus::Added);
+        assert_eq!(
+            config
+                .get("plugins")
+                .and_then(|value| value.get("build-ios-apps@openai-curated"))
+                .and_then(|value| value.get("enabled"))
+                .and_then(toml::Value::as_bool),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn reenables_disabled_plugin() {
+        let mut config = r#"
+            [plugins."build-ios-apps@openai-curated"]
+            enabled = false
+        "#
+        .parse::<toml::Value>()
+        .unwrap();
+
+        let status = merge_plugin_enabled(&mut config, "build-ios-apps@openai-curated").unwrap();
+
+        assert_eq!(status, MergeStatus::Added);
+        assert_eq!(
+            config
+                .get("plugins")
+                .and_then(|value| value.get("build-ios-apps@openai-curated"))
+                .and_then(|value| value.get("enabled"))
+                .and_then(toml::Value::as_bool),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn skips_enabled_plugin() {
+        let mut config = r#"
+            [plugins."build-ios-apps@openai-curated"]
+            enabled = true
+        "#
+        .parse::<toml::Value>()
+        .unwrap();
+
+        let status = merge_plugin_enabled(&mut config, "build-ios-apps@openai-curated").unwrap();
+
+        assert_eq!(status, MergeStatus::SkippedExisting);
     }
 }

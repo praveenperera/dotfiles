@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs;
 use std::io::ErrorKind;
@@ -42,6 +43,12 @@ enum LinkPlan {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SkillInstallSummary {
+    pub linked: Vec<String>,
+    pub skipped: Vec<String>,
+}
+
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     let flags = Skill::parse_from(args);
     run_with_flags(sh, flags)
@@ -67,9 +74,25 @@ fn add_skills(sh: &Shell, requested_skills: &[String]) -> Result<()> {
         return Ok(());
     }
 
+    let summary = add_skills_by_name(sh, &selected_skills)?;
+    print_skill_summary(&summary);
+
+    Ok(())
+}
+
+pub fn add_skills_by_name(sh: &Shell, selected_skills: &[String]) -> Result<SkillInstallSummary> {
+    if selected_skills.is_empty() {
+        return Ok(SkillInstallSummary {
+            linked: Vec::new(),
+            skipped: Vec::new(),
+        });
+    }
+
+    let project_skills_dir = crate::dotfiles_dir()?.join("agents/project-skills");
+    let available_skills = list_project_skills(&project_skills_dir)?;
     let git_root = git_root(sh)?;
     let target_skills_dir = git_root.join(".agents/skills");
-    let plan = plan_skill_links(&available_skills, &selected_skills, &target_skills_dir)?;
+    let plan = plan_skill_links(&available_skills, selected_skills, &target_skills_dir)?;
 
     fs::create_dir_all(&target_skills_dir).wrap_err_with(|| {
         format!(
@@ -78,8 +101,10 @@ fn add_skills(sh: &Shell, requested_skills: &[String]) -> Result<()> {
         )
     })?;
 
-    let mut linked = Vec::new();
-    let mut skipped = Vec::new();
+    let mut summary = SkillInstallSummary {
+        linked: Vec::new(),
+        skipped: Vec::new(),
+    };
     for item in plan {
         match item {
             LinkPlan::Link {
@@ -94,20 +119,30 @@ fn add_skills(sh: &Shell, requested_skills: &[String]) -> Result<()> {
                         target.display()
                     )
                 })?;
-                linked.push(name);
+                summary.linked.push(name);
             }
-            LinkPlan::SkipExisting { name, .. } => skipped.push(name),
+            LinkPlan::SkipExisting { name, .. } => summary.skipped.push(name),
         }
     }
 
-    if !linked.is_empty() {
-        println!("Linked skills: {}", linked.join(", "));
-    }
-    if !skipped.is_empty() {
-        println!("Skipped existing skills: {}", skipped.join(", "));
-    }
+    Ok(summary)
+}
 
-    Ok(())
+pub fn project_skill_names() -> Result<BTreeSet<String>> {
+    let project_skills_dir = crate::dotfiles_dir()?.join("agents/project-skills");
+    Ok(list_project_skills(&project_skills_dir)?
+        .into_iter()
+        .map(|skill| skill.name)
+        .collect())
+}
+
+fn print_skill_summary(summary: &SkillInstallSummary) {
+    if !summary.linked.is_empty() {
+        println!("Linked skills: {}", summary.linked.join(", "));
+    }
+    if !summary.skipped.is_empty() {
+        println!("Skipped existing skills: {}", summary.skipped.join(", "));
+    }
 }
 
 fn git_root(sh: &Shell) -> Result<PathBuf> {
