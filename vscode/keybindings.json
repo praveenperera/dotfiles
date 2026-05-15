@@ -34,6 +34,39 @@
     "command": "workbench.view.scm"
   },
   {
+    "key": "cmd+s",
+    "command": "git.stage",
+    "when": "focusedView == 'workbench.scm'"
+  },
+  {
+    "key": "cmd+d s",
+    "command": "runCommands",
+    "args": {
+      "commands": [
+        "git.stage",
+        "workbench.action.closeActiveEditor",
+        "workbench.view.scm",
+        "list.focusDown",
+        "list.select"
+      ]
+    },
+    "when": "!operationInProgress"
+  },
+  {
+    "key": "cmd+shift+i",
+    "command": "runCommands",
+    "args": {
+      "commands": [
+        "git.stage",
+        "workbench.action.closeActiveEditor",
+        "workbench.view.scm",
+        "list.focusDown",
+        "list.select"
+      ]
+    },
+    "when": "!operationInProgress"
+  },
+  {
     "key": "ctrl+j",
     "command": "workbench.action.compareEditor.nextChange",
     "when": "textCompareEditorVisible"
@@ -44,12 +77,22 @@
     "when": "textCompareEditorVisible"
   },
   {
+    "key": "cmd+r",
+    "command": "workbench.action.compareEditor.nextChange",
+    "when": "textCompareEditorVisible"
+  },
+  {
     "key": "ctrl+k",
     "command": "workbench.action.compareEditor.previousChange",
     "when": "textCompareEditorVisible"
   },
   {
     "key": "cmd+k",
+    "command": "workbench.action.compareEditor.previousChange",
+    "when": "textCompareEditorVisible"
+  },
+  {
+    "key": "cmd+e",
     "command": "workbench.action.compareEditor.previousChange",
     "when": "textCompareEditorVisible"
   }

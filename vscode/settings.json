@@ -7,5 +7,9 @@
   },
   "workbench.editor.openSideBySideDirection": "right",
   "chatgpt.openOnStartup": true,
-  "diffEditor.renderSideBySide": false
+  "diffEditor.renderSideBySide": false,
+  "workbench.colorTheme": "GitHub Light",
+  "editor.accessibilitySupport": "off",
+  "diffEditor.ignoreTrimWhitespace": false,
+  "editor.minimap.enabled": false
 }

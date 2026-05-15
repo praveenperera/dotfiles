@@ -32,8 +32,9 @@
   "agent": {
     "dock": "right",
     "default_model": {
-      "provider": "google",
-      "model": "gemini-2.5-flash",
+      "effort": "medium",
+      "provider": "openai",
+      "model": "gpt-5.5",
       "enable_thinking": true,
     },
     "favorite_models": [
