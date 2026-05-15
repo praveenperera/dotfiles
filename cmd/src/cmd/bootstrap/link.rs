@@ -37,6 +37,7 @@ pub(crate) fn config(sh: &Shell) -> Result<()> {
     }
 
     setup_config_and_dotfiles(sh)?;
+    install_vscode_extensions(sh)?;
     create_gitconfig_local(sh)?;
     create_hardlinks(sh)?;
     reload_configs(sh);
@@ -162,6 +163,16 @@ fn build_link_specs(home: &Path, dotfiles_dir: &Path) -> Result<Vec<LinkSpec>> {
         target: zed_debug_target,
     });
 
+    let vscode_user_dir = vscode_user_dir(home);
+    specs.push(LinkSpec {
+        source: dotfiles_dir.join("vscode/settings.json"),
+        target: vscode_user_dir.join("settings.json"),
+    });
+    specs.push(LinkSpec {
+        source: dotfiles_dir.join("vscode/keybindings.json"),
+        target: vscode_user_dir.join("keybindings.json"),
+    });
+
     for entry in CUSTOM_CONFIG_DIR_ENTRIES {
         let src_dir = dotfiles_dir.join(entry.source);
         let dest_dir = home.join(entry.target);
@@ -182,6 +193,53 @@ fn build_link_specs(home: &Path, dotfiles_dir: &Path) -> Result<Vec<LinkSpec>> {
     }
 
     Ok(specs)
+}
+
+fn vscode_user_dir(home: &Path) -> PathBuf {
+    match Os::current() {
+        Os::MacOS => home.join("Library/Application Support/Code/User"),
+        Os::Linux => home.join(".config/Code/User"),
+    }
+}
+
+fn install_vscode_extensions(sh: &Shell) -> Result<()> {
+    if !has_tool(sh, "code") {
+        return Ok(());
+    }
+
+    let extension_file = crate::dotfiles_dir()?.join("vscode/extensions.txt");
+    if !extension_file.exists() {
+        return Ok(());
+    }
+
+    let desired_extensions = parse_vscode_extensions(&fs::read_to_string(extension_file)?);
+    if desired_extensions.is_empty() {
+        return Ok(());
+    }
+
+    let installed_extensions =
+        parse_vscode_extensions(&cmd!(sh, "code --list-extensions").quiet().read()?);
+    let installed_extensions = installed_extensions.into_iter().collect::<HashSet<_>>();
+
+    for extension in desired_extensions {
+        if installed_extensions.contains(&extension) {
+            continue;
+        }
+
+        println!("installing VS Code extension {}", extension.green());
+        cmd!(sh, "code --install-extension {extension}").run()?;
+    }
+
+    Ok(())
+}
+
+fn parse_vscode_extensions(contents: &str) -> Vec<String> {
+    contents
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(str::to_owned)
+        .collect()
 }
 
 fn push_file_tree_link_specs(
@@ -351,7 +409,9 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use super::{build_link_specs, prune_managed_dir_entry, ManagedDirEntry, Os};
+    use super::{
+        build_link_specs, parse_vscode_extensions, prune_managed_dir_entry, ManagedDirEntry, Os,
+    };
 
     #[test]
     fn keeps_unmanaged_entries_in_target_dir() {
@@ -467,5 +527,51 @@ mod tests {
             spec.source == dotfiles_dir.join("zed/debug.json")
                 && spec.target == expected_debug_target
         }));
+    }
+
+    #[test]
+    fn includes_vscode_config_files() {
+        let dir = tempdir().unwrap();
+        let home = dir.path().join("home");
+        let dotfiles_dir = dir.path().join("dotfiles");
+
+        fs::create_dir_all(&home).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("agents")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("agents/skills")).unwrap();
+
+        let specs = build_link_specs(&home, &dotfiles_dir).unwrap();
+
+        let expected_user_dir = match Os::current() {
+            Os::MacOS => home.join("Library/Application Support/Code/User"),
+            Os::Linux => home.join(".config/Code/User"),
+        };
+        assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("vscode/settings.json")
+                && spec.target == expected_user_dir.join("settings.json")
+        }));
+        assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("vscode/keybindings.json")
+                && spec.target == expected_user_dir.join("keybindings.json")
+        }));
+    }
+
+    #[test]
+    fn parses_vscode_extensions_without_empty_lines_or_comments() {
+        let extensions = parse_vscode_extensions(
+            "
+            rust-lang.rust-analyzer
+            # disabled.extension
+
+            openai.chatgpt
+            ",
+        );
+
+        assert_eq!(
+            extensions,
+            vec![
+                "rust-lang.rust-analyzer".to_owned(),
+                "openai.chatgpt".to_owned()
+            ]
+        );
     }
 }

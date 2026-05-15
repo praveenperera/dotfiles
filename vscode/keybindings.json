@@ -1,0 +1,12 @@
+[
+  {
+    "key": "ctrl+l",
+    "command": "chatgpt.openSidebar",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "ctrl+h",
+    "command": "workbench.action.focusActiveEditorGroup",
+    "when": "webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView'"
+  }
+]

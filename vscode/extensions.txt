@@ -1,0 +1,8 @@
+github.vscode-github-actions
+llvm-vs-code-extensions.lldb-dap
+mathiasfrohlich.kotlin
+openai.chatgpt
+rust-lang.rust-analyzer
+swiftlang.swift-vscode
+vscodevim.vim
+yzhang.markdown-all-in-one
