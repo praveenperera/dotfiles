@@ -6,7 +6,14 @@ use std::str::FromStr;
 
 const DOUBLED_PLAN_TYPES: &[KnownPlanType] = &[KnownPlanType::Prolite];
 pub(super) const USAGE_HISTORY_RETENTION_DAYS: i64 = 14;
-const USAGE_HISTORY_DISPLAY_HOURS: i64 = 24;
+const PREVIOUS_DAY_HISTORY_ROWS: usize = 3;
+const DEFAULT_USAGE_HISTORY_DAYS: usize = 2;
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct UsageHistoryOptions {
+    pub(super) days: usize,
+    pub(super) verbose: bool,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum KnownPlanType {
@@ -338,35 +345,48 @@ pub(super) fn print_usage_history(
     writer: &mut impl Write,
     history: &UsageHistory,
     now: chrono::DateTime<Utc>,
+    options: UsageHistoryOptions,
 ) -> io::Result<()> {
-    let rows = usage_history_rows(history, now);
-    if rows.is_empty() {
-        writeln!(writer, "No usage history from the last 24 hours")?;
+    let entries = usage_history_entries(history, now, options);
+    if entries.is_empty() {
+        writeln!(
+            writer,
+            "No usage history for the last {}",
+            format_days(options.days)
+        )?;
         return Ok(());
     }
 
     let widths = UsageHistoryWidths {
         captured_at: "TIME".len().max(
-            rows.iter()
-                .map(|row| row.captured_at.len())
+            entries
+                .iter()
+                .map(UsageHistoryEntry::captured_at)
+                .map(str::len)
                 .max()
                 .unwrap_or_default(),
         ),
         label: "EMAIL".len().max(
-            rows.iter()
-                .map(|row| row.label.len())
+            entries
+                .iter()
+                .map(UsageHistoryEntry::label)
+                .map(str::len)
                 .max()
                 .unwrap_or_default(),
         ),
         primary: "5 HOUR LIMIT".len().max(
-            rows.iter()
-                .map(|row| row.primary.len())
+            entries
+                .iter()
+                .map(UsageHistoryEntry::primary)
+                .map(str::len)
                 .max()
                 .unwrap_or_default(),
         ),
         secondary: "WEEKLY LIMIT".len().max(
-            rows.iter()
-                .map(|row| row.secondary.len())
+            entries
+                .iter()
+                .map(UsageHistoryEntry::secondary)
+                .map(str::len)
                 .max()
                 .unwrap_or_default(),
         ),
@@ -378,49 +398,174 @@ pub(super) fn print_usage_history(
         format!("{:<width$}", "TIME", width = widths.captured_at)
             .blue()
             .bold(),
-        format!("{:<width$}", "EMAIL", width = widths.label)
-            .blue()
-            .bold(),
         format!("{:<width$}", "5 HOUR LIMIT", width = widths.primary)
             .blue()
             .bold(),
         format!("{:<width$}", "WEEKLY LIMIT", width = widths.secondary)
             .blue()
             .bold(),
+        format!("{:<width$}", "EMAIL", width = widths.label)
+            .blue()
+            .bold(),
     )?;
 
-    for row in rows {
+    let mut current_day = None;
+    for entry in entries {
+        if current_day != Some(entry.captured_day()) {
+            if current_day.is_some() {
+                writeln!(writer)?;
+            }
+            writeln!(writer, "{}", entry.day_label().blue().bold())?;
+            current_day = Some(entry.captured_day());
+        }
+
         writeln!(
             writer,
-            "{:<captured_at_width$}   {:<label_width$}   {:<primary_width$}   {}",
-            row.captured_at,
-            row.label,
-            row.primary,
-            row.secondary,
+            "{:<captured_at_width$}   {:<primary_width$}   {:<secondary_width$}   {}",
+            entry.captured_at(),
+            entry.primary(),
+            entry.secondary(),
+            entry.label(),
             captured_at_width = widths.captured_at,
-            label_width = widths.label,
             primary_width = widths.primary,
+            secondary_width = widths.secondary,
         )?;
     }
 
     Ok(())
 }
 
-fn usage_history_rows(history: &UsageHistory, now: chrono::DateTime<Utc>) -> Vec<UsageHistoryRow> {
-    let cutoff = now - chrono::Duration::hours(USAGE_HISTORY_DISPLAY_HOURS);
-    let mut seen = HashSet::new();
-    let mut samples = history
-        .samples
-        .iter()
-        .filter(|sample| sample.captured_at >= cutoff)
-        .collect::<Vec<_>>();
-    samples.sort_by_key(|sample| sample.captured_at);
+fn usage_history_entries(
+    history: &UsageHistory,
+    now: chrono::DateTime<Utc>,
+    options: UsageHistoryOptions,
+) -> Vec<UsageHistoryEntry> {
+    let days = options.days.max(1);
+    let summary_mode = !options.verbose && days > DEFAULT_USAGE_HISTORY_DAYS;
+    let samples = deduped_history_samples(history);
 
+    if summary_mode {
+        usage_history_summary_entries(samples, now, days)
+    } else {
+        usage_history_sample_entries(samples, now, days, options.verbose)
+    }
+}
+
+#[cfg(test)]
+fn usage_history_rows(
+    history: &UsageHistory,
+    now: chrono::DateTime<Utc>,
+    options: UsageHistoryOptions,
+) -> Vec<UsageHistoryRow> {
+    usage_history_entries(history, now, options)
+        .into_iter()
+        .filter_map(|entry| match entry {
+            UsageHistoryEntry::Sample(row) => Some(row),
+            UsageHistoryEntry::DailySummary(_) => None,
+        })
+        .collect()
+}
+
+fn deduped_history_samples(history: &UsageHistory) -> Vec<&UsageHistorySample> {
+    let mut seen = HashSet::new();
+    let mut samples = history.samples.iter().collect::<Vec<_>>();
+    samples.sort_by_key(|sample| sample.captured_at);
     samples
         .into_iter()
         .filter(|sample| seen.insert(sample.dedupe_key()))
-        .map(UsageHistoryRow::from)
         .collect()
+}
+
+fn usage_history_sample_entries(
+    samples: Vec<&UsageHistorySample>,
+    now: chrono::DateTime<Utc>,
+    days: usize,
+    verbose: bool,
+) -> Vec<UsageHistoryEntry> {
+    let today = now.with_timezone(&Local).date_naive();
+    let yesterday = today
+        .checked_sub_days(chrono::Days::new(1))
+        .unwrap_or(today);
+    let earliest_day = today
+        .checked_sub_days(chrono::Days::new(days.saturating_sub(1) as u64))
+        .unwrap_or(today);
+
+    let mut yesterday_rows = Vec::new();
+    let mut today_rows = Vec::new();
+    let mut older_rows = Vec::new();
+    for sample in samples {
+        let row = UsageHistoryRow::from(sample);
+        if row.captured_day < earliest_day || row.captured_day > today {
+            continue;
+        }
+
+        if row.captured_day == today {
+            today_rows.push(row);
+        } else if row.captured_day == yesterday {
+            yesterday_rows.push(row);
+        } else {
+            older_rows.push(row);
+        }
+    }
+
+    if verbose {
+        return older_rows
+            .into_iter()
+            .chain(yesterday_rows)
+            .chain(today_rows)
+            .map(UsageHistoryEntry::Sample)
+            .collect();
+    }
+
+    let yesterday_start = yesterday_rows
+        .len()
+        .saturating_sub(PREVIOUS_DAY_HISTORY_ROWS);
+    yesterday_rows
+        .into_iter()
+        .skip(yesterday_start)
+        .chain(today_rows)
+        .map(UsageHistoryEntry::Sample)
+        .collect()
+}
+
+fn usage_history_summary_entries(
+    samples: Vec<&UsageHistorySample>,
+    now: chrono::DateTime<Utc>,
+    days: usize,
+) -> Vec<UsageHistoryEntry> {
+    let today = now.with_timezone(&Local).date_naive();
+    let earliest_day = today
+        .checked_sub_days(chrono::Days::new(days.saturating_sub(1) as u64))
+        .unwrap_or(today);
+    let mut day_samples = BTreeMap::<chrono::NaiveDate, Vec<&UsageHistorySample>>::new();
+    let mut today_rows = Vec::new();
+
+    for sample in samples {
+        let captured_day = sample.captured_at.with_timezone(&Local).date_naive();
+        if captured_day < earliest_day || captured_day > today {
+            continue;
+        }
+
+        if captured_day == today {
+            today_rows.push(UsageHistoryRow::from(sample));
+        } else {
+            day_samples.entry(captured_day).or_default().push(sample);
+        }
+    }
+
+    day_samples
+        .into_values()
+        .filter_map(|samples| UsageHistoryDaySummary::from_samples(&samples))
+        .map(UsageHistoryEntry::DailySummary)
+        .chain(today_rows.into_iter().map(UsageHistoryEntry::Sample))
+        .collect()
+}
+
+fn format_days(days: usize) -> String {
+    match days.max(1) {
+        1 => "day".into(),
+        days => format!("{days} days"),
+    }
 }
 
 #[derive(Debug)]
@@ -433,16 +578,81 @@ struct UsageHistoryWidths {
 
 #[derive(Debug, PartialEq, Eq)]
 struct UsageHistoryRow {
+    captured_day: chrono::NaiveDate,
+    day_label: String,
     captured_at: String,
     label: String,
     primary: String,
     secondary: String,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct UsageHistoryDaySummary {
+    captured_day: chrono::NaiveDate,
+    day_label: String,
+    captured_at: String,
+    label: String,
+    primary: String,
+    secondary: String,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum UsageHistoryEntry {
+    Sample(UsageHistoryRow),
+    DailySummary(UsageHistoryDaySummary),
+}
+
+impl UsageHistoryEntry {
+    fn captured_day(&self) -> chrono::NaiveDate {
+        match self {
+            Self::Sample(row) => row.captured_day,
+            Self::DailySummary(summary) => summary.captured_day,
+        }
+    }
+
+    fn day_label(&self) -> &str {
+        match self {
+            Self::Sample(row) => &row.day_label,
+            Self::DailySummary(summary) => &summary.day_label,
+        }
+    }
+
+    fn captured_at(&self) -> &str {
+        match self {
+            Self::Sample(row) => &row.captured_at,
+            Self::DailySummary(summary) => &summary.captured_at,
+        }
+    }
+
+    fn label(&self) -> &str {
+        match self {
+            Self::Sample(row) => &row.label,
+            Self::DailySummary(summary) => &summary.label,
+        }
+    }
+
+    fn primary(&self) -> &str {
+        match self {
+            Self::Sample(row) => &row.primary,
+            Self::DailySummary(summary) => &summary.primary,
+        }
+    }
+
+    fn secondary(&self) -> &str {
+        match self {
+            Self::Sample(row) => &row.secondary,
+            Self::DailySummary(summary) => &summary.secondary,
+        }
+    }
+}
+
 impl From<&UsageHistorySample> for UsageHistoryRow {
     fn from(sample: &UsageHistorySample) -> Self {
+        let captured_at = sample.captured_at.with_timezone(&Local);
         Self {
-            captured_at: format_history_timestamp(sample.captured_at.with_timezone(&Local)),
+            captured_day: captured_at.date_naive(),
+            day_label: format_history_day(captured_at),
+            captured_at: format_history_timestamp(captured_at),
             label: sample.email.clone().unwrap_or_else(|| sample.label.clone()),
             primary: sample
                 .primary
@@ -456,6 +666,29 @@ impl From<&UsageHistorySample> for UsageHistoryRow {
                 .unwrap_or_else(|| "-".into()),
         }
     }
+}
+
+impl UsageHistoryDaySummary {
+    fn from_samples(samples: &[&UsageHistorySample]) -> Option<Self> {
+        let first = samples.first()?;
+        let last = samples.last()?;
+        let captured_at = first.captured_at.with_timezone(&Local);
+        Some(Self {
+            captured_day: captured_at.date_naive(),
+            day_label: format_history_day(captured_at),
+            captured_at: "day".into(),
+            label: last.email.clone().unwrap_or_else(|| last.label.clone()),
+            primary: format_history_window_delta(first.primary.as_ref(), last.primary.as_ref()),
+            secondary: format_history_window_delta(
+                first.secondary.as_ref(),
+                last.secondary.as_ref(),
+            ),
+        })
+    }
+}
+
+fn format_history_day(captured_at: chrono::DateTime<Local>) -> String {
+    captured_at.format("%a %b %-d").to_string()
 }
 
 fn format_history_timestamp(captured_at: chrono::DateTime<Local>) -> String {
@@ -473,6 +706,23 @@ fn format_history_window(window: &UsageHistoryWindow) -> String {
         Some(reset_at) => format!("{percent} ({reset_at})"),
         None => percent,
     }
+}
+
+fn format_history_window_delta(
+    start: Option<&UsageHistoryWindow>,
+    end: Option<&UsageHistoryWindow>,
+) -> String {
+    let (Some(start), Some(end)) = (start, end) else {
+        return "-".into();
+    };
+
+    let start_percent = format_usage_percent(start.used_percent);
+    let end_percent = format_usage_percent(end.used_percent);
+    let delta = end.used_percent - start.used_percent;
+    let delta_percent = format_usage_percent(delta.abs());
+    let sign = if delta >= 0.0 { "+" } else { "-" };
+
+    format!("{start_percent} -> {end_percent} ({sign}{delta_percent})")
 }
 
 impl UsageHistorySample {
@@ -1037,24 +1287,82 @@ mod tests {
     }
 
     #[test]
-    fn usage_history_rows_show_last_24_hours_without_duplicates() {
-        let now = Utc.with_ymd_and_hms(2026, 5, 8, 12, 0, 0).unwrap();
-        let duplicate = sample_at(now - chrono::Duration::hours(2), "acct-1", 10.0);
-        let changed = sample_at(now - chrono::Duration::hours(1), "acct-1", 12.0);
+    fn usage_history_rows_show_today_and_latest_three_from_yesterday() {
+        let now = local_at(2026, 5, 8, 12, 0, 0);
+        let duplicate = sample_at(local_at(2026, 5, 8, 10, 0, 0), "acct-1", 10.0);
+        let changed = sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 12.0);
         let history = UsageHistory {
             samples: vec![
-                sample_at(now - chrono::Duration::hours(25), "acct-1", 8.0),
+                sample_at(local_at(2026, 5, 6, 23, 0, 0), "acct-1", 99.0),
+                sample_at(local_at(2026, 5, 7, 8, 0, 0), "acct-1", 1.0),
+                sample_at(local_at(2026, 5, 7, 9, 0, 0), "acct-1", 2.0),
+                sample_at(local_at(2026, 5, 7, 10, 0, 0), "acct-1", 3.0),
+                sample_at(local_at(2026, 5, 7, 11, 0, 0), "acct-1", 4.0),
                 duplicate.clone(),
                 duplicate,
                 changed,
             ],
         };
 
-        let rows = usage_history_rows(&history, now);
+        let rows = usage_history_rows(&history, now, default_history_options());
 
-        assert_eq!(rows.len(), 2);
-        assert!(rows[0].primary.starts_with(" 10% ("));
-        assert!(rows[1].primary.starts_with(" 12% ("));
+        assert_eq!(rows.len(), 5);
+        assert!(rows[0].primary.starts_with("  2% ("));
+        assert!(rows[1].primary.starts_with("  3% ("));
+        assert!(rows[2].primary.starts_with("  4% ("));
+        assert!(rows[3].primary.starts_with(" 10% ("));
+        assert!(rows[4].primary.starts_with(" 12% ("));
+    }
+
+    #[test]
+    fn usage_history_prints_day_separators() {
+        let now = local_at(2026, 5, 8, 12, 0, 0);
+        let history = UsageHistory {
+            samples: vec![
+                sample_at(local_at(2026, 5, 7, 11, 0, 0), "acct-1", 4.0),
+                sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 12.0),
+            ],
+        };
+
+        let mut output = Vec::new();
+        print_usage_history(&mut output, &history, now, default_history_options()).unwrap();
+        let output = String::from_utf8(output).unwrap();
+
+        assert!(output.contains("Thu May 7"));
+        assert!(output.contains("Fri May 8"));
+        assert!(output.contains("Thu 11:00 AM"));
+        assert!(output.contains("Fri 11:00 AM"));
+    }
+
+    #[test]
+    fn usage_history_prints_new_empty_message() {
+        let now = local_at(2026, 5, 8, 12, 0, 0);
+        let history = UsageHistory::default();
+
+        let mut output = Vec::new();
+        print_usage_history(&mut output, &history, now, default_history_options()).unwrap();
+        let output = String::from_utf8(output).unwrap();
+
+        assert_eq!(output, "No usage history for the last 2 days\n");
+    }
+
+    #[test]
+    fn usage_history_rows_show_today_samples_from_early_morning() {
+        let now = local_at(2026, 5, 8, 1, 0, 0);
+        let history = UsageHistory {
+            samples: vec![
+                sample_at(local_at(2026, 5, 7, 23, 0, 0), "acct-1", 8.0),
+                sample_at(local_at(2026, 5, 8, 0, 15, 0), "acct-1", 10.0),
+                sample_at(local_at(2026, 5, 8, 0, 45, 0), "acct-1", 12.0),
+            ],
+        };
+
+        let rows = usage_history_rows(&history, now, default_history_options());
+
+        assert_eq!(rows.len(), 3);
+        assert!(rows[0].primary.starts_with("  8% ("));
+        assert!(rows[1].primary.starts_with(" 10% ("));
+        assert!(rows[2].primary.starts_with(" 12% ("));
     }
 
     #[test]
@@ -1064,10 +1372,69 @@ mod tests {
             samples: vec![sample_at(now - chrono::Duration::hours(1), "acct-1", 0.42)],
         };
 
-        let rows = usage_history_rows(&history, now);
+        let rows = usage_history_rows(&history, now, default_history_options());
 
         assert_eq!(rows.len(), 1);
         assert!(rows[0].primary.starts_with("0.42% ("));
+    }
+
+    #[test]
+    fn usage_history_summarizes_older_days_when_days_are_requested() {
+        let now = local_at(2026, 5, 8, 12, 0, 0);
+        let history = UsageHistory {
+            samples: vec![
+                sample_at(local_at(2026, 5, 6, 9, 0, 0), "acct-1", 10.0),
+                sample_at(local_at(2026, 5, 6, 17, 0, 0), "acct-1", 18.0),
+                sample_at(local_at(2026, 5, 7, 9, 0, 0), "acct-1", 20.0),
+                sample_at(local_at(2026, 5, 7, 17, 0, 0), "acct-1", 31.0),
+                sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 40.0),
+            ],
+        };
+
+        let mut output = Vec::new();
+        print_usage_history(
+            &mut output,
+            &history,
+            now,
+            UsageHistoryOptions {
+                days: 3,
+                verbose: false,
+            },
+        )
+        .unwrap();
+        let output = String::from_utf8(output).unwrap();
+
+        assert!(output.contains("10% -> 18% (+8%)"));
+        assert!(output.contains("20% -> 31% (+11%)"));
+        assert!(output.contains("Fri 11:00 AM"));
+    }
+
+    #[test]
+    fn usage_history_verbose_shows_all_samples_for_requested_days() {
+        let now = local_at(2026, 5, 8, 12, 0, 0);
+        let history = UsageHistory {
+            samples: vec![
+                sample_at(local_at(2026, 5, 6, 9, 0, 0), "acct-1", 10.0),
+                sample_at(local_at(2026, 5, 7, 9, 0, 0), "acct-1", 20.0),
+                sample_at(local_at(2026, 5, 7, 17, 0, 0), "acct-1", 31.0),
+                sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 40.0),
+            ],
+        };
+
+        let rows = usage_history_rows(
+            &history,
+            now,
+            UsageHistoryOptions {
+                days: 3,
+                verbose: true,
+            },
+        );
+
+        assert_eq!(rows.len(), 4);
+        assert!(rows[0].primary.starts_with(" 10% ("));
+        assert!(rows[1].primary.starts_with(" 20% ("));
+        assert!(rows[2].primary.starts_with(" 31% ("));
+        assert!(rows[3].primary.starts_with(" 40% ("));
     }
 
     #[test]
@@ -1145,6 +1512,28 @@ mod tests {
                 limit_multiplier: 1.0,
             }),
             secondary: None,
+        }
+    }
+
+    fn local_at(
+        year: i32,
+        month: u32,
+        day: u32,
+        hour: u32,
+        minute: u32,
+        second: u32,
+    ) -> chrono::DateTime<Utc> {
+        Local
+            .with_ymd_and_hms(year, month, day, hour, minute, second)
+            .single()
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+
+    fn default_history_options() -> UsageHistoryOptions {
+        UsageHistoryOptions {
+            days: DEFAULT_USAGE_HISTORY_DAYS,
+            verbose: false,
         }
     }
 }

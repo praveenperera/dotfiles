@@ -92,9 +92,17 @@ pub enum CodexCmd {
     /// Show usage for the current global codex auth
     Usage,
 
-    /// Show saved usage samples from the last 24 hours
+    /// Show saved usage samples
     #[command(visible_alias = "uh")]
-    UsageHistory,
+    UsageHistory {
+        /// Number of local calendar days to show
+        #[arg(short, long, default_value_t = 2)]
+        days: usize,
+
+        /// Show every saved sample instead of daily summaries
+        #[arg(short, long)]
+        verbose: bool,
+    },
 
     /// Refresh a saved profile's auth
     #[command(visible_alias = "rp")]
@@ -479,7 +487,9 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
         } => login(&profile, device_auth),
         CodexCmd::List { verbose } => list(verbose),
         CodexCmd::Usage => usage(),
-        CodexCmd::UsageHistory => usage_history(),
+        CodexCmd::UsageHistory { days, verbose } => {
+            usage_history(UsageHistoryOptions { days, verbose })
+        }
         CodexCmd::RefreshProfile { profile } => refresh_profile(&profile),
         CodexCmd::RefreshAll => refresh_all(),
         CodexCmd::Switch { profile } => switch_default_profile(&profile),
@@ -1982,7 +1992,32 @@ mod tests {
     fn cmd_parses_usage_history_subcommand() {
         let cmd = parse_raw_args(&[OsString::from("usage-history")]).unwrap();
 
-        assert!(matches!(cmd.subcommand, CodexCmd::UsageHistory));
+        assert!(matches!(
+            cmd.subcommand,
+            CodexCmd::UsageHistory {
+                days: 2,
+                verbose: false
+            }
+        ));
+    }
+
+    #[test]
+    fn cmd_parses_usage_history_options() {
+        let cmd = parse_raw_args(&[
+            OsString::from("usage-history"),
+            OsString::from("--days"),
+            OsString::from("7"),
+            OsString::from("--verbose"),
+        ])
+        .unwrap();
+
+        assert!(matches!(
+            cmd.subcommand,
+            CodexCmd::UsageHistory {
+                days: 7,
+                verbose: true
+            }
+        ));
     }
 
     #[test]

@@ -691,7 +691,7 @@ pub(super) fn usage() -> Result<()> {
     Ok(())
 }
 
-pub(super) fn usage_history() -> Result<()> {
+pub(super) fn usage_history(options: UsageHistoryOptions) -> Result<()> {
     let path = usage_history_cache_path()?;
     let loader = ProfileUsageLoader::new()?;
     let (label, usage) = current_usage_view(&loader, &auth_path()?)?;
@@ -704,7 +704,7 @@ pub(super) fn usage_history() -> Result<()> {
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
-    print_usage_history(&mut stdout, &history, now)?;
+    print_usage_history(&mut stdout, &history, now, options)?;
 
     Ok(())
 }
