@@ -7,6 +7,7 @@ pub mod gcloud;
 pub mod generate;
 pub mod main_cmd;
 pub mod secrets;
+pub mod skill;
 pub mod sync;
 pub mod terraform;
 pub mod tmux;
@@ -78,6 +79,10 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::File { subcommand } => {
             let file_flags = file::File { subcommand };
             file::run_with_flags(sh, file_flags)
+        }
+        MainCmd::Skill { subcommand } => {
+            let skill_flags = skill::Skill { subcommand };
+            skill::run_with_flags(sh, skill_flags)
         }
         MainCmd::Codex { .. } => codex::run_with_args(sh, &args[1..]),
         MainCmd::Sync { subcommand } => {

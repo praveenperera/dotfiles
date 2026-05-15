@@ -165,6 +165,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::file::FileCmd,
     },
 
+    /// Manage reusable agent skills
+    #[command(arg_required_else_help = true)]
+    Skill {
+        #[command(subcommand)]
+        subcommand: crate::cmd::skill::SkillCmd,
+    },
+
     /// Sync files and directories via iCloud
     #[command(arg_required_else_help = true)]
     Sync {
@@ -191,5 +198,41 @@ impl Cmd {
                 std::process::exit(err.exit_code());
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::OsString;
+
+    use super::{Cmd, MainCmd};
+    use crate::cmd::skill::SkillCmd;
+
+    #[test]
+    fn parses_skill_add_without_names() {
+        let cmd = Cmd::from_args(&[OsString::from("skill"), OsString::from("add")]).unwrap();
+
+        let MainCmd::Skill { subcommand } = cmd.subcommand else {
+            panic!("expected skill command");
+        };
+
+        assert!(matches!(subcommand, SkillCmd::Add { skills } if skills.is_empty()));
+    }
+
+    #[test]
+    fn parses_skill_add_with_names() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("skill"),
+            OsString::from("add"),
+            OsString::from("alpha"),
+            OsString::from("beta"),
+        ])
+        .unwrap();
+
+        let MainCmd::Skill { subcommand } = cmd.subcommand else {
+            panic!("expected skill command");
+        };
+
+        assert!(matches!(subcommand, SkillCmd::Add { skills } if skills == ["alpha", "beta"]));
     }
 }
