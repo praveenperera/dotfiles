@@ -1,0 +1,6 @@
+[mcp_servers.xcodebuildmcp]
+command = "npx"
+args = ["-y", "xcodebuildmcp@latest", "mcp"]
+
+[mcp_servers.xcodebuildmcp.env]
+XCODEBUILDMCP_ENABLED_WORKFLOWS = "simulator,ui-automation,debugging,logging"
