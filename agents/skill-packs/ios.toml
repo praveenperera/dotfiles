@@ -1,0 +1,2 @@
+description = "iOS app development"
+plugins = ["build-ios-apps@openai-curated"]

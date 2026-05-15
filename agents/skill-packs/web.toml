@@ -1,0 +1,11 @@
+description = "Web application development"
+skills = [
+  "agent-browser",
+  "shadcn-baseui",
+  "vercel-react-best-practices",
+  "svg-diagram",
+  "tailwindplus",
+  "web-design-guidelines",
+  "image-design-director",
+]
+packs = ["cloud", "svelte"]

@@ -1,0 +1,3 @@
+description = "Rust command-line app development"
+skills = ["justfile"]
+packs = ["rust"]

@@ -1,0 +1,2 @@
+description = "macOS app development"
+plugins = ["build-macos-apps@openai-curated"]
