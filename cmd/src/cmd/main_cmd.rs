@@ -172,6 +172,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::skill::SkillCmd,
     },
 
+    /// Manage reusable project MCP servers
+    #[command(arg_required_else_help = true)]
+    Mcp {
+        #[command(subcommand)]
+        subcommand: crate::cmd::mcp::McpCmd,
+    },
+
     /// Sync files and directories via iCloud
     #[command(arg_required_else_help = true)]
     Sync {
@@ -206,6 +213,7 @@ mod tests {
     use std::ffi::OsString;
 
     use super::{Cmd, MainCmd};
+    use crate::cmd::mcp::McpCmd;
     use crate::cmd::skill::SkillCmd;
 
     #[test]
@@ -234,5 +242,32 @@ mod tests {
         };
 
         assert!(matches!(subcommand, SkillCmd::Add { skills } if skills == ["alpha", "beta"]));
+    }
+
+    #[test]
+    fn parses_mcp_add_without_names() {
+        let cmd = Cmd::from_args(&[OsString::from("mcp"), OsString::from("add")]).unwrap();
+
+        let MainCmd::Mcp { subcommand } = cmd.subcommand else {
+            panic!("expected mcp command");
+        };
+
+        assert!(matches!(subcommand, McpCmd::Add { mcps } if mcps.is_empty()));
+    }
+
+    #[test]
+    fn parses_mcp_add_with_names() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("mcp"),
+            OsString::from("add"),
+            OsString::from("xcodebuildmcp"),
+        ])
+        .unwrap();
+
+        let MainCmd::Mcp { subcommand } = cmd.subcommand else {
+            panic!("expected mcp command");
+        };
+
+        assert!(matches!(subcommand, McpCmd::Add { mcps } if mcps == ["xcodebuildmcp"]));
     }
 }

@@ -6,6 +6,7 @@ pub mod file;
 pub mod gcloud;
 pub mod generate;
 pub mod main_cmd;
+pub mod mcp;
 pub mod secrets;
 pub mod skill;
 pub mod sync;
@@ -83,6 +84,10 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::Skill { subcommand } => {
             let skill_flags = skill::Skill { subcommand };
             skill::run_with_flags(sh, skill_flags)
+        }
+        MainCmd::Mcp { subcommand } => {
+            let mcp_flags = mcp::Mcp { subcommand };
+            mcp::run_with_flags(sh, mcp_flags)
         }
         MainCmd::Codex { .. } => codex::run_with_args(sh, &args[1..]),
         MainCmd::Sync { subcommand } => {
