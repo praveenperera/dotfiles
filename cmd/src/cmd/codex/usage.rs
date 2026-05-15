@@ -357,6 +357,7 @@ pub(super) fn print_usage_history(
         return Ok(());
     }
 
+    let show_label = options.verbose;
     let widths = UsageHistoryWidths {
         captured_at: "TIME".len().max(
             entries
@@ -394,7 +395,7 @@ pub(super) fn print_usage_history(
 
     writeln!(
         writer,
-        "{}   {}   {}   {}",
+        "{}   {}   {}{}",
         format!("{:<width$}", "TIME", width = widths.captured_at)
             .blue()
             .bold(),
@@ -404,9 +405,7 @@ pub(super) fn print_usage_history(
         format!("{:<width$}", "WEEKLY LIMIT", width = widths.secondary)
             .blue()
             .bold(),
-        format!("{:<width$}", "EMAIL", width = widths.label)
-            .blue()
-            .bold(),
+        format_history_label_header(show_label, widths.label),
     )?;
 
     let mut current_day = None;
@@ -419,20 +418,43 @@ pub(super) fn print_usage_history(
             current_day = Some(entry.captured_day());
         }
 
-        writeln!(
-            writer,
-            "{:<captured_at_width$}   {:<primary_width$}   {:<secondary_width$}   {}",
-            entry.captured_at(),
-            entry.primary(),
-            entry.secondary(),
-            entry.label(),
-            captured_at_width = widths.captured_at,
-            primary_width = widths.primary,
-            secondary_width = widths.secondary,
-        )?;
+        if show_label {
+            writeln!(
+                writer,
+                "{:<captured_at_width$}   {:<primary_width$}   {:<secondary_width$}   {}",
+                entry.captured_at(),
+                entry.primary(),
+                entry.secondary(),
+                entry.label(),
+                captured_at_width = widths.captured_at,
+                primary_width = widths.primary,
+                secondary_width = widths.secondary,
+            )?;
+        } else {
+            writeln!(
+                writer,
+                "{:<captured_at_width$}   {:<primary_width$}   {}",
+                entry.captured_at(),
+                entry.primary(),
+                entry.secondary(),
+                captured_at_width = widths.captured_at,
+                primary_width = widths.primary,
+            )?;
+        }
     }
 
     Ok(())
+}
+
+fn format_history_label_header(show_label: bool, width: usize) -> String {
+    if show_label {
+        format!(
+            "   {}",
+            format!("{:<width$}", "EMAIL", width = width).blue().bold()
+        )
+    } else {
+        String::new()
+    }
 }
 
 fn usage_history_entries(
@@ -1332,6 +1354,8 @@ mod tests {
         assert!(output.contains("Fri May 8"));
         assert!(output.contains("Thu 11:00 AM"));
         assert!(output.contains("Fri 11:00 AM"));
+        assert!(!output.contains("EMAIL"));
+        assert!(!output.contains("praveen@example.com"));
     }
 
     #[test]
@@ -1435,6 +1459,30 @@ mod tests {
         assert!(rows[1].primary.starts_with(" 20% ("));
         assert!(rows[2].primary.starts_with(" 31% ("));
         assert!(rows[3].primary.starts_with(" 40% ("));
+    }
+
+    #[test]
+    fn usage_history_verbose_prints_email_column() {
+        let now = local_at(2026, 5, 8, 12, 0, 0);
+        let history = UsageHistory {
+            samples: vec![sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 40.0)],
+        };
+
+        let mut output = Vec::new();
+        print_usage_history(
+            &mut output,
+            &history,
+            now,
+            UsageHistoryOptions {
+                days: 2,
+                verbose: true,
+            },
+        )
+        .unwrap();
+        let output = String::from_utf8(output).unwrap();
+
+        assert!(output.contains("EMAIL"));
+        assert!(output.contains("praveen@example.com"));
     }
 
     #[test]
