@@ -1,6 +1,7 @@
 github.vscode-github-actions
 llvm-vs-code-extensions.lldb-dap
 mathiasfrohlich.kotlin
+mhutchie.git-graph
 openai.chatgpt
 rust-lang.rust-analyzer
 swiftlang.swift-vscode

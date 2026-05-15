@@ -1,6 +1,9 @@
 {
+  "git-graph.openNewTabEditorGroup": "Two",
+  "git-graph.retainContextWhenHidden": true,
   "vim.handleKeys": {
     "<C-h>": false,
     "<C-l>": false
-  }
+  },
+  "workbench.editor.openSideBySideDirection": "right"
 }
