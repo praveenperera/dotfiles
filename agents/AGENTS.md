@@ -4,7 +4,6 @@
 
 # General
 
-- Stop puttting Created by claude code into my files, if it has an author use me Praveen Perera
 - All comments should make sense without the context if this particular conversation
 - If creating git commits never co author the commit with claude/codex or add any notes about claude just use my name
 - Keep commit subjects short, capitalized, imperative, and without a trailing period
@@ -13,7 +12,7 @@
 - Capitalize higher level doc comments like functions and modules (ex: in rust comments starting with /// instead of //)
 - Don't end comments with a period (periods within comments are fine)
 - Only add important comments to explain why something is being done
-- Try to minimize nesting in functions
+- Minimize nesting in functions
 - Don't default to leaving deprecated code in place, remove it or ask if this is a full replacement or if old code is still needed
 - When working with this user's projects: always read existing config/code before answering from general knowledge. Never assume defaults — check the actual files first
 - Scope changes precisely to what the user asks for. Do not modify files or components beyond the explicit request without asking first. If unsure about scope, ask before making changes — not after
@@ -40,3 +39,13 @@
 # Build Verification
 
 - For Rust projects: always run `just fmt` and `just clippy` after changes (most projects use a justfile; fall back to `cargo fmt` and `cargo clippy` if no justfile exists). For Android/Kotlin: verify builds compile. For iOS/Swift: verify builds compile. Never submit changes without verifying they compile
+
+# Subagents
+
+- Prefer using subagents when they can keep the main context focused and reduce the amount of code, logs, or search results that need to stay in the primary thread
+- Use subagents for parallel investigation, especially when exploring independent parts of a codebase, comparing multiple possible implementations, checking generated docs, or inspecting external references
+- Use subagents for bounded implementation work when the write scope is clear and can be kept separate from other edits
+- Use subagents for verification work that can happen alongside implementation, such as running focused tests, checking platform-specific build output, reviewing UI screenshots, or auditing likely regressions
+- Give subagents concrete ownership, concise task boundaries, and instructions to summarize only the findings or changed files that matter to the main task
+- Keep urgent blocking work in the main thread when waiting for a subagent would slow down the next necessary step
+- Use subagents more freely when they would speed up implementation or prevent the main context from filling with low-signal exploration
