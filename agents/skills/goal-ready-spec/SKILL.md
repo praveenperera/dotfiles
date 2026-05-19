@@ -7,7 +7,7 @@ description: Use only when the user explicitly invokes $goal-ready-spec or speci
 
 ## Overview
 
-Create file-backed specs that an execution agent can follow without replacing explicit requirements with merely equivalent behavior. The goal is to collaborate with the user until the spec is clear, executable, and faithful to their intent, not to finish a spec in one pass. The output must make architectural ownership, state location, scope boundaries, verification commands, and completion evidence auditable before any goal is marked complete. Plan files should be compact-resilient and context-efficient: use progressive disclosure so the agent can load a small controlling contract first, then open detailed context files only when needed.
+Create file-backed specs that an execution agent can follow without replacing explicit requirements with merely equivalent behavior. The goal is to collaborate with the user until the spec is clear, executable, and faithful to their intent, not to finish a spec in one pass. The output must make architectural ownership, state location, scope boundaries, verification commands, and completion evidence auditable before any goal is marked complete. Plan files should be compact-resilient and context-efficient: use progressive disclosure so the agent can load a small controlling contract first, then open detailed context files only when needed. The final response should hand the user a concise prompt that asks Codex to set its own goal from the generated spec file, using the goal-design advice from OpenAI's "Using Goals in Codex" cookbook: define the outcome, evidence surface, constraints, boundaries, iteration policy, and blocked stop condition.
 
 Do not use this skill for ordinary planning, brainstorming, outlining, refining, reviewing, or implementation-plan requests unless the user explicitly invokes `$goal-ready-spec` or specifically asks to make the spec goal-ready.
 
@@ -22,7 +22,9 @@ Do not use this skill for ordinary planning, brainstorming, outlining, refining,
 7. Preserve the original spec or plan text as `_plans/<short-slug>/original-spec.md` before rewriting it into the goal-ready contract. If the source was only provided in chat, copy the relevant source text into that file so later agents can audit the transformed spec against the original.
 8. Write the goal-ready spec to `_plans/<short-slug>/spec.md`, the progress checkpoint to `_plans/<short-slug>/progress.md`, and the audit checklist to `_plans/<short-slug>/audit.md`. This skill is for the repo-local `_plans` workflow; do not produce an unfixed chat-only spec unless the user explicitly asks for that fallback.
 9. The `_plans/<short-slug>/` folder is the goal's durable working area. Start with `original-spec.md`, `spec.md`, `progress.md`, and `audit.md`. Add supporting phase, decision, context, or evidence files only when the work is large enough that splitting them improves context management. Prefer small, named files with clear purposes over copying large context into the main spec.
-10. Before finalizing, audit the spec against the source request and confirm every binding material requirement appears in an acceptance criterion, completion criterion, or completion-audit item.
+10. Shape the goal handoff using the cookbook goal pattern. The handoff must define the outcome, evidence surface, constraints, boundaries, iteration policy, and blocked stop condition without embedding the whole spec in the goal text.
+11. Before finalizing, audit the spec against the source request and confirm every binding material requirement appears in an acceptance criterion, completion criterion, or completion-audit item.
+12. End the final response with a "Set Your Goal Prompt" that references the final `_plans/<short-slug>/spec.md` path and tells Codex to set its own goal from that spec.
 
 ## Required Spec Sections
 
@@ -47,7 +49,21 @@ Use this structure unless the user asks for a different format:
 - Completion Criteria: process requirements before the goal is complete, including verification results and every Completion Audit file item filled with concrete evidence or marked N/A with a reason
 - Acceptance Criteria: behavior plus required architecture, not behavior alone
 - Risks and Open Questions: unresolved assumptions that must be answered before or during execution
-- Recommended Goal Objective: concise `/goal` wording that references the spec as the controlling contract
+- Recommended Goal Objective: concise goal wording that references the spec as the controlling contract
+- Set Your Goal Prompt: user-facing prompt that asks Codex to set its own goal from the final `spec.md`
+
+## Goal Design Checklist
+
+Apply this checklist when writing the Recommended Goal Objective and the final Set Your Goal Prompt. These checks are based on OpenAI's "Using Goals in Codex" cookbook guidance for high-quality goals:
+
+- Outcome: name the concrete end state the goal should achieve
+- Evidence Surface: point to the files, commands, tests, generated artifacts, or audit items that prove completion
+- Constraints: preserve required architecture, ownership, APIs, scope limits, style rules, and repository instructions
+- Boundaries: identify what the agent may change and what it must leave untouched
+- Iteration Policy: tell the agent how to continue after partial progress, failed checks, or compaction
+- Blocked Stop Condition: tell the agent when to stop as blocked and what evidence, attempts, and requested input to report
+
+Do not let the Set Your Goal Prompt become the full spec. It should point to `spec.md` as the controlling contract and summarize only the goal-shaping details needed to make the goal self-contained.
 
 ## Guardrails
 
@@ -58,6 +74,8 @@ Use this structure unless the user asks for a different format:
 - The implementation goal must cite the spec path or title and must not treat the spec as optional background context.
 - Resolve blocking ambiguity during spec creation whenever possible. The execution agent should treat the finalized spec as the contract and continue through routine implementation choices without asking.
 - During execution, the agent must stop and ask only when the next step would change ownership, boundaries, required APIs, acceptance criteria, verification scope, or contradict the spec, repo facts, or newer user instructions.
+- If the agent cannot make defensible progress within the goal contract, it must stop as blocked instead of marking the goal complete. The blocker report should include the failing evidence, paths or commands tried, the specific missing decision or resource, and the next user input needed.
+- Budget exhaustion is not completion. If the goal budget is reached before completion, the agent should summarize completed work, unsatisfied criteria, verification state, blockers, and the next best action without calling `update_goal`.
 - If the spec is not ready yet, ask the user focused questions and work with them until it is ready instead of finalizing a weak draft.
 - The goal is not complete until the Completion Audit file is filled out with concrete evidence for every item or an N/A reason for irrelevant items.
 - The spec must instruct the execution agent to update the separate Completion Audit file before calling `update_goal`.
@@ -65,7 +83,8 @@ Use this structure unless the user asks for a different format:
 - If the user explicitly requires independent review, define an approval-free fallback path that the executing agent can perform itself unless the user also explicitly requires another human or subagent. For example, require a fresh audit pass against specific files and requirements, not repeated permission requests.
 - Never write a Completion Criteria or Completion Audit item whose only possible next action is "ask the user to approve subagent review". If approval is truly required and missing, the execution agent should ask once, record the blocker in `progress.md`, and stop work instead of repeating the same prompt on continuation.
 - The spec must instruct the execution agent to reread controlling spec sections and inspect current repo state on continuation or resume before deciding the next work. For large specs, do not require rereading every line on every continuation; require rereading Objective, Hard Requirements, Architecture and Ownership Invariants, Deviation Protocol, Verification Plan, Completion Criteria, and any detailed sections relevant to the next task.
-- The recommended `/goal` objective should stay short and point to the spec path or title rather than embedding the whole implementation contract.
+- The recommended goal objective and final Set Your Goal Prompt should stay short and point to the spec path or title rather than embedding the whole implementation contract.
+- The final Set Your Goal Prompt must start with language like "Set your own goal to..." so the next Codex instance creates a durable goal instead of treating the text as ordinary chat instructions.
 - Plan-folder files must support progressive disclosure: put the smallest durable contract in `spec.md`, progress and evidence in `audit.md`, and bulky analysis or context in separate files that are linked from the relevant section.
 - Do not instruct the execution agent to load every file in `_plans/<short-slug>/` on every continuation. It should load the index/controlling sections first, then only the referenced detail files needed for the next action or completion decision.
 - Default to exactly four files: `original-spec.md`, `spec.md`, `progress.md`, and `audit.md`. Add `phases/`, `decisions/`, `context/`, or other supporting files only when the spec is large, naturally phase-oriented, or would otherwise overload context.
@@ -129,12 +148,20 @@ This spec is the controlling contract for the implementation goal. At the start 
 
 ## Recommended Goal Objective Template
 
-Every generated spec must include concise goal wording the user can paste into `/goal` or ask Codex to create:
+Every generated spec must include concise goal wording the user can use when asking Codex to create a goal:
 
 ```markdown
 ## Recommended Goal Objective
 
-Read and implement `<spec path or title>` as the controlling contract. On each continuation, use progressive disclosure: read the spec's controlling sections, `<progress path>`, current repo state, and only the relevant supporting files for the next action. Use `<audit path>` for evidence and completion checks. Do not call `update_goal` until every Completion Criteria and Completion Audit file item is satisfied or marked N/A with a reason.
+Implement `<spec path or title>` as the controlling contract. Achieve `<outcome>` with completion proven by `<evidence surface>`. Preserve `<constraints>` and stay within `<boundaries>`. On each continuation, use progressive disclosure: read the spec's controlling sections, `<progress path>`, current repo state, and only the relevant supporting files for the next action. Iterate from failing or partial verification by making the smallest contract-preserving change and rerunning the relevant checks. Use `<audit path>` for evidence and completion checks. Stop as blocked if progress would require changing the contract, missing user input, or unavailable resources; report attempts, evidence, and the needed decision. Do not call `update_goal` until every Completion Criteria and Completion Audit file item is satisfied or marked N/A with a reason.
+```
+
+## Set Your Goal Prompt Template
+
+End the final response with a prompt like this, adapted to the concrete spec path. This is the text the user can send to Codex to start the execution goal:
+
+```markdown
+Set your own goal to implement `_plans/<short-slug>/spec.md` as the controlling contract. Use the spec's Objective, Hard Requirements, Architecture and Ownership Invariants, Verification Plan, Completion Criteria, and Completion Audit File as the source of truth. Keep `_plans/<short-slug>/progress.md` current for continuation state and `_plans/<short-slug>/audit.md` focused on completion evidence. Iterate by making the smallest contract-preserving change after each failed or partial check, then rerun the relevant verification. If you are blocked by missing input, unavailable resources, or a necessary contract change, stop and report the blocker, evidence, attempts, and needed decision. Do not mark the goal complete until the audit proves every completion criterion is satisfied or marked N/A with a reason.
 ```
 
 ## Progress File Template
@@ -192,4 +219,4 @@ Before marking this goal complete or creating a commit, fill out this checklist.
 
 ## Goal Execution Handoff
 
-When the user asks Codex to execute one of these specs as a goal, the implementation goal should cite the spec path or title. The execution agent should first read the full spec, project instructions, and referenced files, then treat the spec as the controlling implementation contract unless it conflicts with newer user instructions, repository instructions, or implementation facts. It should maintain the separate progress file as compact resume state and the separate Completion Audit file as evidence. It should refuse to mark the goal complete until every audit item and completion criterion is filled with concrete evidence or marked N/A with a reason. If the goal continues across turns or resumes after compaction, the agent should use progressive disclosure: read the spec's controlling sections, progress file, current repo state, and only the detailed sections or supporting files needed for the next action or completion decision. When finishing a phase, it should summarize the phase outcome in `progress.md` before moving on. On the final completion pass only, before calling `update_goal`, it should load `audit.md`, `original-spec.md`, Completion Criteria, Acceptance Criteria, Verification Plan, and any supporting files referenced by missing or uncertain audit items, then confirm the final implementation and completed spec covered every binding material requirement from the original spec file. It should not repeat the `original-spec.md` coverage pass during routine continuation, progress updates, or phase handoffs. The agent may create additional phase, decision, context, or evidence files under the same `_plans/<short-slug>/` folder only when useful for context management, and should reference those files from the spec, progress file, or audit with when to read them so future continuations can recover state without loading unnecessary context.
+When the user asks Codex to execute one of these specs as a goal, the implementation goal should cite the spec path or title. The execution agent should first read the full spec, project instructions, and referenced files, then treat the spec as the controlling implementation contract unless it conflicts with newer user instructions, repository instructions, or implementation facts. It should maintain the separate progress file as compact resume state and the separate Completion Audit file as evidence. It should refuse to mark the goal complete until every audit item and completion criterion is filled with concrete evidence or marked N/A with a reason. If the goal continues across turns or resumes after compaction, the agent should use progressive disclosure: read the spec's controlling sections, progress file, current repo state, and only the detailed sections or supporting files needed for the next action or completion decision. When finishing a phase, it should summarize the phase outcome in `progress.md` before moving on. After failed or partial verification, it should inspect the evidence, make the smallest contract-preserving next change, rerun the relevant verification, and update progress. If budget is exhausted or the next step requires missing input, unavailable resources, or a contract change, it should stop as blocked and report completed work, unsatisfied criteria, verification state, attempts, and the needed decision without marking the goal complete. On the final completion pass only, before calling `update_goal`, it should load `audit.md`, `original-spec.md`, Completion Criteria, Acceptance Criteria, Verification Plan, and any supporting files referenced by missing or uncertain audit items, then confirm the final implementation and completed spec covered every binding material requirement from the original spec file. It should not repeat the `original-spec.md` coverage pass during routine continuation, progress updates, or phase handoffs. The agent may create additional phase, decision, context, or evidence files under the same `_plans/<short-slug>/` folder only when useful for context management, and should reference those files from the spec, progress file, or audit with when to read them so future continuations can recover state without loading unnecessary context.
