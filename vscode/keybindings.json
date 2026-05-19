@@ -95,5 +95,20 @@
     "key": "cmd+e",
     "command": "workbench.action.compareEditor.previousChange",
     "when": "textCompareEditorVisible"
+  },
+  {
+    "key": "cmd+t",
+    "command": "diffEditor.toggleCollapseUnchangedRegions",
+    "when": "inDiffEditor || inMultiDiffEditor"
+  },
+  {
+    "key": "cmd+o",
+    "command": "git.openFile",
+    "when": "textCompareEditorVisible || inDiffEditor || inMultiDiffEditor"
+  },
+  {
+    "key": "cmd+shift+l",
+    "command": "chatgpt.addToThread",
+    "when": "editorTextFocus || textCompareEditorVisible || inDiffEditor || inMultiDiffEditor"
   }
 ]
