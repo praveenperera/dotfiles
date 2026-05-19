@@ -8,8 +8,10 @@
   "workbench.editor.openSideBySideDirection": "right",
   "chatgpt.openOnStartup": true,
   "diffEditor.renderSideBySide": false,
+  "diffEditor.hideUnchangedRegions.contextLineCount": 8,
   "workbench.colorTheme": "GitHub Light",
   "editor.accessibilitySupport": "off",
   "diffEditor.ignoreTrimWhitespace": false,
-  "editor.minimap.enabled": false
+  "editor.minimap.enabled": false,
+  "diffEditor.hideUnchangedRegions.enabled": true
 }
