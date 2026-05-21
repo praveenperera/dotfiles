@@ -1,0 +1,42 @@
+{
+  "name": "dotfiles-git-tools",
+  "displayName": "Dotfiles Git Tools",
+  "description": "Personal Git commands for VS Code",
+  "version": "0.0.1",
+  "publisher": "dotfiles",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:dotfilesGit.compareWithMaster",
+    "onCommand:dotfilesGit.openGitGraphWorkspaceFile"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "dotfilesGit.compareWithMaster",
+        "title": "Compare Workspace with Master",
+        "category": "Dotfiles Git"
+      },
+      {
+        "command": "dotfilesGit.openGitGraphWorkspaceFile",
+        "title": "Open Git Graph Workspace File",
+        "category": "Dotfiles Git"
+      }
+    ],
+    "configuration": {
+      "title": "Dotfiles Git Tools",
+      "properties": {
+        "dotfilesGit.compareBaseRef": {
+          "type": "string",
+          "default": "master",
+          "description": "The base Git ref used by Dotfiles Git: Compare Workspace with Master."
+        }
+      }
+    }
+  }
+}

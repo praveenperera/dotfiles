@@ -53,6 +53,11 @@
     "when": "!operationInProgress"
   },
   {
+    "key": "cmd+d m",
+    "command": "dotfilesGit.compareWithMaster",
+    "when": "!operationInProgress"
+  },
+  {
     "key": "cmd+shift+i",
     "command": "runCommands",
     "args": {
@@ -107,7 +112,17 @@
     "when": "textCompareEditorVisible || inDiffEditor || inMultiDiffEditor"
   },
   {
+    "key": "cmd+o",
+    "command": "dotfilesGit.openGitGraphWorkspaceFile",
+    "when": "isInDiffEditor && resourceScheme == git-graph"
+  },
+  {
     "key": "cmd+shift+l",
+    "command": "chatgpt.addToThread",
+    "when": "editorTextFocus || textCompareEditorVisible || inDiffEditor || inMultiDiffEditor"
+  },
+  {
+    "key": "cmd+=",
     "command": "chatgpt.addToThread",
     "when": "editorTextFocus || textCompareEditorVisible || inDiffEditor || inMultiDiffEditor"
   }
