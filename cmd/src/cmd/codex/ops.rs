@@ -682,12 +682,6 @@ pub(super) fn usage() -> Result<()> {
         rates,
     )?;
 
-    if let Some(sample) = sample {
-        if let Ok(path) = usage_history_cache_path() {
-            let _ = record_usage_sample(&path, sample);
-        }
-    }
-
     Ok(())
 }
 
