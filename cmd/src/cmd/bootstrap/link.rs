@@ -17,6 +17,8 @@ use super::{
     MAC_ONLY_CUSTOM_CONFIG_OR_DIR,
 };
 
+const DOTFILES_GIT_TOOLS_EXTENSION: &str = "dotfiles.dotfiles-git-tools-0.0.1";
+
 struct LinkSpec {
     source: PathBuf,
     target: PathBuf,
@@ -214,6 +216,16 @@ fn install_vscode_extensions(sh: &Shell) -> Result<()> {
         return Ok(());
     }
 
+    install_vscode_marketplace_extensions(sh)?;
+    install_local_vscode_extension(
+        &crate::dotfiles_dir()?.join("vscode/extensions/dotfiles-git-tools"),
+        &local_vscode_extension_dir(&fsutil::home_dir()?),
+    )?;
+
+    Ok(())
+}
+
+fn install_vscode_marketplace_extensions(sh: &Shell) -> Result<()> {
     let extension_file = crate::dotfiles_dir()?.join("vscode/extensions.txt");
     if !extension_file.exists() {
         return Ok(());
@@ -235,6 +247,51 @@ fn install_vscode_extensions(sh: &Shell) -> Result<()> {
 
         println!("installing VS Code extension {}", extension.green());
         cmd!(sh, "code --install-extension {extension}").run()?;
+    }
+
+    Ok(())
+}
+
+fn local_vscode_extension_dir(home: &Path) -> PathBuf {
+    home.join(".vscode/extensions")
+        .join(DOTFILES_GIT_TOOLS_EXTENSION)
+}
+
+fn install_local_vscode_extension(source: &Path, target: &Path) -> Result<()> {
+    if !source.exists() {
+        return Ok(());
+    }
+
+    let package_json = source.join("package.json");
+    let out_dir = source.join("out");
+    if !package_json.exists() || !out_dir.exists() {
+        return Ok(());
+    }
+
+    println!(
+        "installing VS Code extension {}",
+        DOTFILES_GIT_TOOLS_EXTENSION.green()
+    );
+    fsutil::remove_existing_path(target)?;
+    fs::create_dir_all(target)?;
+    fs::copy(package_json, target.join("package.json"))?;
+    copy_dir(&out_dir, &target.join("out"))?;
+
+    Ok(())
+}
+
+fn copy_dir(source: &Path, target: &Path) -> Result<()> {
+    fs::create_dir_all(target)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let target_path = target.join(entry.file_name());
+        let metadata = fs::symlink_metadata(&source_path)?;
+        if metadata.is_dir() && !metadata.file_type().is_symlink() {
+            copy_dir(&source_path, &target_path)?;
+        } else {
+            fs::copy(&source_path, target_path)?;
+        }
     }
 
     Ok(())
@@ -413,11 +470,13 @@ fn create_and_run_file(sh: &Shell, contents: &str, file: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::path::PathBuf;
 
     use tempfile::tempdir;
 
     use super::{
-        build_link_specs, parse_vscode_extensions, prune_managed_dir_entry, ManagedDirEntry, Os,
+        build_link_specs, install_local_vscode_extension, local_vscode_extension_dir,
+        parse_vscode_extensions, prune_managed_dir_entry, ManagedDirEntry, Os,
     };
 
     #[test]
@@ -584,5 +643,59 @@ mod tests {
                 "openai.chatgpt".to_owned()
             ]
         );
+    }
+
+    #[test]
+    fn local_vscode_extension_dir_targets_managed_extension() {
+        let home = PathBuf::from("/home/praveen");
+
+        assert_eq!(
+            local_vscode_extension_dir(&home),
+            home.join(".vscode/extensions/dotfiles.dotfiles-git-tools-0.0.1")
+        );
+    }
+
+    #[test]
+    fn installs_local_vscode_extension_runtime_files() {
+        let dir = tempdir().unwrap();
+        let source = dir.path().join("source");
+        let target = dir.path().join("target");
+
+        fs::create_dir_all(source.join("out/nested")).unwrap();
+        fs::write(source.join("package.json"), "{}").unwrap();
+        fs::write(source.join("out/extension.js"), "compiled").unwrap();
+        fs::write(source.join("out/nested/file.js"), "nested").unwrap();
+        fs::create_dir_all(&target).unwrap();
+        fs::write(target.join("stale.js"), "stale").unwrap();
+
+        install_local_vscode_extension(&source, &target).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(target.join("package.json")).unwrap(),
+            "{}"
+        );
+        assert_eq!(
+            fs::read_to_string(target.join("out/extension.js")).unwrap(),
+            "compiled"
+        );
+        assert_eq!(
+            fs::read_to_string(target.join("out/nested/file.js")).unwrap(),
+            "nested"
+        );
+        assert!(!target.join("stale.js").exists());
+    }
+
+    #[test]
+    fn skips_local_vscode_extension_without_compiled_output() {
+        let dir = tempdir().unwrap();
+        let source = dir.path().join("source");
+        let target = dir.path().join("target");
+
+        fs::create_dir_all(&source).unwrap();
+        fs::write(source.join("package.json"), "{}").unwrap();
+
+        install_local_vscode_extension(&source, &target).unwrap();
+
+        assert!(!target.exists());
     }
 }

@@ -1,10 +1,23 @@
-const cp = require("child_process");
-const path = require("path");
-const vscode = require("vscode");
+import * as cp from "child_process";
+import * as path from "path";
+import * as vscode from "vscode";
 
 const compareScheme = "dotfiles-git-compare";
 
-function activate(context) {
+type GitStatusKind = "A" | "D" | "R" | "C" | string;
+
+interface GitStatusEntry {
+  kind: GitStatusKind;
+  oldPath: string;
+  newPath: string;
+}
+
+interface GitGraphFileRequest {
+  repo?: string;
+  filePath?: string;
+}
+
+export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("dotfilesGit.compareWithMaster", compareWithMaster),
     vscode.commands.registerCommand(
@@ -23,11 +36,11 @@ async function openGitGraphWorkspaceFile() {
     return;
   }
 
-  let request;
+  let request: GitGraphFileRequest;
   try {
     request = JSON.parse(Buffer.from(uri.query, "base64").toString("utf8"));
   } catch (error) {
-    vscode.window.showErrorMessage(`Unable to read Git Graph file path: ${error.message}`);
+    vscode.window.showErrorMessage(`Unable to read Git Graph file path: ${errorMessage(error)}`);
     return;
   }
 
@@ -57,11 +70,11 @@ async function compareWithMaster() {
     return;
   }
 
-  let root;
+  let root: string;
   try {
     root = (await git(["rev-parse", "--show-toplevel"], cwd)).trim();
   } catch (error) {
-    vscode.window.showErrorMessage(`Unable to find Git repository: ${error.message}`);
+    vscode.window.showErrorMessage(`Unable to find Git repository: ${errorMessage(error)}`);
     return;
   }
 
@@ -71,17 +84,21 @@ async function compareWithMaster() {
 
   try {
     await git(["rev-parse", "--verify", `${baseRef}^{commit}`], root);
-  } catch (error) {
+  } catch (_) {
     vscode.window.showErrorMessage(`Unable to compare: Git ref "${baseRef}" was not found`);
     return;
   }
 
-  let entries;
+  let entries: GitStatusEntry[];
   try {
-    entries = parseNameStatus(await gitBuffer(["diff", "--name-status", "--find-renames", "-z", baseRef], root));
-    entries.push(...parseUntracked(await gitBuffer(["ls-files", "--others", "--exclude-standard", "-z"], root)));
+    entries = parseNameStatus(
+      await gitBuffer(["diff", "--name-status", "--find-renames", "-z", baseRef], root)
+    );
+    entries.push(
+      ...parseUntracked(await gitBuffer(["ls-files", "--others", "--exclude-standard", "-z"], root))
+    );
   } catch (error) {
-    vscode.window.showErrorMessage(`Unable to compare with ${baseRef}: ${error.message}`);
+    vscode.window.showErrorMessage(`Unable to compare with ${baseRef}: ${errorMessage(error)}`);
     return;
   }
 
@@ -113,27 +130,32 @@ function getStartingDirectory() {
   return folder?.uri.scheme === "file" ? folder.uri.fsPath : null;
 }
 
-function git(args, cwd) {
+function git(args: string[], cwd: string) {
   return gitBuffer(args, cwd).then((buffer) => buffer.toString("utf8"));
 }
 
-function gitBuffer(args, cwd) {
+function gitBuffer(args: string[], cwd: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    cp.execFile("git", args, { cwd, maxBuffer: 50 * 1024 * 1024 }, (error, stdout, stderr) => {
-      if (error) {
-        const message = stderr.toString("utf8").trim() || error.message;
-        reject(new Error(message));
-        return;
-      }
+    cp.execFile(
+      "git",
+      args,
+      { cwd, maxBuffer: 50 * 1024 * 1024, encoding: "buffer" },
+      (error, stdout, stderr) => {
+        if (error) {
+          const message = stderr.toString("utf8").trim() || error.message;
+          reject(new Error(message));
+          return;
+        }
 
-      resolve(stdout);
-    });
+        resolve(stdout);
+      }
+    );
   });
 }
 
-function parseNameStatus(buffer) {
+function parseNameStatus(buffer: Buffer) {
   const fields = splitNul(buffer);
-  const entries = [];
+  const entries: GitStatusEntry[] = [];
 
   for (let index = 0; index < fields.length; ) {
     const status = fields[index++];
@@ -153,17 +175,17 @@ function parseNameStatus(buffer) {
   return entries;
 }
 
-function parseUntracked(buffer) {
+function parseUntracked(buffer: Buffer) {
   return splitNul(buffer)
     .filter(Boolean)
     .map((filePath) => ({ kind: "A", oldPath: filePath, newPath: filePath }));
 }
 
-function splitNul(buffer) {
+function splitNul(buffer: Buffer) {
   return buffer.toString("utf8").split("\0").filter(Boolean);
 }
 
-function toDiffResource(root, baseRef, entry) {
+function toDiffResource(root: string, baseRef: string, entry: GitStatusEntry) {
   if (entry.kind === "A") {
     return { originalUri: undefined, modifiedUri: fileUri(root, entry.newPath) };
   }
@@ -185,11 +207,11 @@ function toDiffResource(root, baseRef, entry) {
   };
 }
 
-function fileUri(root, filePath) {
+function fileUri(root: string, filePath: string) {
   return vscode.Uri.file(path.join(root, filePath));
 }
 
-function gitUri(root, filePath, ref) {
+function gitUri(root: string, filePath: string, ref: string) {
   const absolutePath = path.join(root, filePath);
   const uri = vscode.Uri.file(absolutePath);
 
@@ -200,4 +222,6 @@ function gitUri(root, filePath, ref) {
   });
 }
 
-module.exports = { activate };
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}

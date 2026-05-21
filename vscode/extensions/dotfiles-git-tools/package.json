@@ -14,7 +14,15 @@
     "onCommand:dotfilesGit.compareWithMaster",
     "onCommand:dotfilesGit.openGitGraphWorkspaceFile"
   ],
-  "main": "./extension.js",
+  "main": "./out/extension.js",
+  "scripts": {
+    "compile": "tsc -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "20.12.12",
+    "@types/vscode": "1.80.0",
+    "typescript": "5.4.5"
+  },
   "contributes": {
     "commands": [
       {
