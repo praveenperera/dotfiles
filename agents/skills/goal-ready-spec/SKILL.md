@@ -24,10 +24,12 @@ Do not use this skill for ordinary planning, brainstorming, outlining, refining,
 9. Preserve the original spec or plan text as `_plans/<short-slug>/original-spec.md` before rewriting it into the goal-ready contract. If the source is already a durable repo file, `original-spec.md` may point to that path plus commit or snapshot context and a short binding-requirements summary instead of copying hundreds of lines. If the source was only provided in chat, copy the relevant source text into that file so later agents can audit the transformed spec against the original.
 10. Write the goal-ready spec to `_plans/<short-slug>/spec.md`, the progress checkpoint to `_plans/<short-slug>/progress.md`, and the audit checklist to `_plans/<short-slug>/audit.md`. This skill is for the repo-local `_plans` workflow; do not produce an unfixed chat-only spec unless the user explicitly asks for that fallback.
 11. The `_plans/<short-slug>/` folder is the goal's durable working area. Start with hot entry-point files `original-spec.md`, `spec.md`, `progress.md`, and `audit.md`. Make `spec.md` a router by default and put detailed phase, audit, decision, context, or evidence material in supporting files before the hot files become expensive to read. Prefer small, named files with clear purposes over copying large context into hot-path files.
-12. Split independent workflows into child phase files or child goal-ready specs. The parent `spec.md` should track phase status, read routing, shared invariants, and completion gates rather than embedding every implementation detail.
-13. Shape the goal handoff using the cookbook goal pattern. The handoff must define the outcome, evidence surface, constraints, boundaries, iteration policy, and terminal condition without embedding the whole spec in the goal text.
-14. Before finalizing, audit the spec against the source request and confirm every binding material requirement appears in an acceptance criterion, completion criterion, or completion-audit item.
-15. End the final response with a "Set Your Goal Prompt" that references the final `_plans/<short-slug>/spec.md` path and tells Codex to set its own goal from that spec.
+12. For large, long-running, or multi-workflow goals, create the supporting phase, audit, and evidence surfaces immediately instead of waiting for hot files to bloat. Large means the goal is expected to span multiple continuations, contains more than one independent workflow or phase, needs a broad verification matrix, or would push any hot file over its target size.
+13. Split independent workflows into child phase files or child goal-ready specs. The parent `spec.md` should track phase status, read routing, shared invariants, and completion gates rather than embedding every implementation detail.
+14. Shape the goal handoff using the cookbook goal pattern. The handoff must define the outcome, evidence surface, constraints, boundaries, iteration policy, and terminal condition without embedding the whole spec in the goal text.
+15. Before finalizing, audit the spec against the source request and confirm every binding material requirement appears in an acceptance criterion, completion criterion, or completion-audit item.
+16. Run the internal Creation-Time Plan Hygiene Check before handing off the generated or revised plan. Fix hard failures before handoff unless the user explicitly accepts the residual risk; treat size warnings as routing guidance, not permission to spend unbounded time polishing process files.
+17. End the final response with a "Set Your Goal Prompt" that references the final `_plans/<short-slug>/spec.md` path and tells Codex to set its own goal from that spec.
 
 ## Required Spec Sections
 
@@ -100,10 +102,12 @@ Do not let the Set Your Goal Prompt become the full spec. It should point to `sp
 - The recommended goal objective and final Set Your Goal Prompt should stay short and point to the spec path or title rather than embedding the whole implementation contract.
 - The final Set Your Goal Prompt must start with language like "Set your own goal to..." so the next Codex instance creates a durable goal instead of treating the text as ordinary chat instructions.
 - Plan-folder files must support progressive disclosure: put the smallest durable router and controlling contract in `spec.md`, current state in `progress.md`, parent completion status in `audit.md`, and bulky analysis or context in smaller supporting files linked from the relevant router section.
+- Progressive disclosure is subordinate to goal integrity. The agent should read less only when the smaller read set is enough to preserve the contract; it must expand the read set when uncertainty, risk, blocker triage, verification, or final audit requires more evidence.
 - Do not instruct the execution agent to load every file in `_plans/<short-slug>/` on every continuation, and never tell it to read all supporting files "for context". It should read the router, `progress.md`, current repo state, and only the file or two selected by the Read Map for the next action.
 - Classify plan files and sections by read temperature: Hot files are read every continuation, Warm files are read only while working that phase, and Cold files are read only for final audit, ambiguity, or debugging a blocker.
 - A long `spec.md` is a smell. Make `spec.md` a router by default with a Read Map, requirement IDs, shared invariants, acceptance/completion gates, and links to phase/context/audit files. Move phase detail, source comparisons, and long code-location maps out of `spec.md`.
 - Use four required hot entry-point files: `original-spec.md`, `spec.md`, `progress.md`, and `audit.md`. Use `phases/`, `audits/`, `decisions/`, `context/`, and `evidence/` as the normal homes for detailed phase work, support context, and bulky evidence.
+- For large, long-running, or multi-workflow specs, create `phases/`, `audits/`, and `evidence/` content during initial spec creation. At minimum, route detailed phase contracts to `phases/`, phase-specific completion dashboards to `audits/`, and bulky verification notes or archived history to `evidence/`; do not rely on the parent `audit.md` to hold those details until it becomes too large.
 - Required files must always have these roles:
   - `original-spec.md`: original user-provided spec, plan, or source text preserved before goal-ready rewriting
   - `spec.md`: controlling contract, router, scope, requirement IDs, architecture, verification gates, read map, completion criteria, and recommended goal objective
@@ -113,6 +117,7 @@ Do not let the Set Your Goal Prompt become the full spec. It should point to `sp
 - `progress.md` is overwrite-only compact resume state, not an append-only diary. Update only the fields that changed during routine work. Rewrite or compress it only when it exceeds the target size, starts repeating old phase history, reaches a phase handoff, prepares for final audit, or the agent is about to leave the goal in a state that must survive compaction.
 - Keep `progress.md` short enough to read every continuation. Target under 60 lines. If it grows into a diary, compress it back into current state, milestone summaries, next action, blockers, and read-next; do not spend tokens re-compressing an already compact file.
 - `audit.md` is a compact dashboard, not a running task log. Target under 120-150 lines. It should store current completion status, latest relevant verification snapshot, deviations, final-only checks, and unresolved blockers.
+- `audit.md` updates are update-in-place. Use stable rows keyed by requirement, verification, evidence, or phase IDs, and replace the latest status/result in that row. Do not append a new bullet for every command, implementation slice, continuation, or repeated successful run.
 - Verification evidence should be latest-snapshot only. Record the latest relevant pass or fail for each required command, probe, or evidence ID; keep earlier failures only when they explain a current blocker, deviation, or important fix.
 - Successful repeated checks should collapse to one latest-result row. If a probe emits JSON, smoke summary keys, or generated artifacts, reference the key, artifact, or evidence ID instead of translating the whole result into prose.
 - Use risk-triggered verification during implementation: after each slice, rerun the smallest relevant focused check. Reserve full builds, smoke suites, release readiness, original-spec coverage, counter-evidence scans, and completion review for milestones or the final completion pass unless a failure indicates broader risk.
@@ -126,7 +131,18 @@ Do not let the Set Your Goal Prompt become the full spec. It should point to `sp
 - "Supporting Files Consulted" belongs to final audit only. During normal execution, use `progress.md` Read next and the Read Map instead of listing every source or support file touched.
 - Do not phrase critical checks as vague intentions like "verify it works". Name the command, file, assertion, generated artifact, or manual observation that proves the requirement.
 - If a requirement cannot yet be verified and is not blocking, mark it as a risk or open question instead of burying it in the implementation plan.
-- If the repository has or can cheaply add a plan-file validator, use it to warn on hot files that exceed target size, append-only progress histories, repeated command logs in `audit.md`, missing `Read when` or `Do not read when` headers, or support files that are not reachable from the Read Map.
+- During spec creation or revision, run the bundled `scripts/plan_file_hygiene.py _plans/<short-slug>` when available. If a repo-local validator is stricter, run that too. This is an internal skill-use check only; do not mention the script, checklist, validator, or validation result in generated specs, progress files, audit files, goal handoffs, recommended objectives, or Set Your Goal Prompt.
+
+## Creation-Time Plan Hygiene Check
+
+Run this internal checklist before handing off a generated or revised goal-ready plan. It should shape the plan before execution starts, not become part of the generated plan or routine execution work.
+
+- Hot file size: `spec.md` is a router near 100-200 lines, `progress.md` is under about 60 lines, and `audit.md` is under about 120-150 lines. Treat oversize as routing guidance at handoff, not as a reason for execution agents to stop implementation for cosmetic cleanup.
+- Update-in-place audit: `audit.md` has stable requirement, verification, evidence, or phase rows. It does not contain append-only command logs, repeated `passed after ...` entries, or one bullet per continuation.
+- Supporting-file routing: every `phases/`, `audits/`, `context/`, `decisions/`, or `evidence/` file is reachable from the Read Map or a hot file and starts with `Read when`, `Do not read when`, and `Temperature`.
+- Final-only fields: `Supporting Files Consulted`, original-spec coverage, counter-evidence scan, completion review, and residual risk are empty or marked pending until the final completion pass.
+- Large-plan routing: any large, long-running, or multi-workflow plan has phase/detail content in `phases/`, phase audit dashboards in `audits/`, and bulky verification notes or archived history in `evidence/` from the start.
+- Goal integrity: no file-size, routing, or update-token optimization removed evidence needed to prove a hard requirement, ownership invariant, no-equivalent-substitution item, verification gate, deviation decision, blocker, or final-only check.
 
 ## Plan Folder Contract Template
 
