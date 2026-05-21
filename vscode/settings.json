@@ -13,5 +13,85 @@
   "editor.accessibilitySupport": "off",
   "diffEditor.ignoreTrimWhitespace": false,
   "editor.minimap.enabled": false,
-  "diffEditor.hideUnchangedRegions.enabled": true
+  "vim.leader": "<space>",
+  "vim.normalModeKeyBindingsNonRecursive": [
+    {
+      "before": ["<leader>", "f", "i"],
+      "commands": ["actions.find"]
+    },
+    {
+      "before": ["<leader>", "f", "w"],
+      "commands": ["workbench.action.quickTextSearch"]
+    },
+    {
+      "before": ["<leader>", "f", "f"],
+      "commands": ["workbench.action.quickOpen"]
+    },
+    {
+      "before": ["<leader>", "f", "p"],
+      "commands": ["workbench.action.openRecent"]
+    },
+    {
+      "before": ["<leader>", "f", "s"],
+      "commands": ["workbench.action.gotoSymbol"]
+    },
+    {
+      "before": ["<leader>", "f", "S"],
+      "commands": ["workbench.action.showAllSymbols"]
+    },
+    {
+      "before": ["<leader>", "l", "a"],
+      "commands": ["editor.action.quickFix"]
+    },
+    {
+      "before": ["<leader>", "l", "d"],
+      "commands": ["editor.action.showHover"]
+    },
+    {
+      "before": ["<leader>", "l", "D"],
+      "commands": ["workbench.actions.view.problems"]
+    },
+    {
+      "before": ["<leader>", "l", "f"],
+      "commands": ["editor.action.formatDocument"]
+    },
+    {
+      "before": ["<leader>", "l", "h"],
+      "commands": ["editor.action.triggerParameterHints"]
+    },
+    {
+      "before": ["<leader>", "l", "r"],
+      "commands": ["editor.action.rename"]
+    },
+    {
+      "before": ["<leader>", "l", "R"],
+      "commands": ["editor.action.referenceSearch.trigger"]
+    },
+    {
+      "before": ["<leader>", "l", "s"],
+      "commands": ["workbench.action.gotoSymbol"]
+    },
+    {
+      "before": ["<leader>", "l", "G"],
+      "commands": ["workbench.action.showAllSymbols"]
+    },
+    {
+      "before": ["<leader>", "u", "h"],
+      "commands": ["editor.action.inlayHints.toggle"]
+    },
+    {
+      "before": ["<leader>", "w"],
+      "commands": ["workbench.action.files.save"]
+    }
+  ],
+  "vim.visualModeKeyBindingsNonRecursive": [
+    {
+      "before": ["<leader>", "l", "a"],
+      "commands": ["editor.action.quickFix"]
+    },
+    {
+      "before": ["<leader>", "l", "f"],
+      "commands": ["editor.action.formatSelection"]
+    }
+  ]
 }
