@@ -35,9 +35,18 @@ Ask non-obvious, probing questions - not surface-level questions:
 1. Ask 1-4 probing questions at a time using AskUserQuestion
 2. Incorporate answers into your understanding
 3. If refining an existing file such as `spec.md`, update that file with the new answers and clarified decisions before asking the next question round
-4. When a follow-up, idea, risk, or adjacent task is worth preserving but should not block the current refinement, add it to `next.md` beside the working plan/spec instead of expanding the active scope
-5. Repeat until you have comprehensive understanding
-6. Do NOT stop interviewing prematurely - thorough exploration is important
+4. If the working file is a spec file (`spec.md` or a file the user identifies as a spec), add or update its YAML front matter with `status: refined` once the first refinement update is written
+5. When a follow-up, idea, risk, or adjacent task is worth preserving but should not block the current refinement, add it to `next.md` beside the working plan/spec instead of expanding the active scope
+6. Repeat until you have comprehensive understanding
+7. Do NOT stop interviewing prematurely - thorough exploration is important
+
+## Spec Status Marker
+
+When refining a spec file, mark it as refined so later agents can tell the refinement pass has already touched it.
+
+- If the spec already has YAML front matter, preserve existing fields and set `status: refined`
+- If the spec does not have YAML front matter, add it at the top with only `status: refined`
+- Do not add the status marker to `next.md` or deferred follow-up files
 
 ## Deferred Follow-Ups
 
