@@ -7,9 +7,9 @@
   },
   "workbench.editor.openSideBySideDirection": "right",
   "chatgpt.openOnStartup": true,
-  "diffEditor.renderSideBySide": false,
+  "diffEditor.renderSideBySide": true,
   "diffEditor.hideUnchangedRegions.contextLineCount": 8,
-  "workbench.colorTheme": "GitHub Light",
+  "workbench.colorTheme": "Atom One Dark",
   "editor.accessibilitySupport": "off",
   "diffEditor.ignoreTrimWhitespace": false,
   "editor.minimap.enabled": false,
@@ -93,5 +93,22 @@
       "before": ["<leader>", "l", "f"],
       "commands": ["editor.action.formatSelection"]
     }
-  ]
+  ],
+  "vim.commandLineModeKeyBindingsNonRecursive": [
+    {
+      "before": ["e", "<CR>"],
+      "commands": ["workbench.action.files.revert"],
+      "silent": true
+    }
+  ],
+  "github.copilot.enable": {
+    "*": false,
+    "plaintext": false,
+    "markdown": false,
+    "scminput": false
+  },
+  "rust-analyzer.inlayHints.typeHints.enable": false,
+  "[rust]": {
+    "editor.inlayHints.enabled": "off"
+  }
 }
