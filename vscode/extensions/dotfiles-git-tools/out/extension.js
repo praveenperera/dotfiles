@@ -6,9 +6,14 @@ const path = require("path");
 const vscode = require("vscode");
 const compareScheme = "dotfiles-git-compare";
 function activate(context) {
-    context.subscriptions.push(vscode.commands.registerCommand("dotfilesGit.compareWithMaster", compareWithMaster), vscode.commands.registerCommand("dotfilesGit.openGitGraphWorkspaceFile", openGitGraphWorkspaceFile));
+    context.subscriptions.push(vscode.commands.registerCommand("dotfilesGit.compareWithMaster", compareWithMaster), vscode.commands.registerCommand("dotfilesGit.toggleDiffSideBySide", toggleDiffSideBySide), vscode.commands.registerCommand("dotfilesGit.openGitGraphWorkspaceFile", openGitGraphWorkspaceFile));
 }
 exports.activate = activate;
+async function toggleDiffSideBySide() {
+    const config = vscode.workspace.getConfiguration("diffEditor");
+    const current = config.get("renderSideBySide", true);
+    await config.update("renderSideBySide", !current, vscode.ConfigurationTarget.Global);
+}
 async function openGitGraphWorkspaceFile() {
     const editor = vscode.window.activeTextEditor;
     const uri = editor?.document.uri;

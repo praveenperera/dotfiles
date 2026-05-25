@@ -12,6 +12,7 @@
   ],
   "activationEvents": [
     "onCommand:dotfilesGit.compareWithMaster",
+    "onCommand:dotfilesGit.toggleDiffSideBySide",
     "onCommand:dotfilesGit.openGitGraphWorkspaceFile"
   ],
   "main": "./out/extension.js",
@@ -28,6 +29,11 @@
       {
         "command": "dotfilesGit.compareWithMaster",
         "title": "Compare Workspace with Master",
+        "category": "Dotfiles Git"
+      },
+      {
+        "command": "dotfilesGit.toggleDiffSideBySide",
+        "title": "Toggle Diff Side by Side",
         "category": "Dotfiles Git"
       },
       {

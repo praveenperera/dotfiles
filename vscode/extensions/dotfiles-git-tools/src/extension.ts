@@ -21,10 +21,20 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("dotfilesGit.compareWithMaster", compareWithMaster),
     vscode.commands.registerCommand(
+      "dotfilesGit.toggleDiffSideBySide",
+      toggleDiffSideBySide
+    ),
+    vscode.commands.registerCommand(
       "dotfilesGit.openGitGraphWorkspaceFile",
       openGitGraphWorkspaceFile
     )
   );
+}
+
+async function toggleDiffSideBySide() {
+  const config = vscode.workspace.getConfiguration("diffEditor");
+  const current = config.get("renderSideBySide", true);
+  await config.update("renderSideBySide", !current, vscode.ConfigurationTarget.Global);
 }
 
 async function openGitGraphWorkspaceFile() {

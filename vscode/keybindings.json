@@ -107,6 +107,16 @@
     "when": "inDiffEditor || inMultiDiffEditor"
   },
   {
+    "key": "cmd+shift+d",
+    "command": "dotfilesGit.toggleDiffSideBySide",
+    "when": "inDiffEditor || inMultiDiffEditor"
+  },
+  {
+    "key": "cmd+shift+r",
+    "command": "workbench.action.files.revert",
+    "when": "editorTextFocus"
+  },
+  {
     "key": "cmd+o",
     "command": "git.openFile",
     "when": "textCompareEditorVisible || inDiffEditor || inMultiDiffEditor"
