@@ -53,7 +53,7 @@ fn icloud_sync(sh: &Shell, path: &str, source: Option<&str>) -> Result<()> {
         root.join(requested_path)
     };
 
-    if local_path.is_dir() {
+    if local_path.is_dir() || should_treat_missing_path_as_dir(path, &local_path, source) {
         return icloud_sync_dir(sh, &root, &local_path, source);
     }
 
@@ -73,7 +73,7 @@ fn icloud_sync_dir(sh: &Shell, root: &Path, local_path: &Path, source: Option<&s
     let target = IcloudDirTarget::resolve(&icloud_drive()?, root, local_path, source)?;
 
     if !sh.path_exists(local_path) && !local_path.is_symlink() {
-        return Err(eyre!("directory does not exist: {}", local_path.display()));
+        fs::create_dir_all(local_path)?;
     }
 
     let target_has_content = sh.path_exists(&target.path) && !is_empty_dir(&target.path)?;
@@ -116,6 +116,25 @@ fn icloud_sync_dir(sh: &Shell, root: &Path, local_path: &Path, source: Option<&s
         target.source.as_str()
     );
     Ok(())
+}
+
+fn should_treat_missing_path_as_dir(path: &str, local_path: &Path, source: Option<&str>) -> bool {
+    if sh_path_exists_or_symlink(local_path) {
+        return false;
+    }
+
+    if source.is_some() || path.ends_with(std::path::MAIN_SEPARATOR) {
+        return true;
+    }
+
+    local_path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .is_some_and(|value| value.starts_with('_'))
+}
+
+fn sh_path_exists_or_symlink(path: &Path) -> bool {
+    path.exists() || path.is_symlink()
 }
 
 fn icloud_sync_file(sh: &Shell, local_path: &Path, icloud_target: &Path) -> Result<()> {
@@ -325,7 +344,9 @@ fn rsync_two_way(sh: &Shell, local: &Path, icloud: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{icloud_file_target, IcloudDirTarget, SyncSource};
+    use super::{
+        icloud_file_target, should_treat_missing_path_as_dir, IcloudDirTarget, SyncSource,
+    };
     use std::path::Path;
 
     #[test]
@@ -407,5 +428,32 @@ mod tests {
             err.to_string().contains("path separators"),
             "unexpected error: {err}"
         );
+    }
+
+    #[test]
+    fn missing_underscore_path_syncs_as_directory() {
+        assert!(should_treat_missing_path_as_dir(
+            "_plans",
+            Path::new("~/code/sqlx-tursodb/_plans"),
+            None,
+        ));
+    }
+
+    #[test]
+    fn missing_path_with_source_syncs_as_directory() {
+        assert!(should_treat_missing_path_as_dir(
+            "docs",
+            Path::new("~/code/sqlx-tursodb/docs"),
+            Some("sqlx-tursodb"),
+        ));
+    }
+
+    #[test]
+    fn missing_file_path_stays_file_sync() {
+        assert!(!should_treat_missing_path_as_dir(
+            "~/.codex/config.toml",
+            Path::new("~/.codex/config.toml"),
+            None,
+        ));
     }
 }
