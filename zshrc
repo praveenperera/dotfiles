@@ -4,7 +4,13 @@ if ! infocmp "$TERM" &>/dev/null; then
 fi
 
 # tmux
-alias t="tmux attach | tmux"
+t() {
+  if tmux has-session 2>/dev/null; then
+    tmux attach-session "$@"
+  else
+    tmux new-session "$@"
+  fi
+}
 alias td="tmux detach"
 
 # zsh
