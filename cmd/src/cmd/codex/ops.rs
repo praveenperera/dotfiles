@@ -682,23 +682,36 @@ pub(super) fn usage() -> Result<()> {
         rates,
     )?;
 
+    record_usage_sample_best_effort(usage_history_cache_path(), sample);
+
     Ok(())
 }
 
 pub(super) fn usage_history(options: UsageHistoryOptions) -> Result<()> {
     let path = usage_history_cache_path()?;
-    let loader = ProfileUsageLoader::new()?;
-    let (label, usage) = current_usage_view(&loader, &auth_path()?)?;
     let now = Utc::now();
-    if let Some(sample) = usage_history_sample(&label, &usage, now) {
-        let _ = record_usage_sample(&path, sample);
-    }
-
-    let history = load_usage_history(&path);
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
-    print_usage_history(&mut stdout, &history, now, options)?;
+    print_saved_usage_history(&mut stdout, &path, now, options)?;
+
+    Ok(())
+}
+
+fn record_usage_sample_best_effort(path: Result<PathBuf>, sample: Option<UsageHistorySample>) {
+    if let (Some(sample), Ok(path)) = (sample, path) {
+        let _ = record_usage_sample(&path, sample);
+    }
+}
+
+fn print_saved_usage_history(
+    writer: &mut impl Write,
+    path: &Path,
+    now: chrono::DateTime<Utc>,
+    options: UsageHistoryOptions,
+) -> Result<()> {
+    let history = load_usage_history(path);
+    print_usage_history(writer, &history, now, options)?;
 
     Ok(())
 }
@@ -969,6 +982,64 @@ mod tests {
         assert_eq!(selected.name, "raw-underpaced");
     }
 
+    #[test]
+    fn record_usage_sample_best_effort_records_sample() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("history.json");
+        let now = Utc::now();
+        let sample = usage_history_sample(
+            "praveen@example.com",
+            &available_usage_state("user-1", "acct-1", "praveen@example.com"),
+            now,
+        );
+
+        record_usage_sample_best_effort(Ok(path.clone()), sample);
+
+        let history = load_usage_history(&path);
+        let mut output = Vec::new();
+        print_usage_history(
+            &mut output,
+            &history,
+            now,
+            UsageHistoryOptions {
+                days: 1,
+                verbose: true,
+            },
+        )
+        .unwrap();
+        let output = String::from_utf8(output).unwrap();
+        assert!(output.contains("praveen@example.com"));
+    }
+
+    #[test]
+    fn print_saved_usage_history_does_not_record_sample() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("history.json");
+        let now = Utc::now();
+        let sample = usage_history_sample(
+            "praveen@example.com",
+            &available_usage_state("user-1", "acct-1", "praveen@example.com"),
+            now,
+        )
+        .unwrap();
+        record_usage_sample(&path, sample).unwrap();
+        let initial_len = usage_history_json_len(&path);
+
+        let mut output = Vec::new();
+        print_saved_usage_history(
+            &mut output,
+            &path,
+            now,
+            UsageHistoryOptions {
+                days: 1,
+                verbose: true,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(usage_history_json_len(&path), initial_len);
+    }
+
     fn saved_profile_with_usage(
         name: &str,
         five_hour: f64,
@@ -999,6 +1070,35 @@ mod tests {
                 }),
             }),
         }
+    }
+
+    fn available_usage_state(user_id: &str, account_id: &str, email: &str) -> ProfileUsageState {
+        ProfileUsageState::Available(ProfileUsageSnapshot {
+            user_id: Some(user_id.into()),
+            account_id: Some(account_id.into()),
+            email: Some(email.into()),
+            plan_type: Some("plus".into()),
+            primary: Some(UsageWindowSnapshot {
+                used_percent: 12.0,
+                reset_at: Some(Utc::now().timestamp() + 3600),
+                limit_multiplier: 1.0,
+            }),
+            secondary: Some(UsageWindowSnapshot {
+                used_percent: 34.0,
+                reset_at: Some(Utc::now().timestamp() + 3600),
+                limit_multiplier: 1.0,
+            }),
+        })
+    }
+
+    fn usage_history_json_len(path: &Path) -> usize {
+        let raw = stdfs::read(path).unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&raw).unwrap();
+        value
+            .get("samples")
+            .and_then(serde_json::Value::as_array)
+            .map(Vec::len)
+            .unwrap()
     }
 
     fn reset_at_for_elapsed(
