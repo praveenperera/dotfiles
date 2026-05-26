@@ -107,7 +107,7 @@
     "when": "inDiffEditor || inMultiDiffEditor"
   },
   {
-    "key": "cmd+shift+d",
+    "key": "cmd+shift+t",
     "command": "dotfilesGit.toggleDiffSideBySide",
     "when": "inDiffEditor || inMultiDiffEditor"
   },

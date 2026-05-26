@@ -14,7 +14,8 @@
     "dock": "left"
   },
   "terminal": {
-    "dock": "right"
+    "dock": "right",
+    "option_as_meta": true
   },
   "agent_servers": {
     "codex-acp": {
@@ -69,5 +70,13 @@
     "mode": "dark",
     "light": "One Light",
     "dark": "One Dark",
+  },
+  "theme_overrides": {
+    "One Dark": {
+      "vim.helix_jump_label.foreground": "#ffffff",
+    },
+    "One Light": {
+      "vim.helix_jump_label.foreground": "#6e7781",
+    },
   },
 }

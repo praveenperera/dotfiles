@@ -7,9 +7,9 @@
   },
   "workbench.editor.openSideBySideDirection": "right",
   "chatgpt.openOnStartup": true,
-  "diffEditor.renderSideBySide": true,
+  "diffEditor.renderSideBySide": false,
   "diffEditor.hideUnchangedRegions.contextLineCount": 8,
-  "workbench.colorTheme": "Atom One Dark",
+  "workbench.colorTheme": "GitHub Light",
   "editor.accessibilitySupport": "off",
   "diffEditor.ignoreTrimWhitespace": false,
   "editor.minimap.enabled": false,
@@ -110,5 +110,6 @@
   "rust-analyzer.inlayHints.typeHints.enable": false,
   "[rust]": {
     "editor.inlayHints.enabled": "off"
-  }
+  },
+  "diffEditor.hideUnchangedRegions.enabled": true
 }

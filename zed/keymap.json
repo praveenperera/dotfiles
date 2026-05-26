@@ -4,7 +4,7 @@
     "use_key_equivalents": true,
     "bindings": {
       "space f i": "buffer_search::Deploy",
-      "space f w": "pane::DeploySearch",
+      "space f w": "workspace::NewSearch",
       "space f f": "file_finder::Toggle",
       "space f s": "outline::Toggle",
       "space f shift-s": "project_symbols::Toggle",
@@ -20,9 +20,10 @@
       "space l x": "editor::RestartLanguageServer",
       "space u h": "editor::ToggleInlayHints",
       "space u shift-question": "editor::ToggleAutoSignatureHelp",
-      "space t a": ["task::Spawn", { "task_name": "oca" }],
+      "space t a": ["task::Spawn", { "task_name": "ll" }],
       "space t o": "terminal_panel::ToggleFocus",
       "space t shift-o": "terminal_panel::Toggle",
+      "cmd-shift-l": "editor::CopyFileLocation",
       "space w": "workspace::Save",
       "alt-shift-h": "vim::ResizePaneLeft",
       "alt-shift-j": "vim::ResizePaneDown",
@@ -67,6 +68,7 @@
     "context": "Editor && (vim_mode == normal || vim_mode == visual) && !menu",
     "use_key_equivalents": true,
     "bindings": {
+      "s": "vim::HelixJumpToWord",
       "ctrl-h": "workspace::ActivatePaneLeft",
       "ctrl-j": "workspace::ActivatePaneDown",
       "ctrl-k": "workspace::ActivatePaneUp",
