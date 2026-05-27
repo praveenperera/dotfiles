@@ -7,5 +7,6 @@ skills = [
   "tailwindplus",
   "web-design-guidelines",
   "image-design-director",
+  "impeccable",
 ]
 packs = ["cloud", "svelte"]
