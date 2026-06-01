@@ -17,7 +17,7 @@
 
 - `info` and `error` logs are okay to start capitalized
 - log/println! macros, prefer inline variable capture like `warn!("person id={id} ...")` instead of positional placeholders like `warn!("person id={} ...", id)`
-- Before regenerating crate docs, check `target/doc/`; otherwise run `cargo doc -p <crate-name>` and read `target/doc/<crate-name>/index.html`
+- For unfamiliar crates or external libraries, prefer docs and `btx` over guessing; check `target/doc/`, run `cargo doc -p <crate-name>`, use `btx`, or inspect `~/.cargo/registry/src` as appropriate
 - Whenever you get clippy errors first run cargo fix --allow-dirty and then fix whatever remains
 - I always prefer eyre (color-eyre if cli) to anyhow
 - Don't use `mod.rs` for regular modules, prefer the Rust 2018+ layout with `module_name.rs` and nested modules in `module_name/nested_module_name.rs`
@@ -41,7 +41,7 @@
 
 # Subagents
 
-- Prefer using subagents when they can keep the main context focused and reduce the amount of code, logs, or search results that need to stay in the primary thread
+- Prefer using subagents freely when they keep the main context focused or reduce low-signal code, logs, or search results
 - Use subagents for parallel investigation, especially when exploring independent parts of a codebase, comparing multiple possible implementations, checking generated docs, or inspecting external references
 - Use subagents for bounded implementation work when the write scope is clear and can be kept separate from other edits
 - Use subagents for verification work that can happen alongside implementation, such as running focused tests, checking platform-specific build output, reviewing UI screenshots, or auditing likely regressions
