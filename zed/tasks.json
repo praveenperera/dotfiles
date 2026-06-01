@@ -1,7 +1,7 @@
 [
   {
     "label": "ll",
-    "command": "ll",
+    "command": "cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && ll",
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": true,
