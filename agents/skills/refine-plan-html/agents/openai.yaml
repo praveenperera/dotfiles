@@ -1,0 +1,4 @@
+interface:
+  display_name: "Refine Plan HTML"
+  short_description: "Create a styled HTML spec with batchable questions"
+  default_prompt: "Use $refine-plan-html to refine this plan into a styled HTML spec with all questions at the bottom."
