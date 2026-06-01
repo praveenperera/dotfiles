@@ -560,7 +560,6 @@ fn usage_history_summary_entries(
         .checked_sub_days(chrono::Days::new(days.saturating_sub(1) as u64))
         .unwrap_or(today);
     let mut day_samples = BTreeMap::<chrono::NaiveDate, Vec<&UsageHistorySample>>::new();
-    let mut today_rows = Vec::new();
 
     for sample in samples {
         let captured_day = sample.captured_at.with_timezone(&Local).date_naive();
@@ -568,18 +567,13 @@ fn usage_history_summary_entries(
             continue;
         }
 
-        if captured_day == today {
-            today_rows.push(UsageHistoryRow::from(sample));
-        } else {
-            day_samples.entry(captured_day).or_default().push(sample);
-        }
+        day_samples.entry(captured_day).or_default().push(sample);
     }
 
     day_samples
         .into_values()
         .filter_map(|samples| UsageHistoryDaySummary::from_samples(&samples))
         .map(UsageHistoryEntry::DailySummary)
-        .chain(today_rows.into_iter().map(UsageHistoryEntry::Sample))
         .collect()
 }
 
@@ -1411,7 +1405,8 @@ mod tests {
                 sample_at(local_at(2026, 5, 6, 17, 0, 0), "acct-1", 18.0),
                 sample_at(local_at(2026, 5, 7, 9, 0, 0), "acct-1", 20.0),
                 sample_at(local_at(2026, 5, 7, 17, 0, 0), "acct-1", 31.0),
-                sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 40.0),
+                sample_at(local_at(2026, 5, 8, 9, 0, 0), "acct-1", 40.0),
+                sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 45.0),
             ],
         };
 
@@ -1430,7 +1425,8 @@ mod tests {
 
         assert!(output.contains("10% -> 18% (+8%)"));
         assert!(output.contains("20% -> 31% (+11%)"));
-        assert!(output.contains("Fri 11:00 AM"));
+        assert!(output.contains("40% -> 45% (+5%)"));
+        assert!(!output.contains("Fri 11:00 AM"));
     }
 
     #[test]
