@@ -3,14 +3,17 @@ pub mod clipboard;
 pub mod codex;
 pub mod config;
 pub mod history;
+#[cfg(not(target_os = "linux"))]
 pub mod realtime;
 pub mod tmux;
 
 use std::ffi::OsString;
 
-use cli::{Cli, Command};
+use cli::{Cli, Command, MessageSelection};
 use color_eyre::eyre::{Result, WrapErr};
 use xshell::Shell;
+
+use codex::types::CodexContext;
 
 use crate::runtime;
 
@@ -71,26 +74,47 @@ async fn run_async(sh: &Shell, cli: Cli) -> Result<()> {
             }
             Ok(())
         }
-        Command::Ask { selection } => {
-            let item = codex::latest_message::LatestMessageSelector::new()
-                .select(&context, selection.item)
-                .wrap_err("Failed to read latest Codex message")?;
-            let prompt = realtime::session::VoiceSession::from_env()?
-                .ask_with_readout(&item)
-                .await?;
-            clipboard::copy(&prompt)?;
-            history::record_prompt(&prompt).ok();
-            println!("{prompt}");
-            Ok(())
-        }
-        Command::Prompt => {
-            let prompt = realtime::session::VoiceSession::from_env()?
-                .prompt_only(context.thread.id.as_str())
-                .await?;
-            clipboard::copy(&prompt)?;
-            history::record_prompt(&prompt).ok();
-            println!("{prompt}");
-            Ok(())
-        }
+        Command::Ask { selection } => run_ask(&context, selection).await,
+        Command::Prompt => run_prompt(&context).await,
     }
+}
+
+#[cfg(not(target_os = "linux"))]
+async fn run_ask(context: &CodexContext, selection: MessageSelection) -> Result<()> {
+    let item = codex::latest_message::LatestMessageSelector::new()
+        .select(context, selection.item)
+        .wrap_err("Failed to read latest Codex message")?;
+    let prompt = realtime::session::VoiceSession::from_env()?
+        .ask_with_readout(&item)
+        .await?;
+    clipboard::copy(&prompt)?;
+    history::record_prompt(&prompt).ok();
+    println!("{prompt}");
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+async fn run_ask(_context: &CodexContext, _selection: MessageSelection) -> Result<()> {
+    unsupported_voice_audio()
+}
+
+#[cfg(not(target_os = "linux"))]
+async fn run_prompt(context: &CodexContext) -> Result<()> {
+    let prompt = realtime::session::VoiceSession::from_env()?
+        .prompt_only(context.thread.id.as_str())
+        .await?;
+    clipboard::copy(&prompt)?;
+    history::record_prompt(&prompt).ok();
+    println!("{prompt}");
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+async fn run_prompt(_context: &CodexContext) -> Result<()> {
+    unsupported_voice_audio()
+}
+
+#[cfg(target_os = "linux")]
+fn unsupported_voice_audio() -> Result<()> {
+    color_eyre::eyre::bail!("codex-voice audio is not supported in Linux release builds")
 }
