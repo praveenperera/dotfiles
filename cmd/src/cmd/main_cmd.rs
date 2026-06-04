@@ -129,6 +129,10 @@ pub enum MainCmd {
         subcommand: crate::cmd::generate::GenerateCmd,
     },
 
+    /// Install a tool from a GitHub release
+    #[command(visible_alias = "i")]
+    Install(#[command(flatten)] crate::cmd::install::Install),
+
     /// Tmux operations
     #[command(arg_required_else_help = true)]
     Tmux {
@@ -261,6 +265,29 @@ mod tests {
         };
 
         assert!(matches!(subcommand, McpCmd::Add { mcps } if mcps.is_empty()));
+    }
+
+    #[test]
+    fn parses_install_tool() {
+        let cmd = Cmd::from_args(&[OsString::from("install"), OsString::from("smrze")]).unwrap();
+
+        let MainCmd::Install(args) = cmd.subcommand else {
+            panic!("expected install command");
+        };
+
+        assert_eq!(args.tool, "smrze");
+        assert!(!args.force);
+    }
+
+    #[test]
+    fn parses_install_alias() {
+        let cmd = Cmd::from_args(&[OsString::from("i"), OsString::from("rustywind")]).unwrap();
+
+        let MainCmd::Install(args) = cmd.subcommand else {
+            panic!("expected install command");
+        };
+
+        assert_eq!(args.tool, "rustywind");
     }
 
     #[test]

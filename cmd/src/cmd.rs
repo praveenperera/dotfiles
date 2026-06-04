@@ -5,6 +5,7 @@ pub mod crate_versions;
 pub mod file;
 pub mod gcloud;
 pub mod generate;
+pub mod install;
 pub mod main_cmd;
 pub mod mcp;
 pub mod pack;
@@ -60,6 +61,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             let generate_flags = generate::Generate { subcommand };
             generate::run_with_flags(sh, generate_flags)
         }
+        MainCmd::Install(args) => install::run_with_flags(sh, args),
         MainCmd::Tmux { subcommand } => {
             let tmux_flags = tmux::Tmux { subcommand };
             tmux::run_with_flags(sh, tmux_flags)
