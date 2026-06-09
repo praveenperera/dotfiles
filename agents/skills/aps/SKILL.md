@@ -1,19 +1,19 @@
 ---
 name: aps
-description: Academic paper search CLI (Semantic Scholar, OpenAlex & local library). Use when the user needs to find papers, look up citations, get paper details, search authors, download papers, or do any academic research task.
+description: Academic paper search CLI (Semantic Scholar, OpenAlex, ChinaRxiv preprints & local library). Use when the user needs to find papers, look up citations, get paper details, search authors, download papers, or do any academic research task.
 ---
 
 # aps — Academic Paper Search
 
-`aps` searches academic papers across Semantic Scholar (S2) and OpenAlex (OA), and manages a local paper library with PDF downloads, full-text search, and semantic vector search. Both search backends share a unified interface — learn one, swap the prefix.
+`aps` searches academic papers across Semantic Scholar (S2), OpenAlex (OA), and default-on preprint sources, and manages a local paper library with PDF downloads, full-text search, and semantic vector search. S2 and OA have backend-specific command groups; ChinaRxiv is handled like arXiv-style preprint support inside the unified commands, not as its own public command.
 
-**Always search both S2 and OA** for any query. They index different corpora and return different results. Run both in parallel and combine the findings.
+**Always search unified `aps search` first** for general paper discovery. It queries S2 and OA, includes arXiv-like records from those indexes, and also searches ChinaRxiv by default. Use `--skip-preprint` when the user wants journal/conference-style results without arXiv/ChinaRxiv preprints.
 
 ## When to Use
 
 - User asks to find academic papers on a topic
 - User needs citation counts, references, or paper metadata
-- User wants to look up a specific paper by DOI, arXiv ID, or title
+- User wants to look up a specific paper by DOI, arXiv ID, ChinaRxiv ID, or title
 - User needs author information (h-index, paper count, affiliations)
 - User wants paper recommendations based on a seed paper
 - User needs to search full-text passages (S2 snippets)
@@ -27,16 +27,17 @@ description: Academic paper search CLI (Semantic Scholar, OpenAlex & local libra
 
 ### Top-level Unified Commands
 
-These commands query both Semantic Scholar and OpenAlex unless noted otherwise
+These commands query Semantic Scholar and OpenAlex, with preprints included by default where supported
 
 | Command | Alias | Description |
 |---------|-------|-------------|
-| `search <query>` | `s` | Search both backends and merge results |
-| `paper <id>` | `p` | Get merged paper details by DOI, S2 ID, OA ID, or arXiv ID |
+| `search <query>` | `s` | Search S2, OA, and default-on preprints, then merge results |
+| `search <query> --skip-preprint` | | Search S2/OA while suppressing arXiv-like records and ChinaRxiv |
+| `paper <id>` | `p` | Get paper details by DOI, S2 ID, OA ID, arXiv ID, or ChinaRxiv ID |
 | `citations <id>` | `c` | Get citations from both backends |
 | `references <id>` | `r` | Get references from both backends |
 | `author <query-or-id>` | `a` | Search authors across both backends |
-| `download <id>` | `dl` | Resolve any supported paper ID to a DOI and download the PDF to the local library |
+| `download <id>` | `dl` | Resolve DOI-backed IDs (DOI, S2, OA, arXiv) and download the PDF to the local library |
 | `scan --manifest <FILE> --from-date <DATE> --to-date <DATE> --seen-file <FILE>` | | Run a manifest of discovery jobs with date-window and seen-state filtering |
 | `login` | | Save API keys from env vars to `~/.config/aps/` |
 | `status` | | Show current auth status |
@@ -77,6 +78,7 @@ These commands query both Semantic Scholar and OpenAlex unless noted otherwise
 | `--field <FIELD>` | Field of study (S2) or topic filter (OA) |
 | `-m, --min-citations <N>` | Minimum citation count |
 | `--open-access` | Only open access papers |
+| `--skip-preprint` | Exclude preprints from unified `aps search` (aliases: `--no-preprint`, `--skip-preprints`, `--no-preprints`) |
 | `-l, --limit <N>` | Max results (default 50). Use smaller limits (5-10) for focused lookups like specific paper/author queries |
 | `--offset <N>` | Pagination offset |
 | `-F, --format plain\|json` | Output format (default plain) |
@@ -86,9 +88,10 @@ These commands query both Semantic Scholar and OpenAlex unless noted otherwise
 ### Search for Papers
 
 ```bash
-# merged search across both APIs
+# merged search across S2, OA, and default-on preprint sources
 aps search "transformer attention"
 aps search "large language models" --since 2023 --min-citations 100
+aps search "nanophotonic sensors" --skip-preprint
 
 # keyword search (default limit is 50)
 aps s2 search "transformer attention"
@@ -108,12 +111,18 @@ aps s2 search "transformer attention" --limit 5
 ### Look Up a Specific Paper
 
 ```bash
-# merged details across both APIs
+# unified details across supported sources
 aps paper ARXIV:1706.03762
+aps paper chinaxiv-202606.00025
 aps paper "10.1038/s41586-020-2308-7"
 
 # by arXiv ID
 aps s2 paper ARXIV:1706.03762
+
+# by ChinaRxiv ID (handled only by unified paper lookup; there is no aps chinarxiv command)
+aps paper chinaxiv-202606.00025
+aps paper 202606.00025
+aps paper "https://chinaxiv.org/abs/202606.00025"
 
 # by DOI
 aps s2 paper DOI:10.1038/s41586-020-2308-7
@@ -204,9 +213,10 @@ aps oa group-by publication_year --filter "authorships.institutions.id:I63966007
 ### Local Library (`aps library` / `aps lib`)
 
 ```bash
-# top-level download resolves any supported paper ID to a DOI first
+# top-level download resolves DOI-backed paper IDs first
 aps download ARXIV:1706.03762
 aps download W2963403868 --tag transformers
+# ChinaRxiv does not expose DOI metadata for the downloader; use `aps paper <id>` for URLs
 
 # download a paper by DOI (tries OA sources first, Sci-Hub fallback)
 # automatically chunks and embeds text for semantic search
@@ -394,9 +404,9 @@ aps s2 search "attention" --limit 1 -F json
 aps oa search "CRISPR" --limit 1 -F json | jq '.results[0].title'
 ```
 
-## Always Use Both
+## Search Strategy
 
-Always run both `aps s2` and `aps oa` for any search. They have different corpora and ranking — combining results gives better coverage. For commands only available on one backend, use that backend.
+For general discovery, use unified `aps search` first; it queries S2, OA, and default-on preprint support. If you need backend-specific behavior, run both `aps s2 search` and `aps oa search` because they have different corpora and ranking. For commands only available on one backend, use that backend.
 
 | Only on S2 | Only on OA |
 |------------|------------|
