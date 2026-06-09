@@ -24,7 +24,7 @@ Produce an `.html` spec file unless the user names another target path.
 - If refining an existing plan/spec, preserve its decisions and convert or update it into an HTML spec
 - If no path is provided, create a clearly named HTML spec beside the relevant plan or in the current working directory
 - Use Tailwind utility classes directly on the HTML elements so the spec is easy to read without a separate stylesheet
-- Include the Tailwind browser CDN in `<head>` for normal viewing, and keep any extra inline CSS limited to small print or textarea fixes
+- Include the Tailwind browser CDN in `<head>` for normal viewing, and keep any extra inline CSS limited to small print fixes
 - Prefer durable sections such as Overview, Goals, Non-Goals, Current Evidence, Requirements, Implementation Plan, Edge Cases, Verification, Risks, and Questions
 - Include concrete file paths, APIs, commands, configs, and constraints discovered during inspection
 - Mark uncertain details as questions instead of silently assuming product intent
@@ -32,14 +32,13 @@ Produce an `.html` spec file unless the user names another target path.
 
 ## Styling
 
-Make the generated HTML comfortable to read and answer.
+Make the generated HTML comfortable to read and reference.
 
 - Use a restrained Tailwind layout: centered `max-w-5xl`, generous vertical spacing, readable line length, light borders, and clear section hierarchy
 - Use inline Tailwind classes on every major element instead of relying on custom class names for core styling
 - Use neutral colors with subtle accent colors for status, risks, and questions
 - Style code paths, commands, and identifiers with compact monospace treatment
 - Style question cards distinctly from confirmed requirements so unresolved decisions are visually obvious
-- Make answer areas full width with enough height for detailed answers
 - Avoid decorative gradients, oversized hero treatments, or dense card nesting
 - Keep the HTML usable when printed by adding only minimal inline print CSS if needed
 
@@ -71,7 +70,7 @@ Place all questions at the bottom of the HTML document in a dedicated section wi
 - Group related questions under short subheadings when helpful
 - Number each question so answers can refer to stable IDs
 - Include a short context note for each question when source evidence explains why it matters
-- Provide an answer area for each question, such as an empty `<textarea>` or clearly labeled blank answer block
+- Make each question easy to copy or reference by its stable number
 - Make the questions comprehensive enough that the user can answer them all in one pass
 - Do not ask `AskUserQuestion` questions for items already captured in the HTML, unless the user explicitly requests an interactive follow-up
 
@@ -84,10 +83,7 @@ Example question markup:
     <article class="rounded-lg border border-amber-200 bg-amber-50/70 p-5">
       <h3 class="text-base font-semibold text-zinc-950">Q1. Which retry behavior should failed uploads use?</h3>
       <p class="mt-2 text-sm leading-6 text-zinc-700">The current uploader retries network failures but not validation failures.</p>
-      <label class="mt-4 block text-sm font-medium text-zinc-800">
-        Answer
-        <textarea name="q1" rows="5" class="mt-2 w-full rounded-md border border-zinc-300 bg-white p-3 text-sm leading-6 text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"></textarea>
-      </label>
+      <p class="mt-4 text-xs font-medium uppercase tracking-wide text-amber-700">Unresolved decision</p>
     </article>
   </div>
 </section>
