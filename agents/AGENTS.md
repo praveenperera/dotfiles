@@ -10,6 +10,7 @@
 - Minimize nesting in functions
 - Don't default to leaving deprecated code in place, remove it or ask if this is a full replacement or if old code is still needed
 - Put ad hoc files the user may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory and create it if needed
+- When writing public-facing copy, output only reader-visible content and omit implementation notes, source labels, workflow state, or edit instructions
 - When working with this user's projects: always read existing config/code before answering from general knowledge. Never assume defaults — check the actual files first
 - Preserve unrelated user/agent changes. Use hunk staging for commits and never undo unrelated edits
 
