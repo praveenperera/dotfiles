@@ -61,6 +61,9 @@ Follow `$HOME/.agents/commit-message-guide.md`:
 - wrap the body at 72 characters
 - explain what changed and why, not how
 - include a body only when it adds important context beyond the subject
+- give each commit a specific, descriptive name based on the staged change
+- do not use vague subjects like `Address review comments`, `Address feedback`,
+  or `Fix PR comments`, even when the work came from a PR review session
 
 Keep subjects short, capitalized, imperative, and without a trailing period.
 
