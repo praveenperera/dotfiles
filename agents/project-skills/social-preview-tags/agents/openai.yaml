@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Preview Tags"
+  short_description: "Debug Open Graph, X card, and chat previews"
+  default_prompt: "Use $social-preview-tags to audit and fix this site's link preview metadata."
