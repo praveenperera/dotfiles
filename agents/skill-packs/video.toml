@@ -1,0 +1,2 @@
+description = "Video and motion graphics work"
+plugin_sources = ["remotion@openai-curated-remote"]
