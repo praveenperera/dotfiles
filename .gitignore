@@ -49,3 +49,6 @@ claude/security_warnings_state_*.json
 # Codex config is synced through iCloud
 /codex/config*.toml
 /codex/config-groups/
+/claude/security
+claude/.last-cleanup
+claude/.last-update-result.json

@@ -97,10 +97,11 @@
       }
     }
   },
-  "effortLevel": "high",
-  "voiceEnabled": true,
+  "effortLevel": "xhigh",
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "voiceEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
   }
