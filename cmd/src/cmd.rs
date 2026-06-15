@@ -1,3 +1,4 @@
+pub mod agent_target;
 pub mod better_context;
 pub mod bootstrap;
 pub mod codex;

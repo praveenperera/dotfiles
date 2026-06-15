@@ -10,6 +10,8 @@ use eyre::{eyre, Result, WrapErr};
 use toml::{map::Map, Value};
 use xshell::{cmd, Shell};
 
+use crate::cmd::agent_target::AgentTarget;
+
 #[derive(Debug, Clone, Parser)]
 pub struct Mcp {
     #[command(subcommand)]
@@ -81,6 +83,14 @@ fn add_mcps(sh: &Shell, requested_mcps: &[String]) -> Result<()> {
 }
 
 pub fn add_mcps_by_name(sh: &Shell, selected_mcps: &[String]) -> Result<McpInstallSummary> {
+    add_mcps_by_name_for_agent(sh, AgentTarget::Codex, selected_mcps)
+}
+
+pub fn add_mcps_by_name_for_agent(
+    sh: &Shell,
+    agent: AgentTarget,
+    selected_mcps: &[String],
+) -> Result<McpInstallSummary> {
     if selected_mcps.is_empty() {
         return Ok(McpInstallSummary {
             added: Vec::new(),
@@ -105,7 +115,7 @@ pub fn add_mcps_by_name(sh: &Shell, selected_mcps: &[String]) -> Result<McpInsta
         })
         .collect::<Result<Vec<_>>>()?;
 
-    add_mcp_servers(sh, sources)
+    add_mcp_servers_for_agent(sh, agent, sources)
 }
 
 pub fn project_mcp_names() -> Result<BTreeSet<String>> {
@@ -117,6 +127,14 @@ pub fn project_mcp_names() -> Result<BTreeSet<String>> {
 }
 
 pub fn add_mcp_servers(sh: &Shell, servers: Vec<McpServerSource>) -> Result<McpInstallSummary> {
+    add_mcp_servers_for_agent(sh, AgentTarget::Codex, servers)
+}
+
+pub fn add_mcp_servers_for_agent(
+    sh: &Shell,
+    agent: AgentTarget,
+    servers: Vec<McpServerSource>,
+) -> Result<McpInstallSummary> {
     if servers.is_empty() {
         return Ok(McpInstallSummary {
             added: Vec::new(),
@@ -125,7 +143,17 @@ pub fn add_mcp_servers(sh: &Shell, servers: Vec<McpServerSource>) -> Result<McpI
     }
 
     let git_root = git_root(sh)?;
-    let config_path = git_root.join(".codex/config.toml");
+    match agent {
+        AgentTarget::Codex => add_codex_mcp_servers(&git_root, servers),
+        AgentTarget::Claude => add_claude_mcp_servers(&git_root, servers),
+    }
+}
+
+fn add_codex_mcp_servers(
+    git_root: &Path,
+    servers: Vec<McpServerSource>,
+) -> Result<McpInstallSummary> {
+    let config_path = AgentTarget::Codex.project_mcp_config_path(git_root);
     let mut config = read_project_config(&config_path)?;
     let mut summary = McpInstallSummary {
         added: Vec::new(),
@@ -141,6 +169,32 @@ pub fn add_mcp_servers(sh: &Shell, servers: Vec<McpServerSource>) -> Result<McpI
 
     if !summary.added.is_empty() {
         write_project_config(&config_path, &config)?;
+    }
+
+    Ok(summary)
+}
+
+fn add_claude_mcp_servers(
+    git_root: &Path,
+    servers: Vec<McpServerSource>,
+) -> Result<McpInstallSummary> {
+    let config_path = AgentTarget::Claude.project_mcp_config_path(git_root);
+    let mut config = read_claude_mcp_config(&config_path)?;
+    let mut summary = McpInstallSummary {
+        added: Vec::new(),
+        skipped: Vec::new(),
+    };
+
+    for server in servers {
+        let value = serde_json::to_value(&server.value)?;
+        match merge_claude_mcp_server(&mut config, server.name.as_str(), value)? {
+            MergeStatus::Added => summary.added.push(server.name),
+            MergeStatus::SkippedExisting => summary.skipped.push(server.name),
+        }
+    }
+
+    if !summary.added.is_empty() {
+        write_claude_mcp_config(&config_path, &config)?;
     }
 
     Ok(summary)
@@ -315,6 +369,33 @@ fn write_project_config(config_path: &Path, config: &Value) -> Result<()> {
     Ok(())
 }
 
+fn read_claude_mcp_config(config_path: &Path) -> Result<serde_json::Value> {
+    match fs::read_to_string(config_path) {
+        Ok(text) => serde_json::from_str(&text)
+            .wrap_err_with(|| format!("invalid Claude MCP config: {}", config_path.display())),
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(serde_json::json!({})),
+        Err(err) => Err(err).wrap_err_with(|| {
+            format!(
+                "failed to read Claude MCP config: {}",
+                config_path.display()
+            )
+        }),
+    }
+}
+
+fn write_claude_mcp_config(config_path: &Path, config: &serde_json::Value) -> Result<()> {
+    fs::write(
+        config_path,
+        format!("{}\n", serde_json::to_string_pretty(config)?),
+    )
+    .wrap_err_with(|| {
+        format!(
+            "failed to write Claude MCP config: {}",
+            config_path.display()
+        )
+    })
+}
+
 fn merge_mcp_server(config: &mut Value, name: &str, server: Value) -> Result<MergeStatus> {
     let root = config
         .as_table_mut()
@@ -333,9 +414,34 @@ fn merge_mcp_server(config: &mut Value, name: &str, server: Value) -> Result<Mer
     Ok(MergeStatus::Added)
 }
 
+fn merge_claude_mcp_server(
+    config: &mut serde_json::Value,
+    name: &str,
+    server: serde_json::Value,
+) -> Result<MergeStatus> {
+    let root = config
+        .as_object_mut()
+        .ok_or_else(|| eyre!("Claude MCP config root must be a JSON object"))?;
+    let mcp_servers = root
+        .entry("mcpServers".to_string())
+        .or_insert_with(|| serde_json::json!({}))
+        .as_object_mut()
+        .ok_or_else(|| eyre!("Claude MCP config mcpServers entry must be a JSON object"))?;
+
+    if mcp_servers.contains_key(name) {
+        return Ok(MergeStatus::SkippedExisting);
+    }
+
+    mcp_servers.insert(name.to_string(), server);
+    Ok(MergeStatus::Added)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{list_project_mcps, merge_mcp_server, parse_mcp_snippet, MergeStatus};
+    use super::{
+        list_project_mcps, merge_claude_mcp_server, merge_mcp_server, parse_mcp_snippet,
+        MergeStatus,
+    };
 
     #[test]
     fn lists_project_mcp_snippets() {
@@ -438,6 +544,47 @@ mod tests {
                 .and_then(|value| value.get("xcodebuildmcp"))
                 .and_then(|value| value.get("command"))
                 .and_then(toml::Value::as_str),
+            Some("existing")
+        );
+    }
+
+    #[test]
+    fn adds_mcp_to_empty_claude_config() {
+        let mut config = serde_json::json!({});
+        let server = serde_json::json!({
+            "command": "npx",
+            "args": ["-y", "xcodebuildmcp@latest", "mcp"],
+        });
+
+        let status = merge_claude_mcp_server(&mut config, "xcodebuildmcp", server).unwrap();
+
+        assert_eq!(status, MergeStatus::Added);
+        assert!(config
+            .get("mcpServers")
+            .and_then(|value| value.get("xcodebuildmcp"))
+            .is_some());
+    }
+
+    #[test]
+    fn skips_existing_claude_mcp() {
+        let mut config = serde_json::json!({
+            "mcpServers": {
+                "xcodebuildmcp": {
+                    "command": "existing"
+                }
+            }
+        });
+        let server = serde_json::json!({ "command": "npx" });
+
+        let status = merge_claude_mcp_server(&mut config, "xcodebuildmcp", server).unwrap();
+
+        assert_eq!(status, MergeStatus::SkippedExisting);
+        assert_eq!(
+            config
+                .get("mcpServers")
+                .and_then(|value| value.get("xcodebuildmcp"))
+                .and_then(|value| value.get("command"))
+                .and_then(serde_json::Value::as_str),
             Some("existing")
         );
     }

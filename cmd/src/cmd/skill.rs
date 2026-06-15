@@ -9,6 +9,8 @@ use clap::{Parser, Subcommand};
 use eyre::{eyre, Result, WrapErr};
 use xshell::{cmd, Shell};
 
+use crate::cmd::agent_target::AgentTarget;
+
 #[derive(Debug, Clone, Parser)]
 pub struct Skill {
     #[command(subcommand)]
@@ -19,6 +21,10 @@ pub struct Skill {
 pub enum SkillCmd {
     /// Link project-local skills into the current Git repo
     Add {
+        /// Agent project layout to install into
+        #[arg(long, value_enum, default_value_t)]
+        agent: AgentTarget,
+
         /// Skill names to link. Opens a searchable multi-select picker when omitted
         skills: Vec<String>,
     },
@@ -68,11 +74,11 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 
 pub fn run_with_flags(sh: &Shell, flags: Skill) -> Result<()> {
     match flags.subcommand {
-        SkillCmd::Add { skills } => add_skills(sh, &skills),
+        SkillCmd::Add { agent, skills } => add_skills(sh, agent, &skills),
     }
 }
 
-fn add_skills(sh: &Shell, requested_skills: &[String]) -> Result<()> {
+fn add_skills(sh: &Shell, agent: AgentTarget, requested_skills: &[String]) -> Result<()> {
     let project_skills_dir = crate::dotfiles_dir()?.join("agents/project-skills");
     let available_skills = list_project_skills(&project_skills_dir)?;
     let selected_skills = if requested_skills.is_empty() {
@@ -86,13 +92,21 @@ fn add_skills(sh: &Shell, requested_skills: &[String]) -> Result<()> {
         return Ok(());
     }
 
-    let summary = add_skills_by_name(sh, &selected_skills)?;
+    let summary = add_skills_by_name_for_agent(sh, agent, &selected_skills)?;
     print_skill_summary(&summary);
 
     Ok(())
 }
 
 pub fn add_skills_by_name(sh: &Shell, selected_skills: &[String]) -> Result<SkillInstallSummary> {
+    add_skills_by_name_for_agent(sh, AgentTarget::Codex, selected_skills)
+}
+
+pub fn add_skills_by_name_for_agent(
+    sh: &Shell,
+    agent: AgentTarget,
+    selected_skills: &[String],
+) -> Result<SkillInstallSummary> {
     if selected_skills.is_empty() {
         return Ok(SkillInstallSummary {
             linked: Vec::new(),
@@ -117,10 +131,18 @@ pub fn add_skills_by_name(sh: &Shell, selected_skills: &[String]) -> Result<Skil
         })
         .collect::<Result<Vec<_>>>()?;
 
-    add_skill_sources(sh, &sources)
+    add_skill_sources_for_agent(sh, agent, &sources)
 }
 
 pub fn add_skill_sources(sh: &Shell, sources: &[SkillSource]) -> Result<SkillInstallSummary> {
+    add_skill_sources_for_agent(sh, AgentTarget::Codex, sources)
+}
+
+pub fn add_skill_sources_for_agent(
+    sh: &Shell,
+    agent: AgentTarget,
+    sources: &[SkillSource],
+) -> Result<SkillInstallSummary> {
     if sources.is_empty() {
         return Ok(SkillInstallSummary {
             linked: Vec::new(),
@@ -129,7 +151,7 @@ pub fn add_skill_sources(sh: &Shell, sources: &[SkillSource]) -> Result<SkillIns
     }
 
     let git_root = git_root(sh)?;
-    let target_skills_dir = git_root.join(".agents/skills");
+    let target_skills_dir = agent.project_skills_dir(&git_root);
     let plan = plan_skill_links(sources, &target_skills_dir)?;
 
     fs::create_dir_all(&target_skills_dir).wrap_err_with(|| {

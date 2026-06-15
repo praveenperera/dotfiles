@@ -224,6 +224,7 @@ mod tests {
     use std::ffi::OsString;
 
     use super::{Cmd, MainCmd};
+    use crate::cmd::agent_target::AgentTarget;
     use crate::cmd::mcp::McpCmd;
     use crate::cmd::pack::PackCmd;
     use crate::cmd::skill::SkillCmd;
@@ -236,7 +237,9 @@ mod tests {
             panic!("expected skill command");
         };
 
-        assert!(matches!(subcommand, SkillCmd::Add { skills } if skills.is_empty()));
+        assert!(
+            matches!(subcommand, SkillCmd::Add { agent: AgentTarget::Codex, skills } if skills.is_empty())
+        );
     }
 
     #[test]
@@ -253,7 +256,29 @@ mod tests {
             panic!("expected skill command");
         };
 
-        assert!(matches!(subcommand, SkillCmd::Add { skills } if skills == ["alpha", "beta"]));
+        assert!(
+            matches!(subcommand, SkillCmd::Add { agent: AgentTarget::Codex, skills } if skills == ["alpha", "beta"])
+        );
+    }
+
+    #[test]
+    fn parses_skill_add_for_claude() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("skill"),
+            OsString::from("add"),
+            OsString::from("--agent"),
+            OsString::from("claude"),
+            OsString::from("alpha"),
+        ])
+        .unwrap();
+
+        let MainCmd::Skill { subcommand } = cmd.subcommand else {
+            panic!("expected skill command");
+        };
+
+        assert!(
+            matches!(subcommand, SkillCmd::Add { agent: AgentTarget::Claude, skills } if skills == ["alpha"])
+        );
     }
 
     #[test]
@@ -314,7 +339,9 @@ mod tests {
             panic!("expected pack command");
         };
 
-        assert!(matches!(subcommand, PackCmd::Add { packs } if packs.is_empty()));
+        assert!(
+            matches!(subcommand, PackCmd::Add { agent: AgentTarget::Codex, packs } if packs.is_empty())
+        );
     }
 
     #[test]
@@ -331,7 +358,29 @@ mod tests {
             panic!("expected pack command");
         };
 
-        assert!(matches!(subcommand, PackCmd::Add { packs } if packs == ["web", "native"]));
+        assert!(
+            matches!(subcommand, PackCmd::Add { agent: AgentTarget::Codex, packs } if packs == ["web", "native"])
+        );
+    }
+
+    #[test]
+    fn parses_pack_add_for_claude() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("pack"),
+            OsString::from("add"),
+            OsString::from("--agent"),
+            OsString::from("claude"),
+            OsString::from("web"),
+        ])
+        .unwrap();
+
+        let MainCmd::Pack { subcommand } = cmd.subcommand else {
+            panic!("expected pack command");
+        };
+
+        assert!(
+            matches!(subcommand, PackCmd::Add { agent: AgentTarget::Claude, packs } if packs == ["web"])
+        );
     }
 
     #[test]

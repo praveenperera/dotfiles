@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use xshell::Shell;
 
+use crate::cmd::agent_target::AgentTarget;
+
 #[derive(Debug, Clone, Parser)]
 pub struct Pack {
     #[command(subcommand)]
@@ -23,6 +25,10 @@ pub struct Pack {
 pub enum PackCmd {
     /// Add project-local skills and MCPs from reusable packs
     Add {
+        /// Agent project layout to install into
+        #[arg(long, value_enum, default_value_t)]
+        agent: AgentTarget,
+
         /// Pack names to add. Opens a searchable multi-select picker when omitted
         packs: Vec<String>,
     },
@@ -77,6 +83,9 @@ struct PackProjectRegistry {
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq)]
 struct PackProject {
+    #[serde(default)]
+    target_packs: BTreeMap<AgentTarget, Vec<String>>,
+    #[serde(default)]
     packs: Vec<String>,
 }
 
@@ -87,12 +96,12 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 
 pub fn run_with_flags(sh: &Shell, flags: Pack) -> Result<()> {
     match flags.subcommand {
-        PackCmd::Add { packs } => add_packs(sh, &packs),
+        PackCmd::Add { agent, packs } => add_packs(sh, agent, &packs),
         PackCmd::Refresh { all } => refresh_packs(sh, all),
     }
 }
 
-fn add_packs(sh: &Shell, requested_packs: &[String]) -> Result<()> {
+fn add_packs(sh: &Shell, agent: AgentTarget, requested_packs: &[String]) -> Result<()> {
     let pack_dir = crate::dotfiles_dir()?.join("agents/skill-packs");
     let available_packs = list_packs(&pack_dir)?;
     let selected_packs = if requested_packs.is_empty() {
@@ -106,8 +115,8 @@ fn add_packs(sh: &Shell, requested_packs: &[String]) -> Result<()> {
         return Ok(());
     }
 
-    install_packs(sh, &available_packs, &selected_packs, "Added packs")?;
-    register_current_project(sh, &selected_packs)?;
+    install_packs(sh, agent, &available_packs, &selected_packs, "Added packs")?;
+    register_current_project(sh, agent, &selected_packs)?;
 
     Ok(())
 }
@@ -127,7 +136,7 @@ fn refresh_packs(sh: &Shell, all: bool) -> Result<()> {
         ));
     };
     let available_packs = list_packs(&pack_dir()?)?;
-    install_packs(sh, &available_packs, &project.packs, "Refreshed packs")
+    install_project_packs(sh, &available_packs, project, "Refreshed packs")
 }
 
 pub fn refresh_registered_packs(_sh: &Shell) -> Result<()> {
@@ -147,7 +156,7 @@ pub fn refresh_registered_packs(_sh: &Shell) -> Result<()> {
                 (
                     project_root.clone(),
                     project_root_path,
-                    project.packs.clone(),
+                    project_target_packs(project),
                 )
             })
         })
@@ -171,20 +180,25 @@ pub fn refresh_registered_packs(_sh: &Shell) -> Result<()> {
 }
 
 fn refresh_targets_concurrently(
-    refresh_targets: Vec<(String, PathBuf, Vec<String>)>,
+    refresh_targets: Vec<(String, PathBuf, BTreeMap<AgentTarget, Vec<String>>)>,
     available_packs: Vec<PackEntry>,
 ) -> Vec<String> {
     thread::scope(|scope| {
         let handles = refresh_targets
             .into_iter()
-            .map(|(project_root, project_root_path, packs)| {
+            .map(|(project_root, project_root_path, target_packs)| {
                 let available_packs = available_packs.clone();
                 scope.spawn(move || {
                     println!("Refreshing packs in {project_root}");
                     let result = (|| {
                         let sh = Shell::new()?;
                         let _dir = sh.push_dir(&project_root_path);
-                        install_packs(&sh, &available_packs, &packs, "Refreshed packs")
+                        install_target_packs(
+                            &sh,
+                            &available_packs,
+                            &target_packs,
+                            "Refreshed packs",
+                        )
                     })();
                     result.map_err(|err| format!("{project_root}: {err}"))
                 })
@@ -204,6 +218,7 @@ fn refresh_targets_concurrently(
 
 fn install_packs(
     sh: &Shell,
+    agent: AgentTarget,
     available_packs: &[PackEntry],
     selected_packs: &[String],
     summary_label: &str,
@@ -213,12 +228,19 @@ fn install_packs(
     validate_expanded_pack(&expanded)?;
     let plugin_sources = resolve_plugin_sources(&expanded.plugin_sources)?;
 
-    let skill_summary = crate::cmd::skill::add_skills_by_name(sh, &expanded.skills)?;
-    let plugin_skill_summary = crate::cmd::skill::add_skill_sources(sh, &plugin_sources.skills)?;
-    let mcp_summary = crate::cmd::mcp::add_mcps_by_name(sh, &expanded.mcps)?;
-    let plugin_mcp_summary = crate::cmd::mcp::add_mcp_servers(sh, plugin_sources.mcps)?;
+    let skill_summary =
+        crate::cmd::skill::add_skills_by_name_for_agent(sh, agent, &expanded.skills)?;
+    let plugin_skill_summary =
+        crate::cmd::skill::add_skill_sources_for_agent(sh, agent, &plugin_sources.skills)?;
+    let mcp_summary = crate::cmd::mcp::add_mcps_by_name_for_agent(sh, agent, &expanded.mcps)?;
+    let plugin_mcp_summary =
+        crate::cmd::mcp::add_mcp_servers_for_agent(sh, agent, plugin_sources.mcps)?;
 
-    println!("{summary_label}: {}", selected_packs.join(", "));
+    println!(
+        "{summary_label} for {}: {}",
+        agent.label(),
+        selected_packs.join(", ")
+    );
     if !skill_summary.linked.is_empty() {
         println!("Linked skills: {}", skill_summary.linked.join(", "));
     }
@@ -259,17 +281,58 @@ fn install_packs(
     Ok(())
 }
 
-fn register_current_project(sh: &Shell, packs: &[String]) -> Result<()> {
+fn install_project_packs(
+    sh: &Shell,
+    available_packs: &[PackEntry],
+    project: &PackProject,
+    summary_label: &str,
+) -> Result<()> {
+    install_target_packs(
+        sh,
+        available_packs,
+        &project_target_packs(project),
+        summary_label,
+    )
+}
+
+fn install_target_packs(
+    sh: &Shell,
+    available_packs: &[PackEntry],
+    target_packs: &BTreeMap<AgentTarget, Vec<String>>,
+    summary_label: &str,
+) -> Result<()> {
+    for (agent, packs) in target_packs {
+        install_packs(sh, *agent, available_packs, packs, summary_label)?;
+    }
+
+    Ok(())
+}
+
+fn register_current_project(sh: &Shell, agent: AgentTarget, packs: &[String]) -> Result<()> {
     let git_root = git_root(sh)?;
     let registry_path = pack_registry_path()?;
     let mut registry = load_pack_registry(&registry_path)?;
-    register_project(&mut registry, &git_root, packs);
+    register_project(&mut registry, &git_root, agent, packs);
     save_pack_registry(&registry_path, &registry)
 }
 
-fn register_project(registry: &mut PackProjectRegistry, project_root: &Path, packs: &[String]) {
+fn register_project(
+    registry: &mut PackProjectRegistry,
+    project_root: &Path,
+    agent: AgentTarget,
+    packs: &[String],
+) {
     let project = registry.projects.entry(path_key(project_root)).or_default();
     append_unique(&mut project.packs, packs);
+    append_unique(project.target_packs.entry(agent).or_default(), packs);
+}
+
+fn project_target_packs(project: &PackProject) -> BTreeMap<AgentTarget, Vec<String>> {
+    if !project.target_packs.is_empty() {
+        return project.target_packs.clone();
+    }
+
+    BTreeMap::from([(AgentTarget::Codex, project.packs.clone())])
 }
 
 fn prune_missing_projects(registry: &mut PackProjectRegistry) -> Vec<String> {
@@ -687,10 +750,11 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        expand_packs, list_packs, load_pack_definitions, load_pack_registry,
+        expand_packs, list_packs, load_pack_definitions, load_pack_registry, project_target_packs,
         prune_missing_projects, register_project, save_pack_registry, ExpandedPack, PackEntry,
         PackProject, PackProjectRegistry,
     };
+    use crate::cmd::agent_target::AgentTarget;
     use std::collections::BTreeMap;
 
     #[test]
@@ -816,6 +880,27 @@ mod tests {
                 "/tmp/project".to_string(),
                 PackProject {
                     packs: vec!["native".to_string()],
+                    ..Default::default()
+                },
+            )]),
+        };
+
+        save_pack_registry(&path, &registry).unwrap();
+        let loaded = load_pack_registry(&path).unwrap();
+
+        assert_eq!(loaded, registry);
+    }
+
+    #[test]
+    fn saves_and_loads_target_pack_registry() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("state/cmd/pack-projects.toml");
+        let registry = PackProjectRegistry {
+            projects: BTreeMap::from([(
+                "/tmp/project".to_string(),
+                PackProject {
+                    target_packs: BTreeMap::from([(AgentTarget::Claude, vec!["web".to_string()])]),
+                    packs: vec!["web".to_string()],
                 },
             )]),
         };
@@ -834,11 +919,13 @@ mod tests {
         register_project(
             &mut registry,
             project_root,
+            AgentTarget::Codex,
             &["native".to_string(), "web".to_string()],
         );
         register_project(
             &mut registry,
             project_root,
+            AgentTarget::Codex,
             &["native".to_string(), "cli".to_string()],
         );
 
@@ -846,6 +933,40 @@ mod tests {
             registry.projects["/tmp/project"].packs,
             ["native", "web", "cli"]
         );
+        assert_eq!(
+            registry.projects["/tmp/project"].target_packs[&AgentTarget::Codex],
+            ["native", "web", "cli"]
+        );
+    }
+
+    #[test]
+    fn registers_project_packs_by_agent() {
+        let mut registry = PackProjectRegistry::default();
+        let project_root = std::path::Path::new("/tmp/project");
+
+        register_project(
+            &mut registry,
+            project_root,
+            AgentTarget::Claude,
+            &["web".to_string()],
+        );
+
+        assert_eq!(
+            registry.projects["/tmp/project"].target_packs[&AgentTarget::Claude],
+            ["web"]
+        );
+    }
+
+    #[test]
+    fn legacy_project_packs_refresh_as_codex() {
+        let project = PackProject {
+            packs: vec!["native".to_string()],
+            ..Default::default()
+        };
+
+        let target_packs = project_target_packs(&project);
+
+        assert_eq!(target_packs[&AgentTarget::Codex], ["native"]);
     }
 
     #[test]
@@ -860,12 +981,14 @@ mod tests {
                     existing_project.to_string_lossy().into_owned(),
                     PackProject {
                         packs: vec!["native".to_string()],
+                        ..Default::default()
                     },
                 ),
                 (
                     missing_project.to_string_lossy().into_owned(),
                     PackProject {
                         packs: vec!["web".to_string()],
+                        ..Default::default()
                     },
                 ),
             ]),

@@ -6,3 +6,4 @@ _plans
 _scratch
 .claude/settings.local.json
 **/.agents/skills/
+**/.claude/skills/
