@@ -1,0 +1,4 @@
+interface:
+  display_name: "SMRZE YouTube Transcripts"
+  short_description: "Fetch YouTube transcripts with smrze t"
+  default_prompt: "Use $smrze-youtube-transcripts to get a transcript from this YouTube video."
