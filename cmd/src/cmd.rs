@@ -1,6 +1,7 @@
 pub mod agent_target;
 pub mod better_context;
 pub mod bootstrap;
+pub mod cloudflare;
 pub mod codex;
 pub mod crate_versions;
 pub mod file;
@@ -42,6 +43,10 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             bootstrap::run_with_flags(sh, bootstrap_flags)
         }
 
+        MainCmd::Cloudflare { subcommand } => {
+            let cloudflare_flags = cloudflare::Cloudflare { subcommand };
+            cloudflare::run_with_flags(sh, cloudflare_flags)
+        }
         MainCmd::Gcloud { subcommand } => {
             let gcloud_flags = gcloud::Gcloud { subcommand };
             gcloud::run_with_flags(sh, gcloud_flags)

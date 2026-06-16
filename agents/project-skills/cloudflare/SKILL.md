@@ -1,12 +1,6 @@
 ---
 name: cloudflare
-description: Comprehensive Cloudflare platform skill covering development, deployment, hosting, publishing, setup, and troubleshooting for Workers, Pages, storage (KV, D1, R2), AI (Workers AI, Vectorize, Agents SDK), feature flags (Flagship), networking (Tunnel, Spectrum), security (WAF, DDoS), and infrastructure-as-code (Terraform, Pulumi). Use for any Cloudflare development or deployment task. Biases towards retrieval from Cloudflare docs over pre-trained knowledge.
-references:
-  - workers
-  - pages
-  - d1
-  - durable-objects
-  - workers-ai
+description: Comprehensive Cloudflare platform skill covering development, deployment, hosting, publishing, setup, and troubleshooting for Workers, Pages, storage (KV, D1, R2), AI (Workers AI, Vectorize, Agents SDK), feature flags (Flagship), networking (Tunnel, Spectrum, canonical redirects), security (WAF, DDoS), and infrastructure-as-code (Terraform, Pulumi). Use for any Cloudflare development or deployment task. Biases towards retrieval from Cloudflare docs over pre-trained knowledge.
 ---
 
 # Cloudflare Platform Skill
@@ -137,6 +131,7 @@ Need AI?
 ```
 Need networking?
 ├─ Expose local service to internet → tunnel/
+├─ Canonical host redirects / dashboard DNS fixes → dashboard-redirects/
 ├─ TCP/UDP proxy (non-HTTP) → spectrum/
 ├─ WebRTC TURN server → turn/
 ├─ Private network connectivity → network-interconnect/
@@ -237,6 +232,7 @@ Need IaC?
 | Product | Entry File |
 |---------|------------|
 | Tunnel | `./references/tunnel/README.md` |
+| Dashboard Redirects | `./references/dashboard-redirects/README.md` |
 | Spectrum | `./references/spectrum/README.md` |
 | TURN | `./references/turn/README.md` |
 | Network Interconnect | `./references/network-interconnect/README.md` |

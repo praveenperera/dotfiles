@@ -94,6 +94,13 @@ pub enum MainCmd {
     #[command(visible_alias = "cfg")]
     Config,
 
+    /// Cloudflare API operations
+    #[command(visible_alias = "cf", arg_required_else_help = true)]
+    Cloudflare {
+        #[command(subcommand)]
+        subcommand: crate::cmd::cloudflare::CloudflareCmd,
+    },
+
     /// Google Cloud operations
     #[command(arg_required_else_help = true)]
     Gcloud {
@@ -225,6 +232,7 @@ mod tests {
 
     use super::{Cmd, MainCmd};
     use crate::cmd::agent_target::AgentTarget;
+    use crate::cmd::cloudflare::{CloudflareCmd, RedirectCmd};
     use crate::cmd::mcp::McpCmd;
     use crate::cmd::pack::PackCmd;
     use crate::cmd::skill::SkillCmd;
@@ -259,6 +267,48 @@ mod tests {
         assert!(
             matches!(subcommand, SkillCmd::Add { agent: AgentTarget::Codex, skills } if skills == ["alpha", "beta"])
         );
+    }
+
+    #[test]
+    fn parses_cloudflare_redirect_www_to_apex() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("cloudflare"),
+            OsString::from("redirect"),
+            OsString::from("www-to-apex"),
+            OsString::from("example.com"),
+            OsString::from("--zone-id"),
+            OsString::from("zone-id"),
+        ])
+        .unwrap();
+
+        let MainCmd::Cloudflare { subcommand } = cmd.subcommand else {
+            panic!("expected cloudflare command");
+        };
+
+        let CloudflareCmd::Redirect { subcommand } = subcommand;
+
+        assert!(
+            matches!(subcommand, RedirectCmd::WwwToApex(args) if args.zone == "example.com" && args.zone_id.as_deref() == Some("zone-id"))
+        );
+    }
+
+    #[test]
+    fn parses_cloudflare_redirect_list() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("cf"),
+            OsString::from("redirect"),
+            OsString::from("list"),
+            OsString::from("www.example.com"),
+        ])
+        .unwrap();
+
+        let MainCmd::Cloudflare { subcommand } = cmd.subcommand else {
+            panic!("expected cloudflare command");
+        };
+
+        let CloudflareCmd::Redirect { subcommand } = subcommand;
+
+        assert!(matches!(subcommand, RedirectCmd::List(args) if args.zone == "www.example.com"));
     }
 
     #[test]
