@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Fix Loop"
+  short_description: "Automate PR review and fix loops"
+  default_prompt: "Use $review-fix-loop to run a bounded PR review and fix loop for the current branch."
