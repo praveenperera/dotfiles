@@ -341,6 +341,31 @@ impl From<&UsageWindowSnapshot> for UsageHistoryWindow {
     }
 }
 
+impl From<RateLimitResetCreditsResponse> for RateLimitResetCreditSummary {
+    fn from(response: RateLimitResetCreditsResponse) -> Self {
+        let mut credits = response
+            .credits
+            .into_iter()
+            .filter(|credit| credit.status.as_deref() == Some("available"))
+            .map(|credit| RateLimitResetCredit {
+                expires_at: credit.expires_at,
+            })
+            .collect::<Vec<_>>();
+        credits.sort_by_key(|credit| credit.expires_at);
+
+        let available_count = if response.available_count == 0 {
+            credits.len()
+        } else {
+            response.available_count
+        };
+
+        Self::Available {
+            available_count,
+            credits,
+        }
+    }
+}
+
 pub(super) fn print_usage_history(
     writer: &mut impl Write,
     history: &UsageHistory,
@@ -925,33 +950,7 @@ impl ProfileUsageLoader {
         &self,
         auth: &StoredAuth,
     ) -> std::result::Result<ProfileUsageSnapshot, UsageHttpError> {
-        let token = auth
-            .tokens
-            .as_ref()
-            .and_then(|tokens| tokens.access_token.as_deref())
-            .filter(|token| !token.is_empty())
-            .ok_or_else(|| UsageHttpError::other("Missing access_token"))?;
-
-        let mut headers = HeaderMap::new();
-        headers.insert(USER_AGENT, HeaderValue::from_static("codex-cli"));
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {token}"))
-                .map_err(|err| UsageHttpError::other(err.to_string()))?,
-        );
-
-        if let Some(account_id) = auth
-            .tokens
-            .as_ref()
-            .and_then(|tokens| tokens.account_id.as_deref())
-            .filter(|account_id| !account_id.is_empty())
-        {
-            if let Ok(name) = HeaderName::from_bytes(b"ChatGPT-Account-Id") {
-                if let Ok(value) = HeaderValue::from_str(account_id) {
-                    headers.insert(name, value);
-                }
-            }
-        }
+        let headers = chatgpt_auth_headers(auth)?;
 
         let response = self
             .http
@@ -1006,6 +1005,97 @@ impl ProfileUsageLoader {
             }),
         })
     }
+}
+
+impl RateLimitResetCreditLoader {
+    pub(super) fn new() -> Result<Self> {
+        let http = HttpClient::builder().timeout(USAGE_FETCH_TIMEOUT).build()?;
+        Ok(Self {
+            http,
+            reset_credits_url: CHATGPT_RATE_LIMIT_RESET_CREDITS_URL.into(),
+        })
+    }
+
+    #[cfg(test)]
+    pub(super) fn with_url(reset_credits_url: impl Into<String>) -> Result<Self> {
+        let http = HttpClient::builder().timeout(USAGE_FETCH_TIMEOUT).build()?;
+        Ok(Self {
+            http,
+            reset_credits_url: reset_credits_url.into(),
+        })
+    }
+
+    pub(super) async fn fetch_reset_credits(
+        &self,
+        auth: &StoredAuth,
+    ) -> Result<RateLimitResetCreditSummary> {
+        let account_id = chatgpt_account_id(auth).ok_or_else(|| eyre!("Missing account_id"))?;
+        let mut headers = chatgpt_auth_headers(auth).map_err(|err| eyre!("{err}"))?;
+        headers.insert(
+            HeaderName::from_static("chatgpt-account-id"),
+            HeaderValue::from_str(account_id)?,
+        );
+        headers.insert(
+            HeaderName::from_static("openai-beta"),
+            HeaderValue::from_static("codex-1"),
+        );
+        headers.insert(
+            HeaderName::from_static("originator"),
+            HeaderValue::from_static("Codex Desktop"),
+        );
+
+        let response = self
+            .http
+            .get(&self.reset_credits_url)
+            .headers(headers)
+            .send()
+            .await?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            if body.is_empty() {
+                return Err(eyre!("Reset credits request failed: {status}"));
+            }
+
+            return Err(eyre!("Reset credits request failed: {status}: {body}"));
+        }
+
+        let response = response.json::<RateLimitResetCreditsResponse>().await?;
+        Ok(response.into())
+    }
+}
+
+fn chatgpt_auth_headers(auth: &StoredAuth) -> std::result::Result<HeaderMap, UsageHttpError> {
+    let token = auth
+        .tokens
+        .as_ref()
+        .and_then(|tokens| tokens.access_token.as_deref())
+        .filter(|token| !token.is_empty())
+        .ok_or_else(|| UsageHttpError::other("Missing access_token"))?;
+
+    let mut headers = HeaderMap::new();
+    headers.insert(USER_AGENT, HeaderValue::from_static("codex-cli"));
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {token}"))
+            .map_err(|err| UsageHttpError::other(err.to_string()))?,
+    );
+
+    if let Some(value) =
+        chatgpt_account_id(auth).and_then(|account_id| HeaderValue::from_str(account_id).ok())
+    {
+        headers.insert(HeaderName::from_static("chatgpt-account-id"), value);
+    }
+
+    Ok(headers)
+}
+
+fn chatgpt_account_id(auth: &StoredAuth) -> Option<&str> {
+    auth.tokens
+        .as_ref()
+        .and_then(|tokens| tokens.account_id.as_deref())
+        .filter(|account_id| !account_id.is_empty())
 }
 
 impl ProfileAuthRefresher {

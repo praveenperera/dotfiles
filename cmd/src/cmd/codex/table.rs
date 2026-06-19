@@ -48,6 +48,7 @@ pub(super) fn print_current_usage_table(
     usage: &ProfileUsageState,
     captured_at: chrono::DateTime<Local>,
     rates: UsageRunRates,
+    reset_credits: &RateLimitResetCreditSummary,
 ) -> io::Result<()> {
     let current_local = captured_at;
     let current_utc = captured_at.with_timezone(&Utc);
@@ -73,6 +74,8 @@ pub(super) fn print_current_usage_table(
         writer,
         "Time: {time}   5H rate: {five_hour_rate}   Week rate: {weekly_rate}"
     )?;
+    writeln!(writer)?;
+    print_reset_credits_table(writer, reset_credits, current_local)?;
     writeln!(writer)?;
 
     writeln!(
@@ -108,6 +111,147 @@ pub(super) fn print_current_usage_table(
             usage_window_style(usage, UsageWindowKind::Secondary),
         ),
     )
+}
+
+fn print_reset_credits_table(
+    writer: &mut impl Write,
+    reset_credits: &RateLimitResetCreditSummary,
+    captured_at: chrono::DateTime<Local>,
+) -> io::Result<()> {
+    let rows = reset_credit_rows(reset_credits, captured_at);
+    let widths = reset_credit_table_widths(&rows);
+
+    writeln!(
+        writer,
+        "{}   {}",
+        format!(
+            "{:<reset_width$}",
+            "RESET CREDITS",
+            reset_width = widths.resets
+        )
+        .blue()
+        .bold(),
+        format!(
+            "{:<expires_width$}",
+            "EXPIRES",
+            expires_width = widths.expires
+        )
+        .blue()
+        .bold(),
+    )?;
+
+    for row in rows {
+        writeln!(
+            writer,
+            "{:<reset_width$}   {:<expires_width$}",
+            row.resets,
+            row.expires,
+            reset_width = widths.resets,
+            expires_width = widths.expires,
+        )?;
+    }
+
+    Ok(())
+}
+
+fn reset_credit_rows(
+    reset_credits: &RateLimitResetCreditSummary,
+    captured_at: chrono::DateTime<Local>,
+) -> Vec<ResetCreditRow> {
+    let RateLimitResetCreditSummary::Available {
+        available_count,
+        credits,
+    } = reset_credits
+    else {
+        return vec![ResetCreditRow {
+            resets: "unavailable".into(),
+            expires: "-".into(),
+        }];
+    };
+
+    let reset_label = if *available_count == 0 {
+        "none available".into()
+    } else {
+        format!("{available_count} available")
+    };
+
+    let expirations = credits
+        .iter()
+        .filter_map(|credit| credit.expires_at)
+        .map(|expires_at| format_reset_credit_expiration(expires_at, captured_at))
+        .collect::<Vec<_>>();
+
+    if expirations.is_empty() {
+        return vec![ResetCreditRow {
+            resets: reset_label,
+            expires: "-".into(),
+        }];
+    }
+
+    vec![ResetCreditRow {
+        resets: reset_label,
+        expires: expirations.join("   "),
+    }]
+}
+
+#[derive(Debug, Clone)]
+struct ResetCreditRow {
+    resets: String,
+    expires: String,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ResetCreditTableWidths {
+    resets: usize,
+    expires: usize,
+}
+
+fn reset_credit_table_widths(rows: &[ResetCreditRow]) -> ResetCreditTableWidths {
+    rows.iter().fold(
+        ResetCreditTableWidths {
+            resets: "RESET CREDITS".len(),
+            expires: "EXPIRES".len(),
+        },
+        |widths, row| ResetCreditTableWidths {
+            resets: widths.resets.max(row.resets.len()),
+            expires: widths.expires.max(row.expires.len()),
+        },
+    )
+}
+
+fn format_reset_credit_expiration(
+    expires_at: chrono::DateTime<Utc>,
+    captured_at: chrono::DateTime<Local>,
+) -> String {
+    let expires_at = expires_at.with_timezone(&Local);
+    let time = expires_at.format("%-I:%M %p").to_string();
+    let remaining = format_reset_credit_days_remaining(expires_at, captured_at);
+
+    let expires_at = if expires_at.date_naive() == captured_at.date_naive() {
+        format!("today {time}")
+    } else if expires_at.format("%Y").to_string() == captured_at.format("%Y").to_string() {
+        format!("{} {time}", expires_at.format("%-d %b"))
+    } else {
+        format!("{} {time}", expires_at.format("%-d %b %Y"))
+    };
+
+    format!("{expires_at} ({remaining})")
+}
+
+fn format_reset_credit_days_remaining(
+    expires_at: chrono::DateTime<Local>,
+    captured_at: chrono::DateTime<Local>,
+) -> String {
+    let days = expires_at
+        .date_naive()
+        .signed_duration_since(captured_at.date_naive())
+        .num_days()
+        .max(0);
+
+    match days {
+        1 => "1 day".into(),
+        _ => format!("{days} days"),
+    }
 }
 
 fn compact_profile_header(widths: &CompactProfileTableWidths) -> String {

@@ -301,6 +301,21 @@ struct UsageRunRates {
     secondary: Option<f64>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RateLimitResetCredit {
+    expires_at: Option<chrono::DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+enum RateLimitResetCreditSummary {
+    Available {
+        available_count: usize,
+        credits: Vec<RateLimitResetCredit>,
+    },
+    #[default]
+    Unavailable,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct SessionMarker {
     pid: u32,
@@ -343,6 +358,12 @@ struct ProfileUsageLoader {
 }
 
 #[derive(Debug, Clone)]
+struct RateLimitResetCreditLoader {
+    http: HttpClient,
+    reset_credits_url: String,
+}
+
+#[derive(Debug, Clone)]
 struct ProfileAuthRefresher {
     http: HttpClient,
     refresh_url: String,
@@ -367,6 +388,20 @@ struct UsageRateLimit {
 struct UsageWindowResponse {
     used_percent: f64,
     reset_at: i64,
+}
+
+#[derive(Debug, Deserialize)]
+struct RateLimitResetCreditsResponse {
+    #[serde(default)]
+    credits: Vec<RateLimitResetCreditResponse>,
+    #[serde(default)]
+    available_count: usize,
+}
+
+#[derive(Debug, Deserialize)]
+struct RateLimitResetCreditResponse {
+    status: Option<String>,
+    expires_at: Option<chrono::DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -452,6 +487,8 @@ enum LaunchTarget {
 }
 
 const CHATGPT_USAGE_URL: &str = "https://chatgpt.com/backend-api/wham/usage";
+const CHATGPT_RATE_LIMIT_RESET_CREDITS_URL: &str =
+    "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits";
 const CHATGPT_REFRESH_URL: &str = "https://auth.openai.com/oauth/token";
 const CHATGPT_REFRESH_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 const USAGE_FETCH_CONCURRENCY: usize = 4;
@@ -564,8 +601,8 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
 #[cfg(test)]
 mod tests {
     use super::{
-        active_session_markers, build_profile_rows, create_launch_home, current_usage_view,
-        delete_profile_home, enrich_active_profiles_from_global_auth,
+        active_session_markers, build_profile_rows, create_launch_home, current_reset_credits_view,
+        current_usage_view, delete_profile_home, enrich_active_profiles_from_global_auth,
         enrich_active_profiles_with_global_auth, format_launch_banner, launch_banner_details,
         needs_proactive_refresh, parse_auth_identity, parse_captured_threads, parse_jwt_expiration,
         parse_raw_args, prepare_config_group_home, prepare_resume_group_home,
@@ -577,6 +614,7 @@ mod tests {
         write_auth_raw_if_unchanged, write_session_marker, AuthIdentity, CapturedThread, CodexCmd,
         LaunchAuthMode, LaunchGroups, LaunchTarget, LimitStyleKind, ProfileAuthRefresher,
         ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState,
+        RateLimitResetCredit, RateLimitResetCreditLoader, RateLimitResetCreditSummary,
         SavedProfile, SessionMarker, StoredAuth, UsageFetchResult, UsageRunRates,
         UsageWindowSnapshot,
     };
@@ -2672,6 +2710,7 @@ mod tests {
                 primary: Some(4.5),
                 secondary: None,
             },
+            &RateLimitResetCreditSummary::Unavailable,
         )
         .unwrap();
 
@@ -2682,6 +2721,10 @@ mod tests {
         assert!(output.contains("WEEKLY LIMIT"));
         assert!(output.contains("5H rate: +4.5%/h"));
         assert!(output.contains("Week rate: -"));
+        assert!(output.contains("RESET CREDITS"));
+        assert!(output.contains("EXPIRES"));
+        assert!(output.contains("unavailable"));
+        assert!(!output.contains("Resets: unavailable"));
         assert!(output.contains("praveen@example.com"));
         assert!(output.contains(" 42% ("));
         assert!(output.contains(" 73% ("));
@@ -2692,6 +2735,55 @@ mod tests {
         assert!(!output.contains("TOTAL"));
         assert!(!output.contains("PLAN"));
         assert!(!output.contains("STATUS"));
+    }
+
+    #[test]
+    fn current_usage_table_shows_available_resets_and_expirations() {
+        let mut output = Vec::new();
+        let captured_at = Local.with_ymd_and_hms(2026, 6, 18, 9, 15, 0).unwrap();
+        let first_expiration = Utc.with_ymd_and_hms(2026, 7, 12, 2, 39, 9).unwrap();
+        let second_expiration = Utc.with_ymd_and_hms(2026, 7, 18, 0, 41, 14).unwrap();
+
+        print_current_usage_table(
+            &mut output,
+            "praveen@example.com",
+            &ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 73.0)),
+            captured_at,
+            UsageRunRates::default(),
+            &RateLimitResetCreditSummary::Available {
+                available_count: 2,
+                credits: vec![
+                    RateLimitResetCredit {
+                        expires_at: Some(first_expiration),
+                    },
+                    RateLimitResetCredit {
+                        expires_at: Some(second_expiration),
+                    },
+                ],
+            },
+        )
+        .unwrap();
+
+        let output = String::from_utf8(output).unwrap();
+        let first_expiration = first_expiration
+            .with_timezone(&Local)
+            .format("%-d %b %-I:%M %p")
+            .to_string();
+        let second_expiration = second_expiration
+            .with_timezone(&Local)
+            .format("%-d %b %-I:%M %p")
+            .to_string();
+        assert!(output.contains("RESET CREDITS"));
+        assert!(output.contains("EXPIRES"));
+        assert!(output.contains("2 available"));
+        assert!(output.contains(&first_expiration));
+        assert!(output.contains(&second_expiration));
+        assert!(output.contains(&format!("{first_expiration} (23 days)")));
+        assert!(output.contains(&format!("{second_expiration} (29 days)")));
+        assert!(output
+            .lines()
+            .any(|line| { line.contains(&first_expiration) && line.contains(&second_expiration) }));
+        assert!(!output.contains("Expirations:"));
     }
 
     #[test]
@@ -2731,6 +2823,76 @@ mod tests {
         };
         assert_eq!(usage.email.as_deref(), Some("fresh@example.com"));
         assert_eq!(usage.plan_type.as_deref(), Some("plus"));
+    }
+
+    #[test]
+    fn current_reset_credits_view_fetches_available_expirations() {
+        let dir = tempdir().unwrap();
+        let auth_path = dir.path().join(".codex").join("auth.json");
+        fs::create_dir_all(auth_path.parent().unwrap()).unwrap();
+        fs::write(&auth_path, auth_json(&ID_1)).unwrap();
+        let first_expiration = "2026-07-12T02:39:09.922818Z";
+        let second_expiration = "2026-07-18T00:41:14.230051Z";
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let server = runtime.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/backend-api/wham/rate-limit-reset-credits"))
+                .and(header("authorization", "Bearer access-token"))
+                .and(header("chatgpt-account-id", "acct-1"))
+                .and(header("openai-beta", "codex-1"))
+                .and(header("originator", "Codex Desktop"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                    "available_count": 2,
+                    "credits": [
+                        {
+                            "status": "redeemed",
+                            "expires_at": "2026-07-01T00:00:00Z"
+                        },
+                        {
+                            "status": "available",
+                            "expires_at": second_expiration
+                        },
+                        {
+                            "status": "available",
+                            "expires_at": first_expiration
+                        }
+                    ]
+                })))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let loader = RateLimitResetCreditLoader::with_url(format!(
+            "{}/backend-api/wham/rate-limit-reset-credits",
+            server.uri()
+        ))
+        .unwrap();
+        let summary = current_reset_credits_view(&loader, &auth_path);
+
+        let RateLimitResetCreditSummary::Available {
+            available_count,
+            credits,
+        } = summary
+        else {
+            panic!("expected available reset credits");
+        };
+        assert_eq!(available_count, 2);
+        assert_eq!(credits.len(), 2);
+        assert_eq!(
+            credits[0].expires_at.unwrap(),
+            chrono::DateTime::parse_from_rfc3339(first_expiration)
+                .unwrap()
+                .with_timezone(&Utc)
+        );
+        assert_eq!(
+            credits[1].expires_at.unwrap(),
+            chrono::DateTime::parse_from_rfc3339(second_expiration)
+                .unwrap()
+                .with_timezone(&Utc)
+        );
     }
 
     #[test]

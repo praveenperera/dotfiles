@@ -660,7 +660,11 @@ pub(super) fn enrich_active_profiles_with_global_auth(
 
 pub(super) fn usage() -> Result<()> {
     let loader = ProfileUsageLoader::new()?;
-    let (label, usage) = current_usage_view(&loader, &auth_path()?)?;
+    let auth_path = auth_path()?;
+    let (label, usage) = current_usage_view(&loader, &auth_path)?;
+    let reset_credits = RateLimitResetCreditLoader::new()
+        .map(|loader| current_reset_credits_view(&loader, &auth_path))
+        .unwrap_or_default();
     let captured_at = Utc::now();
     let sample = usage_history_sample(&label, &usage, captured_at);
     let rates = sample
@@ -680,11 +684,29 @@ pub(super) fn usage() -> Result<()> {
         &usage,
         captured_at.with_timezone(&Local),
         rates,
+        &reset_credits,
     )?;
 
     record_usage_sample_best_effort(usage_history_cache_path(), sample);
 
     Ok(())
+}
+
+pub(super) fn current_reset_credits_view(
+    loader: &RateLimitResetCreditLoader,
+    auth_path: &Path,
+) -> RateLimitResetCreditSummary {
+    let Ok(auth) = read_stored_auth(auth_path) else {
+        return RateLimitResetCreditSummary::Unavailable;
+    };
+
+    let Ok(runtime) = runtime::current_thread_runtime() else {
+        return RateLimitResetCreditSummary::Unavailable;
+    };
+
+    runtime
+        .block_on(loader.fetch_reset_credits(&auth))
+        .unwrap_or_default()
 }
 
 pub(super) fn usage_history(options: UsageHistoryOptions) -> Result<()> {
