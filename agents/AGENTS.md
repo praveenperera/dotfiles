@@ -2,6 +2,7 @@
 
 - Scope changes precisely to the request. If needed changes exceed the planned or requested scope, ask before proceeding
 - Do not leave tech debt or shortcuts behind; go back and do them right before finishing
+- Use subagents freely
 
 # General
 
