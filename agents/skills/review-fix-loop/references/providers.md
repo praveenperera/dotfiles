@@ -105,23 +105,25 @@ If Greptile comments are materialized as GitHub review threads, use the `gh-addr
 
 ## Claude Review
 
-Use the noninteractive Claude PR review path when running from Codex:
+Use the Claude PR Review Toolkit plugin skill when running from Codex.
 
 ```bash
 claude --version
-claude ultrareview --help
-claude ultrareview "$target" --json --timeout 20 > "$scratch/raw/claude.json" 2> "$scratch/raw/claude.stderr"
+claude plugin details pr-review-toolkit
+claude -p --output-format json "/pr-review-toolkit:review-pr $target" \
+  > "$scratch/raw/claude-review-toolkit.json" \
+  2> "$scratch/raw/claude-review-toolkit.stderr"
 ```
 
-`target` can be a PR number or a base branch, depending on the current repository and Claude CLI support. `claude ultrareview` blocks until the remote review completes, writes findings to stdout, and writes progress or session links to stderr.
+`target` should be the PR number or URL when available; otherwise pass enough repository and base-branch context in the prompt after `/pr-review-toolkit:review-pr`. The `pr-review-toolkit` plugin exposes the `review-pr` skill plus specialist review agents. Save stdout and stderr before normalization.
 
 Exit handling:
 
 - `0`: parse findings from stdout.
-- `1`: treat as failed or timed out; include stderr in the report.
+- nonzero: treat as failed; include stderr in the report.
 - `130`: user interrupted; stop the loop cleanly.
 
-The Claude PR Review Toolkit plugin is primarily a Claude-side workflow. From Codex, prefer `claude ultrareview` for automation. If the user provides Claude toolkit output or asks to incorporate it manually, normalize it as another provider finding file.
+If the toolkit plugin is unavailable or disabled, skip Claude with a clear reason unless the user explicitly asks to install or enable the plugin. If the user provides Claude toolkit output manually, normalize it as another provider finding file.
 
 ## Codex Review
 

@@ -57,7 +57,7 @@ Load `references/providers.md` before running provider commands. The key constra
 - CodeRabbit CLI can review committed and uncommitted local changes, depending on installed version and flags.
 - Greptile CLI commonly reviews committed branch state against a base branch; do not assume it can validate uncommitted fixes.
 - Greptile hosted comments require bounded polling and should not be driven by an infinite loop.
-- Claude should be invoked through non-interactive `claude ultrareview` when running from Codex.
+- Claude should be invoked through the Claude PR Review Toolkit skill.
 - Codex self-review is collected with `codex review`, while fixes still happen in separate fresh `codex exec` threads.
 
 ## Fresh Codex Threads
