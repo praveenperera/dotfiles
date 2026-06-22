@@ -595,9 +595,20 @@ fn usage_history_summary_entries(
         day_samples.entry(captured_day).or_default().push(sample);
     }
 
+    let yesterday = today
+        .checked_sub_days(chrono::Days::new(1))
+        .unwrap_or(today);
+    let today_start = day_samples
+        .get(&yesterday)
+        .and_then(|samples| samples.last())
+        .copied();
+
     day_samples
-        .into_values()
-        .filter_map(|samples| UsageHistoryDaySummary::from_samples(&samples))
+        .into_iter()
+        .filter_map(|(day, samples)| {
+            let start = if day == today { today_start } else { None };
+            UsageHistoryDaySummary::from_samples(&samples, start)
+        })
         .map(UsageHistoryEntry::DailySummary)
         .collect()
 }
@@ -710,18 +721,22 @@ impl From<&UsageHistorySample> for UsageHistoryRow {
 }
 
 impl UsageHistoryDaySummary {
-    fn from_samples(samples: &[&UsageHistorySample]) -> Option<Self> {
+    fn from_samples(
+        samples: &[&UsageHistorySample],
+        start: Option<&UsageHistorySample>,
+    ) -> Option<Self> {
         let first = samples.first()?;
         let last = samples.last()?;
+        let start = start.unwrap_or(first);
         let captured_at = first.captured_at.with_timezone(&Local);
         Some(Self {
             captured_day: captured_at.date_naive(),
             day_label: format_history_day(captured_at),
             captured_at: "day".into(),
             label: last.email.clone().unwrap_or_else(|| last.label.clone()),
-            primary: format_history_window_delta(first.primary.as_ref(), last.primary.as_ref()),
+            primary: format_history_window_delta(start.primary.as_ref(), last.primary.as_ref()),
             secondary: format_history_window_delta(
-                first.secondary.as_ref(),
+                start.secondary.as_ref(),
                 last.secondary.as_ref(),
             ),
         })
@@ -1515,8 +1530,38 @@ mod tests {
 
         assert!(output.contains("10% -> 18% (+8%)"));
         assert!(output.contains("20% -> 31% (+11%)"));
-        assert!(output.contains("40% -> 45% (+5%)"));
+        assert!(output.contains("31% -> 45% (+14%)"));
         assert!(!output.contains("Fri 11:00 AM"));
+    }
+
+    #[test]
+    fn usage_history_summary_uses_yesterday_end_as_today_start() {
+        let now = local_at(2026, 5, 8, 12, 0, 0);
+        let history = UsageHistory {
+            samples: vec![
+                sample_with_windows_at(local_at(2026, 5, 7, 17, 0, 0), "acct-1", 6.0, 35.0),
+                sample_with_windows_at(local_at(2026, 5, 8, 9, 0, 0), "acct-1", 47.0, 46.0),
+                sample_with_windows_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 22.0, 50.0),
+            ],
+        };
+
+        let mut output = Vec::new();
+        print_usage_history(
+            &mut output,
+            &history,
+            now,
+            UsageHistoryOptions {
+                days: 3,
+                verbose: false,
+            },
+        )
+        .unwrap();
+        let output = String::from_utf8(output).unwrap();
+
+        assert!(output.contains("6% -> 22% (+16%)"));
+        assert!(output.contains("35% -> 50% (+15%)"));
+        assert!(!output.contains("47% -> 22% (-25%)"));
+        assert!(!output.contains("46% -> 50% (+4%)"));
     }
 
     #[test]
@@ -1633,6 +1678,29 @@ mod tests {
         account_id: &str,
         used_percent: f64,
     ) -> UsageHistorySample {
+        sample_with_optional_secondary_at(captured_at, account_id, used_percent, None)
+    }
+
+    fn sample_with_windows_at(
+        captured_at: chrono::DateTime<Utc>,
+        account_id: &str,
+        primary_used_percent: f64,
+        secondary_used_percent: f64,
+    ) -> UsageHistorySample {
+        sample_with_optional_secondary_at(
+            captured_at,
+            account_id,
+            primary_used_percent,
+            Some(secondary_used_percent),
+        )
+    }
+
+    fn sample_with_optional_secondary_at(
+        captured_at: chrono::DateTime<Utc>,
+        account_id: &str,
+        primary_used_percent: f64,
+        secondary_used_percent: Option<f64>,
+    ) -> UsageHistorySample {
         UsageHistorySample {
             captured_at,
             label: "praveen@example.com".into(),
@@ -1641,11 +1709,15 @@ mod tests {
             email: Some("praveen@example.com".into()),
             plan_type: Some("plus".into()),
             primary: Some(UsageHistoryWindow {
-                used_percent,
+                used_percent: primary_used_percent,
                 reset_at: Some(5_000),
                 limit_multiplier: 1.0,
             }),
-            secondary: None,
+            secondary: secondary_used_percent.map(|used_percent| UsageHistoryWindow {
+                used_percent,
+                reset_at: Some(604_800),
+                limit_multiplier: 1.0,
+            }),
         }
     }
 
