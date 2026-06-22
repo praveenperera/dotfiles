@@ -1,0 +1,4 @@
+interface:
+  display_name: "Refactor TypeScript"
+  short_description: "Evaluate TypeScript code for clarity, safety, and readability"
+  default_prompt: "Use $refactor-typescript to evaluate and refactor this TypeScript code."

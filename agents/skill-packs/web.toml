@@ -1,6 +1,7 @@
 description = "Web application development"
 skills = [
   "agent-browser",
+  "refactor-typescript",
   "shadcn-baseui",
   "vercel-react-best-practices",
   "svg-diagram",
