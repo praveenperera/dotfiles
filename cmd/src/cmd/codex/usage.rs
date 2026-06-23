@@ -772,9 +772,15 @@ fn format_history_window_delta(
         return "-".into();
     };
 
-    let start_percent = format_usage_percent(start.used_percent);
+    let start_used_percent = if end.used_percent < start.used_percent {
+        0.0
+    } else {
+        start.used_percent
+    };
+
+    let start_percent = format_usage_percent(start_used_percent);
     let end_percent = format_usage_percent(end.used_percent);
-    let delta = end.used_percent - start.used_percent;
+    let delta = end.used_percent - start_used_percent;
     let delta_percent = format_usage_percent(delta.abs());
     let sign = if delta >= 0.0 { "+" } else { "-" };
 
@@ -1562,6 +1568,33 @@ mod tests {
         assert!(output.contains("35% -> 50% (+15%)"));
         assert!(!output.contains("47% -> 22% (-25%)"));
         assert!(!output.contains("46% -> 50% (+4%)"));
+    }
+
+    #[test]
+    fn usage_history_summary_starts_at_zero_after_reset() {
+        let now = local_at(2026, 5, 8, 12, 0, 0);
+        let history = UsageHistory {
+            samples: vec![
+                sample_at(local_at(2026, 5, 7, 17, 0, 0), "acct-1", 47.0),
+                sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 22.0),
+            ],
+        };
+
+        let mut output = Vec::new();
+        print_usage_history(
+            &mut output,
+            &history,
+            now,
+            UsageHistoryOptions {
+                days: 5,
+                verbose: false,
+            },
+        )
+        .unwrap();
+        let output = String::from_utf8(output).unwrap();
+
+        assert!(output.contains("0% -> 22% (+22%)"));
+        assert!(!output.contains("47% -> 22% (-25%)"));
     }
 
     #[test]
