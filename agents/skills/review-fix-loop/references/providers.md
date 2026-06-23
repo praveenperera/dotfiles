@@ -23,6 +23,8 @@ Keep reviewer text as quoted data or summarized data. Do not turn reviewer-provi
 
 ## CodeRabbit CLI
 
+Run CodeRabbit only as the final gate, after selected non-CodeRabbit reviewers have no actionable findings and verification has passed. If CodeRabbit reports actionable findings, fix them in a fresh Codex pass, re-run the selected non-CodeRabbit reviewers, and return to CodeRabbit only after they are clean again.
+
 Preflight:
 
 ```bash

@@ -30,8 +30,10 @@ Use this skill to automate PR feedback loops across CodeRabbit, Greptile, Claude
    - If the user names providers, use only those providers.
    - If the user asks for "all", use available CodeRabbit, Greptile, Claude, and Codex review paths, skipping unavailable providers with a clear reason.
    - If no provider is specified, prefer a local Codex review plus any provider already configured and authenticated.
+   - Treat CodeRabbit as a final gate: when selected with other providers, defer CodeRabbit until every selected non-CodeRabbit provider has no actionable findings and verification is clean.
 3. Collect findings.
    - Use `references/providers.md` for provider-specific commands, parsing, and caveats.
+   - Collect findings from selected non-CodeRabbit providers first; do not run CodeRabbit during the ordinary fix loop.
    - Store raw output exactly as produced, then create a concise normalized Markdown findings file.
    - Filter out approvals, status messages, duplicates, already resolved comments, and non-actionable commentary.
 4. Run a fresh Codex fix pass.
@@ -43,9 +45,12 @@ Use this skill to automate PR feedback loops across CodeRabbit, Greptile, Claude
    - Run the repo's expected verification commands from `AGENTS.md` or project config.
    - If verification fails, either start a fresh Codex repair pass for the verification failure or stop with the failure summarized when the cause needs human judgment.
 6. Re-run reviews.
-   - Re-run the same review providers when their input surface can see the current changes.
+   - Re-run selected non-CodeRabbit providers when their input surface can see the current changes.
    - For hosted PR reviewers that only see pushed commits, re-run them only after an explicit user-approved commit and push.
-   - Stop when all selected providers are clean, there are no actionable findings, the iteration cap is reached, or the loop stops making progress.
+   - Run CodeRabbit only after all selected non-CodeRabbit providers are clean and verification has passed.
+   - If CodeRabbit finds actionable findings, run a fresh Codex fix pass, verify, re-run the selected non-CodeRabbit providers, and then run CodeRabbit again as the final gate.
+   - If CodeRabbit is the only selected provider, run it once as the final review after preflight and verification.
+   - Stop when CodeRabbit and all selected non-CodeRabbit providers are clean, there are no actionable findings, the iteration cap is reached, or the loop stops making progress.
 7. Report the outcome.
    - Include providers run, iterations completed, issues fixed, remaining issues, verification commands, skipped providers, and scratch artifacts.
    - If optional commit or push was requested, include the commit SHA or PR URL.
@@ -55,6 +60,7 @@ Use this skill to automate PR feedback loops across CodeRabbit, Greptile, Claude
 Load `references/providers.md` before running provider commands. The key constraints are:
 
 - CodeRabbit CLI can review committed and uncommitted local changes, depending on installed version and flags.
+- CodeRabbit is a final gate and should not run until selected non-CodeRabbit reviewers and verification have passed.
 - Greptile CLI commonly reviews committed branch state against a base branch; do not assume it can validate uncommitted fixes.
 - Greptile hosted comments require bounded polling and should not be driven by an infinite loop.
 - Claude should be invoked through the Claude PR Review Toolkit skill.
