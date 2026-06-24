@@ -29,7 +29,7 @@ Before adding a question to the plan, decide whether the answer should already e
 
 ## Output Contract
 
-Prefer a structured Agent-Native visual plan when the Plan tools or local Plan CLI are available. If the user gives a target file or existing plan/spec, refine that artifact or import it as source material. If no target is provided, choose a conservative local plan path such as `plans/<slug>/` for repo-owned plans, or a repo-ignored/private plan path when the user asks for scratch/private output.
+Use a structured Agent-Native visual plan when the Plan tools or local Plan CLI are available. If the user gives a target file or existing plan/spec, refine that artifact or import it as source material. If no target is provided, choose a conservative local plan path such as `plans/<slug>/` for repo-owned plans, or a repo-ignored/private plan path when the user asks for scratch/private output.
 
 The plan should include the sections and blocks that make the work reviewable:
 
@@ -44,6 +44,23 @@ The plan should include the sections and blocks that make the work reviewable:
 - Bottom `Open Questions` form/section with stable question IDs and recommended defaults when appropriate
 
 Do not include unresolved questions as accepted requirements. Do not hide product or architecture choices in vague steps such as "wire this up" or "make it work."
+
+## Rendering Contract
+
+This skill uses `visual-plan` for the final review surface whenever available.
+The final deliverable must be an Agent-Native local plan, not plain Markdown.
+
+When local Plan CLI output is available:
+
+1. Read the `visual-plan` skill instructions.
+2. Run `npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md`.
+3. Author the plan as `plan.mdx` in a local plan folder.
+4. Run `npx -y @agent-native/core@0.75.5 plan local check --dir <plan-dir>`.
+5. Run `npx -y @agent-native/core@0.75.5 plan local serve --dir <plan-dir> --kind plan --open`.
+6. Also create a static HTML fallback with `npx -y @agent-native/core@0.75.5 plan local preview --dir <plan-dir> --kind plan --out _scratch/<slug>-preview.html`.
+7. Report both the local Plan URL and the `file://` HTML preview path.
+
+Plain Markdown may be used only as scratch/source notes, never as the final artifact, unless the user explicitly asks for Markdown or the Plan CLI is unavailable.
 
 ## Visual Surface Choice
 
