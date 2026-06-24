@@ -383,6 +383,7 @@ pub(super) fn print_usage_history(
     }
 
     let show_label = options.verbose;
+    let show_primary = !usage_history_summary_mode(options);
     let widths = UsageHistoryWidths {
         captured_at: "TIME".len().max(
             entries
@@ -400,14 +401,18 @@ pub(super) fn print_usage_history(
                 .max()
                 .unwrap_or_default(),
         ),
-        primary: "5 HOUR LIMIT".len().max(
-            entries
-                .iter()
-                .map(UsageHistoryEntry::primary)
-                .map(str::len)
-                .max()
-                .unwrap_or_default(),
-        ),
+        primary: if show_primary {
+            "5 HOUR LIMIT".len().max(
+                entries
+                    .iter()
+                    .map(UsageHistoryEntry::primary)
+                    .map(str::len)
+                    .max()
+                    .unwrap_or_default(),
+            )
+        } else {
+            0
+        },
         secondary: "WEEKLY LIMIT".len().max(
             entries
                 .iter()
@@ -418,20 +423,34 @@ pub(super) fn print_usage_history(
         ),
     };
 
-    writeln!(
-        writer,
-        "{}   {}   {}{}",
-        format!("{:<width$}", "TIME", width = widths.captured_at)
-            .blue()
-            .bold(),
-        format!("{:<width$}", "5 HOUR LIMIT", width = widths.primary)
-            .blue()
-            .bold(),
-        format!("{:<width$}", "WEEKLY LIMIT", width = widths.secondary)
-            .blue()
-            .bold(),
-        format_history_label_header(show_label, widths.label),
-    )?;
+    if show_primary {
+        writeln!(
+            writer,
+            "{}   {}   {}{}",
+            format!("{:<width$}", "TIME", width = widths.captured_at)
+                .blue()
+                .bold(),
+            format!("{:<width$}", "5 HOUR LIMIT", width = widths.primary)
+                .blue()
+                .bold(),
+            format!("{:<width$}", "WEEKLY LIMIT", width = widths.secondary)
+                .blue()
+                .bold(),
+            format_history_label_header(show_label, widths.label),
+        )?;
+    } else {
+        writeln!(
+            writer,
+            "{}   {}{}",
+            format!("{:<width$}", "TIME", width = widths.captured_at)
+                .blue()
+                .bold(),
+            format!("{:<width$}", "WEEKLY LIMIT", width = widths.secondary)
+                .blue()
+                .bold(),
+            format_history_label_header(show_label, widths.label),
+        )?;
+    }
 
     let mut current_day = None;
     for entry in entries {
@@ -455,7 +474,7 @@ pub(super) fn print_usage_history(
                 primary_width = widths.primary,
                 secondary_width = widths.secondary,
             )?;
-        } else {
+        } else if show_primary {
             writeln!(
                 writer,
                 "{:<captured_at_width$}   {:<primary_width$}   {}",
@@ -464,6 +483,14 @@ pub(super) fn print_usage_history(
                 entry.secondary(),
                 captured_at_width = widths.captured_at,
                 primary_width = widths.primary,
+            )?;
+        } else {
+            writeln!(
+                writer,
+                "{:<captured_at_width$}   {}",
+                entry.captured_at(),
+                entry.secondary(),
+                captured_at_width = widths.captured_at,
             )?;
         }
     }
@@ -488,14 +515,17 @@ fn usage_history_entries(
     options: UsageHistoryOptions,
 ) -> Vec<UsageHistoryEntry> {
     let days = options.days.max(1);
-    let summary_mode = !options.verbose && days > DEFAULT_USAGE_HISTORY_DAYS;
     let samples = deduped_history_samples(history);
 
-    if summary_mode {
+    if usage_history_summary_mode(options) {
         usage_history_summary_entries(samples, now, days)
     } else {
         usage_history_sample_entries(samples, now, days, options.verbose)
     }
+}
+
+fn usage_history_summary_mode(options: UsageHistoryOptions) -> bool {
+    !options.verbose && options.days.max(1) > DEFAULT_USAGE_HISTORY_DAYS
 }
 
 #[cfg(test)]
@@ -1512,12 +1542,12 @@ mod tests {
         let now = local_at(2026, 5, 8, 12, 0, 0);
         let history = UsageHistory {
             samples: vec![
-                sample_at(local_at(2026, 5, 6, 9, 0, 0), "acct-1", 10.0),
-                sample_at(local_at(2026, 5, 6, 17, 0, 0), "acct-1", 18.0),
-                sample_at(local_at(2026, 5, 7, 9, 0, 0), "acct-1", 20.0),
-                sample_at(local_at(2026, 5, 7, 17, 0, 0), "acct-1", 31.0),
-                sample_at(local_at(2026, 5, 8, 9, 0, 0), "acct-1", 40.0),
-                sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 45.0),
+                sample_with_windows_at(local_at(2026, 5, 6, 9, 0, 0), "acct-1", 1.0, 10.0),
+                sample_with_windows_at(local_at(2026, 5, 6, 17, 0, 0), "acct-1", 2.0, 18.0),
+                sample_with_windows_at(local_at(2026, 5, 7, 9, 0, 0), "acct-1", 3.0, 20.0),
+                sample_with_windows_at(local_at(2026, 5, 7, 17, 0, 0), "acct-1", 4.0, 31.0),
+                sample_with_windows_at(local_at(2026, 5, 8, 9, 0, 0), "acct-1", 5.0, 40.0),
+                sample_with_windows_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 6.0, 45.0),
             ],
         };
 
@@ -1534,9 +1564,12 @@ mod tests {
         .unwrap();
         let output = String::from_utf8(output).unwrap();
 
+        assert!(!output.contains("5 HOUR LIMIT"));
+        assert!(output.contains("WEEKLY LIMIT"));
         assert!(output.contains("10% -> 18% (+8%)"));
         assert!(output.contains("20% -> 31% (+11%)"));
         assert!(output.contains("31% -> 45% (+14%)"));
+        assert!(!output.contains("1% -> 2% (+1%)"));
         assert!(!output.contains("Fri 11:00 AM"));
     }
 
@@ -1564,8 +1597,10 @@ mod tests {
         .unwrap();
         let output = String::from_utf8(output).unwrap();
 
-        assert!(output.contains("6% -> 22% (+16%)"));
+        assert!(!output.contains("5 HOUR LIMIT"));
+        assert!(output.contains("WEEKLY LIMIT"));
         assert!(output.contains("35% -> 50% (+15%)"));
+        assert!(!output.contains("6% -> 22% (+16%)"));
         assert!(!output.contains("47% -> 22% (-25%)"));
         assert!(!output.contains("46% -> 50% (+4%)"));
     }
@@ -1575,8 +1610,8 @@ mod tests {
         let now = local_at(2026, 5, 8, 12, 0, 0);
         let history = UsageHistory {
             samples: vec![
-                sample_at(local_at(2026, 5, 7, 17, 0, 0), "acct-1", 47.0),
-                sample_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 22.0),
+                sample_with_windows_at(local_at(2026, 5, 7, 17, 0, 0), "acct-1", 1.0, 47.0),
+                sample_with_windows_at(local_at(2026, 5, 8, 11, 0, 0), "acct-1", 2.0, 22.0),
             ],
         };
 
@@ -1595,6 +1630,7 @@ mod tests {
 
         assert!(output.contains("0% -> 22% (+22%)"));
         assert!(!output.contains("47% -> 22% (-25%)"));
+        assert!(!output.contains("1% -> 2% (+1%)"));
     }
 
     #[test]

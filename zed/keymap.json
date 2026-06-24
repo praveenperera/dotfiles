@@ -69,6 +69,7 @@
     "use_key_equivalents": true,
     "bindings": {
       "s": "vim::HelixJumpToWord",
+      "ctrl-n": "vim::SelectNext",
       "ctrl-h": "workspace::ActivatePaneLeft",
       "ctrl-j": "workspace::ActivatePaneDown",
       "ctrl-k": "workspace::ActivatePaneUp",
