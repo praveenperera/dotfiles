@@ -18,20 +18,17 @@ or under a repo-ignored/temp folder when they should stay private scratch. Befor
 authoring structured MDX, run
 `npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` and read the
 no-auth block catalog; it sends no plan content. Then run
-`npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`, then
-`npx -y @agent-native/core@0.75.5 plan local serve --dir plans/<slug> --kind plan|recap --open`,
-and report the local bridge URL from stdout or `plans/<slug>/.plan-url`. Treat
-`.plan-url` as a local token file and do not commit it. It opens the hosted Plan
-UI but reads from the localhost bridge on this machine, so it is not shareable
-across machines. On macOS, use Chrome/Chromium if Safari blocks the localhost
-bridge; run
-`npx -y @agent-native/core@0.75.5 plan local verify --dir plans/<slug> --kind plan|recap`
-for headless diagnostics. If the bridge still fails or the user needs a file
-fallback, run
+`npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`, then run
+`planport serve plans/<slug> --open` and report the printed LAN URL. `planport`
+serves the review UI and the local MDX files from this machine, always binds to
+the local network, and writes review feedback to `plans/<slug>/comments.json`.
+The printed URL includes a per-run token; do not commit tokenized URLs. If
+`planport` is not installed, run `cmd release planport` first. If the user needs
+a file fallback, run
 `npx -y @agent-native/core@0.75.5 plan local preview --dir plans/<slug> --kind plan|recap --out _scratch/<slug>-preview.html`
-from the repo root and report the `file://` URL. No sharing, all local. Use a
-hosted or self-hosted Plan MCP connector only if the user explicitly asks to
-publish or share.
+from the repo root and report the `file://` URL. No external Plan UI, no hosted
+Plan database, and no sharing by default. Use a hosted or self-hosted Plan MCP
+connector only if the user explicitly asks to publish or share.
 
 
 # Agent-Native Plans
@@ -126,37 +123,21 @@ surface.
   Presenting the plan and requesting sign-off is the approval step — do not ask a
   separate "does this look good?" question.
 - **The document is the source of truth, not the chat.** When scope shifts,
-  update the plan with `update-visual-plan` rather than only changing course in
-  chat, and make the updated document stand alone. Do not describe the update as
-  a correction to an earlier draft inside the plan itself. Re-read the approved
-  plan before major steps.
+  update the local MDX plan rather than only changing course in chat, and make
+  the updated document stand alone. Do not describe the update as a correction
+  to an earlier draft inside the plan itself. Re-read the approved plan before
+  major steps.
 
-## Create A Structured Agent-Native Plan — Never Inline
+## Create A Structured Local Plan — Never Inline
 
 The deliverable is ALWAYS a structured Agent-Native Plan, not a chat-only plan.
-The hosted Plan MCP connector (`plan` server, or legacy `agent-native-plans`) is
-the default collaboration and commenting surface; it is not a reason to reject
-the planning pattern as an external dependency or rented layer. Plans are
-portable source artifacts (`plan.mdx`, optional `canvas.mdx` /
-`prototype.mdx`, JSON, and HTML export), and ownership-sensitive workflows can
-use local-files mode or a self-hosted/custom Plan app URL without abandoning the
-skill's review discipline. Do not advise the user to skip `/visual-plan` because
-the default surface is hosted; choose the right Plan mode for the user's
-ownership, privacy, sharing, and branding needs.
-
-By default, create the plan via the Plan MCP connector. NEVER hand the plan over
-as inline chat content — no Markdown prose, ASCII sketch, table, or fenced
-wireframe. If the connector's tools are missing, do NOT fall back to inline
-output: the usual cause is a connector that did not finish connecting this
-session (it registers zero tools), not auth. Stop and give the user the exact
-restore step for their current client: in Codex/Codex Desktop run
-`npx -y @agent-native/core@0.75.5 reconnect https://plan.agent-native.com --client codex`
-and start a new Codex session; in Claude Code run `/mcp` and choose
-Authenticate/Reconnect (or run the same reconnect command with
-`--client claude-code` and restart Claude). Auth is stored per client
-config/session, so one client's reconnect does not make another running client
-load tools. Never reinstall from scratch just to fix auth. Publish once the tool
-is reachable. Local-files privacy mode (after Tool Guidance) is the exception.
+By default, create it as a local MDX folder and review it through `planport`.
+Plans are portable source artifacts (`plan.mdx`, optional `canvas.mdx`,
+optional `prototype.mdx`, optional `.plan-state.json`, and `comments.json`
+feedback). NEVER hand the plan over as inline chat content — no Markdown prose,
+ASCII sketch, table, or fenced wireframe as the final artifact. Hosted Plan MCP
+tools are an explicit opt-in path for publishing or sharing, not the default
+collaboration surface.
 
 ## Core Workflow
 
@@ -165,15 +146,12 @@ is reachable. Local-files privacy mode (after Tool Guidance) is the exception.
    clarifying questions as needed before generating the plan. If a source plan
    already exists, gather its exact text from the user's paste, a referenced
    file, or recent visible agent context; do not invent source text.
-2. Call `get-plan-blocks` for the authoritative block catalog — do not author
-   from memorized tags. Then call the mode-matched create tool:
-   `create-visual-plan` for document-first plans (architecture, backend, data,
-   refactor, API), `create-ui-plan` for UI-first plans, `create-prototype-plan`
-   for prototype-first plans, `create-plan-design` for design-first plans,
-   `create-visual-questions` only when the user explicitly asks for a visual
-   intake questionnaire. When a source plan already exists,
-   pass it as `planText` and preserve the original plan's useful intent while
-   producing a standalone plan document, not a revision memo.
+2. Fetch/read the authoritative block catalog — do not author from memorized
+   tags. Run
+   `npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` and read
+   the generated file before writing structured MDX. When a source plan already
+   exists, preserve its useful intent while producing a standalone plan document,
+   not a revision memo.
 3. For UI/product plans, compose the top canvas first with the primary
    wireframes and annotated states, then write the document with native blocks
    (see `references/canvas.md` and `references/document-quality.md`). For
@@ -187,33 +165,25 @@ is reachable. Local-files privacy mode (after Tool Guidance) is the exception.
    and put `diagram`, `data-model`,
    `api-endpoint`, `diff`, `file-tree`, `code`, and `annotated-code` blocks
    directly next to the relevant prose.
-4. Surface the returned Plans link or inline MCP App and ask the user to review.
-   Always include the actual URL in chat so the next step is a click in CLI or
-   other text-only hosts. When the host exposes an embedded browser/preview panel
-   and a tool can open arbitrary URLs there, open the returned plan URL
-   automatically for convenient review — a convenience and smoke test, never the
-   only handoff or the access
-   model. Plans should load out of the box for the local agent and local browser
-   session; if a signed-in embedded browser cannot read a local plan that an
-   anonymous/tool check can read, fix the app/action ownership or access path
-   rather than patching one plan by hand. For high-stakes plans (architecture,
+4. Validate with
+   `npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`, then
+   serve with `planport serve plans/<slug> --open`. Include the printed LAN URL
+   in chat so the next step is a click in CLI or other text-only hosts. When the
+   host exposes an embedded browser/preview panel and a tool can open arbitrary
+   URLs there, open the URL automatically for convenient review — a convenience
+   and smoke test, never the only handoff. For high-stakes plans (architecture,
    backend, data, multi-file, or risky), also kick off the self-review pass in
    **Self-Review Before Handoff** while the user reads, instead of blocking the
    handoff on it.
-5. Call `get-plan-feedback` before editing, after review, after any long pause,
-   and before the final response. Treat `anchorDetails`, resolver intent, recent
-   review events, and any focused screenshots from browser handoff as the source
-   of truth for exactly what changed and exactly what each comment points at.
-6. Apply changes with `update-visual-plan`, preferring targeted `contentPatches`.
-   Treat the top-level `content` payload as a full replacement, not a merge; do
-   not send a partial `content` object to add a canvas or one block. If a full
-   replacement is unavoidable, first read the complete plan source/content, carry
-   forward every existing block and visual surface, and verify the source/export
-   afterward so the document body was not truncated. When the user wants
-   source-control friendly edits, use `patch-visual-plan-source` against the MDX
-   files instead of regenerating the plan.
-7. Export with `export-visual-plan` only when the user wants a shareable receipt
-   or repo-check-in artifacts.
+5. Read `comments.json` before editing, after review, after any long pause, and
+   before the final response. Treat the line/file anchors and comment body as the
+   source of truth for exactly what each comment points at. If the user pasted a
+   `Copy` payload from Planport, use that payload the same way.
+6. Apply changes by editing the MDX files directly. Keep edits surgical and
+   preserve every existing block and visual surface. Rerun `plan local check`
+   after changes, then restart or keep using `planport` against the same folder.
+7. Create an HTML preview with `plan local preview` only when the user wants a
+   portable receipt or fallback.
 
 ## Self-Review Before Handoff
 
@@ -233,11 +203,11 @@ outweighs the value. Keep the pass cheap and non-blocking:
   not anchored in real files or symbols; a menu of options where the plan should
   commit to one; obvious missing decisions ("what happens when X?", "why not Y?");
   and padding or single-step filler.
-- **Fix vs. ask.** Apply clear-cut fixes yourself with `update-visual-plan`
-  `contentPatches` — vague non-goals, unanchored claims, an obvious missing
-  decision. Route genuine judgment calls back to the user instead: add them to the
-  bottom `question-form` Open Questions block or batch them into the normal
-  ask-user-question flow. Do not silently decide them.
+- **Fix vs. ask.** Apply clear-cut fixes yourself by patching the MDX files —
+  vague non-goals, unanchored claims, an obvious missing decision. Route genuine
+  judgment calls back to the user instead: add them to the bottom `question-form`
+  Open Questions block or batch them into the normal ask-user-question flow. Do
+  not silently decide them.
 - **Do not surprise the user mid-read.** On a large plan, apply the patches before
   the editor loads; otherwise note briefly that a self-review is running so the
   plan changing under them is expected. When you next respond, summarize what the
@@ -330,7 +300,11 @@ For a worked example of the bar — a great UI-first plan and `/visual-plan`, pl
 the anti-patterns to avoid — READ `references/exemplar.md` in this skill
 directory before authoring a plan.
 
-## Tool Guidance
+## Hosted Plan Tool Guidance
+
+Use these tools only when the user explicitly asks to publish, share, or use a
+hosted/self-hosted Plan MCP connector instead of the default local `planport`
+workflow.
 
 - `create-visual-plan`: start one structured visual plan per agent task/run, or
   import an existing text plan by passing `planText`; `content` may include no
@@ -365,28 +339,26 @@ directory before authoring a plan.
 When the user critiques a plan's look or structure, fix the renderer or this
 skill — never hand-edit one stored plan. Turn feedback into better guidance.
 
-## Local-Files Privacy Mode
+## Planport Local Mode
 
-Use local-files privacy mode when the user explicitly asks for no DB writes,
-no hosted Plan database writes, no Plan MCP publish, fully local files, offline/private
-planning, repo-owned/source-controlled planning artifacts, or when
-`AGENT_NATIVE_PLANS_MODE=local-files` is set. Also use it when a user or repo
-policy says a plan must stay under their own brand, domain, source control, or
-infrastructure. In this mode the plan data must never be sent to the Plan MCP
-server or Plan app action surface. Schema-only block catalog lookup is allowed
-because it sends no plan content: use the MCP `get-plan-blocks` tool if it is
-already available, or run
-`npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` and read
-that file before authoring MDX.
+Planport local mode is the default for this installation. Use it whenever the
+user needs a reviewable visual plan and has not explicitly asked to publish or
+share through a hosted Plan app. It provides no hosted DB writes, no Plan MCP
+publish, fully local files, LAN access, and repo-owned/source-controlled planning
+artifacts. Plan data must never be sent to the Plan MCP server or Plan app
+action surface in this mode. Schema-only block catalog lookup is allowed because
+it sends no plan content: run
+`npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` and read that
+file before authoring MDX.
 
-The local-files contract is:
+The Planport contract is:
 
 - Read source context from local files and shell commands only.
 - Fetch/read the block catalog before writing structured MDX. The
   `plan blocks` command calls the public no-auth `get-plan-blocks` route and
   writes only registry metadata to disk; use `--format schema` if exact nested
   fields are needed. If network access is unavailable, use the bundled
-  references and rely on `plan local check` / `plan local serve` to catch
+  references and rely on `plan local check` to catch
   invalid tags. For `checklist` and `question-form`, copy the catalog examples
   verbatim: checklist items need `id` and `label`; question-form questions need
   `id`, `title`, and `mode`; and each option needs `id` and `label`. `plan local
@@ -397,24 +369,17 @@ The local-files contract is:
   when it should not be checked in. The folder contains `plan.mdx`, optional
   `canvas.mdx`, optional `prototype.mdx`, and optional `.plan-state.json`.
 - Run `npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`
-  before serving, then run
-  `npx -y @agent-native/core@0.75.5 plan local serve --dir plans/<slug> --kind plan --open`.
-  Report the returned local bridge URL from stdout or `plans/<slug>/.plan-url`.
-  Treat `.plan-url` as a local token file and do not commit it. The URL opens
-  the hosted Plan UI but reads from the localhost bridge on this machine, so it
-  is not shareable across machines. On macOS, `--open` prefers Chromium browsers;
-  if Safari opens, switch to Chrome/Chromium because Safari can block the hosted
-  HTTPS page from fetching the HTTP localhost bridge. If the Plan app itself is
-  running locally with the same `PLAN_LOCAL_DIR`, the `/local-plans/<slug>` route
-  is also valid.
-- For headless verification, run
-  `npx -y @agent-native/core@0.75.5 plan local verify --dir plans/<slug> --kind plan`.
-  It starts the bridge, checks the private-network preflight and JSON payload,
-  prints diagnostics, and exits. If the browser hangs on "Loading plan", fetch
-  the `bridgeUrl` from the verify/serve JSON to read the concrete validation
-  error.
-- If the localhost bridge remains unreliable or the user asks for a local file
-  fallback, create the repo-root `_scratch/` directory if needed and run
+  before serving, then run `planport serve plans/<slug> --open`. Report the
+  printed LAN URL. The URL includes a per-run token and should not be committed.
+  Planport always binds to the LAN (`0.0.0.0`) and writes review feedback to
+  `comments.json` beside `plan.mdx`. If `planport` is missing, run
+  `cmd release planport`.
+- For headless verification, fetch the Planport API using the printed token:
+  `curl '<lan-or-local-url>/api/plan?token=<token>'`. Confirm the response
+  includes the expected title/files. If the browser cannot load the plan, use
+  this endpoint to read the concrete server error.
+- If the user asks for a local file fallback, create the repo-root `_scratch/`
+  directory if needed and run
   `npx -y @agent-native/core@0.75.5 plan local preview --dir plans/<slug> --kind plan --out _scratch/<slug>-preview.html`.
   Report the resulting `file://` URL as a fallback preview.
 - Do **not** call `create-visual-plan`, `create-ui-plan`,
@@ -422,19 +387,23 @@ The local-files contract is:
   `update-visual-plan`, `patch-visual-plan-source`, `get-plan-feedback`,
   `export-visual-plan`, or any hosted Plan tool for that plan except the
   schema-only block catalog lookup above.
-- Treat feedback as file or chat feedback: update the MDX files directly, rerun
-  the local bridge command, and summarize the new local bridge URL. Hosted
+- Treat feedback as file or chat feedback: read `comments.json` or the user's
+  pasted Planport `Copy` payload, update the MDX files directly, rerun
+  `plan local check`, and keep serving the same plan folder with Planport. Hosted
   comments, sharing, history, and publish/export receipts are unavailable until
   the user explicitly opts into publishing.
 
-Local-files mode prevents plan content from going to the Agent-Native Plan
-database. It does not by itself make the coding agent's language model local;
-for that stronger privacy boundary, the host agent/model must also be local or
-otherwise approved by the user.
+Planport mode prevents plan content from going to the Agent-Native Plan database.
+It does not by itself make the coding agent's language model local; for that
+stronger privacy boundary, the host agent/model must also be local or otherwise
+approved by the user.
 
 ## Interpreting comment anchors
 
-`get-plan-feedback` returns rich anchors — read them before acting on any comment.
+In Planport local mode, comments are file/line/text anchors stored in
+`comments.json`, or serialized into the user's pasted Planport `Copy` payload.
+Read those before acting on any comment. In explicitly hosted Plan MCP mode,
+`get-plan-feedback` returns richer anchors:
 
 - **Coordinate frames.** `targetX`/`targetY` are percentages *within* the
   element named by `targetSelector`/`targetKind`. Bare `x`/`y` are percentages
@@ -463,57 +432,23 @@ otherwise approved by the user.
 
 ## Visibility & Sharing
 
-Use `set-resource-visibility` to change who can see a plan (e.g. public, login,
-or org-scoped). Use `share-resource` to grant specific users or roles access
-by email or role. Gate visibility before sharing any plan that covers
-unreleased or private work — default to the narrowest scope that meets the
-review need.
+Planport URLs are LAN URLs with per-run tokens. Do not paste them into public
+issues, PR comments, or durable docs unless the user explicitly wants a
+local-network review link there. If the user explicitly opts into hosted or
+self-hosted Plan MCP sharing, use `set-resource-visibility` to change who can
+see a plan (e.g. public, login, or org-scoped) and `share-resource` to grant
+specific users or roles access by email or role. Gate visibility before sharing
+any plan that covers unreleased or private work — default to the narrowest scope
+that meets the review need.
 
 ## Setup & Authentication
 
-There are two ways into Plans.
+Planport is the default local review surface and does not require hosted auth.
+It is installed with this repo's `cmd release planport` workflow. The
+Agent-Native CLI is still used for no-content block catalog lookup and local MDX
+validation.
 
-**Coding agent (CLI).** Install once with the Agent-Native CLI. The command
-installs the Plans skills, registers the hosted Plans MCP connector, and runs
-auth/setup for the selected local client(s) in the same step (a one-time browser
-sign-in at setup — this is intended), so the first tool call in that client does
-not hit an OAuth wall:
-
-```bash
-npx -y @agent-native/core@0.75.5 skills add visual-plan
-```
-
-After that, `/visual-plan` and `/visual-recap` are the two installed slash
-commands. The other planning modes (`create-ui-plan`, `create-prototype-plan`,
-`create-plan-design`, `create-visual-questions`) are MCP tools reachable from
-`/visual-plan`, not separate slash commands. Pass `--no-connect` to register
-the connector without authenticating, then run
-`npx -y @agent-native/core@0.75.5 connect https://plan.agent-native.com --client all`
-whenever you are ready, or choose a narrower `--client`. Auth and MCP tool
-loading are per client config/session.
-
-**Browser (people you share with).** Open the Plans editor and create & edit
-with no sign-up — you work as a guest. Sign in only when you want to save or
-share; signing in claims the plans you made as a guest into your account.
-
-Sharing and commenting require an account: public/shared plans are viewable by
-anyone with the link, but commenting on them needs an agent-native account.
-
-For fully offline, no-account use, run the Plans app locally and sync plans to
-your repo as MDX. This local mode is a separate advanced path, not the default
-hosted flow.
-
-If a Plans tool returns `needs auth`, `Unauthorized`, or `Session terminated`,
-do not keep retrying the tool. Stop and give the user the reconnect step for the
-client they are using: Codex/Codex Desktop should run
-`npx -y @agent-native/core@0.75.5 reconnect https://plan.agent-native.com --client codex`
-and start a new Codex session; Claude Code should run `/mcp` and choose
-Authenticate/Reconnect for the plan connector, or run the reconnect command with
-`--client claude-code` and restart Claude. To refresh every local client config
-that already has the Plan entry, use `--client all`, then restart/reload each
-client. Reconnect re-authenticates WITHOUT reinstalling and finds the entry by
-URL regardless of connector name. Never reinstall from scratch just to fix auth.
-Continue once the connector is available.
-
-Hosted default: connect `https://plan.agent-native.com/_agent-native/mcp`. Do
-not put shared secrets in skill files.
+Hosted Plan MCP setup/auth is only relevant when the user explicitly asks to
+publish or share through a hosted/self-hosted Plan app. In that case, connect
+the requested Plan MCP origin for the active client and do not put shared
+secrets in skill files.
