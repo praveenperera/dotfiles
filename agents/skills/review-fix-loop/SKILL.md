@@ -15,9 +15,10 @@ The default loop is adaptive, not profile-based. Always start with a Z.ai GLM 5.
 
 - Start the first review pass with `zai-coding-plan/glm-5.2` through `opencode run` unless the user explicitly disables it.
 - Start every fix pass in a fresh Codex thread with `codex exec`; never use `codex exec resume`, `codex resume`, or any continuation command for a fix pass.
-- Keep repository and PR writes in the orchestrator thread. Fresh Codex fix threads must not commit, push, resolve PR threads, or comment on the PR.
-- Default to no commits and no pushes. Commit, push, resolve threads, or comment on the PR only when the user explicitly requests that write action.
+- Keep repository and PR writes in the orchestrator thread. Fresh Codex fix threads must not commit, push, resolve PR threads, label the PR, or comment on the PR.
+- Default to no commits and no pushes. Commit, push, resolve threads, label the PR, or comment on the PR only when the user explicitly requests that write action.
 - When the user explicitly requests commit, push, or PR comment finalization, require verification to pass and run CodeRabbit as the final gate unless the user explicitly opted out of CodeRabbit. If CodeRabbit cannot run, stop before repository or PR writes and report the blocker.
+- Treat a requested final successful PR comment as a request to apply the repo's completion label. For this repo convention, check that `review-complete` exists and add it after the push and passing CI, in the same orchestrator finalization step as the completion comment.
 - The review loop is not complete until required CI checks are passing on the pushed branch or PR. Local verification and clean reviewers are not enough to call the loop complete.
 - Never use `git add -A` for this workflow. If the user asks for commits, stage only intentional files or hunks.
 - Bound every loop. Default to 3 fresh Codex fix iterations unless the user gives a different cap.
@@ -73,7 +74,7 @@ Skip Codex xhigh when GLM finds no actionable issues, findings are small and loc
    - Choose low, medium, or high effort using the adaptive budget policy.
    - Build a prompt from `references/fresh-codex-thread.md`.
    - Use `scripts/run_codex_pass.py` or an equivalent direct `codex exec ... - < prompt.md` command.
-   - The prompt must tell the new thread to inspect the codebase, fix only the listed actionable findings, run appropriate verification, and avoid commits, pushes, thread resolution, or PR comments.
+   - The prompt must tell the new thread to inspect the codebase, fix only the listed actionable findings, run appropriate verification, and avoid commits, pushes, thread resolution, PR labels, or PR comments.
 5. Verify and inspect.
    - Review `git status --short`, `git diff --stat`, and `git diff --check` after each fresh Codex pass.
    - Run the repo's expected verification commands from `AGENTS.md`, project config, `justfile`, package scripts, or CI config.
@@ -95,11 +96,13 @@ Skip Codex xhigh when GLM finds no actionable issues, findings are small and loc
    - Commit after the final CodeRabbit gate, not before it. Follow repository commit instructions, including `$HOME/.agents/commit-message-guide.md` when applicable.
    - Push the committed branch only after the final local commit succeeds.
    - After the push, wait for required CI checks to pass with bounded polling. If CI is pending, failing, unknown, or times out, do not post a completion comment; report the loop as incomplete with the failing or pending checks.
+   - Check available PR labels before applying a completion label. If `review-complete` is unavailable, do not invent a replacement; report the missing label.
+   - Add the `review-complete` label after the push and passing CI when a PR is available and the final successful PR comment was requested.
    - Post one final PR comment only after the push and passing CI when a PR is available. Write the exact comment body to `$scratch/final-pr-comment.md`, then post it with the GitHub connector or `gh pr comment --body-file "$scratch/final-pr-comment.md"`.
 9. Report the outcome.
    - Include providers run, Codex review efforts used, fresh fix passes completed, issues fixed, remaining issues, verification commands, skipped providers, CI status, and scratch artifacts.
    - Do not call the overall review loop complete unless required CI checks are passing.
-   - If optional commit, push, or PR comment finalization was requested, include the commit SHA, pushed branch, PR URL, CI status, and final comment status.
+   - If optional commit, push, or PR comment finalization was requested, include the commit SHA, pushed branch, PR URL, CI status, final comment status, and completion label status.
 
 ## Provider Guidance
 
