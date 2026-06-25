@@ -39,7 +39,7 @@ macro_rules! project {
     };
 }
 
-const LOCAL_PROJECTS: &[LocalProject] = &[project!("jju"), project!("aps")];
+const LOCAL_PROJECTS: &[LocalProject] = &[project!("jju"), project!("aps"), project!("planport")];
 
 pub(crate) fn release(sh: &Shell, args: ReleaseArgs) -> Result<()> {
     if let Some(path) = args.install_built {
