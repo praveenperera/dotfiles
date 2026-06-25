@@ -57,9 +57,8 @@ When local Plan CLI output is available:
 3. Author the plan as `plan.mdx` in a local plan folder.
 4. Run `npx -y @agent-native/core@0.75.5 plan local check --dir <plan-dir>`.
 5. Run `npx -y @agent-native/core@0.75.5 plan local serve --dir <plan-dir> --kind plan --open`.
-6. Use the machine's LAN IP from the user's `ip` shell function for the bridge URL instead of `localhost` or `127.0.0.1` whenever the installed CLI supports binding/advertising a host or prints a LAN URL, so other devices on the same network can access the plan. Run `zsh -ic ip` if needed so the shell function is available. If the pinned CLI only emits localhost, report that limitation and continue with the static fallback.
-7. Also create a static HTML fallback with `npx -y @agent-native/core@0.75.5 plan local preview --dir <plan-dir> --kind plan --out _scratch/<slug>-preview.html`.
-8. Report both the LAN Plan URL when available and the `file://` HTML preview path.
+6. Also create a static HTML fallback with `npx -y @agent-native/core@0.75.5 plan local preview --dir <plan-dir> --kind plan --out _scratch/<slug>-preview.html`.
+7. Report both the local Plan URL and the `file://` HTML preview path.
 
 Plain Markdown may be used only as scratch/source notes, never as the final artifact, unless the user explicitly asks for Markdown or the Plan CLI is unavailable.
 

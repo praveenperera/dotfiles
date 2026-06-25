@@ -20,16 +20,11 @@ authoring structured MDX, run
 no-auth block catalog; it sends no plan content. Then run
 `npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`, then
 `npx -y @agent-native/core@0.75.5 plan local serve --dir plans/<slug> --kind plan|recap --open`,
-using the machine LAN IP from the user's `ip` shell function rather than
-`localhost`/`127.0.0.1` for the bridge URL whenever the installed CLI supports a
-host/bind option or prints a LAN URL. Run `zsh -ic ip` if needed so the shell
-function is available. Prefer a URL such as `http://<local-ip>:<port>` so other
-devices on the same network can open the plan. Report the LAN bridge URL from
-stdout or `plans/<slug>/.plan-url`; if the pinned CLI only emits a localhost
-URL, report that limitation and the static HTML fallback. Treat `.plan-url` as a
-local token file and do not commit it. It opens the hosted Plan UI but reads
-from the local bridge on this machine. On macOS, use Chrome/Chromium if Safari
-blocks the local HTTP bridge; run
+and report the local bridge URL from stdout or `plans/<slug>/.plan-url`. Treat
+`.plan-url` as a local token file and do not commit it. It opens the hosted Plan
+UI but reads from the localhost bridge on this machine, so it is not shareable
+across machines. On macOS, use Chrome/Chromium if Safari blocks the localhost
+bridge; run
 `npx -y @agent-native/core@0.75.5 plan local verify --dir plans/<slug> --kind plan|recap`
 for headless diagnostics. If the bridge still fails or the user needs a file
 fallback, run
@@ -404,26 +399,21 @@ The local-files contract is:
 - Run `npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`
   before serving, then run
   `npx -y @agent-native/core@0.75.5 plan local serve --dir plans/<slug> --kind plan --open`.
-  Always use the machine's LAN IP from the user's `ip` shell function for the
-  bridge URL instead of `localhost` or `127.0.0.1` when the installed CLI
-  supports binding/advertising a host or prints a LAN URL. Run `zsh -ic ip` if
-  needed so the shell function is available. Prefer a URL such as
-  `http://<local-ip>:<port>` so other devices on the same network can access the
-  plan. Report the returned LAN bridge URL from stdout or `plans/<slug>/.plan-url`;
-  if the pinned CLI only emits localhost, say so and provide the static preview
-  fallback. Treat `.plan-url` as a local token file and do not commit it. The URL
-  opens the hosted Plan UI but reads from the local HTTP bridge on this machine.
-  On macOS, `--open` prefers Chromium browsers; if Safari opens, switch to
-  Chrome/Chromium because Safari can block the hosted HTTPS page from fetching
-  the HTTP bridge. If the Plan app itself is running locally with the same
-  `PLAN_LOCAL_DIR`, the `/local-plans/<slug>` route is also valid.
+  Report the returned local bridge URL from stdout or `plans/<slug>/.plan-url`.
+  Treat `.plan-url` as a local token file and do not commit it. The URL opens
+  the hosted Plan UI but reads from the localhost bridge on this machine, so it
+  is not shareable across machines. On macOS, `--open` prefers Chromium browsers;
+  if Safari opens, switch to Chrome/Chromium because Safari can block the hosted
+  HTTPS page from fetching the HTTP localhost bridge. If the Plan app itself is
+  running locally with the same `PLAN_LOCAL_DIR`, the `/local-plans/<slug>` route
+  is also valid.
 - For headless verification, run
   `npx -y @agent-native/core@0.75.5 plan local verify --dir plans/<slug> --kind plan`.
   It starts the bridge, checks the private-network preflight and JSON payload,
   prints diagnostics, and exits. If the browser hangs on "Loading plan", fetch
   the `bridgeUrl` from the verify/serve JSON to read the concrete validation
   error.
-- If the local bridge remains unreliable or the user asks for a local file
+- If the localhost bridge remains unreliable or the user asks for a local file
   fallback, create the repo-root `_scratch/` directory if needed and run
   `npx -y @agent-native/core@0.75.5 plan local preview --dir plans/<slug> --kind plan --out _scratch/<slug>-preview.html`.
   Report the resulting `file://` URL as a fallback preview.
