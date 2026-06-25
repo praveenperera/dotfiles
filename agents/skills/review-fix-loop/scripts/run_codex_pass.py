@@ -23,6 +23,12 @@ def parse_args():
     parser.add_argument("--model", help="Optional Codex model")
     parser.add_argument("--profile", help="Optional Codex config profile")
     parser.add_argument(
+        "--config",
+        action="append",
+        default=[],
+        help="Optional Codex config override, repeatable; passed as --config key=value",
+    )
+    parser.add_argument(
         "--sandbox",
         choices=["read-only", "workspace-write", "danger-full-access"],
         help="Optional Codex sandbox mode",
@@ -53,6 +59,8 @@ def resolve_existing_file(path, label):
 
 def build_command(args, repo, output_file):
     command = [args.codex_bin, "exec", "--cd", str(repo)]
+    for config in args.config:
+        command.extend(["--config", config])
     if args.model:
         command.extend(["--model", args.model])
     if args.profile:

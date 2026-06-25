@@ -2,6 +2,14 @@
 
 Every fix pass must be a new `codex exec` invocation. Do not resume a prior Codex session, even if the previous fix pass was close to correct.
 
+The orchestrator chooses the fix effort before launching the pass:
+
+- `low` for one or two small, local, obvious findings
+- `medium` for ordinary findings and the default repair path
+- `high` for broad, subtle, risky, or previously failed repairs
+
+Do not use `xhigh` for ordinary fix passes. Reserve xhigh for Codex review gates described in the main skill.
+
 ## Prompt Template
 
 Write each prompt to `_scratch/review-fix-loop/<timestamp>/prompts/iteration-<n>.md`:
@@ -28,6 +36,7 @@ You are a fresh Codex thread fixing review findings for this repository.
 - Base: <base branch or SHA>
 - PR: <PR URL or number, if known>
 - Scratch artifacts: <absolute scratch path>
+- Selected Codex fix effort: low | medium | high
 
 ## Actionable Findings
 
@@ -49,7 +58,8 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --repo "$repo" \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/codex/iteration-1-summary.md" \
-  --sandbox danger-full-access
+  --sandbox danger-full-access \
+  --config model_reasoning_effort='"medium"'
 ```
 
 Use `--dry-run` to print the exact command without running Codex:
@@ -60,6 +70,7 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/codex/iteration-1-summary.md" \
   --sandbox danger-full-access \
+  --config model_reasoning_effort='"medium"' \
   --dry-run
 ```
 
@@ -70,6 +81,7 @@ If the helper is unavailable, run Codex directly:
 ```bash
 codex exec \
   --cd "$repo" \
+  --config model_reasoning_effort='"medium"' \
   --sandbox danger-full-access \
   --output-last-message "$scratch/codex/iteration-1-summary.md" \
   - < "$scratch/prompts/iteration-1.md"
