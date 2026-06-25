@@ -38,7 +38,7 @@ You are a fresh Codex thread fixing review findings for this repository.
 Summarize files changed, findings addressed, verification commands, and any remaining blockers.
 ```
 
-When the user explicitly asked for commits or pushes, add that permission to the prompt in a dedicated "Allowed Writes" section. Do not imply permission from the existence of a PR.
+Do not grant fresh fix threads permission to commit, push, resolve PR threads, or comment on the PR. When the user explicitly asked for commit, push, or PR comment finalization, the orchestrator performs those writes after verification and the final CodeRabbit gate are clean.
 
 ## Helper Command
 
