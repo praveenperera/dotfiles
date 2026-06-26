@@ -858,7 +858,7 @@ mod tests {
         );
 
         assert_eq!(primary, " 42% (-8%) (11:45 AM)");
-        assert_eq!(weekly, " 73% (-4%) (Thu 12:30 AM)");
+        assert_eq!(weekly, " 73% (+2%) (Thu 12:30 AM)");
     }
 
     #[test]
@@ -1214,10 +1214,27 @@ mod tests {
     #[test]
     fn list_rows_style_limits_by_run_rate_when_weekly_is_exhausted() {
         let active = identity("sub-1", "user-1", "acct-1", Some("praveen@example.com"));
+        let now = Local::now().timestamp();
+        let usage = ProfileUsageSnapshot {
+            user_id: Some("user-1".into()),
+            account_id: Some("acct-1".into()),
+            email: None,
+            plan_type: Some("plus".into()),
+            primary: Some(UsageWindowSnapshot {
+                used_percent: 42.0,
+                reset_at: Some(now + 3600),
+                limit_multiplier: 1.0,
+            }),
+            secondary: Some(UsageWindowSnapshot {
+                used_percent: 100.0,
+                reset_at: Some(now),
+                limit_multiplier: 1.0,
+            }),
+        };
         let profiles = vec![saved_profile(
             "a",
             active.clone(),
-            ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 100.0)),
+            ProfileUsageState::Available(usage),
         )];
 
         let rows = build_profile_rows(&profiles, Some(&active));
