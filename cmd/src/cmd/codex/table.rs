@@ -1,4 +1,8 @@
 use super::*;
+use chrono::{Datelike, LocalResult, NaiveDate, NaiveTime, Weekday};
+
+const WEEKDAY_WEEKLY_USAGE_PERCENT: f64 = 90.0 / 5.0;
+const WEEKEND_WEEKLY_USAGE_PERCENT: f64 = 10.0 / 2.0;
 
 pub(super) fn print_compact_profile_table(rows: &[ProfileRow]) {
     let totals = compact_profile_totals(rows);
@@ -1105,7 +1109,21 @@ fn ideal_used_percent(
 ) -> Option<f64> {
     let reset_at = window.reset_at?;
     let reset_at = Utc.timestamp_opt(reset_at, 0).single()?;
-    let duration = usage_window_duration(kind);
+    match kind {
+        UsageWindowKind::Primary => Some(linear_ideal_used_percent(
+            reset_at,
+            now,
+            usage_window_duration(kind),
+        )),
+        UsageWindowKind::Secondary => weekly_ideal_used_percent(reset_at, now),
+    }
+}
+
+fn linear_ideal_used_percent(
+    reset_at: chrono::DateTime<Utc>,
+    now: chrono::DateTime<Utc>,
+    duration: chrono::Duration,
+) -> f64 {
     let start_at = reset_at - duration;
     let elapsed_seconds = now
         .signed_duration_since(start_at)
@@ -1113,7 +1131,76 @@ fn ideal_used_percent(
         .clamp(0, duration.num_seconds());
     let elapsed_fraction = elapsed_seconds as f64 / duration.num_seconds() as f64;
 
-    Some(elapsed_fraction * 100.0)
+    elapsed_fraction * 100.0
+}
+
+fn weekly_ideal_used_percent(
+    reset_at: chrono::DateTime<Utc>,
+    now: chrono::DateTime<Utc>,
+) -> Option<f64> {
+    let start_at = reset_at - usage_window_duration(UsageWindowKind::Secondary);
+    if now <= start_at {
+        return Some(0.0);
+    }
+    if now >= reset_at {
+        return Some(100.0);
+    }
+
+    weekly_elapsed_budget_percent(start_at, now)
+}
+
+fn weekly_elapsed_budget_percent(
+    start_at: chrono::DateTime<Utc>,
+    end_at: chrono::DateTime<Utc>,
+) -> Option<f64> {
+    let mut cursor = start_at;
+    let mut used_percent = 0.0;
+
+    while cursor < end_at {
+        let cursor_local = cursor.with_timezone(&Local);
+        let day_start = local_midnight_utc(cursor_local.date_naive())?;
+        let next_day_start = local_midnight_utc(cursor_local.date_naive().succ_opt()?)?;
+        let segment_end = if next_day_start < end_at {
+            next_day_start
+        } else {
+            end_at
+        };
+        if segment_end <= cursor {
+            return None;
+        }
+
+        let day_seconds = next_day_start
+            .signed_duration_since(day_start)
+            .num_seconds() as f64;
+        if day_seconds <= 0.0 {
+            return None;
+        }
+
+        let segment_seconds = segment_end.signed_duration_since(cursor).num_seconds() as f64;
+        used_percent +=
+            weekly_day_usage_percent(cursor_local.weekday()) * segment_seconds / day_seconds;
+        cursor = segment_end;
+    }
+
+    Some(used_percent)
+}
+
+fn local_midnight_utc(date: NaiveDate) -> Option<chrono::DateTime<Utc>> {
+    let midnight = date.and_time(NaiveTime::MIN);
+    match Local.from_local_datetime(&midnight) {
+        LocalResult::Single(dt) => Some(dt.with_timezone(&Utc)),
+        LocalResult::Ambiguous(earliest, _) => Some(earliest.with_timezone(&Utc)),
+        LocalResult::None => None,
+    }
+}
+
+fn weekly_day_usage_percent(weekday: Weekday) -> f64 {
+    match weekday {
+        Weekday::Sat | Weekday::Sun => WEEKEND_WEEKLY_USAGE_PERCENT,
+        Weekday::Mon | Weekday::Tue | Weekday::Wed | Weekday::Thu | Weekday::Fri => {
+            WEEKDAY_WEEKLY_USAGE_PERCENT
+        }
+    }
 }
 
 fn limit_weight(window: &UsageWindowSnapshot) -> f64 {
@@ -1355,14 +1442,15 @@ mod tests {
 
     #[test]
     fn compact_profile_totals_matches_pooled_usage_across_accounts() {
-        let now = Utc.timestamp_opt(1_800, 0).single().unwrap();
+        let now = weekly_pace_now_at_10_percent();
+        let weekly_reset_at = weekly_pace_reset_at();
         let rows = (0..10)
             .map(|_| {
                 profile_row_with_usage(
                     10.0,
                     Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.1)),
                     10.0,
-                    Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.1)),
+                    Some(weekly_reset_at),
                 )
             })
             .collect::<Vec<_>>();
@@ -1375,20 +1463,21 @@ mod tests {
 
     #[test]
     fn compact_profile_totals_account_for_limit_multiplier() {
-        let now = Utc.timestamp_opt(1_800, 0).single().unwrap();
+        let now = weekly_pace_now_at_10_percent();
+        let weekly_reset_at = weekly_pace_reset_at();
         let rows = vec![
             profile_row_with_usage_and_multiplier(
                 10.0,
                 Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.1)),
                 10.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.1)),
+                Some(weekly_reset_at),
                 10.0,
             ),
             profile_row_with_usage(
                 10.0,
                 Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.1)),
                 10.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.1)),
+                Some(weekly_reset_at),
             ),
         ];
 
@@ -1400,20 +1489,21 @@ mod tests {
 
     #[test]
     fn compact_profile_totals_weight_percentages_by_limit_multiplier() {
-        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let now = weekly_pace_now_at_50_percent();
+        let weekly_reset_at = weekly_pace_reset_at();
         let rows = vec![
             profile_row_with_usage_and_multiplier(
                 84.0,
                 Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
                 84.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                Some(weekly_reset_at),
                 10.0,
             ),
             profile_row_with_usage(
                 100.0,
                 Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
                 100.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                Some(weekly_reset_at),
             ),
         ];
 
@@ -1425,27 +1515,28 @@ mod tests {
 
     #[test]
     fn compact_profile_totals_dedupes_duplicate_emails() {
-        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let now = weekly_pace_now_at_50_percent();
+        let weekly_reset_at = weekly_pace_reset_at();
         let rows = vec![
             profile_row_with_usage_and_email(
                 80.0,
                 Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
                 80.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                Some(weekly_reset_at),
                 "dup@example.com",
             ),
             profile_row_with_usage_and_email(
                 20.0,
                 Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
                 20.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                Some(weekly_reset_at),
                 "dup@example.com",
             ),
             profile_row_with_usage_and_email(
                 40.0,
                 Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
                 40.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                Some(weekly_reset_at),
                 "other@example.com",
             ),
         ];
@@ -1458,12 +1549,13 @@ mod tests {
 
     #[test]
     fn compact_profile_totals_formats_negative_pace_delta() {
-        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let now = weekly_pace_now_at_50_percent();
+        let weekly_reset_at = weekly_pace_reset_at();
         let rows = vec![profile_row_with_usage(
             30.0,
             Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
             30.0,
-            Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+            Some(weekly_reset_at),
         )];
 
         let totals = compact_profile_totals_at(&rows, now).expect("totals");
@@ -1474,12 +1566,13 @@ mod tests {
 
     #[test]
     fn compact_profile_totals_formats_positive_pace_delta() {
-        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let now = weekly_pace_now_at_50_percent();
+        let weekly_reset_at = weekly_pace_reset_at();
         let rows = vec![profile_row_with_usage(
             70.0,
             Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
             70.0,
-            Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+            Some(weekly_reset_at),
         )];
 
         let totals = compact_profile_totals_at(&rows, now).expect("totals");
@@ -1490,19 +1583,19 @@ mod tests {
 
     #[test]
     fn compact_profile_totals_average_pace_with_mixed_reset_times() {
-        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
+        let now = weekly_pace_now_at_50_percent();
         let rows = vec![
             profile_row_with_usage(
                 70.0,
                 Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
                 70.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5)),
+                Some(weekly_pace_reset_at()),
             ),
             profile_row_with_usage(
                 30.0,
                 Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2)),
                 30.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.2)),
+                Some(weekly_pace_reset_at_for_20_percent()),
             ),
         ];
 
@@ -1548,8 +1641,8 @@ mod tests {
 
     #[test]
     fn pace_delta_uses_displayed_percent_for_weekly_window() {
-        let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
-        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5);
+        let now = weekly_pace_now_at_50_percent();
+        let reset_at = weekly_pace_reset_at();
         let window = UsageWindowSnapshot {
             used_percent: 55.0,
             reset_at: Some(reset_at),
@@ -1560,6 +1653,34 @@ mod tests {
             pace_delta_percent(&window, now, UsageWindowKind::Secondary)
                 .map(|delta| delta.round() as i64),
             Some(5)
+        );
+    }
+
+    #[test]
+    fn pace_delta_uses_ten_total_weekend_points_for_weekly_window() {
+        let reset_at = weekly_pace_reset_at();
+        let saturday = local_datetime(2026, 6, 27, 0, 0, 0).with_timezone(&Utc);
+        let sunday = local_datetime(2026, 6, 28, 0, 0, 0).with_timezone(&Utc);
+        let saturday_window = UsageWindowSnapshot {
+            used_percent: 90.0,
+            reset_at: Some(reset_at),
+            limit_multiplier: 10.0,
+        };
+        let sunday_window = UsageWindowSnapshot {
+            used_percent: 95.0,
+            reset_at: Some(reset_at),
+            limit_multiplier: 10.0,
+        };
+
+        assert_eq!(
+            pace_delta_percent(&saturday_window, saturday, UsageWindowKind::Secondary)
+                .map(|delta| delta.round() as i64),
+            Some(0)
+        );
+        assert_eq!(
+            pace_delta_percent(&sunday_window, sunday, UsageWindowKind::Secondary)
+                .map(|delta| delta.round() as i64),
+            Some(0)
         );
     }
 
@@ -1764,6 +1885,36 @@ mod tests {
             weekly_usage: None,
             status: ProfileStatus::default(),
         }
+    }
+
+    fn weekly_pace_now_at_10_percent() -> chrono::DateTime<Utc> {
+        local_datetime(2026, 6, 22, 13, 20, 0).with_timezone(&Utc)
+    }
+
+    fn weekly_pace_now_at_50_percent() -> chrono::DateTime<Utc> {
+        local_datetime(2026, 6, 24, 18, 40, 0).with_timezone(&Utc)
+    }
+
+    fn weekly_pace_reset_at() -> i64 {
+        local_datetime(2026, 6, 29, 0, 0, 0).timestamp()
+    }
+
+    fn weekly_pace_reset_at_for_20_percent() -> i64 {
+        local_datetime(2026, 6, 30, 16, 0, 0).timestamp()
+    }
+
+    fn local_datetime(
+        year: i32,
+        month: u32,
+        day: u32,
+        hour: u32,
+        minute: u32,
+        second: u32,
+    ) -> chrono::DateTime<Local> {
+        Local
+            .with_ymd_and_hms(year, month, day, hour, minute, second)
+            .single()
+            .unwrap()
     }
 
     fn reset_at_for_elapsed(
