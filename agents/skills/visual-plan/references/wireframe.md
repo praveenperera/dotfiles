@@ -8,20 +8,33 @@ author wireframes from memory or paraphrase these rules per command.
 <!-- SHARED-CORE:wireframe-quality START -->
 
 **A wireframe is an HTML mockup. The renderer owns the look; you write the
-content.** Set `data.html` to a self-contained, semantic HTML fragment of the
-screen and set `data.surface`. The renderer owns the surface footprint/aspect,
+content.** In local MDX, author a `<WireframeBlock>` with one nested `<Screen>`
+whose `html` is a self-contained, semantic HTML fragment and whose `surface`
+matches the real footprint. The renderer owns the surface footprint/aspect,
 the dark/light theme, the hand-drawn font, and the rough.js sketch overlay — you
 never write `<html>`/`<body>`/`<script>`/`<style>` tags or any
 width/height/coordinates. You write real HTML layout and real product
 content; the renderer styles and roughens it.
 
-**A wireframe block's data is an HTML screen plus a surface:**
+**A wireframe block is an HTML screen plus a surface:**
 
-```json
-{
-  "surface": "browser",
-  "html": "<div style=\"display:flex;flex-direction:column;gap:10px;padding:16px;height:100%\"><h1>Sign in</h1><p class=\"wf-muted\">Use your work email to continue.</p><div class=\"wf-card\" style=\"display:flex;flex-direction:column;gap:10px\"><label>Email<input value=\"jane@acme.co\" /></label><label>Password<input value=\"••••••••\" /></label><label style=\"display:flex;align-items:center;gap:8px\"><input type=\"checkbox\" checked /> Remember me</label><button class=\"primary\">Sign in</button></div><a href=\"#\">Forgot password?</a></div>"
-}
+```mdx
+<WireframeBlock id="signin">
+  <Screen
+    surface="browser"
+    html={`<div style="display:flex;flex-direction:column;gap:10px;padding:16px;height:100%">
+  <h1>Sign in</h1>
+  <p class="wf-muted">Use your work email to continue.</p>
+  <div class="wf-card" style="display:flex;flex-direction:column;gap:10px">
+    <label>Email<input value="jane@acme.co" /></label>
+    <label>Password<input value="••••••••" /></label>
+    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked /> Remember me</label>
+    <button class="primary">Sign in</button>
+  </div>
+  <a href="#">Forgot password?</a>
+</div>`}
+  />
+</WireframeBlock>
 ```
 
 **Write PLAIN semantic HTML and let the renderer style it.** Bare elements
@@ -135,12 +148,10 @@ no labels or copy. The renderer drops borders, sketch, and color into the
 skeleton register automatically. Never escape to a `custom-html` document block
 to fake a loader.
 
-**Editing an existing mockup.** To change one element, text, or color in an
-existing html mockup, call `update-visual-plan`
-with `contentPatches: [{ op: "patch-wireframe-html", blockId, edits: [{ find,
-replace }] }]`. Each `find` is a unique snippet of the current html (read it
-first with `get-visual-plan`); set `all: true` on an edit to replace every
-occurrence. The result is re-sanitized.
+**Editing an existing mockup.** In Planport local mode, edit the relevant
+`plan.mdx` or `canvas.mdx` source directly and keep the change targeted to the
+wireframe HTML snippet that needs to move. Reload the Planport review and keep
+serving the same folder.
 
 **Treat the wireframe border as part of the visible design.** Always wrap HTML
 wireframe content in a root container with real inner padding before drawing

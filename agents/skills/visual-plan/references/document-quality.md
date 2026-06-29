@@ -59,10 +59,9 @@ clean rich document. For a simple binary UI visual choice, show the two
 directions in the canvas only; do not repeat the same options as body
 wireframes or prose. Put the actual choice in the bottom "Open Questions" form.
 
-**Use the right block, and make it carry substance.** For the authoritative,
-machine-checked list of block types and their data schemas, call `get-plan-blocks`
-— it returns the live registry vocabulary (type, MDX tag, placement, key fields)
-so you never emit a block the editor cannot render or round-trip:
+**Use the right block, and make it carry substance.** For the local Planport
+component list, read `references/blocks.md` before authoring structured MDX so
+you emit canonical tags the renderer can display and round-trip:
 
 - `rich-text` for plan prose with real bold/italic/code/links and nested lists.
 - `annotated-code` for the file map: when a load-bearing file is worth
@@ -108,17 +107,20 @@ so you never emit a block the editor cannot render or round-trip:
   or CSS. Leave room for the sketch font: keep labels short, give nodes generous
   width, and place boundary/annotation labels in unused space instead of over
   nodes; labels must not overlap nodes, connectors, or each other. For small
-  text/SVG changes to an existing HTML diagram, use `patch-diagram-html` with a
-  unique `find`/`replace` snippet instead of resending the whole `data.html`
-  string. Use legacy `nodes` / `edges` only for small previews or truly
-  sequential flows. In architecture/code plans, prefer a repeated section rhythm:
+  text/SVG changes to an existing HTML diagram, patch the local `data.html`
+  source snippet directly with a unique find/replace. Use legacy `nodes` /
+  `edges` only for small previews or truly sequential flows. In
+  architecture/code plans, prefer a repeated section rhythm:
   recommendation title, confidence and category badges, code-path evidence, a
   local before/after or current/target spatial diagram, then concise
   Problem/Solution/Why text.
 - `tabs` for multiple states, directions, or comparisons. A tab that reveals
   only prose usually means the plan is under-specified — include a relevant
   visual unless the tab is intentionally document-only.
-- `table`, `checklist`, `callout` for scannable structure.
+- `data-model`, `api-endpoint`, `json-explorer`, `custom-html`, `mermaid`,
+  `table`, `checklist`, and `callout` when the matching native block carries the
+  information better than prose. Use the canonical tags listed in
+  `references/blocks.md`.
 
 **Open questions live at the bottom as a form when answers would change the
 plan.** Surface answerable unresolved decisions in a final `question-form`

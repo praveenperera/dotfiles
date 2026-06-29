@@ -10,20 +10,20 @@ metadata:
 
 ## Installed Mode
 
-Default storage for this installation: local files. Create and update plans and
-recaps as MDX folders under `plans/<slug>/` when they should be checked in, or
-under a repo-ignored/temp folder when they should stay private scratch. Before
-authoring structured MDX, run
-`npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` and read the
-no-auth block catalog; it sends no plan content. Then run
-`npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`, then run
-`planport serve plans/<slug> --open` and report the printed LAN URL. Planport
-serves the review UI and the local MDX files from this machine, always binds to
-the local network, and writes review feedback to `plans/<slug>/comments.json`.
-The printed URL includes a per-run token; do not commit tokenized URLs. If
-`planport` is not installed, run `cmd release planport` first. No sharing, all
-local. Use a hosted or self-hosted Plan MCP connector only if the user explicitly
-asks to publish or share.
+Default storage for this installation: local files reviewed through Planport.
+Create and update plans and recaps as MDX folders under `plans/<slug>/` when
+they should be checked in, or under a repo-ignored/temp folder when they should
+stay private scratch. Before authoring structured MDX, read
+`../visual-plan/references/blocks.md` plus the bundled wireframe and recap
+rules. Then run
+`env -u PORT planport serve plans/<slug> --open` and report the printed LAN URL.
+Planport serves the review UI and the local MDX files from this machine, binds
+to the local network, and chooses a random available TCP port by default so many
+local recaps can run at once. Use `PORT` or `--port` only when the user
+explicitly asks for a fixed port. It writes review feedback to
+`plans/<slug>/comments.json`. The printed URL includes a per-run token; do not
+commit tokenized URLs. If `planport` is not installed, run `cmd release
+planport` first. No sharing, all local.
 
 
 # Visual Recap
@@ -40,68 +40,55 @@ before spending attention on the literal lines.
 ## Planport Local Mode
 
 Planport local mode is the default for this installation. Use it whenever the
-user needs a recap and has not explicitly asked to publish or share through a
-hosted Plan app. It provides no hosted DB writes, no Plan MCP publish, fully
-local files, LAN access, and repo-owned/source-controlled recap artifacts.
+user needs a recap. It provides fully local files, LAN access, and
+repo-owned/source-controlled recap artifacts.
 
 In Planport local mode:
 
 - Read the diff/stat/source context from local files and shell commands only.
-  The existing `npx -y @agent-native/core@0.75.5 recap collect-diff`, `scan`, and
-  `build-prompt --local-files` helpers are safe to use because they operate on
-  local files and do not write to the Plan database.
-- Fetch/read the block catalog before writing structured MDX. Use
-  `npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` when the Plan
-  MCP connector is not registered; it calls the public no-auth
-  `get-plan-blocks` route and sends no recap content. If network access is
-  unavailable, use the bundled references and validate with
-  `plan local check`. For `checklist` and `question-form`,
-  copy the catalog examples verbatim: checklist items need `id` and `label`;
-  question-form questions need `id`, `title`, and `mode`; and each option needs
-  `id` and `label`. `plan local check` validates these required fields against
-  the renderer schema.
+  Use `git diff`, `git show`, `git status`, `rg`, and focused file reads to
+  collect the recap evidence locally.
+- Read `../visual-plan/references/blocks.md` and the relevant bundled
+  references before writing structured MDX. For `checklist` and
+  `question-form`, follow the required shapes exactly: checklist items need
+  `id` and `label`; question-form questions need `id`, `title`, and `mode`; and
+  each option needs `id` and `label`.
 - Write the recap as a local MDX folder: use `plans/<slug>/` when the user
   wants the artifact checked into the repo, or use a repo-ignored/temporary
-  folder such as `.agent-native/plans/<slug>/` or `/tmp/agent-native-plans/<slug>/`
-  when it should not be checked in. The folder contains `plan.mdx`, optional
+  folder such as `_scratch/plans/<slug>/` or `/tmp/planport-plans/<slug>/` when
+  it should not be checked in. The folder contains `plan.mdx`, optional
   `canvas.mdx`, optional `prototype.mdx`, and optional `.plan-state.json`. Set
   `kind: "recap"` and `localOnly: true` in frontmatter/state when authoring
   the source.
-- Run `npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`
-  before serving, then run `planport serve plans/<slug> --open`. Report the
-  printed LAN URL. The URL includes a per-run token and should not be committed.
-  Planport always binds to the LAN (`0.0.0.0`) and writes review feedback to
-  `comments.json` beside `plan.mdx`. If `planport` is missing, run
+- Run `env -u PORT planport serve plans/<slug> --open`. Report the printed LAN
+  URL. The URL includes a per-run token and should not be
+  committed. Planport binds to the LAN (`0.0.0.0`), chooses a random available
+  TCP port when `PORT` is unset and no `--port` is passed, and writes review
+  feedback to `comments.json` beside `plan.mdx`. Use `PORT` or `--port` only
+  when the user explicitly asks for a fixed port. If `planport` is missing, run
   `cmd release planport`.
+- Planport is the default workflow for this installation.
 - For headless verification, fetch the Planport API using the printed token:
   `curl '<lan-or-local-url>/api/plan?token=<token>'`. Confirm the response
   includes the expected title/files. If the browser cannot load the recap, use
   this endpoint to read the concrete server error.
-- Do **not** call `create-visual-recap`, `create-visual-plan`,
-  `import-visual-plan-source`, `update-visual-plan`,
-  `patch-visual-plan-source`, `get-plan-feedback`, `export-visual-plan`,
-  `set-resource-visibility`, or any hosted Plan tool for that recap except the
-  schema-only block catalog lookup above.
 - Treat review feedback as file or chat feedback: read `comments.json` or the
-  user's pasted Planport `Copy` payload, update the MDX files directly, rerun
-  `plan local check`, and keep serving the same plan folder with Planport.
-  Hosted comments, sharing, screenshots, usage attachment, and PR sticky comment
-  publishing are unavailable until the user explicitly opts into publishing.
+  user's pasted Planport `Copy` payload, update the MDX files directly, and keep
+  serving the same plan folder with Planport.
 
-Planport mode prevents recap content from going to the Agent-Native Plan
-database. It does not by itself make the coding agent's language model local;
-for that stronger privacy boundary, the host agent/model must also be local or
-otherwise approved by the user.
+Planport local mode keeps recap content local. It does not by itself make the
+coding agent's language model local; for that stronger
+privacy boundary, the host agent/model must also be local or otherwise approved
+by the user.
 
 ## Always Create A Structured Local Recap — Never Inline
 
-The deliverable is ALWAYS a structured Agent-Native local recap, reviewed through
-Planport. NEVER hand the recap to the user as inline chat content — not Markdown
-prose, not an ASCII sketch, not a table, not a fenced "wireframe", not a "here's
-the recap" summary. A recap's value is the interactive, annotatable plan; an
-inline summary is not a recap, it is the thing a recap replaces. Hosted Plan MCP
-tools (`plan` or legacy `agent-native-plans`) are an explicit opt-in path for
-publishing or sharing, not the default.
+The deliverable is ALWAYS a structured local Planport recap. NEVER hand the
+recap to the user as inline chat content — not Markdown prose, not an ASCII
+sketch, not a table, not a fenced "wireframe", not a "here's the recap" summary.
+A recap's value is the interactive, annotatable plan; an inline summary is not a
+recap, it is the thing a recap replaces. Planport is the only collaboration
+surface.
 
 ## When To Use
 
@@ -275,34 +262,30 @@ headless CI agent), state that in the recap handoff instead.
 
 ## Open And Report The Recap
 
-Run `plan local check` first, then open the recap through Planport:
+Open the recap through Planport:
 
 ```bash
-npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>
-planport serve plans/<slug> --open
+env -u PORT planport serve plans/<slug> --open
 ```
 
 Report the printed Planport LAN URL. It is the primary review link for local
 recaps and can be opened from other devices on the local network while the
-server is running. The URL includes a per-run token; do not commit it. Local
-mirror files like `plans/<slug>/plan.mdx` may be mentioned only as secondary
-source-control artifacts, not as the main way to open the recap.
+server is running. The command unsets inherited `PORT` so Planport chooses a
+random available TCP port by default; use `PORT` or `--port` only when the user
+explicitly asks for a fixed port. The URL includes a per-run token; do not
+commit it. Local mirror files like `plans/<slug>/plan.mdx` may be mentioned only
+as secondary source-control artifacts, not as the main way to open the recap.
 
 When running in Codex and the Browser/in-app side browser tools are available,
 open the Planport URL there automatically after creation. Still include the same
 LAN URL in the final response.
 
-If the user explicitly asks to publish/share through a hosted or self-hosted
-Plan MCP, use the absolute URL returned by that create/publish tool and make the
-privacy/access model explicit. Do not invent hosted database URLs or publish
-only to get a link.
-
 ## Diff → Block Mapping
 
 Map each kind of change to the block that carries it, derived mechanically from
 the actual diff. The names below are the CONCEPTUAL block types, not the JSX
-tags — resolve every conceptual name to its exact tag + prop schema with the
-`get-plan-blocks` tool (see "Block reference" below) before authoring.
+tags — resolve every conceptual name to its exact canonical tag with the local
+block reference before authoring.
 
 - **Schema / migration change** → `data-model` for the resulting entities,
   fields, and relations. Flag what moved per field/entity with
@@ -386,50 +369,27 @@ tags — resolve every conceptual name to its exact tag + prop schema with the
   the objective the diff served, the key decisions visible in it, and the risks a
   reviewer should weigh. This is the only place the model writes freely.
 
-## Block reference — call `get-plan-blocks`, do not memorize tags
+## Block reference — local Planport components
 
-The conceptual block names above (`api-endpoint`, `data-model`, `json-explorer`,
-`tabs`, …) are NOT the JSX tags you author with, and the exact tags, required
-fields, and prop shapes change as the block library evolves. Do not author from
-memorized tags — they drift and silently produce a wrong tag (`ApiEndpoint`
-instead of `Endpoint`, `JsonExplorer` instead of `Json`, `Tabs` instead of
-`TabsBlock`) that errors on import.
+Before writing structured recap content, READ
+`../visual-plan/references/blocks.md` from this skill directory. That file is
+the local renderer contract for canonical tags and nested `tabs` block types.
+Use conceptual names such as `api-endpoint`, `data-model`, `tabs`,
+`question-form`, and `custom-html` in prose only; author the canonical MDX tags:
+`Endpoint`, `DataModel`, `TabsBlock`, `QuestionForm`, `CustomHtml`,
+`WireframeBlock`, `Screen`, `DesignBoard`, `Section`, `Artboard`, `Annotation`,
+`Connector`, `Prototype`, and `PrototypeScreen`.
 
-**Before writing any structured plan content, fetch/read the block catalog.** In
-Planport local mode, run
-`npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` and read that
-file first. The CLI command calls the public no-auth `get-plan-blocks` route and
-sends no plan/recap content. If network access is unavailable, use the bundled
-references and validate with `plan local check`. In explicitly hosted or
-self-hosted mode, call `get-plan-blocks` on the Plan MCP connector (`plan` or
-legacy `agent-native-plans`) instead.
+Legacy aliases render for old recaps but should not be emitted for new ones:
+`ApiEndpoint`, `Tabs`, `JsonExplorer`, `CustomHTML`, `CodeTabs`,
+`ImplementationMap`, `LegacyWireframe`, and `Wireframe`.
 
-The catalog returns the authoritative, always-current block vocabulary generated
-live from the app's own block registry — the same config the renderer and MDX
-round-trip use — so it can never be stale even if this SKILL.md is an old
-installed copy:
-
-- `get-plan-blocks` (default `format: "reference"`) → a compact table of every
-  block's runtime `type`, exact MDX `<Tag>`, placement, and key data fields.
-  This is your map from each conceptual name above to its real tag and props.
-- `get-plan-blocks` with `format: "schema"` → the full per-block JSON Schema
-  plus a worked example for each block, when you need exact field types,
-  enums, or nesting (e.g. `Diff.annotations`, `Endpoint.params[].in`,
-  `DataModel.entities[].fields[]`).
-
-Author the recap source against the tags and schemas that call returns. The
-complete set of valid block-level tags is whatever `get-plan-blocks` lists;
-any other capitalized tag at the block level is rejected on import with an
-"Unknown plan block" / "did you mean" error. Lowercase HTML tags inside
-`rich-text`/markdown prose (`<div>`, `<span>`, `<code>`, `<br>`, …) are always
-fine — only capitalized component-style block tags are validated.
-
-A few recap-specific authoring rules the registry table cannot encode:
+A few recap-specific authoring rules the local reference cannot encode:
 
 - Every block takes a REQUIRED `id` (unique across the whole plan) plus the
-  shared optional `summary` / `editable` envelope; give a block a heading by
-  placing a `rich-text` block with a Markdown `###` heading directly above it
-  (blocks no longer take a `title`).
+  shared optional `summary` / `editable` envelope; give a document section a
+  heading by placing a `RichText` block with a Markdown `###` heading directly
+  above it.
 - Every capitalized block component must be self-closing (`<RichText ... />`) or
   explicitly closed around children (`<RichText ...>...</RichText>`). Never
   leave a bare opening tag like `<RichText ...>` in a paragraph; MDX treats it
@@ -447,6 +407,10 @@ A few recap-specific authoring rules the registry table cannot encode:
 - `Diagram`: the whole payload is one `data={{ html?, css?, nodes?, edges?, … }}`
   attribute and requires either `html` or at least one node; `Mermaid` is its
   own separate block (`source` text), not a `Diagram` prop.
+- `QuestionForm`: questions need `id`, `title`, and `mode`; options need `id`
+  and `label`.
+- `CustomHtml`: use only as a bounded fragment escape hatch. Do not use it for
+  wireframes, before/after layout, or diagrams that have native blocks.
 
 ## Before / After Is The Headline
 
@@ -499,8 +463,6 @@ inferred (not extracted) as inferred in prose.
   Do not paste them into public PR comments unless the user explicitly wants a
   local-network review link there. A recap can expose unreleased schema,
   internal endpoints, and architecture; treat it like the source it summarizes.
-  If the user opts into hosted publishing, gate visibility to the owning org or
-  login and never auto-public a private-repo recap.
 - **Never transcribe secrets.** A diff can contain API keys, tokens, webhook
   URLs, signing secrets, `.env` values, or credential-looking literals. Do not
   copy any of these into a `diff`, `file-tree` snippet, `api-endpoint`, or prose
@@ -515,18 +477,15 @@ applies: a reviewer can annotate the Planport view, and the coding agent reads
 `comments.json` or the user's pasted Planport `Copy` payload to drive fixes back
 into the code — annotation → agent → diff. After a reviewer annotates a recap,
 read the local feedback, update the implementation or recap source as needed,
-rerun `plan local check`, and keep serving the same folder through Planport. In
-explicitly hosted mode, use `get-plan-feedback` and `update-visual-plan` instead.
+and keep serving the same folder through Planport.
 
 ## Related Skills
 
 - **visual-plan** — the canonical command and the source of the shared Wireframe
   & Canvas and Document Quality cores; a recap follows the same block discipline
   in reverse.
-- **comment anchors** — recap comments use the same anchor rules as forward
-  plans when hosted tooling is used. In Planport local mode, comments are simpler
-  file/line/text anchors stored in `comments.json`.
+- **comment anchors** — recap comments use file/line/text anchors stored in
+  `comments.json`.
 - **security** — data scoping, secret handling, and the hardcoded-secret rule the
   recap's redaction and visibility gating mirror.
-- **sharing** — hosted sharing is explicit opt-in; default recap links are local
-  LAN Planport URLs.
+- **sharing** — recap links are local LAN Planport URLs.

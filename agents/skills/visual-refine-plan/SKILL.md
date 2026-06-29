@@ -29,7 +29,7 @@ Before adding a question to the plan, decide whether the answer should already e
 
 ## Output Contract
 
-Use a structured Agent-Native visual plan when the Plan tools or local Plan CLI are available. If the user gives a target file or existing plan/spec, refine that artifact or import it as source material. If no target is provided, choose a conservative local plan path such as `plans/<slug>/` for repo-owned plans, or a repo-ignored/private plan path when the user asks for scratch/private output.
+Use a structured local Planport visual plan when Planport is available. If the user gives a target file or existing plan/spec, refine that artifact or import it as source material. If no target is provided, choose a conservative local plan path such as `plans/<slug>/` for repo-owned plans, or a repo-ignored/private plan path such as `_scratch/plans/<slug>/` when the user asks for scratch/private output.
 
 The plan should include the sections and blocks that make the work reviewable:
 
@@ -48,24 +48,24 @@ Do not include unresolved questions as accepted requirements. Do not hide produc
 ## Rendering Contract
 
 This skill uses `visual-plan` for the final review surface whenever available.
-The final deliverable must be an Agent-Native local MDX plan served through
-Planport, not plain Markdown.
+The final deliverable must be a local MDX visual plan served through Planport,
+not plain Markdown.
 
-When local Plan CLI output and Planport are available:
+When Planport is available:
 
 1. Read the `visual-plan` skill instructions.
-2. Run `npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md`.
+2. Read `../visual-plan/references/blocks.md` and the relevant bundled
+   references before authoring structured MDX.
 3. Author the plan as `plan.mdx` in a local plan folder.
-4. Run `npx -y @agent-native/core@0.75.5 plan local check --dir <plan-dir>`.
-5. Run `planport serve <plan-dir> --open`.
-6. Report the printed Planport LAN URL. It includes a per-run token and should
-   not be committed.
-7. If `planport` is missing, run `cmd release planport` and retry.
-8. Create a static HTML fallback only when requested or when the Planport UI
-   cannot be used:
-   `npx -y @agent-native/core@0.75.5 plan local preview --dir <plan-dir> --kind plan --out _scratch/<slug>-preview.html`.
+4. Run `env -u PORT planport serve <plan-dir> --open` so Planport chooses a
+   random available TCP port by default.
+5. Report the printed Planport LAN URL. It includes a per-run token and should
+   not be committed. Use `PORT` or `--port` only when the user explicitly asks
+   for a fixed port.
+6. If `planport` is missing, run `cmd release planport` and retry.
+7. Use Planport as the local review server.
 
-Plain Markdown may be used only as scratch/source notes, never as the final artifact, unless the user explicitly asks for Markdown or the Plan CLI is unavailable.
+Plain Markdown may be used only as scratch/source notes, never as the final artifact, unless the user explicitly asks for Markdown or Planport is unavailable.
 
 ## Visual Surface Choice
 
@@ -83,7 +83,8 @@ Choose the review surface based on the work.
 
 Place all unresolved decisions at the bottom of the artifact in a single section titled `Open Questions` or `Questions For User`.
 
-- Prefer the Agent-Native `question-form` block when using visual plan tooling
+- Prefer the Planport `QuestionForm` component (`question-form` concept) when
+  using visual plan tooling
 - Group related questions only when it improves scanning
 - Give each question a stable ID such as `Q1`, `Q2`, or a semantic ID supported by the plan tool
 - Include a short evidence note explaining why the decision matters
@@ -111,12 +112,12 @@ Cover the non-obvious dimensions that would otherwise cause rework:
 ## Workflow
 
 1. Gather source context from the repo, docs, tests, configs, prior plans, and external sources as needed.
-2. Identify the output mode: default Planport local plan folder, hosted Plan tool only when explicitly requested, existing plan update, or explicit fallback requested by the user.
+2. Identify the output mode: default Planport local plan folder, existing plan update, or explicit fallback requested by the user.
 3. Choose the visual surface: no top surface, canvas, canvas plus prototype, or prototype-first.
 4. Draft a standalone plan with confirmed evidence, decisions, implementation steps, risks, and verification.
 5. Add every unresolved decision to the single bottom questions section with evidence notes and recommended defaults when possible.
 6. Put deferred or adjacent follow-ups in `next.md` beside the plan instead of expanding the active scope.
-7. Verify the artifact validates with `plan local check` and opens through Planport before handoff.
+7. Verify the artifact opens through Planport before handoff.
 8. Report the Planport LAN URL and summarize the highest-impact open questions.
 
 ## Important
