@@ -10,32 +10,28 @@ metadata:
 
 ## Installed Mode
 
-Default storage for this installation: local files. Use the pinned Agent-Native
-CLI package `@agent-native/core@0.75.5`; do not substitute `@latest` for local
-plan commands unless a newer version has been verified. Create and update plans
-and recaps as MDX folders under `plans/<slug>/` when they should be checked in,
-or under a repo-ignored/temp folder when they should stay private scratch. Before
-authoring structured MDX, run
-`npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` and read the
-no-auth block catalog; it sends no plan content. Then run
-`npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`, then run
-`planport serve plans/<slug> --open` and report the printed LAN URL. `planport`
-serves the review UI and the local MDX files from this machine, always binds to
-the local network, and writes review feedback to `plans/<slug>/comments.json`.
-The printed URL includes a per-run token; do not commit tokenized URLs. If
-`planport` is not installed, run `cmd release planport` first. If the user needs
-a file fallback, run
-`npx -y @agent-native/core@0.75.5 plan local preview --dir plans/<slug> --kind plan|recap --out _scratch/<slug>-preview.html`
-from the repo root and report the `file://` URL. No external Plan UI, no hosted
-Plan database, and no sharing by default. Use a hosted or self-hosted Plan MCP
-connector only if the user explicitly asks to publish or share.
+Default storage for this installation: local files reviewed through Planport.
+Create and update plans and recaps as MDX folders under `plans/<slug>/` when
+they should be checked in, or under a repo-ignored/temp folder when they should
+stay private scratch. Before authoring structured MDX, read the bundled
+reference docs for block components, canvas, wireframe, and document rules. Then
+run `env -u PORT planport serve plans/<slug> --open` and report the printed LAN
+URL.
+`planport` serves the review UI and the local MDX files from this machine, binds
+to the local network, and chooses a random available TCP port by default so many
+local plans can run at once. Use `PORT` or `--port` only when the user
+explicitly asks for a fixed port. It writes review feedback to
+`plans/<slug>/comments.json`. The printed URL includes a per-run token; do not
+commit tokenized URLs. If `planport` is not installed, run `cmd release
+planport` first. No external Plan UI, no remote database, and no sharing by
+default.
 
 
-# Agent-Native Plans
+# Planport Visual Plans
 
-Agent-Native Plans is structured visual planning mode for coding agents. Build
-the plan you would normally write in Markdown, but as a scannable document with
-editable blocks mixed in: inline diagrams, code snippets,
+Planport visual plans are structured local planning artifacts for coding agents.
+Build the plan you would normally write in Markdown, but as a scannable document
+with editable blocks mixed in: inline diagrams, code snippets,
 open questions, and an optional top visual review area (wireframe canvas, live
 prototype, or both in tabs). Architecture and backend plans stay document-only;
 UI and product plans start with the top canvas/prototype (the Visual Surface
@@ -111,9 +107,10 @@ surface.
   approach and options in the plan. Ask a clarifying question only when an
   ambiguity would change the design and you cannot resolve it from the code; use
   the host agent's normal ask-user-question flow and batch 2-4 high-leverage
-  questions before finalizing. Do not call `create-visual-questions` from
-  `/visual-plan`. Otherwise state the assumption explicitly and proceed, and
-  keep anything unresolved in the plan's single bottom `question-form` Open
+  questions before finalizing. Do not create a separate visual intake artifact
+  unless the user explicitly asks for one. Otherwise state the assumption
+  explicitly and proceed, and keep anything unresolved in the plan's single
+  bottom `question-form` Open
   Questions block. For complex plans, do a final open-question pass before
   handoff: if a decision would affect architecture, scope, UX, data shape, or
   rollout, either decide it in the plan with rationale or put it in that bottom
@@ -130,14 +127,13 @@ surface.
 
 ## Create A Structured Local Plan — Never Inline
 
-The deliverable is ALWAYS a structured Agent-Native Plan, not a chat-only plan.
-By default, create it as a local MDX folder and review it through `planport`.
-Plans are portable source artifacts (`plan.mdx`, optional `canvas.mdx`,
-optional `prototype.mdx`, optional `.plan-state.json`, and `comments.json`
-feedback). NEVER hand the plan over as inline chat content — no Markdown prose,
-ASCII sketch, table, or fenced wireframe as the final artifact. Hosted Plan MCP
-tools are an explicit opt-in path for publishing or sharing, not the default
-collaboration surface.
+The deliverable is ALWAYS a structured local Planport visual plan, not a
+chat-only plan. By default, create it as a local MDX folder and review it
+through `planport`. Plans are portable source artifacts (`plan.mdx`, optional
+`canvas.mdx`, optional `prototype.mdx`, optional `.plan-state.json`, and
+`comments.json` feedback). NEVER hand the plan over as inline chat content — no
+Markdown prose, ASCII sketch, table, or fenced wireframe as the final artifact.
+Planport is the only collaboration surface.
 
 ## Core Workflow
 
@@ -146,10 +142,9 @@ collaboration surface.
    clarifying questions as needed before generating the plan. If a source plan
    already exists, gather its exact text from the user's paste, a referenced
    file, or recent visible agent context; do not invent source text.
-2. Fetch/read the authoritative block catalog — do not author from memorized
-   tags. Run
-   `npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` and read
-   the generated file before writing structured MDX. When a source plan already
+2. Read `references/blocks.md`, the relevant bundled references, and existing
+   local plan examples before writing structured MDX — do not author from
+   memorized tags. When a source plan already
    exists, preserve its useful intent while producing a standalone plan document,
    not a revision memo.
 3. For UI/product plans, compose the top canvas first with the primary
@@ -165,25 +160,23 @@ collaboration surface.
    and put `diagram`, `data-model`,
    `api-endpoint`, `diff`, `file-tree`, `code`, and `annotated-code` blocks
    directly next to the relevant prose.
-4. Validate with
-   `npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`, then
-   serve with `planport serve plans/<slug> --open`. Include the printed LAN URL
-   in chat so the next step is a click in CLI or other text-only hosts. When the
-   host exposes an embedded browser/preview panel and a tool can open arbitrary
-   URLs there, open the URL automatically for convenient review — a convenience
-   and smoke test, never the only handoff. For high-stakes plans (architecture,
-   backend, data, multi-file, or risky), also kick off the self-review pass in
-   **Self-Review Before Handoff** while the user reads, instead of blocking the
-   handoff on it.
+4. Serve with `env -u PORT planport serve plans/<slug> --open`. Include the
+   printed LAN URL in chat so the next step is a click in CLI or other text-only
+   hosts. Do not pass a fixed port by default; let Planport choose a random
+   available TCP port. When the host exposes an embedded browser/preview panel
+   and a tool can open arbitrary URLs there, open the URL automatically for
+   convenient review and smoke-test the render; when no browser is available,
+   fetch the Planport API with the printed token. For high-stakes plans
+   (architecture, backend, data, multi-file, or risky), also kick off the
+   self-review pass in **Self-Review Before Handoff** while the user reads,
+   instead of blocking the handoff on it.
 5. Read `comments.json` before editing, after review, after any long pause, and
    before the final response. Treat the line/file anchors and comment body as the
    source of truth for exactly what each comment points at. If the user pasted a
    `Copy` payload from Planport, use that payload the same way.
 6. Apply changes by editing the MDX files directly. Keep edits surgical and
-   preserve every existing block and visual surface. Rerun `plan local check`
-   after changes, then restart or keep using `planport` against the same folder.
-7. Create an HTML preview with `plan local preview` only when the user wants a
-   portable receipt or fallback.
+   preserve every existing block and visual surface. Restart or keep using
+   `planport` against the same folder and reload the review URL.
 
 ## Self-Review Before Handoff
 
@@ -250,20 +243,29 @@ folding framework chrome into the product UI.
   relationship is truly sequential.
 - **Canvas only** for one static screen, a before/after comparison, a component
   state, a small popover, or a visual direction that does not require clicking.
-  Put those wireframes in `content.canvas` and omit `content.prototype`.
+  Put those wireframes in `canvas.mdx` and omit `prototype.mdx`.
 - **Canvas + prototype** for multi-step UI flows, onboarding, wizards,
   review/approval flows, navigation changes, or anything where the reviewer
   needs to operate the behavior. Keep the static wireframes in
-  `content.canvas`, add the aligned functional prototype in
-  `content.prototype`, and rely on the top visual tabs to switch between them.
+  `canvas.mdx`, add the aligned functional prototype in `prototype.mdx`, and
+  rely on the top visual tabs to switch between them.
 - **Prototype-first** when the user asks to operate the UI or when interaction is
-  the main question. Use `create-prototype-plan`, which still preserves static
-  mocks where useful.
+  the main question. Author `prototype.mdx` with `<Prototype>` and
+  `<PrototypeScreen>` while still preserving static mocks where useful.
 
 For mixed canvas + prototype plans, reuse the same real labels, app statuses,
 and screen ids across both surfaces. The canvas is the inspectable static reference;
 the prototype is the interactive version of that same flow, not a separate
 design direction.
+
+## Block components — read `references/blocks.md`
+
+The local renderer supports a fixed MDX component set. Before authoring any
+capitalized block tag or nested `tabs` block, READ `references/blocks.md` in
+this skill directory. Use canonical tags such as `Endpoint`, `DataModel`,
+`QuestionForm`, `CustomHtml`, `TabsBlock`, `WireframeBlock`, `DesignBoard`, and
+`Prototype`; do not author legacy or alias tags unless preserving an existing
+plan.
 
 ## Wireframe quality — read `references/wireframe.md`
 
@@ -280,7 +282,7 @@ and `/visual-recap`. Do not author wireframes from memory.
 The canvas is the single source of truth for static UI mockups: the `surface`
 locks each artboard's footprint, mixed surfaces lay out
 in lanes, annotations are plain-text designer notes anchored by
-`targetId`/`placement`, and edits are surgical `contentPatches`. Before
+`targetId`/`placement`, and edits are surgical local source patches. Before
 authoring or editing ANY canvas, artboard, or annotation, READ
 `references/canvas.md` in this skill directory — it is the single source of truth
 for canvas/artboard mechanics. Do not author canvas layouts from memory.
@@ -300,155 +302,60 @@ For a worked example of the bar — a great UI-first plan and `/visual-plan`, pl
 the anti-patterns to avoid — READ `references/exemplar.md` in this skill
 directory before authoring a plan.
 
-## Hosted Plan Tool Guidance
-
-Use these tools only when the user explicitly asks to publish, share, or use a
-hosted/self-hosted Plan MCP connector instead of the default local `planport`
-workflow.
-
-- `create-visual-plan`: start one structured visual plan per agent task/run, or
-  import an existing text plan by passing `planText`; `content` may include no
-  visual surface, canvas only, or canvas + prototype.
-- `create-ui-plan`: start a UI-first plan when the work is primarily product UI.
-- `create-prototype-plan`: start a prototype-first plan with a functional top
-  review surface.
-- `create-plan-design`: start a full-fidelity branded Design-tab plan with an
-  optional matching Prototype tab.
-- `convert-visual-plan-to-prototype`: convert an existing HTML wireframe canvas
-  into a prototype plan.
-- `create-visual-questions`: use only when the user explicitly asks for a visual
-  intake questionnaire, not as `/visual-plan` preflight.
-- `update-visual-plan`: revise content, status, or comments with targeted
-  `contentPatches` (see Core Workflow step 6).
-- `read-visual-plan-source`: read the normalized plan as `plan.mdx`,
-  optional `canvas.mdx`, optional `.plan-state.json`, and JSON.
-- `patch-visual-plan-source`: apply granular MDX AST patches by stable block,
-  artboard, annotation, component, or wireframe-node id.
-- `import-visual-plan-source`: create or replace a plan from an MDX folder.
-- `get-visual-plan`: read the current structured plan, exported HTML, and
-  annotations; it also returns the MDX folder for source workflows.
-- `get-plan-feedback`: read unconsumed human feedback. Use it frequently; it
-  returns grouped threads, exact anchor details, expected resolver, and recent
-  review-event payloads so agents can act only on the comments meant for them.
-- `get-plan-blocks`: resolve block tags before authoring — do not memorize tags;
-  call this first to get the authoritative tag names, required fields, and prop
-  shapes from the live block registry.
-- `export-visual-plan`: export HTML, Markdown fallback, structured JSON, and MDX
-  files for repo check-in.
-
-When the user critiques a plan's look or structure, fix the renderer or this
-skill — never hand-edit one stored plan. Turn feedback into better guidance.
-
 ## Planport Local Mode
 
 Planport local mode is the default for this installation. Use it whenever the
-user needs a reviewable visual plan and has not explicitly asked to publish or
-share through a hosted Plan app. It provides no hosted DB writes, no Plan MCP
-publish, fully local files, LAN access, and repo-owned/source-controlled planning
-artifacts. Plan data must never be sent to the Plan MCP server or Plan app
-action surface in this mode. Schema-only block catalog lookup is allowed because
-it sends no plan content: run
-`npx -y @agent-native/core@0.75.5 plan blocks --out plan-blocks.md` and read that
-file before authoring MDX.
+user needs a reviewable visual plan. It provides fully local files, LAN access,
+and repo-owned/source-controlled planning artifacts. Planport is the only
+default review server.
 
 The Planport contract is:
 
 - Read source context from local files and shell commands only.
-- Fetch/read the block catalog before writing structured MDX. The
-  `plan blocks` command calls the public no-auth `get-plan-blocks` route and
-  writes only registry metadata to disk; use `--format schema` if exact nested
-  fields are needed. If network access is unavailable, use the bundled
-  references and rely on `plan local check` to catch
-  invalid tags. For `checklist` and `question-form`, copy the catalog examples
-  verbatim: checklist items need `id` and `label`; question-form questions need
-  `id`, `title`, and `mode`; and each option needs `id` and `label`. `plan local
-  check` validates these required fields against the renderer schema.
+- Read `references/blocks.md` and the relevant bundled references before
+  writing structured MDX. For `checklist` and `question-form`, follow the
+  required shapes exactly: checklist items need `id` and `label`; question-form
+  questions need `id`, `title`, and `mode`; and each option needs `id` and
+  `label`.
 - Write the plan as a local MDX folder: use `plans/<slug>/` when the user
   wants the artifact checked into the repo, or use a repo-ignored/temporary
-  folder such as `.agent-native/plans/<slug>/` or `/tmp/agent-native-plans/<slug>/`
-  when it should not be checked in. The folder contains `plan.mdx`, optional
+  folder such as `_scratch/plans/<slug>/` or `/tmp/planport-plans/<slug>/` when
+  it should not be checked in. The folder contains `plan.mdx`, optional
   `canvas.mdx`, optional `prototype.mdx`, and optional `.plan-state.json`.
-- Run `npx -y @agent-native/core@0.75.5 plan local check --dir plans/<slug>`
-  before serving, then run `planport serve plans/<slug> --open`. Report the
-  printed LAN URL. The URL includes a per-run token and should not be committed.
-  Planport always binds to the LAN (`0.0.0.0`) and writes review feedback to
-  `comments.json` beside `plan.mdx`. If `planport` is missing, run
+- Run `env -u PORT planport serve plans/<slug> --open`. Report the printed LAN
+  URL. The URL includes a per-run token and should not be
+  committed. Planport binds to the LAN (`0.0.0.0`), chooses a random available
+  TCP port when `PORT` is unset and no `--port` is passed, and writes review
+  feedback to `comments.json` beside `plan.mdx`. Use `PORT` or `--port` only
+  when the user explicitly asks for a fixed port. If `planport` is missing, run
   `cmd release planport`.
+- Planport is the default workflow for this installation.
 - For headless verification, fetch the Planport API using the printed token:
   `curl '<lan-or-local-url>/api/plan?token=<token>'`. Confirm the response
   includes the expected title/files. If the browser cannot load the plan, use
   this endpoint to read the concrete server error.
-- If the user asks for a local file fallback, create the repo-root `_scratch/`
-  directory if needed and run
-  `npx -y @agent-native/core@0.75.5 plan local preview --dir plans/<slug> --kind plan --out _scratch/<slug>-preview.html`.
-  Report the resulting `file://` URL as a fallback preview.
-- Do **not** call `create-visual-plan`, `create-ui-plan`,
-  `create-prototype-plan`, `create-plan-design`, `import-visual-plan-source`,
-  `update-visual-plan`, `patch-visual-plan-source`, `get-plan-feedback`,
-  `export-visual-plan`, or any hosted Plan tool for that plan except the
-  schema-only block catalog lookup above.
 - Treat feedback as file or chat feedback: read `comments.json` or the user's
-  pasted Planport `Copy` payload, update the MDX files directly, rerun
-  `plan local check`, and keep serving the same plan folder with Planport. Hosted
-  comments, sharing, history, and publish/export receipts are unavailable until
-  the user explicitly opts into publishing.
+  pasted Planport `Copy` payload, update the MDX files directly, and keep
+  serving the same plan folder with Planport.
 
-Planport mode prevents plan content from going to the Agent-Native Plan database.
-It does not by itself make the coding agent's language model local; for that
-stronger privacy boundary, the host agent/model must also be local or otherwise
-approved by the user.
+Planport local mode keeps plan content local. It does not by itself make the
+coding agent's language model local; for that stronger privacy boundary, the
+host agent/model must also be local or otherwise approved by the user.
 
 ## Interpreting comment anchors
 
 In Planport local mode, comments are file/line/text anchors stored in
 `comments.json`, or serialized into the user's pasted Planport `Copy` payload.
-Read those before acting on any comment. In explicitly hosted Plan MCP mode,
-`get-plan-feedback` returns richer anchors:
+Read those before acting on any comment.
 
-- **Coordinate frames.** `targetX`/`targetY` are percentages *within* the
-  element named by `targetSelector`/`targetKind`. Bare `x`/`y` are percentages
-  of the whole plan document. `canvasX`/`canvasY` are raw board-world pixels on
-  the design canvas (board size given when available).
-- **Wireframe pins.** Anchors on wireframes include `targetNodeId` and
-  `targetNodePath` (e.g. `card > list > listItem "Acme Inc"`) identifying the
-  exact kit node. Use `targetNodeId` directly with wireframe node patch ops;
-  use `data-design-id` values from design artboards with
-  `update-design-element-style`. Prefer the node id/path over raw coordinates;
-  fall back to coordinates plus the focused screenshot (red ring marks the exact
-  point) only when no node id is present.
-- **Text quotes.** Resolve `textQuote` against current prose using
-  `contextBefore`/`contextAfter` for disambiguation. If `ambiguous: true`, ask
-  the user — do not guess which occurrence is meant.
-- **Detached comments.** `get-plan-feedback` flags threads whose quoted text no
-  longer exists as `detached` (in `detachedThreads`). Reconcile these against
-  rewritten content — never silently drop them.
-- **Routing.** `resolutionTarget` is the only routing signal: act on `agent`,
-  treat `human` as context only. `@mentions` are people to notify, never a
-  routing signal.
-- **Two-axis state.** Mark every ingested comment as consumed
-  (`consumedCommentIds` on `update-visual-plan`). Set `status=resolved` only on
-  agent-targeted comments you actually addressed; leave human-targeted comments
-  open.
-
-## Visibility & Sharing
+## Local Links
 
 Planport URLs are LAN URLs with per-run tokens. Do not paste them into public
 issues, PR comments, or durable docs unless the user explicitly wants a
-local-network review link there. If the user explicitly opts into hosted or
-self-hosted Plan MCP sharing, use `set-resource-visibility` to change who can
-see a plan (e.g. public, login, or org-scoped) and `share-resource` to grant
-specific users or roles access by email or role. Gate visibility before sharing
-any plan that covers unreleased or private work — default to the narrowest scope
-that meets the review need.
+local-network review link there.
 
 ## Setup & Authentication
 
-Planport is the default local review surface and does not require hosted auth.
-It is installed with this repo's `cmd release planport` workflow. The
-Agent-Native CLI is still used for no-content block catalog lookup and local MDX
-validation.
-
-Hosted Plan MCP setup/auth is only relevant when the user explicitly asks to
-publish or share through a hosted/self-hosted Plan app. In that case, connect
-the requested Plan MCP origin for the active client and do not put shared
-secrets in skill files.
+Planport is the default local review surface and does not require auth.
+It is installed with this repo's `cmd release planport` workflow. The Planport
+CLI serves local plan folders for review.
