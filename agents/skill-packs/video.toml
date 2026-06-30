@@ -1,2 +1,3 @@
 description = "Video and motion graphics work"
 plugin_sources = ["remotion@openai-curated-remote"]
+skills = ["smrze-youtube-transcripts"]
