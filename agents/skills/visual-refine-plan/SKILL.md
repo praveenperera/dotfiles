@@ -41,7 +41,7 @@ The plan should include the sections and blocks that make the work reviewable:
 - Data/API contracts, migrations, lifecycle, cleanup, and compatibility risks when relevant
 - Security, permissions, privacy, performance, scalability, and maintenance concerns
 - Verification with concrete commands and at least one workflow-level smoke check when the feature crosses UI, persistence, sync, providers, or app boundaries
-- Bottom `Open Questions` form/section with stable question IDs and recommended defaults when appropriate
+- Bottom `Open Questions` form/section with stable question IDs, per-question decision aids, and recommended defaults when appropriate
 
 Do not include unresolved questions as accepted requirements. Do not hide product or architecture choices in vague steps such as "wire this up" or "make it work."
 
@@ -87,7 +87,7 @@ Place all unresolved decisions at the bottom of the artifact in a single section
   using visual plan tooling
 - Group related questions only when it improves scanning
 - Give each question a stable ID such as `Q1`, `Q2`, or a semantic ID supported by the plan tool
-- Include a short evidence note explaining why the decision matters
+- Include concise decision-help info below each question so the user can answer in place: relevant evidence, why the decision matters, meaningful options, tradeoffs, likely impact, and any recommended default
 - Use single-choice, multi-choice, or freeform mode based on the decision type
 - Mark a recommended default when the evidence supports one
 - Do not add an explicit `Other` option when the renderer already provides a write-in field
@@ -115,7 +115,7 @@ Cover the non-obvious dimensions that would otherwise cause rework:
 2. Identify the output mode: default Planport local plan folder, existing plan update, or explicit fallback requested by the user.
 3. Choose the visual surface: no top surface, canvas, canvas plus prototype, or prototype-first.
 4. Draft a standalone plan with confirmed evidence, decisions, implementation steps, risks, and verification.
-5. Add every unresolved decision to the single bottom questions section with evidence notes and recommended defaults when possible.
+5. Add every unresolved decision to the single bottom questions section with decision-help info below each question and recommended defaults when possible.
 6. Put deferred or adjacent follow-ups in `next.md` beside the plan instead of expanding the active scope.
 7. Verify the artifact opens through Planport before handoff.
 8. Report the Planport LAN URL and summarize the highest-impact open questions.
