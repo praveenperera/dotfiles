@@ -13,7 +13,7 @@ The default loop is adaptive, not profile-based. Always start with a Z.ai GLM 5.
 
 ## Hard Requirements
 
-- Start the first review pass with `zai-coding-plan/glm-5.2` through `opencode run` unless the user explicitly disables it.
+- Start the first review pass with `zai-coding-plan/glm-5.2` through `opencode run` and the OpenCode `pr-review-toolkit` skill unless the user explicitly disables it.
 - Start every fix pass in a fresh Codex thread with `codex exec`; never use `codex exec resume`, `codex resume`, or any continuation command for a fix pass.
 - Keep repository and PR writes in the orchestrator thread. Fresh Codex fix threads must not commit, push, resolve PR threads, label the PR, or comment on the PR.
 - Default to no commits and no pushes. Commit, push, resolve threads, label the PR, or comment on the PR only when the user explicitly requests that write action.
@@ -58,10 +58,10 @@ Skip Codex xhigh when GLM finds no actionable issues, findings are small and loc
 1. Preflight the repository.
    - Read applicable `AGENTS.md` files and project config before relying on defaults.
    - Capture `git status --short`, current branch, remotes, base branch, and PR number or URL when available.
-   - Check required CLIs and auth state: `opencode` with `zai-coding-plan/glm-5.2`, plus any user-requested providers.
+   - Check required CLIs, skill availability, and auth state: `opencode` with `zai-coding-plan/glm-5.2`, OpenCode `pr-review-toolkit`, plus any user-requested providers.
    - Create the scratch directory for the run.
 2. Run the required first review.
-   - Run Z.ai GLM 5.2 with a concise review prompt focused on actionable correctness, regression, testing, migration, security, and maintainability risks.
+   - Run Z.ai GLM 5.2 with a concise review prompt that explicitly tells OpenCode to use `pr-review-toolkit` for actionable correctness, regression, testing, migration, security, and maintainability risks.
    - Store raw JSONL or text exactly as produced.
    - Normalize findings into the format from `references/providers.md`.
 3. Decide the next review step.
@@ -108,7 +108,7 @@ Skip Codex xhigh when GLM finds no actionable issues, findings are small and loc
 
 Load `references/providers.md` before running provider commands. The key constraints are:
 
-- Z.ai GLM 5.2 through opencode is the required first review provider and default re-review provider.
+- Z.ai GLM 5.2 through opencode with the OpenCode `pr-review-toolkit` skill is the required first review provider and default re-review provider.
 - CodeRabbit is a final gate and should not run until selected non-CodeRabbit reviewers and verification have passed.
 - Greptile CLI commonly reviews committed branch state against a base branch; do not assume it can validate uncommitted fixes.
 - Greptile hosted comments require bounded polling and should not be driven by an infinite loop.
