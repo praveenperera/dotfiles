@@ -23,8 +23,8 @@ pub struct Args {
     /// Pull request number (optional if URL or PR number is provided as first argument)
     pub pr_number: Option<u64>,
 
-    /// GitHub token (optional, for higher rate limits)
-    #[arg(short, long, env = "GITHUB_TOKEN")]
+    /// GitHub token (defaults to GITHUB_TOKEN, GH_TOKEN, or gh auth token)
+    #[arg(short, long)]
     pub token: Option<String>,
 
     /// Only include comments with code references
