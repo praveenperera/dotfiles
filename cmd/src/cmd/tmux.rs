@@ -164,15 +164,24 @@ fn move_after(sh: &Shell, position: u32) -> Result<()> {
 }
 
 fn session_picker(sh: &Shell) -> Result<()> {
-    let fmt = format!(
-        "#S{FIELD_SEP}#{{session_last_attached}}{FIELD_SEP}#{{session_activity}}{FIELD_SEP}#{{session_active}}"
-    );
+    let client_fmt = format!("#{{client_session}}{FIELD_SEP}#{{client_last_session}}");
+    let client_context = cmd!(sh, "tmux display-message -p {client_fmt}")
+        .quiet()
+        .read()
+        .unwrap_or_default();
+    let (current_session, last_session) = parse_client_session_context(&client_context);
+
+    let fmt = format!("#S{FIELD_SEP}#{{session_last_attached}}{FIELD_SEP}#{{session_activity}}");
     let sessions = cmd!(sh, "tmux list-sessions -F {fmt}").quiet().read()?;
     let mut sessions = sessions
         .lines()
         .filter_map(SessionEntry::parse)
         .collect::<Vec<_>>();
-    order_sessions(&mut sessions);
+    order_sessions(
+        &mut sessions,
+        current_session.as_deref(),
+        last_session.as_deref(),
+    );
     let selection = run_fzf(sh, "Session > ", &render_lines(&sessions))?;
     let session = selection.trim();
     if !session.is_empty() {
@@ -232,7 +241,6 @@ struct SessionEntry {
     name: String,
     last_attached: u64,
     activity: u64,
-    active: bool,
 }
 
 impl SessionEntry {
@@ -241,12 +249,10 @@ impl SessionEntry {
         let name = parts.next()?.to_string();
         let last_attached = parse_num(parts.next()?);
         let activity = parse_num(parts.next()?);
-        let active = parse_flag(parts.next()?);
         Some(Self {
             name,
             last_attached,
             activity,
-            active,
         })
     }
 
@@ -336,12 +342,39 @@ fn render_lines<T: PickerEntry>(entries: &[T]) -> String {
         .join("\n")
 }
 
-fn order_sessions(entries: &mut [SessionEntry]) {
+fn order_sessions(
+    entries: &mut [SessionEntry],
+    current_session: Option<&str>,
+    last_session: Option<&str>,
+) {
     entries.sort_by(|a, b| {
-        demote_active(a.active, b.active)
-            .then_with(|| b.recency_key().cmp(&a.recency_key()))
-            .then_with(|| a.name.cmp(&b.name))
+        demote_active(
+            is_named_session(a, current_session),
+            is_named_session(b, current_session),
+        )
+        .then_with(|| compare_session_rank(a, b, last_session))
+        .then_with(|| b.recency_key().cmp(&a.recency_key()))
+        .then_with(|| a.name.cmp(&b.name))
     });
+}
+
+fn is_named_session(entry: &SessionEntry, session: Option<&str>) -> bool {
+    session.is_some_and(|session| entry.name == session)
+}
+
+fn compare_session_rank(
+    left: &SessionEntry,
+    right: &SessionEntry,
+    last_session: Option<&str>,
+) -> Ordering {
+    match (
+        is_named_session(left, last_session),
+        is_named_session(right, last_session),
+    ) {
+        (true, true) | (false, false) => Ordering::Equal,
+        (true, false) => Ordering::Less,
+        (false, true) => Ordering::Greater,
+    }
 }
 
 fn order_windows(entries: &mut [WindowEntry], session_stack: &[u32]) {
@@ -390,6 +423,20 @@ fn parse_index_list(value: &str) -> Vec<u32> {
         .filter(|part| !part.is_empty())
         .filter_map(|part| part.parse().ok())
         .collect()
+}
+
+fn parse_client_session_context(value: &str) -> (Option<String>, Option<String>) {
+    let mut parts = value.trim_end().split(FIELD_SEP);
+    let current = non_empty_string(parts.next());
+    let last = non_empty_string(parts.next());
+    (current, last)
+}
+
+fn non_empty_string(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
 }
 
 fn parse_num<T: std::str::FromStr + Default>(value: &str) -> T {
@@ -1501,9 +1548,10 @@ impl std::fmt::Display for NotifyKind {
 mod tests {
     use super::{
         build_naming_context, codex_thread_name_message, order_panes, order_sessions,
-        order_windows, parse_index_list, parse_pane_process, sanitize_generated_name,
-        user_requests_from_rollout, ActiveCodexSession, CodexSessionMarker, CodexThreadNameOutcome,
-        PaneEntry, PaneNameAction, PaneTarget, SessionEntry, WindowEntry,
+        order_windows, parse_client_session_context, parse_index_list, parse_pane_process,
+        sanitize_generated_name, user_requests_from_rollout, ActiveCodexSession,
+        CodexSessionMarker, CodexThreadNameOutcome, PaneEntry, PaneNameAction, PaneTarget,
+        SessionEntry, WindowEntry, FIELD_SEP,
     };
     use std::io::Write;
     use std::path::PathBuf;
@@ -1708,35 +1756,41 @@ mod tests {
     }
 
     #[test]
-    fn orders_sessions_by_last_attached_and_moves_active_to_end() {
+    fn parses_client_session_context() {
+        let (current, last) =
+            parse_client_session_context(&format!("current{FIELD_SEP}previous\n"));
+
+        assert_eq!(current.as_deref(), Some("current"));
+        assert_eq!(last.as_deref(), Some("previous"));
+    }
+
+    #[test]
+    fn orders_sessions_by_last_session_and_moves_current_to_end() {
         let mut entries = vec![
             SessionEntry {
                 name: "current".into(),
                 last_attached: 300,
                 activity: 300,
-                active: true,
             },
             SessionEntry {
                 name: "recent".into(),
                 last_attached: 200,
                 activity: 200,
-                active: false,
             },
             SessionEntry {
-                name: "older".into(),
+                name: "previous".into(),
                 last_attached: 100,
                 activity: 500,
-                active: false,
             },
         ];
 
-        order_sessions(&mut entries);
+        order_sessions(&mut entries, Some("current"), Some("previous"));
 
         let names = entries
             .iter()
             .map(|entry| entry.name.as_str())
             .collect::<Vec<_>>();
-        assert_eq!(names, vec!["recent", "older", "current"]);
+        assert_eq!(names, vec!["previous", "recent", "current"]);
     }
 
     #[test]
@@ -1746,17 +1800,15 @@ mod tests {
                 name: "quiet".into(),
                 last_attached: 0,
                 activity: 100,
-                active: false,
             },
             SessionEntry {
                 name: "busy".into(),
                 last_attached: 0,
                 activity: 200,
-                active: false,
             },
         ];
 
-        order_sessions(&mut entries);
+        order_sessions(&mut entries, None, None);
 
         let names = entries
             .iter()
