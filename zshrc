@@ -248,6 +248,13 @@ export PATH="$PATH:$HOME/.local/bin"
 
 
 export ANDROID_HOME=$HOME/Library/Android/sdk
+if [[ -d /Volumes/CacheDisk/dev-cache ]]; then
+  export DEV_CACHE_ROOT="/Volumes/CacheDisk/dev-cache"
+  export ANDROID_AVD_HOME="$DEV_CACHE_ROOT/android/avd"
+  export GRADLE_USER_HOME="$DEV_CACHE_ROOT/android/gradle-user-home"
+else
+  unset DEV_CACHE_ROOT ANDROID_AVD_HOME GRADLE_USER_HOME
+fi
 
 
 export ANDROID_SDK_ROOT=$ANDROID_HOME
