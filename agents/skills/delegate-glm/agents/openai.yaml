@@ -1,7 +1,7 @@
 interface:
   display_name: "Delegate GLM"
   short_description: "Open GLM 5.2 through OpenCode"
-  default_prompt: "Use $delegate-glm to ask Z.ai GLM 5.2 for a coding plan for the current work."
+  default_prompt: "Use $delegate-glm to delegate the current task to Z.ai GLM 5.2 through OpenCode."
 
 policy:
   allow_implicit_invocation: false
