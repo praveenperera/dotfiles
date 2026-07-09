@@ -1,6 +1,6 @@
 ---
 name: review-fix-loop
-description: Run bounded adaptive PR review and fix loops using Z.ai GLM 5.2, Codex, CodeRabbit, Greptile, and Claude, with every fix pass delegated to a fresh Codex exec thread.
+description: Run bounded adaptive PR review and fix loops using Grok 4.5, Z.ai GLM 5.2, Codex, CodeRabbit, Greptile, and Claude, with every fix pass delegated to a fresh Codex exec thread.
 ---
 
 # Review Fix Loop
@@ -9,11 +9,15 @@ description: Run bounded adaptive PR review and fix loops using Z.ai GLM 5.2, Co
 
 Use this skill to run a bounded review and repair loop for a PR or local branch. The current thread is the orchestrator: it gathers review output, normalizes findings, chooses the next review or fix step, runs verification, and reports progress. Code edits should be delegated to fresh `codex exec` sessions unless the user explicitly asks to work directly in the current thread.
 
-The default loop is adaptive, not profile-based. Always start with a Z.ai GLM 5.2 review, then spend Codex effort only where the findings, diff risk, or verification results justify it.
+The default loop is adaptive, not profile-based. Always start with a Grok 4.5 review via the Grok CLI, then run Z.ai GLM 5.2 after Grok finishes for that round. Spend Codex effort only where the combined findings, diff risk, or verification results justify it.
+
+Grok is the default first cheap reviewer because it is currently free and fast. Flip the default order later by editing this skill if that preference changes.
 
 ## Hard Requirements
 
-- Start the first review pass with `zai-coding-plan/glm-5.2` through `opencode run` and the OpenCode `pr-review-toolkit` skill unless the user explicitly disables it.
+- Start the first review pass with `grok-4.5` through the `grok` CLI unless the user explicitly disables Grok.
+- After Grok finishes for that round, run Z.ai GLM 5.2 through `opencode run` with the OpenCode `pr-review-toolkit` skill unless the user explicitly disables GLM.
+- Re-review after every fix pass that changes code in the same order: Grok first, then GLM (unless a provider was disabled).
 - Start every fix pass in a fresh Codex thread with `codex exec`; never use `codex exec resume`, `codex resume`, or any continuation command for a fix pass.
 - Keep repository and PR writes in the orchestrator thread. Fresh Codex fix threads must not commit, push, resolve PR threads, label the PR, or comment on the PR.
 - Default to no commits and no pushes. Commit, push, resolve threads, label the PR, or comment on the PR only when the user explicitly requests that write action.
@@ -27,14 +31,27 @@ The default loop is adaptive, not profile-based. Always start with a Z.ai GLM 5.
 - Preserve unrelated local changes. Read `git status --short` before the first pass and before any optional commit.
 - Save raw reviewer output, normalized findings, prompts, Codex summaries, verification output, and final reports under `_scratch/review-fix-loop/<timestamp>/`.
 
+## Cheap Reviewer Overrides
+
+Parse the user request at preflight:
+
+| User intent | Behavior |
+| --- | --- |
+| (default) | Grok first, then GLM |
+| "skip glm" / "no glm" | Grok only for cheap reviews |
+| "skip grok" / "glm only" / "use glm first" | GLM-first or GLM-only as requested |
+| "glm only, no grok" | GLM first/re-review only |
+
+If Grok is required (default) but unavailable and the user did not authorize a fallback, stop before burning GLM/Codex and report the blocker. If only GLM is unavailable, continue with Grok and report GLM as skipped.
+
 ## Adaptive Budget Policy
 
-Run Z.ai GLM 5.2 first and after each fix pass that changes code. Use it as the cheap reviewer that drives the ordinary loop.
+Run Grok first and after each fix pass that changes code. After Grok finishes that round, run GLM. Use this Grok-then-GLM pair as the cheap reviewers that drive the ordinary loop.
 
 Use Codex xhigh reviews sparingly. A normal high-assurance loop may use at most two Codex xhigh reviews:
 
-- An initial Codex xhigh review after the GLM pass, only when GLM findings or diff risk warrant deeper review before fixing.
-- A final Codex xhigh review after verification and GLM are clean, only for high-risk changes or when the initial xhigh review found serious issues.
+- An initial Codex xhigh review after the Grok+GLM pair, only when combined findings or diff risk warrant deeper review before fixing. Escalate early after Grok alone when Grok already shows high-risk issues.
+- A final Codex xhigh review after verification and the selected cheap reviewers are clean, only for high-risk changes or when the initial xhigh review found serious issues.
 
 Do not run Codex xhigh by default for small PRs. Do not use Codex xhigh as the ordinary fix agent. Fix passes should normally use low, medium, or high reasoning effort.
 
@@ -44,30 +61,32 @@ Choose the fresh Codex fix effort before launching each fix pass:
 - `medium`: default for ordinary actionable findings, moderate refactors, test updates, and small cross-file fixes.
 - `high`: broad or subtle behavior changes, API or migration risk, security/auth/data-loss/concurrency issues, complex Rust/type-system work, unclear reviewer findings that appear plausible, or any repair after a low/medium pass fails verification.
 
-Escalate from GLM to a Codex xhigh review when any of these are true:
+Escalate from the cheap reviewers to a Codex xhigh review when any of these are true:
 
-- GLM reports architecture, security, auth, data-loss, concurrency, migration, API compatibility, or test-gap concerns.
+- Grok or GLM reports architecture, security, auth, data-loss, concurrency, migration, API compatibility, or test-gap concerns.
 - The diff is large, touches multiple ownership boundaries, or changes public behavior.
-- GLM findings are vague but plausible and could cause expensive rework if fixed blindly.
+- Findings are vague but plausible and could cause expensive rework if fixed blindly.
 - Verification fails after a fresh Codex fix pass and the cause is not mechanical.
 - The user requested high assurance for the PR.
 
-Skip Codex xhigh when GLM finds no actionable issues, findings are small and local, verification is strong, and CodeRabbit will still run as the final gate.
+Skip Codex xhigh when Grok and GLM (when enabled) find no actionable issues, findings are small and local, verification is strong, and CodeRabbit will still run as the final gate.
 
 ## Workflow
 
 1. Preflight the repository.
    - Read applicable `AGENTS.md` files and project config before relying on defaults.
    - Capture `git status --short`, current branch, remotes, base branch, and PR number or URL when available.
-   - Check required CLIs, skill availability, and auth state: `opencode` with `zai-coding-plan/glm-5.2`, OpenCode `pr-review-toolkit`, plus any user-requested providers.
+   - Resolve cheap-reviewer overrides from the user request.
+   - Check required CLIs, skill availability, and auth state: `grok` with `grok-4.5` when Grok is enabled; `opencode` with `zai-coding-plan/glm-5.2` and OpenCode `pr-review-toolkit` when GLM is enabled; plus any user-requested providers.
    - Create the scratch directory for the run.
-2. Run the required first review.
-   - Run Z.ai GLM 5.2 with a concise review prompt that explicitly tells OpenCode to use `pr-review-toolkit` for actionable correctness, regression, testing, migration, security, and maintainability risks.
-   - Store raw JSONL or text exactly as produced.
-   - Normalize findings into the format from `references/providers.md`.
+2. Run the required first review round.
+   - Run Grok 4.5 first with a concise review prompt for actionable correctness, regression, testing, migration, security, and maintainability risks.
+   - After Grok finishes, run Z.ai GLM 5.2 with a concise review prompt that explicitly tells OpenCode to use `pr-review-toolkit` for the same classes of risk (unless GLM is disabled).
+   - Store raw JSON/JSONL or text exactly as produced for each provider.
+   - Normalize findings into the format from `references/providers.md`. Merge and dedupe Grok and GLM findings before planning fixes.
 3. Decide the next review step.
-   - If the GLM pass or diff risk meets the escalation rules, run an initial Codex xhigh review and normalize its findings.
-   - If the user requested extra providers, run only the requested non-CodeRabbit providers after GLM unless CodeRabbit is being used as the final gate.
+   - If the Grok/GLM findings or diff risk meet the escalation rules, run an initial Codex xhigh review and normalize its findings.
+   - If the user requested extra providers, run only the requested non-CodeRabbit providers after the cheap reviewers unless CodeRabbit is being used as the final gate.
    - Defer CodeRabbit until verification and selected non-CodeRabbit reviewers are clean.
 4. Plan and run a fresh Codex fix pass.
    - Merge normalized actionable findings, remove duplicates, and filter approvals, status messages, stale comments, and informational notes.
@@ -82,14 +101,14 @@ Skip Codex xhigh when GLM finds no actionable issues, findings are small and loc
    - If no fix pass ran because reviewers were already clean, still run the expected verification before any final gate or write action.
    - If verification fails mechanically, run a focused fresh Codex repair pass. If it fails for a design or product reason, stop and report the decision needed.
 6. Re-review.
-   - Re-run Z.ai GLM 5.2 after every fix pass that changes code.
+   - Re-run Grok then GLM after every fix pass that changes code (respecting disables/overrides).
    - Re-run a provider only when it can see the current changes and either it previously raised findings or the user explicitly requested it.
    - For hosted PR reviewers that only see pushed commits, re-run them only after a separately approved interim commit and push. Do not treat finalization permission as permission for an interim push.
-   - If GLM and verification are clean, decide whether final Codex xhigh is warranted by the adaptive budget policy.
+   - If the selected cheap reviewers and verification are clean, decide whether final Codex xhigh is warranted by the adaptive budget policy.
    - Stop when reviewers and verification are clean, there are no actionable findings, the iteration cap is reached, or the loop stops making progress.
 7. Run CodeRabbit final gate when required.
    - If the user requested commit, push, PR comment finalization, or explicitly selected CodeRabbit, run CodeRabbit only after selected non-CodeRabbit reviewers and verification are clean.
-   - If CodeRabbit finds actionable findings, fix them in a fresh Codex pass, verify, re-run GLM, then return to CodeRabbit only after the non-CodeRabbit path is clean again.
+   - If CodeRabbit finds actionable findings, fix them in a fresh Codex pass, verify, re-run Grok then GLM, then return to CodeRabbit only after the non-CodeRabbit path is clean again.
 8. Finalize requested repository and PR writes.
    - Run this step only when the user explicitly requested commit, push, thread resolution, or PR comment finalization.
    - Require the final CodeRabbit gate to have completed with zero actionable findings after the last fresh Codex fix pass and verification run.
@@ -138,6 +157,7 @@ Loop summary:
 Models and gates:
 | Round | Stage | Provider | Model/effort | Ran after last code change | Result | Artifact |
 | --- | --- | --- | --- | --- | --- | --- |
+| 1 | review | Grok | grok-4.5 | no | clean/finding count | _scratch/... |
 | 1 | review | Z.ai GLM | zai-coding-plan/glm-5.2 | no | clean/finding count | _scratch/... |
 | 2 | final gate | CodeRabbit | coderabbit CLI <version or unknown model> | yes | clean | _scratch/... |
 
@@ -157,7 +177,8 @@ Remaining issues: none
 
 Load `references/providers.md` before running provider commands. The key constraints are:
 
-- Z.ai GLM 5.2 through opencode with the OpenCode `pr-review-toolkit` skill is the required first review provider and default re-review provider.
+- Grok 4.5 through the `grok` CLI is the required first review provider and default first re-review provider unless the user disables Grok.
+- Z.ai GLM 5.2 through opencode with the OpenCode `pr-review-toolkit` skill runs after Grok for each cheap-review round unless the user disables GLM.
 - CodeRabbit is a final gate and should not run until selected non-CodeRabbit reviewers and verification have passed.
 - Greptile CLI commonly reviews committed branch state against a base branch; do not assume it can validate uncommitted fixes.
 - Greptile hosted comments require bounded polling and should not be driven by an infinite loop.

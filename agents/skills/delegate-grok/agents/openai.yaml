@@ -1,0 +1,7 @@
+interface:
+  display_name: "Delegate Grok"
+  short_description: "Open Grok 4.5 through the Grok CLI"
+  default_prompt: "Use $delegate-grok to delegate the current task to Grok 4.5 through the Grok CLI."
+
+policy:
+  allow_implicit_invocation: false
