@@ -64,13 +64,12 @@ grok \
   --no-plan \
   --no-subagents \
   --disable-web-search \
-  --max-turns 1 \
   --output-format json \
   -m grok-4.5 \
   > "$scratch/raw/grok-review-$iteration.json"
 ```
 
-The embedded prompt is what keeps the review non-editing; the command should not rely on repository tools. Still save the raw JSON exactly as produced, then normalize it yourself. Ignore tool chatter, status events, approvals, and broad style preferences. Parse the JSON `text` field when present; if the CLI emits an error object, treat the run as failed. If Grok still attempts tool use or returns `stopReason: Cancelled`, rerun once with the same embedded prompt plus an explicit first line: `Do not use tools. Review only the embedded diff below.`
+The embedded prompt is what keeps the review non-editing; the command should not rely on repository tools. Still save the raw JSON exactly as produced, then normalize it yourself. Ignore tool chatter, status events, approvals, and broad style preferences. Parse the JSON `text` field when present; if the CLI emits an error object, treat the run as failed. Treat `stopReason: MaxTurns` as incomplete even if partial text is present, and rerun without a turn cap. If Grok still attempts tool use or returns `stopReason: Cancelled`, rerun once with the same embedded prompt plus an explicit first line: `Do not use tools. Review only the embedded diff below.`
 
 ## Z.ai GLM 5.2 Through OpenCode
 
