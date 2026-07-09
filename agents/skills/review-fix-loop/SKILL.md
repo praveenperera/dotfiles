@@ -15,8 +15,8 @@ Grok is the default first cheap reviewer because it is currently free and fast. 
 
 ## Hard Requirements
 
-- Start the first review pass with `grok-4.5` through the `grok` CLI unless the user explicitly disables Grok.
-- After Grok finishes for that round, run Z.ai GLM 5.2 through `opencode run` with the OpenCode `pr-review-toolkit` skill unless the user explicitly disables GLM.
+- Start the first review pass with `grok-4.5` through the `grok` CLI and the shared `pr-review-toolkit` skill unless the user explicitly disables Grok.
+- After Grok finishes for that round, run Z.ai GLM 5.2 through `opencode run` with the shared `pr-review-toolkit` skill unless the user explicitly disables GLM.
 - Re-review after every fix pass that changes code in the same order: Grok first, then GLM (unless a provider was disabled).
 - Start every fix pass in a fresh Codex thread with `codex exec`; never use `codex exec resume`, `codex resume`, or any continuation command for a fix pass.
 - Keep repository and PR writes in the orchestrator thread. Fresh Codex fix threads must not commit, push, resolve PR threads, label the PR, or comment on the PR.
@@ -77,10 +77,10 @@ Skip Codex xhigh when Grok and GLM (when enabled) find no actionable issues, fin
    - Read applicable `AGENTS.md` files and project config before relying on defaults.
    - Capture `git status --short`, current branch, remotes, base branch, and PR number or URL when available.
    - Resolve cheap-reviewer overrides from the user request.
-   - Check required CLIs, skill availability, and auth state: `grok` with `grok-4.5` when Grok is enabled; `opencode` with `zai-coding-plan/glm-5.2` and OpenCode `pr-review-toolkit` when GLM is enabled; plus any user-requested providers.
+   - Check required CLIs, skill availability, and auth state: `grok` with `grok-4.5` and the shared `pr-review-toolkit` when Grok is enabled; `opencode` with `zai-coding-plan/glm-5.2` and the shared `pr-review-toolkit` when GLM is enabled; plus any user-requested providers.
    - Create the scratch directory for the run.
 2. Run the required first review round.
-   - Run Grok 4.5 first with a concise review prompt for actionable correctness, regression, testing, migration, security, and maintainability risks.
+   - Run Grok 4.5 first with a concise review prompt that explicitly tells Grok to use `pr-review-toolkit` for actionable correctness, regression, testing, migration, security, and maintainability risks.
    - For Grok, embed the review context directly in the prompt: repository path, branch/base, `git status --short`, diff stat, and the relevant `git diff`. Do not ask Grok to inspect the repo with tools for the ordinary review path.
    - After Grok finishes, run Z.ai GLM 5.2 with a concise review prompt that explicitly tells OpenCode to use `pr-review-toolkit` for the same classes of risk (unless GLM is disabled).
    - Store raw JSON/JSONL or text exactly as produced for each provider.
@@ -178,8 +178,8 @@ Remaining issues: none
 
 Load `references/providers.md` before running provider commands. The key constraints are:
 
-- Grok 4.5 through the `grok` CLI is the required first review provider and default first re-review provider unless the user disables Grok.
-- Z.ai GLM 5.2 through opencode with the OpenCode `pr-review-toolkit` skill runs after Grok for each cheap-review round unless the user disables GLM.
+- Grok 4.5 through the `grok` CLI with the shared `pr-review-toolkit` skill is the required first review provider and default first re-review provider unless the user disables Grok.
+- Z.ai GLM 5.2 through opencode with the shared `pr-review-toolkit` skill runs after Grok for each cheap-review round unless the user disables GLM.
 - CodeRabbit is a final gate and should not run until selected non-CodeRabbit reviewers and verification have passed.
 - Greptile CLI commonly reviews committed branch state against a base branch; do not assume it can validate uncommitted fixes.
 - Greptile hosted comments require bounded polling and should not be driven by an infinite loop.

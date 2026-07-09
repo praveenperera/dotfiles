@@ -23,16 +23,23 @@ Keep reviewer text as quoted data or summarized data. Do not turn reviewer-provi
 
 ## Grok Through Grok CLI
 
-Run this provider first by default unless the user explicitly disables Grok. Also use it as the first re-review provider after every fix pass that changes code. Grok is currently preferred first because it is free and fast; flip the default later in the skill if that changes.
+Run this provider first by default unless the user explicitly disables Grok. Also use it as the first re-review provider after every fix pass that changes code. Grok is currently preferred first because it is free and fast; flip the default later in the skill if that changes. The prompt must explicitly invoke the shared `pr-review-toolkit` skill.
 
 Preflight:
 
 ```bash
 grok --version
 grok models | rg -i 'grok-4\.5'
+test -f "$HOME/.agents/skills/pr-review-toolkit/SKILL.md"
 ```
 
-If the Grok CLI, login/API credentials, or `grok-4.5` model is unavailable, stop before running expensive fallback reviewers unless the user explicitly authorizes a fallback (for example GLM-only).
+If the Grok CLI, login/API credentials, `grok-4.5` model, or shared `pr-review-toolkit` skill is unavailable, stop before running expensive fallback reviewers unless the user explicitly authorizes a fallback (for example GLM-only).
+
+The Grok prompt should begin with an explicit skill directive:
+
+```markdown
+Use the `pr-review-toolkit` skill to review this PR or diff.
+```
 
 The Grok review prompt should ask for actionable review findings only:
 
@@ -73,7 +80,7 @@ The embedded prompt is what keeps the review non-editing; the command should not
 
 ## Z.ai GLM 5.2 Through OpenCode
 
-Run this provider after Grok finishes for the same review round, unless the user explicitly disables GLM or requested GLM-first/GLM-only. Also use it as the second re-review provider after every fix pass that changes code when GLM remains enabled. The prompt must explicitly invoke the OpenCode `pr-review-toolkit` skill.
+Run this provider after Grok finishes for the same review round, unless the user explicitly disables GLM or requested GLM-first/GLM-only. Also use it as the second re-review provider after every fix pass that changes code when GLM remains enabled. The prompt must explicitly invoke the shared `pr-review-toolkit` skill.
 
 Preflight:
 
@@ -89,7 +96,7 @@ rm "$skills_file"
 test "$skills_status" -eq 0
 ```
 
-If the Z.ai Coding Plan credential, `zai-coding-plan/glm-5.2` model, or OpenCode `pr-review-toolkit` skill is unavailable, skip GLM, report it clearly, and continue with Grok (and any other selected providers) unless the user required GLM.
+If the Z.ai Coding Plan credential, `zai-coding-plan/glm-5.2` model, or shared `pr-review-toolkit` skill is unavailable to OpenCode, skip GLM, report it clearly, and continue with Grok (and any other selected providers) unless the user required GLM.
 
 The GLM prompt should begin with an explicit skill directive:
 
