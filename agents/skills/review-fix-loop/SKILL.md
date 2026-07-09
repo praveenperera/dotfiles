@@ -81,6 +81,7 @@ Skip Codex xhigh when Grok and GLM (when enabled) find no actionable issues, fin
    - Create the scratch directory for the run.
 2. Run the required first review round.
    - Run Grok 4.5 first with a concise review prompt for actionable correctness, regression, testing, migration, security, and maintainability risks.
+   - For Grok, embed the review context directly in the prompt: repository path, branch/base, `git status --short`, diff stat, and the relevant `git diff`. Do not ask Grok to inspect the repo with tools for the ordinary review path.
    - After Grok finishes, run Z.ai GLM 5.2 with a concise review prompt that explicitly tells OpenCode to use `pr-review-toolkit` for the same classes of risk (unless GLM is disabled).
    - Store raw JSON/JSONL or text exactly as produced for each provider.
    - Normalize findings into the format from `references/providers.md`. Merge and dedupe Grok and GLM findings before planning fixes.
