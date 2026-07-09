@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apple Design"
+  short_description: "Fluid Apple-style UI, springs, and gestures"
+  default_prompt: "Use $apple-design when building or reviewing gesture-driven UI, spring animations, sheets, materials, typography, or Apple-style interface feel."
