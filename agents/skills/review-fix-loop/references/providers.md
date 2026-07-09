@@ -42,7 +42,17 @@ The Grok review prompt should ask for actionable review findings only:
 - missing verification that would catch real regressions
 - maintainability issues that are likely to cause bugs
 
-Ask Grok to return normalized Markdown findings and to say `No actionable findings` when clean. Instruct it not to edit files.
+Build the Grok prompt as a self-contained review packet. Include:
+
+- repository path, current branch, base branch or merge-base, and PR URL/number when known
+- applicable `AGENTS.md` instructions that affect review scope
+- `git status --short`
+- `git diff --stat`
+- the relevant `git diff` content
+
+Ask Grok to return normalized Markdown findings and to say `No actionable findings` when clean. Instruct it to review only the embedded context, not to inspect the repository, not to call tools, and not to edit files.
+
+Do not use `--permission-mode plan` for the ordinary Grok review path. Plan mode can stop before a review if Grok attempts repository inspection. Use a single-turn, no-plan invocation with embedded context instead.
 
 Review example:
 
@@ -51,13 +61,16 @@ prompt_file="$scratch/prompts/grok-review-$iteration.md"
 grok \
   --prompt-file "$prompt_file" \
   --cwd "$repo" \
-  --permission-mode plan \
+  --no-plan \
+  --no-subagents \
+  --disable-web-search \
+  --max-turns 1 \
   --output-format json \
   -m grok-4.5 \
   > "$scratch/raw/grok-review-$iteration.json"
 ```
 
-Use `--permission-mode plan` so the review pass stays non-editing. Still save the raw JSON exactly as produced, then normalize it yourself. Ignore tool chatter, status events, approvals, and broad style preferences. Parse the JSON `text` field when present; if the CLI emits an error object, treat the run as failed.
+The embedded prompt is what keeps the review non-editing; the command should not rely on repository tools. Still save the raw JSON exactly as produced, then normalize it yourself. Ignore tool chatter, status events, approvals, and broad style preferences. Parse the JSON `text` field when present; if the CLI emits an error object, treat the run as failed. If Grok still attempts tool use or returns `stopReason: Cancelled`, rerun once with the same embedded prompt plus an explicit first line: `Do not use tools. Review only the embedded diff below.`
 
 ## Z.ai GLM 5.2 Through OpenCode
 
