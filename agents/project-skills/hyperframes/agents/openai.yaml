@@ -1,0 +1,4 @@
+interface:
+  display_name: "HyperFrames"
+  short_description: "Route and author HyperFrames video work"
+  default_prompt: "Use $hyperframes to make a HyperFrames video for this request."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Motion Graphics"
+  short_description: "Short design-led motion graphics in HyperFrames"
+  default_prompt: "Use $motion-graphics to make a short motion graphic for this."

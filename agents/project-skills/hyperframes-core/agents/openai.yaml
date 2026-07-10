@@ -1,0 +1,4 @@
+interface:
+  display_name: "HyperFrames Core"
+  short_description: "HyperFrames composition contract and structure"
+  default_prompt: "Use $hyperframes-core to build this HyperFrames composition structure correctly."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "General Video"
+  short_description: "Author custom HyperFrames compositions"
+  default_prompt: "Use $general-video to author or edit this custom HyperFrames composition."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "HyperFrames Figma"
+  short_description: "Import Figma content into HyperFrames"
+  default_prompt: "Use $figma to import this Figma design into a HyperFrames composition."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "HyperFrames Creative"
+  short_description: "Creative direction for HyperFrames videos"
+  default_prompt: "Use $hyperframes-creative to set creative direction for this HyperFrames video."

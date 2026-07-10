@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Launch Video"
+  short_description: "Turn a product URL or brief into a promo video"
+  default_prompt: "Use $product-launch-video to make a product launch video for this."

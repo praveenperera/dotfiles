@@ -1,0 +1,4 @@
+interface:
+  display_name: "Slideshow"
+  short_description: "Author HyperFrames presentation decks"
+  default_prompt: "Use $slideshow to author a HyperFrames slideshow for this."

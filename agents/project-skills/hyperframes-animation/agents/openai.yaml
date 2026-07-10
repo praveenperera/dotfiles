@@ -1,0 +1,4 @@
+interface:
+  display_name: "HyperFrames Animation"
+  short_description: "Motion rules and animation adapters for HyperFrames"
+  default_prompt: "Use $hyperframes-animation to animate this HyperFrames composition."

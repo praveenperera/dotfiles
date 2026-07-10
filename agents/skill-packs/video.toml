@@ -1,3 +1,25 @@
 description = "Video and motion graphics work"
 plugin_sources = ["remotion@openai-curated-remote"]
-skills = ["smrze-youtube-transcripts"]
+skills = [
+  "smrze-youtube-transcripts",
+  "hyperframes",
+  "hyperframes-core",
+  "hyperframes-animation",
+  "hyperframes-cli",
+  "hyperframes-creative",
+  "hyperframes-keyframes",
+  "hyperframes-registry",
+  "media-use",
+  "figma",
+  "general-video",
+  "product-launch-video",
+  "website-to-video",
+  "faceless-explainer",
+  "pr-to-video",
+  "embedded-captions",
+  "talking-head-recut",
+  "motion-graphics",
+  "music-to-video",
+  "slideshow",
+  "remotion-to-hyperframes",
+]
