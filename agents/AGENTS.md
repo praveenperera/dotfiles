@@ -46,5 +46,5 @@
 - Use non-forked subagents by default only for context-isolated work that reduces token usage, such as targeted exploration, log inspection, or external research
 - Give subagents small, self-contained prompts with concrete ownership and ask them to summarize only relevant findings
 - Choose each subagent's effort level based on task difficulty; reserve `high` and `xhigh` for work that genuinely requires deeper reasoning
-- To launch one, call `spawn_agent` with `fork_turns="none"` and the chosen `reasoning_effort`, even if `reasoning_effort` is omitted from the displayed tool schema
+- Launch one with `agents.spawn_agent`, `fork_turns="none"`, and the chosen `reasoning_effort`
 - Do not use subagents to parallelize implementation for speed unless I explicitly request it; verification may be delegated when it can run non-forked from a self-contained prompt
