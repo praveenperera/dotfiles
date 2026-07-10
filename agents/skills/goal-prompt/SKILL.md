@@ -1,6 +1,7 @@
 ---
 name: goal-prompt
-description: Use when the user wants to create, improve, or sanity-check an arbitrary Codex goal without creating a full goal-ready spec. Helps draft compact goals with measurable outcomes, evidence surfaces, constraints, boundaries, iteration policy, and blocked stop conditions.
+description: Use only when the user explicitly invokes $goal-prompt or /goal-prompt. Helps draft compact Codex goals with measurable outcomes, evidence surfaces, constraints, boundaries, iteration policy, and blocked stop conditions — without creating a full goal-ready spec.
+disable-model-invocation: true
 ---
 
 # Goal Prompt
@@ -9,7 +10,7 @@ description: Use when the user wants to create, improve, or sanity-check an arbi
 
 Create compact, paste-ready Codex goal prompts without creating a file-backed `_plans/` spec.
 
-Use this skill when the user wants an arbitrary goal, goal wording, goal review, or a lightweight goal prompt. Do not use it when the user asks for a durable implementation spec, explicitly invokes `$goal-ready-spec`, or needs a repo-local plan folder.
+This skill is manual-only. Use it only when the user explicitly invokes `$goal-prompt` or `/goal-prompt`. Do not use it for ordinary requests, durable implementation specs, `$goal-ready-spec`, or repo-local plan folders.
 
 ## When To Use A Goal
 
