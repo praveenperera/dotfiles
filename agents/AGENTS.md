@@ -17,8 +17,14 @@
 
 # Background Commands
 
-- For long-running non-interactive commands that should resume work when finished, use `exec_command` with `on_exit: "wake"` and stop polling with `write_stdin`
-- Keep the default `on_exit: "none"` for interactive processes, commands requiring stdin, or commands whose completion should not start another model turn
+- For long-running non-interactive commands that should resume work when finished, use `exec_command(..., on_exit: "wake")`; after they yield, do not poll with `write_stdin` or send status-only updates
+- Keep `on_exit: "none"` for interactive commands, commands requiring stdin, and commands whose completion should not start another turn
+- Give a delegated checker the exact command and working directory. It must use completion wakeup, avoid polling or interim messages, and return exactly one final response, which the parent receives through its mailbox. Require the exact command, exit status, duration, concise result, first actionable failure, and artifact paths. It must not diagnose or edit unless assigned, and the primary agent must not poll or duplicate its run
+
+# Progress Communication
+
+- Make progress communication event-driven, not timer-driven. Send updates for meaningful state changes, actionable failures, integration checkpoints, user decisions, or final results; do not send periodic heartbeats merely to report that work is still running
+- While waiting for delegated work or a background command, rely on completion wakeups and final mailbox reports instead of status-only updates
 
 # Rust Project Specific
 
@@ -53,4 +59,7 @@
 - Make every non-forked prompt self-contained. Include the exact objective, relevant files or commands, constraints, concrete ownership, and expected concise output; point to repository files or raw artifacts when available and state any other necessary context directly
 - Choose each subagent's effort level based on task difficulty; default to `medium`, reserve `high` and `xhigh` for work that genuinely requires deeper reasoning, and use `low` for simple, mechanical tasks whose results can be verified cheaply
 - Fork only when an essential recent decision cannot be supplied through repository files, raw artifacts, or a concise prompt without making the task costly or unsafe. Use the smallest positive `fork_turns` value that supplies the missing context. Do not use `fork_turns="all"` unless I explicitly request it
+- Default implementation work to at most two concurrent workers. Prefer larger, phase-sized, non-overlapping ownership slices over many small assignments. Each worker verifies its own slice and returns one concise final report with changed files, verification results, risks, and integration notes
+- While a worker wave is active, the primary agent may do unrelated work but should not reread worker-owned files or duplicate focused verification. After all workers in the wave finish, perform one integration checkpoint: inspect the combined diff, reconcile boundaries, run cross-cutting checks, and update durable progress or audit state. Do not launch another implementation wave before integrating the current one
+- Exceed two concurrent implementation workers only when the additional slices are genuinely independent and the expected savings clearly exceed coordination and context costs
 - The primary agent remains responsible for integration and verification of delegated results
