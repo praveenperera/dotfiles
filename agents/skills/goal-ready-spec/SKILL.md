@@ -47,7 +47,7 @@ Use this structure unless the user asks for a different format:
 - Plan Folder Contract: define `_plans/<short-slug>/` as the durable working area for spec, progress, audit, and optional supporting files, with progressive-disclosure loading rules
 - Read Map: a small table that tells the execution agent which file to read for each common need, and which files to skip
 - Goal Runtime Handoff: instructions that make the spec durable across `/goal` continuations, including rereading controlling sections, maintaining a separate Completion Audit file, and not marking the goal complete until audit evidence exists
-- Cost-Aware Subagent Delegation: execution-wide rules for non-forked delegation, reasoning-effort selection, bounded prompts, and primary-agent ownership
+- Subagent Delegation: execution-wide rules for non-forked delegation, reasoning-effort selection, bounded prompts, and primary-agent ownership
 - Implementation Plan: ordered phases with files or modules likely involved
 - Deviation Protocol: contract-level changes that require stopping to ask before implementation continues
 - Verification Plan: exact commands, tests, generated outputs, manual checks, and expected evidence
@@ -93,7 +93,7 @@ Do not let the Set Your Goal Prompt become the full spec. It should point to `sp
 - Residual risk that touches a Hard Requirement or No Equivalent Substitution blocks completion. Do not mark that risk as low while also marking the goal complete.
 - `progress.md` must not say Done, complete, ready to commit, or only pending review while `audit.md` has unapproved deviations, unresolved residual risk, unsatisfied criteria, or missing evidence, unless the only remaining blocker is terminal manual intervention. In that case it must say the agent-actionable work is complete, name the manual intervention still required, and state that the manual work was not performed by the agent.
 - Do not require subagent review, independent boundary review, or any other approval-only review gate unless the user explicitly asks for that gate. Verification and audit requirements should be satisfiable by the executing agent through commands, file inspection, documented evidence, or an N/A reason.
-- Every generated `spec.md` must include a Cost-Aware Subagent Delegation section. Keep this execution policy in the controlling spec rather than repeating it in the Recommended Goal Objective or Set Your Goal Prompt.
+- Every generated `spec.md` must include a Subagent Delegation section. Keep this execution policy in the controlling spec rather than repeating it in the Recommended Goal Objective or Set Your Goal Prompt.
 - Use non-forked subagents selectively during implementation when a bounded, context-isolated task is likely to reduce total token cost. Default to `fork_turns="none"`; use the smallest positive fork only when essential recent decisions are absent from durable files. Do not use `fork_turns="all"` unless the user explicitly requests it.
 - Default delegated tasks to `medium` reasoning effort. Use `low` for simple, mechanically verifiable work. Use `high` or `xhigh` only when ambiguity, complexity, or required depth makes lower effort unreliable.
 - Give each subagent a self-contained prompt with the exact objective, relevant files or commands, constraints, ownership boundary, and expected concise output. Bound the work to a single focused pass when possible; avoid open-ended investigation, repeated follow-ups, or multiple agents covering the same scope.
@@ -211,12 +211,12 @@ Every generated spec must include a section like this, adapted to the concrete s
 This spec is the controlling router and contract for the implementation goal. At the start of execution, read this router spec, inspect the current repo state, and read `<progress path>` before choosing the next action. On continuation or resume, reread only the hot sections of this spec and follow the Read Map; do not read all supporting files for context. Open `<audit path>` when updating evidence, checking blockers, or considering completion. Open phase, context, or phase-audit files only when the Read Map, current task, blocker, or final completion pass points to them. Keep `<progress path>` short by updating changed fields during routine work and compressing only when it exceeds target size, starts acting like a diary, reaches a phase handoff, prepares for final audit, or must survive likely compaction. Keep `<audit path>` as a compact completion dashboard and latest verification snapshot, not a running log. Keep detailed phase, audit, decision, context, and evidence material in supporting files under `_plans/<short-slug>/`, and link each file from the Read Map with when to read and skip it. If this spec or the user requires independent completion review, run that review only on the final completion pass after `<audit path>` is filled; if the review cannot run, perform and record the specified fallback audit. Do not call `update_goal` or otherwise mark the goal complete until every Completion Criteria item and every Completion Audit file item is satisfied with evidence or marked N/A with a reason, with no unresolved deviation, residual-risk, or completion-review blocker, except for a recorded terminal manual-intervention blocker after all agent-actionable work is complete.
 ```
 
-## Cost-Aware Subagent Delegation Template
+## Subagent Delegation Template
 
 Every generated `spec.md` must include a section like this, adapted to the implementation:
 
 ```markdown
-## Cost-Aware Subagent Delegation
+## Subagent Delegation
 
 Use subagents selectively when a bounded, context-isolated task is likely to reduce total token cost.
 
