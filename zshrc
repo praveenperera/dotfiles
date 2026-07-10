@@ -86,12 +86,11 @@ alias ll="cmd codex launch a -c shared"
 alias llq="cmd codex launch a -c q"
 
 # terra / luna
-alias llw="cmd codex launch a -c terra -- -m gpt-5.6-terra"
-alias lle="cmd codex launch a -c luna -- -m gpt-5.6-luna"
+alias lla="cmd codex launch a -c terra -- -m gpt-5.6-terra"
+alias lls="cmd codex launch a -c luna -- -m gpt-5.6-luna"
 
-# fast / slow
+# fast
 alias llf="cmd codex launch a -c fast"
-alias lls="cmd codex launch a -c slow"
 
 # review
 alias llr="cmd codex launch a -c review-high"
