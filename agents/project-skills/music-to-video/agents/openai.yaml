@@ -1,0 +1,4 @@
+interface:
+  display_name: "Music to Video"
+  short_description: "Turn music into a beat-synced HyperFrames video"
+  default_prompt: "Use $music-to-video to make a beat-synced video for this music track."

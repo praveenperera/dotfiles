@@ -1,0 +1,4 @@
+interface:
+  display_name: "Embedded Captions"
+  short_description: "Add cinematic captions to talking-head video"
+  default_prompt: "Use $embedded-captions to add embedded captions to this talking-head video."

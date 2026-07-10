@@ -1,0 +1,4 @@
+interface:
+  display_name: "Talking Head Recut"
+  short_description: "Add graphic overlays to talking-head video"
+  default_prompt: "Use $talking-head-recut to package this talking-head video with graphic overlays."

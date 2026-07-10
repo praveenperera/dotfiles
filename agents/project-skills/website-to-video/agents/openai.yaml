@@ -1,0 +1,4 @@
+interface:
+  display_name: "Website to Video"
+  short_description: "Turn a website into a HyperFrames tour video"
+  default_prompt: "Use $website-to-video to turn this website into a video."

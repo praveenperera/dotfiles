@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR to Video"
+  short_description: "Turn a GitHub PR into a code explainer video"
+  default_prompt: "Use $pr-to-video to make a video about this GitHub PR."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "HyperFrames CLI"
+  short_description: "HyperFrames CLI build and render loop"
+  default_prompt: "Use $hyperframes-cli to run the HyperFrames CLI for this composition."

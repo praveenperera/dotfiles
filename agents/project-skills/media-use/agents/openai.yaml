@@ -1,0 +1,4 @@
+interface:
+  display_name: "Media Use"
+  short_description: "Resolve media assets for HyperFrames projects"
+  default_prompt: "Use $media-use to resolve media assets for this HyperFrames project."

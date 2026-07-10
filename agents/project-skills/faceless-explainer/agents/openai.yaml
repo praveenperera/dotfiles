@@ -1,0 +1,4 @@
+interface:
+  display_name: "Faceless Explainer"
+  short_description: "Turn text into a faceless explainer video"
+  default_prompt: "Use $faceless-explainer to turn this topic into a faceless explainer video."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Remotion to HyperFrames"
+  short_description: "Port Remotion compositions to HyperFrames HTML"
+  default_prompt: "Use $remotion-to-hyperframes to port this Remotion composition to HyperFrames."
