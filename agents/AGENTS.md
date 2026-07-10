@@ -15,6 +15,11 @@
 - When working with this user's projects: always read existing config/code before answering from general knowledge. Never assume defaults — check the actual files first
 - Preserve unrelated user/agent changes. Use hunk staging for commits and never undo unrelated edits
 
+# Background Commands
+
+- For long-running non-interactive commands that should resume work when finished, use `exec_command` with `on_exit: "wake"` and stop polling with `write_stdin`
+- Keep the default `on_exit: "none"` for interactive processes, commands requiring stdin, or commands whose completion should not start another model turn
+
 # Rust Project Specific
 
 - `info` and `error` logs are okay to start capitalized
@@ -43,8 +48,9 @@
 
 # Subagents
 
-- Use non-forked subagents by default only for context-isolated work that reduces token usage, such as targeted exploration, log inspection, or external research
-- Give subagents small, self-contained prompts with concrete ownership and ask them to summarize only relevant findings
-- Choose each subagent's effort level based on task difficulty; reserve `high` and `xhigh` for work that genuinely requires deeper reasoning
-- Launch one with `agents.spawn_agent`, `fork_turns="none"`, and the chosen `reasoning_effort`
-- Do not use subagents to parallelize implementation for speed unless I explicitly request it; verification may be delegated when it can run non-forked from a self-contained prompt
+- Use subagents for bounded, context-isolated work when delegation is likely to reduce total context or token usage, such as targeted exploration, log inspection, external research, or focused verification
+- Launch one with `agents.spawn_agent`, `fork_turns="none"`, and the chosen `reasoning_effort`. Non-forked is the default because inherited parent history is carried through later child model cycles and can compound input-token usage
+- Make every non-forked prompt self-contained. Include the exact objective, relevant files or commands, constraints, concrete ownership, and expected concise output; point to repository files or raw artifacts when available and state any other necessary context directly
+- Choose each subagent's effort level based on task difficulty; default to `medium`, reserve `high` and `xhigh` for work that genuinely requires deeper reasoning, and use `low` for simple, mechanical tasks whose results can be verified cheaply
+- Fork only when an essential recent decision cannot be supplied through repository files, raw artifacts, or a concise prompt without making the task costly or unsafe. Use the smallest positive `fork_turns` value that supplies the missing context and treat `fork_turns="all"` as exceptional
+- Do not use subagents to parallelize implementation solely for speed unless I explicitly request it. The primary agent remains responsible for integration and verification of delegated results
