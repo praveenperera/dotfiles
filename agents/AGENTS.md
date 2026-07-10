@@ -2,7 +2,7 @@
 
 - Scope changes precisely to the request. If needed changes exceed the planned or requested scope, ask before proceeding
 - Do not leave tech debt or shortcuts behind; go back and do them right before finishing
-- I am explicitly authorizing the use of the subagent tool as needed, use subagents freely
+- I authorize subagent use according to the guidance below
 
 # General
 
@@ -43,9 +43,8 @@
 
 # Subagents
 
-- Prefer using subagents freely when they keep the main context focused or reduce low-signal code, logs, or search results
-- Use subagents for parallel investigation, especially when exploring independent parts of a codebase, comparing multiple possible implementations, checking generated docs, or inspecting external references
-- Use subagents for bounded implementation work when the write scope is clear and can be kept separate from other edits
-- Use subagents for verification work that can happen alongside implementation, such as running focused tests, checking platform-specific build output, reviewing UI screenshots, or auditing likely regressions
-- Give subagents concrete ownership, concise task boundaries, and instructions to summarize only the findings or changed files that matter to the main task
-- Keep urgent blocking work in the main thread when waiting for a subagent would slow down the next necessary step
+- Use non-forked subagents by default only for context-isolated work that reduces token usage, such as targeted exploration, log inspection, or external research
+- Give subagents small, self-contained prompts with concrete ownership and ask them to summarize only relevant findings
+- Choose each subagent's effort level based on task difficulty; reserve `high` and `xhigh` for work that genuinely requires deeper reasoning
+- To launch one, call `spawn_agent` with `fork_turns="none"` and the chosen `reasoning_effort`, even if `reasoning_effort` is omitted from the displayed tool schema
+- Do not use subagents to parallelize implementation for speed unless I explicitly request it; verification may be delegated when it can run non-forked from a self-contained prompt
