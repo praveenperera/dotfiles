@@ -1,6 +1,7 @@
 pub mod agent_target;
 pub mod better_context;
 pub mod bootstrap;
+pub mod cache;
 pub mod cloudflare;
 pub mod codex;
 pub mod crate_versions;
@@ -106,6 +107,10 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::Sync { subcommand } => {
             let sync_flags = sync::Sync { subcommand };
             sync::run_with_flags(sh, sync_flags)
+        }
+        MainCmd::Cache { subcommand } => {
+            let cache_flags = cache::Cache { subcommand };
+            cache::run_with_flags(sh, cache_flags)
         }
     }
 }
