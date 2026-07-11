@@ -203,6 +203,13 @@ pub enum MainCmd {
         #[command(subcommand)]
         subcommand: crate::cmd::sync::SyncCmd,
     },
+
+    /// Symlink folders onto CacheDisk (dev-cache)
+    #[command(arg_required_else_help = true)]
+    Cache {
+        #[command(subcommand)]
+        subcommand: crate::cmd::cache::CacheCmd,
+    },
 }
 
 #[derive(Debug, Clone, Subcommand)]
