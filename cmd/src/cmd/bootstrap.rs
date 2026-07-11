@@ -1,3 +1,4 @@
+mod codex_plugins;
 mod install;
 mod link;
 mod release;
@@ -217,7 +218,8 @@ pub fn run_with_flags(sh: &Shell, flags: Bootstrap) -> Result<()> {
 }
 
 pub fn config(sh: &Shell) -> Result<()> {
-    link::config(sh)
+    link::config(sh)?;
+    codex_plugins::reconcile()
 }
 
 pub fn release(sh: &Shell, args: crate::cmd::main_cmd::ReleaseArgs) -> Result<()> {
