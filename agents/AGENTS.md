@@ -18,6 +18,7 @@
 # Background Commands
 
 - For long-running non-interactive commands that should resume work when finished, use `exec_command(..., on_exit: "wake")`; after they yield, do not poll with `write_stdin` or send status-only updates
+- Add a `watchdog` with an appropriate `timeout_ms` and `grace_period_ms` when a command needs a runtime bound; treat `termination_reason: "timed_out"` as a real timeout to diagnose
 - Keep `on_exit: "none"` for interactive commands, commands requiring stdin, and commands whose completion should not start another turn
 - Give a delegated checker the exact command and working directory. It must use completion wakeup, avoid polling or interim messages, and return exactly one final response, which the parent receives through its mailbox. Require the exact command, exit status, duration, concise result, first actionable failure, and artifact paths. It must not diagnose or edit unless assigned, and the primary agent must not poll or duplicate its run
 
@@ -25,6 +26,7 @@
 
 - Make progress communication event-driven, not timer-driven. Send updates for meaningful state changes, actionable failures, integration checkpoints, user decisions, or final results; do not send periodic heartbeats merely to report that work is still running
 - While waiting for delegated work or a background command, rely on completion wakeups and final mailbox reports instead of status-only updates
+- Keep an active goal in its current root thread through every phase because moving to a fresh root cannot preserve the goal lifecycle. Never plan a fresh-root or fresh-thread transition as a phase boundary, gate, completion criterion, or blocker. Control root context with compact durable checkpoints, progressive disclosure, and compaction; use fresh non-forked subagents for bounded context-isolated work. If the user requests a different root, explain that it requires a separate goal lifecycle and ask how to proceed instead of blocking the active goal
 
 # Rust Project Specific
 
@@ -58,6 +60,10 @@
 - Launch one with `agents.spawn_agent`, `fork_turns="none"`, and the chosen `reasoning_effort`. Non-forked is the default because inherited parent history is carried through later child model cycles and can compound input-token usage
 - Make every non-forked prompt self-contained. Include the exact objective, relevant files or commands, constraints, concrete ownership, and expected concise output; point to repository files or raw artifacts when available and state any other necessary context directly
 - Choose each subagent's effort level based on task difficulty; default to `medium`, reserve `high` and `xhigh` for work that genuinely requires deeper reasoning, and use `low` for simple, mechanical tasks whose results can be verified cheaply
+- Before launching any delegated review, define its scope, reasoning effort, time or runtime budget, evidence surface, and maximum review rounds. Default reviews to `medium` or `high`; reserve `xhigh` for exceptional architectural, safety-critical, or unusually ambiguous work
+- Default to one broad review and at most one targeted follow-up after fixes. Give the follow-up the original findings, implemented fixes, changed hunks, and affected invariants; do not have it reread the whole diff unless the fixes materially changed cross-cutting architecture
+- Never define completion as launching fresh broad reviewers until one reports no findings. After the review-round cap, the primary agent must integrate and fix remaining actionable findings, run targeted verification, and record any genuine unresolved blocker or residual risk. The cap limits review repetition, not completion criteria, and never dismisses a known blocker
+- Keep an independent completion review final-only unless the user explicitly requests otherwise. Do not interrupt active work solely to adopt these review rules; apply them at the next review decision
 - Fork only when an essential recent decision cannot be supplied through repository files, raw artifacts, or a concise prompt without making the task costly or unsafe. Use the smallest positive `fork_turns` value that supplies the missing context. Do not use `fork_turns="all"` unless I explicitly request it
 - Default implementation work to at most two concurrent workers. Prefer larger, phase-sized, non-overlapping ownership slices over many small assignments. Each worker verifies its own slice and returns one concise final report with changed files, verification results, risks, and integration notes
 - While a worker wave is active, the primary agent may do unrelated work but should not reread worker-owned files or duplicate focused verification. After all workers in the wave finish, perform one integration checkpoint: inspect the combined diff, reconcile boundaries, run cross-cutting checks, and update durable progress or audit state. Do not launch another implementation wave before integrating the current one
