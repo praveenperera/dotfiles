@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::str::FromStr;
 
 const DOUBLED_PLAN_TYPES: &[KnownPlanType] = &[KnownPlanType::Prolite];
+const USAGE_HISTORY_SCHEMA_VERSION: u32 = 2;
 pub(super) const USAGE_HISTORY_RETENTION_DAYS: i64 = 14;
 const PREVIOUS_DAY_HISTORY_ROWS: usize = 3;
 const DEFAULT_USAGE_HISTORY_DAYS: usize = 2;
@@ -94,7 +95,19 @@ pub(super) struct UsageHistory {
     samples: Vec<UsageHistorySample>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Deserialize)]
+struct UsageHistoryFileVersion {
+    #[serde(default)]
+    schema_version: u32,
+}
+
+#[derive(Serialize)]
+struct UsageHistoryFile<'a> {
+    schema_version: u32,
+    samples: &'a [UsageHistorySample],
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub(super) struct UsageHistorySample {
     captured_at: chrono::DateTime<Utc>,
     label: String,
@@ -102,8 +115,99 @@ pub(super) struct UsageHistorySample {
     account_id: Option<String>,
     email: Option<String>,
     plan_type: Option<String>,
+    five_hour: Option<UsageHistoryWindow>,
+    weekly: Option<UsageHistoryWindow>,
+}
+
+#[derive(Deserialize)]
+struct UsageHistorySampleWire {
+    captured_at: chrono::DateTime<Utc>,
+    label: String,
+    user_id: Option<String>,
+    account_id: Option<String>,
+    email: Option<String>,
+    plan_type: Option<String>,
+    #[serde(default)]
+    five_hour: Option<UsageHistoryWindow>,
+    #[serde(default)]
+    weekly: Option<UsageHistoryWindow>,
+    #[serde(default)]
     primary: Option<UsageHistoryWindow>,
+    #[serde(default)]
     secondary: Option<UsageHistoryWindow>,
+}
+
+impl<'de> Deserialize<'de> for UsageHistorySample {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let wire = UsageHistorySampleWire::deserialize(deserializer)?;
+        Ok(wire.into_sample())
+    }
+}
+
+impl UsageHistorySampleWire {
+    fn into_sample(self) -> UsageHistorySample {
+        let Self {
+            captured_at,
+            label,
+            user_id,
+            account_id,
+            email,
+            plan_type,
+            five_hour,
+            weekly,
+            primary,
+            secondary,
+        } = self;
+        let has_semantic_windows = five_hour.is_some() || weekly.is_some();
+        let (five_hour, weekly) = if has_semantic_windows {
+            Self::normalize_five_hour(captured_at, five_hour, weekly)
+        } else {
+            match (primary, secondary) {
+                (Some(five_hour), Some(weekly)) => (Some(five_hour), Some(weekly)),
+                (Some(window), None) if window.exceeds_five_hour_horizon(captured_at) => {
+                    (None, Some(window))
+                }
+                (None, Some(weekly)) => (None, Some(weekly)),
+                (Some(five_hour), None) => (Some(five_hour), None),
+                (None, None) => (None, None),
+            }
+        };
+
+        UsageHistorySample {
+            captured_at,
+            label,
+            user_id,
+            account_id,
+            email,
+            plan_type,
+            five_hour,
+            weekly,
+        }
+    }
+
+    fn normalize_five_hour(
+        captured_at: chrono::DateTime<Utc>,
+        five_hour: Option<UsageHistoryWindow>,
+        weekly: Option<UsageHistoryWindow>,
+    ) -> (Option<UsageHistoryWindow>, Option<UsageHistoryWindow>) {
+        match (five_hour, weekly) {
+            (Some(window), None) if window.exceeds_five_hour_horizon(captured_at) => {
+                (None, Some(window))
+            }
+            windows => windows,
+        }
+    }
+}
+
+impl UsageHistoryWindow {
+    fn exceeds_five_hour_horizon(&self, captured_at: chrono::DateTime<Utc>) -> bool {
+        self.reset_at.is_some_and(|reset_at| {
+            reset_at > captured_at.timestamp() + UsageWindowKind::FIVE_HOUR_SECONDS as i64
+        })
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -186,13 +290,39 @@ pub(super) fn load_usage_history(path: &Path) -> UsageHistory {
 
 pub(super) fn save_usage_history(path: &Path, history: &UsageHistory) -> Result<()> {
     fsutil::ensure_parent_dir(path)?;
+    backup_usage_history_before_migration(path)?;
     let parent = path
         .parent()
         .ok_or_else(|| eyre!("usage history path has no parent"))?;
     let temp = tempfile::NamedTempFile::new_in(parent)?;
-    stdfs::write(temp.path(), serde_json::to_vec_pretty(history)?)?;
+    let file = UsageHistoryFile {
+        schema_version: USAGE_HISTORY_SCHEMA_VERSION,
+        samples: &history.samples,
+    };
+    stdfs::write(temp.path(), serde_json::to_vec_pretty(&file)?)?;
     temp.persist(path)?;
 
+    Ok(())
+}
+
+fn backup_usage_history_before_migration(path: &Path) -> Result<()> {
+    let Ok(raw) = stdfs::read(path) else {
+        return Ok(());
+    };
+    let version = serde_json::from_slice::<UsageHistoryFileVersion>(&raw)
+        .map(|file| file.schema_version)
+        .unwrap_or_default();
+    if version >= USAGE_HISTORY_SCHEMA_VERSION {
+        return Ok(());
+    }
+
+    let backup_path = PathBuf::from(format!(
+        "{}.pre-v{USAGE_HISTORY_SCHEMA_VERSION}",
+        path.display()
+    ));
+    if !backup_path.exists() {
+        stdfs::write(backup_path, raw)?;
+    }
     Ok(())
 }
 
@@ -257,8 +387,8 @@ pub(super) fn usage_history_sample(
         account_id: snapshot.account_id.clone(),
         email: snapshot.email.clone(),
         plan_type: snapshot.plan_type.clone(),
-        primary: snapshot.primary.as_ref().map(UsageHistoryWindow::from),
-        secondary: snapshot.secondary.as_ref().map(UsageHistoryWindow::from),
+        five_hour: snapshot.five_hour.as_ref().map(UsageHistoryWindow::from),
+        weekly: snapshot.weekly.as_ref().map(UsageHistoryWindow::from),
     })
 }
 
@@ -276,15 +406,15 @@ pub(super) fn usage_run_rates(
     };
 
     UsageRunRates {
-        primary: window_run_rate(
-            previous.primary.as_ref(),
-            current.primary.as_ref(),
+        five_hour: window_run_rate(
+            previous.five_hour.as_ref(),
+            current.five_hour.as_ref(),
             previous,
             current,
         ),
-        secondary: window_run_rate(
-            previous.secondary.as_ref(),
-            current.secondary.as_ref(),
+        weekly: window_run_rate(
+            previous.weekly.as_ref(),
+            current.weekly.as_ref(),
             previous,
             current,
         ),
@@ -383,7 +513,7 @@ pub(super) fn print_usage_history(
     }
 
     let show_label = options.verbose;
-    let show_primary = !usage_history_summary_mode(options);
+    let show_five_hour = !usage_history_summary_mode(options);
     let widths = UsageHistoryWidths {
         captured_at: "TIME".len().max(
             entries
@@ -401,11 +531,11 @@ pub(super) fn print_usage_history(
                 .max()
                 .unwrap_or_default(),
         ),
-        primary: if show_primary {
+        five_hour: if show_five_hour {
             "5 HOUR LIMIT".len().max(
                 entries
                     .iter()
-                    .map(UsageHistoryEntry::primary)
+                    .map(UsageHistoryEntry::five_hour)
                     .map(str::len)
                     .max()
                     .unwrap_or_default(),
@@ -413,27 +543,27 @@ pub(super) fn print_usage_history(
         } else {
             0
         },
-        secondary: "WEEKLY LIMIT".len().max(
+        weekly: "WEEKLY LIMIT".len().max(
             entries
                 .iter()
-                .map(UsageHistoryEntry::secondary)
+                .map(UsageHistoryEntry::weekly)
                 .map(str::len)
                 .max()
                 .unwrap_or_default(),
         ),
     };
 
-    if show_primary {
+    if show_five_hour {
         writeln!(
             writer,
             "{}   {}   {}{}",
             format!("{:<width$}", "TIME", width = widths.captured_at)
                 .blue()
                 .bold(),
-            format!("{:<width$}", "5 HOUR LIMIT", width = widths.primary)
+            format!("{:<width$}", "5 HOUR LIMIT", width = widths.five_hour)
                 .blue()
                 .bold(),
-            format!("{:<width$}", "WEEKLY LIMIT", width = widths.secondary)
+            format!("{:<width$}", "WEEKLY LIMIT", width = widths.weekly)
                 .blue()
                 .bold(),
             format_history_label_header(show_label, widths.label),
@@ -445,7 +575,7 @@ pub(super) fn print_usage_history(
             format!("{:<width$}", "TIME", width = widths.captured_at)
                 .blue()
                 .bold(),
-            format!("{:<width$}", "WEEKLY LIMIT", width = widths.secondary)
+            format!("{:<width$}", "WEEKLY LIMIT", width = widths.weekly)
                 .blue()
                 .bold(),
             format_history_label_header(show_label, widths.label),
@@ -465,31 +595,31 @@ pub(super) fn print_usage_history(
         if show_label {
             writeln!(
                 writer,
-                "{:<captured_at_width$}   {:<primary_width$}   {:<secondary_width$}   {}",
+                "{:<captured_at_width$}   {:<five_hour_width$}   {:<weekly_width$}   {}",
                 entry.captured_at(),
-                entry.primary(),
-                entry.secondary(),
+                entry.five_hour(),
+                entry.weekly(),
                 entry.label(),
                 captured_at_width = widths.captured_at,
-                primary_width = widths.primary,
-                secondary_width = widths.secondary,
+                five_hour_width = widths.five_hour,
+                weekly_width = widths.weekly,
             )?;
-        } else if show_primary {
+        } else if show_five_hour {
             writeln!(
                 writer,
-                "{:<captured_at_width$}   {:<primary_width$}   {}",
+                "{:<captured_at_width$}   {:<five_hour_width$}   {}",
                 entry.captured_at(),
-                entry.primary(),
-                entry.secondary(),
+                entry.five_hour(),
+                entry.weekly(),
                 captured_at_width = widths.captured_at,
-                primary_width = widths.primary,
+                five_hour_width = widths.five_hour,
             )?;
         } else {
             writeln!(
                 writer,
                 "{:<captured_at_width$}   {}",
                 entry.captured_at(),
-                entry.secondary(),
+                entry.weekly(),
                 captured_at_width = widths.captured_at,
             )?;
         }
@@ -654,8 +784,8 @@ fn format_days(days: usize) -> String {
 struct UsageHistoryWidths {
     captured_at: usize,
     label: usize,
-    primary: usize,
-    secondary: usize,
+    five_hour: usize,
+    weekly: usize,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -664,8 +794,8 @@ struct UsageHistoryRow {
     day_label: String,
     captured_at: String,
     label: String,
-    primary: String,
-    secondary: String,
+    five_hour: String,
+    weekly: String,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -674,8 +804,8 @@ struct UsageHistoryDaySummary {
     day_label: String,
     captured_at: String,
     label: String,
-    primary: String,
-    secondary: String,
+    five_hour: String,
+    weekly: String,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -713,17 +843,17 @@ impl UsageHistoryEntry {
         }
     }
 
-    fn primary(&self) -> &str {
+    fn five_hour(&self) -> &str {
         match self {
-            Self::Sample(row) => &row.primary,
-            Self::DailySummary(summary) => &summary.primary,
+            Self::Sample(row) => &row.five_hour,
+            Self::DailySummary(summary) => &summary.five_hour,
         }
     }
 
-    fn secondary(&self) -> &str {
+    fn weekly(&self) -> &str {
         match self {
-            Self::Sample(row) => &row.secondary,
-            Self::DailySummary(summary) => &summary.secondary,
+            Self::Sample(row) => &row.weekly,
+            Self::DailySummary(summary) => &summary.weekly,
         }
     }
 }
@@ -736,13 +866,13 @@ impl From<&UsageHistorySample> for UsageHistoryRow {
             day_label: format_history_day(captured_at),
             captured_at: format_history_timestamp(captured_at),
             label: sample.email.clone().unwrap_or_else(|| sample.label.clone()),
-            primary: sample
-                .primary
+            five_hour: sample
+                .five_hour
                 .as_ref()
                 .map(format_history_window)
                 .unwrap_or_else(|| "-".into()),
-            secondary: sample
-                .secondary
+            weekly: sample
+                .weekly
                 .as_ref()
                 .map(format_history_window)
                 .unwrap_or_else(|| "-".into()),
@@ -764,11 +894,11 @@ impl UsageHistoryDaySummary {
             day_label: format_history_day(captured_at),
             captured_at: "day".into(),
             label: last.email.clone().unwrap_or_else(|| last.label.clone()),
-            primary: format_history_window_delta(start.primary.as_ref(), last.primary.as_ref()),
-            secondary: format_history_window_delta(
-                start.secondary.as_ref(),
-                last.secondary.as_ref(),
+            five_hour: format_history_window_delta(
+                start.five_hour.as_ref(),
+                last.five_hour.as_ref(),
             ),
+            weekly: format_history_window_delta(start.weekly.as_ref(), last.weekly.as_ref()),
         })
     }
 }
@@ -827,11 +957,11 @@ impl UsageHistorySample {
                 .or(self.email.as_deref())
                 .unwrap_or(&self.label),
             self.plan_type.as_deref().unwrap_or_default(),
-            self.primary
+            self.five_hour
                 .as_ref()
                 .map(UsageHistoryWindow::dedupe_key)
                 .unwrap_or_default(),
-            self.secondary
+            self.weekly
                 .as_ref()
                 .map(UsageHistoryWindow::dedupe_key)
                 .unwrap_or_default(),
@@ -1028,33 +1158,43 @@ impl ProfileUsageLoader {
             .json::<UsageResponse>()
             .await
             .map_err(UsageHttpError::from_reqwest)?;
-        let limit_multiplier = effective_limit_multiplier(payload.plan_type.as_deref());
-        Ok(ProfileUsageSnapshot {
-            user_id: payload.user_id,
-            account_id: payload.account_id,
-            email: payload.email,
-            plan_type: payload.plan_type,
-            primary: payload.rate_limit.as_ref().and_then(|rate_limit| {
-                rate_limit
-                    .primary_window
-                    .as_ref()
-                    .map(|window| UsageWindowSnapshot {
-                        used_percent: window.used_percent,
-                        reset_at: Some(window.reset_at),
-                        limit_multiplier,
-                    })
-            }),
-            secondary: payload.rate_limit.as_ref().and_then(|rate_limit| {
-                rate_limit
-                    .secondary_window
-                    .as_ref()
-                    .map(|window| UsageWindowSnapshot {
-                        used_percent: window.used_percent,
-                        reset_at: Some(window.reset_at),
-                        limit_multiplier,
-                    })
-            }),
-        })
+        Ok(payload.into_snapshot())
+    }
+}
+
+impl UsageResponse {
+    pub(super) fn into_snapshot(self) -> ProfileUsageSnapshot {
+        let limit_multiplier = effective_limit_multiplier(self.plan_type.as_deref());
+        let mut snapshot = ProfileUsageSnapshot {
+            user_id: self.user_id,
+            account_id: self.account_id,
+            email: self.email,
+            plan_type: self.plan_type,
+            five_hour: None,
+            weekly: None,
+        };
+
+        let windows = self
+            .rate_limit
+            .into_iter()
+            .flat_map(|rate_limit| [rate_limit.primary_window, rate_limit.secondary_window]);
+        for window in windows.flatten() {
+            let Some(kind) = UsageWindowKind::from_window_seconds(window.limit_window_seconds)
+            else {
+                continue;
+            };
+            let window = UsageWindowSnapshot {
+                used_percent: window.used_percent,
+                reset_at: Some(window.reset_at),
+                limit_multiplier,
+            };
+            match kind {
+                UsageWindowKind::FiveHour => snapshot.five_hour = Some(window),
+                UsageWindowKind::Weekly => snapshot.weekly = Some(window),
+            }
+        }
+
+        snapshot
     }
 }
 
@@ -1414,6 +1554,25 @@ mod tests {
     }
 
     #[test]
+    fn usage_history_backs_up_pre_migration_file_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("codex-usage-history.json");
+        let backup_path = dir.path().join("codex-usage-history.json.pre-v2");
+        let original = br#"{"samples":[]}"#;
+        stdfs::write(&path, original).unwrap();
+
+        save_usage_history(&path, &UsageHistory::default()).unwrap();
+
+        assert_eq!(stdfs::read(&backup_path).unwrap(), original);
+        let saved =
+            serde_json::from_slice::<serde_json::Value>(&stdfs::read(&path).unwrap()).unwrap();
+        assert_eq!(saved["schema_version"], USAGE_HISTORY_SCHEMA_VERSION);
+
+        save_usage_history(&path, &UsageHistory::default()).unwrap();
+        assert_eq!(stdfs::read(backup_path).unwrap(), original);
+    }
+
+    #[test]
     fn usage_history_prunes_samples_older_than_two_weeks() {
         let now = Utc.with_ymd_and_hms(2026, 5, 8, 12, 0, 0).unwrap();
         let mut history = UsageHistory::default();
@@ -1434,11 +1593,11 @@ mod tests {
 
         assert_eq!(history.samples.len(), 2);
         assert_eq!(
-            history.samples[0].primary.as_ref().unwrap().used_percent,
+            history.samples[0].five_hour.as_ref().unwrap().used_percent,
             2.0
         );
         assert_eq!(
-            history.samples[1].primary.as_ref().unwrap().used_percent,
+            history.samples[1].five_hour.as_ref().unwrap().used_percent,
             3.0
         );
     }
@@ -1464,11 +1623,11 @@ mod tests {
         let rows = usage_history_rows(&history, now, default_history_options());
 
         assert_eq!(rows.len(), 5);
-        assert!(rows[0].primary.starts_with("  2% ("));
-        assert!(rows[1].primary.starts_with("  3% ("));
-        assert!(rows[2].primary.starts_with("  4% ("));
-        assert!(rows[3].primary.starts_with(" 10% ("));
-        assert!(rows[4].primary.starts_with(" 12% ("));
+        assert!(rows[0].five_hour.starts_with("  2% ("));
+        assert!(rows[1].five_hour.starts_with("  3% ("));
+        assert!(rows[2].five_hour.starts_with("  4% ("));
+        assert!(rows[3].five_hour.starts_with(" 10% ("));
+        assert!(rows[4].five_hour.starts_with(" 12% ("));
     }
 
     #[test]
@@ -1519,9 +1678,9 @@ mod tests {
         let rows = usage_history_rows(&history, now, default_history_options());
 
         assert_eq!(rows.len(), 3);
-        assert!(rows[0].primary.starts_with("  8% ("));
-        assert!(rows[1].primary.starts_with(" 10% ("));
-        assert!(rows[2].primary.starts_with(" 12% ("));
+        assert!(rows[0].five_hour.starts_with("  8% ("));
+        assert!(rows[1].five_hour.starts_with(" 10% ("));
+        assert!(rows[2].five_hour.starts_with(" 12% ("));
     }
 
     #[test]
@@ -1534,7 +1693,7 @@ mod tests {
         let rows = usage_history_rows(&history, now, default_history_options());
 
         assert_eq!(rows.len(), 1);
-        assert!(rows[0].primary.starts_with("0.42% ("));
+        assert!(rows[0].five_hour.starts_with("0.42% ("));
     }
 
     #[test]
@@ -1655,10 +1814,10 @@ mod tests {
         );
 
         assert_eq!(rows.len(), 4);
-        assert!(rows[0].primary.starts_with(" 10% ("));
-        assert!(rows[1].primary.starts_with(" 20% ("));
-        assert!(rows[2].primary.starts_with(" 31% ("));
-        assert!(rows[3].primary.starts_with(" 40% ("));
+        assert!(rows[0].five_hour.starts_with(" 10% ("));
+        assert!(rows[1].five_hour.starts_with(" 20% ("));
+        assert!(rows[2].five_hour.starts_with(" 31% ("));
+        assert!(rows[3].five_hour.starts_with(" 40% ("));
     }
 
     #[test]
@@ -1696,7 +1855,103 @@ mod tests {
 
         let rates = usage_run_rates(&history, &current);
 
-        assert_eq!(rates.primary, Some(6.0));
+        assert_eq!(rates.five_hour, Some(6.0));
+    }
+
+    #[test]
+    fn usage_history_migrates_positional_window_names() {
+        let history = serde_json::from_value::<UsageHistory>(serde_json::json!({
+            "samples": [{
+                "captured_at": "2026-07-13T12:00:00Z",
+                "label": "praveen@example.com",
+                "user_id": "user-1",
+                "account_id": "acct-1",
+                "email": "praveen@example.com",
+                "plan_type": "plus",
+                "primary": {
+                    "used_percent": 12.0,
+                    "reset_at": 1_800,
+                    "limit_multiplier": 1.0
+                },
+                "secondary": {
+                    "used_percent": 34.0,
+                    "reset_at": 604_800,
+                    "limit_multiplier": 1.0
+                }
+            }]
+        }))
+        .unwrap();
+
+        assert_eq!(
+            history.samples[0].five_hour.as_ref().unwrap().used_percent,
+            12.0
+        );
+        assert_eq!(
+            history.samples[0].weekly.as_ref().unwrap().used_percent,
+            34.0
+        );
+
+        let migrated = serde_json::to_value(history).unwrap();
+        let sample = &migrated["samples"][0];
+        assert!(sample.get("primary").is_none());
+        assert!(sample.get("secondary").is_none());
+        assert!(sample.get("five_hour").is_some());
+        assert!(sample.get("weekly").is_some());
+    }
+
+    #[test]
+    fn usage_history_preserves_legacy_primary_only_window() {
+        let history = serde_json::from_value::<UsageHistory>(serde_json::json!({
+            "samples": [{
+                "captured_at": "2026-07-13T12:00:00Z",
+                "label": "praveen@example.com",
+                "user_id": "user-1",
+                "account_id": "acct-1",
+                "email": "praveen@example.com",
+                "plan_type": "plus",
+                "primary": {
+                    "used_percent": 18.0,
+                    "reset_at": 604_800,
+                    "limit_multiplier": 1.0
+                },
+                "secondary": null
+            }]
+        }))
+        .unwrap();
+
+        assert_eq!(
+            history.samples[0].five_hour.as_ref().unwrap().used_percent,
+            18.0
+        );
+        assert!(history.samples[0].weekly.is_none());
+    }
+
+    #[test]
+    fn usage_history_repairs_impossible_five_hour_reset_horizon() {
+        let captured_at = Utc.with_ymd_and_hms(2026, 7, 13, 12, 0, 0).unwrap();
+        let history = serde_json::from_value::<UsageHistory>(serde_json::json!({
+            "samples": [{
+                "captured_at": captured_at,
+                "label": "praveen@example.com",
+                "user_id": "user-1",
+                "account_id": "acct-1",
+                "email": "praveen@example.com",
+                "plan_type": "plus",
+                "five_hour": {
+                    "used_percent": 18.0,
+                    "reset_at": captured_at.timestamp() + 6 * 24 * 60 * 60,
+                    "limit_multiplier": 1.0
+                },
+                "weekly": null
+            }]
+        }))
+        .unwrap();
+
+        assert!(history.samples[0].five_hour.is_none());
+        assert_eq!(
+            history.samples[0].weekly.as_ref().unwrap().used_percent,
+            18.0
+        );
     }
 
     #[test]
@@ -1710,7 +1965,7 @@ mod tests {
 
         let rates = usage_run_rates(&history, &current);
 
-        assert_eq!(rates.primary, None);
+        assert_eq!(rates.five_hour, None);
     }
 
     #[test]
@@ -1718,14 +1973,14 @@ mod tests {
         let now = Utc.timestamp_opt(1_000, 0).single().unwrap();
         let previous = sample_at(now, "acct-1", 10.0);
         let mut current = sample_at(now + chrono::Duration::minutes(30), "acct-1", 13.0);
-        current.primary.as_mut().unwrap().reset_at = Some(10_000);
+        current.five_hour.as_mut().unwrap().reset_at = Some(10_000);
         let history = UsageHistory {
             samples: vec![previous],
         };
 
         let rates = usage_run_rates(&history, &current);
 
-        assert_eq!(rates.primary, None);
+        assert_eq!(rates.five_hour, None);
     }
 
     #[test]
@@ -1739,7 +1994,7 @@ mod tests {
 
         let rates = usage_run_rates(&history, &current);
 
-        assert_eq!(rates.primary, None);
+        assert_eq!(rates.five_hour, None);
     }
 
     fn sample_at(
@@ -1747,28 +2002,28 @@ mod tests {
         account_id: &str,
         used_percent: f64,
     ) -> UsageHistorySample {
-        sample_with_optional_secondary_at(captured_at, account_id, used_percent, None)
+        sample_with_optional_weekly_at(captured_at, account_id, used_percent, None)
     }
 
     fn sample_with_windows_at(
         captured_at: chrono::DateTime<Utc>,
         account_id: &str,
-        primary_used_percent: f64,
-        secondary_used_percent: f64,
+        five_hour_used_percent: f64,
+        weekly_used_percent: f64,
     ) -> UsageHistorySample {
-        sample_with_optional_secondary_at(
+        sample_with_optional_weekly_at(
             captured_at,
             account_id,
-            primary_used_percent,
-            Some(secondary_used_percent),
+            five_hour_used_percent,
+            Some(weekly_used_percent),
         )
     }
 
-    fn sample_with_optional_secondary_at(
+    fn sample_with_optional_weekly_at(
         captured_at: chrono::DateTime<Utc>,
         account_id: &str,
-        primary_used_percent: f64,
-        secondary_used_percent: Option<f64>,
+        five_hour_used_percent: f64,
+        weekly_used_percent: Option<f64>,
     ) -> UsageHistorySample {
         UsageHistorySample {
             captured_at,
@@ -1777,12 +2032,12 @@ mod tests {
             account_id: Some(account_id.into()),
             email: Some("praveen@example.com".into()),
             plan_type: Some("plus".into()),
-            primary: Some(UsageHistoryWindow {
-                used_percent: primary_used_percent,
+            five_hour: Some(UsageHistoryWindow {
+                used_percent: five_hour_used_percent,
                 reset_at: Some(5_000),
                 limit_multiplier: 1.0,
             }),
-            secondary: secondary_used_percent.map(|used_percent| UsageHistoryWindow {
+            weekly: weekly_used_percent.map(|used_percent| UsageHistoryWindow {
                 used_percent,
                 reset_at: Some(604_800),
                 limit_multiplier: 1.0,

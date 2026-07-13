@@ -435,18 +435,18 @@ pub(super) fn launch_banner_details(profile: &SavedProfile) -> LaunchBannerDetai
         label: saved_profile_label(profile),
         five_hour_compact: current_usage_window_compact(
             &profile.usage,
-            UsageWindowKind::Primary,
+            UsageWindowKind::FiveHour,
             current_local,
             current_utc,
         ),
         five_hour_style: five_hour_limit_style(&profile.usage),
         weekly_compact: current_usage_window_compact(
             &profile.usage,
-            UsageWindowKind::Secondary,
+            UsageWindowKind::Weekly,
             current_local,
             current_utc,
         ),
-        weekly_style: usage_window_style(&profile.usage, UsageWindowKind::Secondary),
+        weekly_style: usage_window_style(&profile.usage, UsageWindowKind::Weekly),
     }
 }
 
@@ -471,23 +471,38 @@ fn launch_candidate(
         return None;
     };
 
-    let primary = usage.primary.as_ref()?;
-    let secondary = usage.secondary.as_ref()?;
-    if primary.used_percent >= 100.0 || secondary.used_percent >= 100.0 {
+    let weekly = usage.weekly.as_ref()?;
+    if weekly.used_percent >= 100.0 {
         return None;
     }
 
-    let five_hour = primary.used_percent;
-    let five_hour_pace_delta =
-        pace_delta_percent(primary, now, UsageWindowKind::Primary).unwrap_or(five_hour);
-    let weekly_pace_delta = pace_delta_percent(secondary, now, UsageWindowKind::Secondary)?;
+    let weekly_pace_delta = pace_delta_percent(weekly, now, UsageWindowKind::Weekly)?;
+    if usage
+        .five_hour
+        .as_ref()
+        .is_some_and(|five_hour| five_hour.used_percent >= 100.0)
+    {
+        return None;
+    }
+    let (five_hour, five_hour_pace_delta, five_hour_reset_at) = usage
+        .five_hour
+        .as_ref()
+        .map(|five_hour| {
+            (
+                five_hour.used_percent,
+                pace_delta_percent(five_hour, now, UsageWindowKind::FiveHour)
+                    .unwrap_or(five_hour.used_percent),
+                five_hour.reset_at,
+            )
+        })
+        .unwrap_or((0.0, 0.0, None));
 
     Some(LaunchCandidate {
         profile,
         weekly_pace_delta,
         five_hour_pace_delta,
         five_hour,
-        five_hour_reset_at: primary.reset_at,
+        five_hour_reset_at,
         score: weekly_pace_delta * 3.0 + five_hour_pace_delta,
     })
 }
@@ -984,17 +999,17 @@ mod tests {
             saved_profile_with_usage(
                 "raw-overpaced",
                 25.0,
-                reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2),
+                reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.2),
                 50.0,
-                reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5),
+                reset_at_for_elapsed(now, UsageWindowKind::Weekly, 0.5),
                 10.0,
             ),
             saved_profile_with_usage(
                 "raw-underpaced",
                 15.0,
-                reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2),
+                reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.2),
                 50.0,
-                reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.5),
+                reset_at_for_elapsed(now, UsageWindowKind::Weekly, 0.5),
                 1.0,
             ),
         ];
@@ -1080,12 +1095,12 @@ mod tests {
                 account_id: None,
                 email: None,
                 plan_type: None,
-                primary: Some(UsageWindowSnapshot {
+                five_hour: Some(UsageWindowSnapshot {
                     used_percent: five_hour,
                     reset_at: Some(five_hour_reset_at),
                     limit_multiplier,
                 }),
-                secondary: Some(UsageWindowSnapshot {
+                weekly: Some(UsageWindowSnapshot {
                     used_percent: weekly,
                     reset_at: Some(weekly_reset_at),
                     limit_multiplier,
@@ -1100,12 +1115,12 @@ mod tests {
             account_id: Some(account_id.into()),
             email: Some(email.into()),
             plan_type: Some("plus".into()),
-            primary: Some(UsageWindowSnapshot {
+            five_hour: Some(UsageWindowSnapshot {
                 used_percent: 12.0,
                 reset_at: Some(Utc::now().timestamp() + 3600),
                 limit_multiplier: 1.0,
             }),
-            secondary: Some(UsageWindowSnapshot {
+            weekly: Some(UsageWindowSnapshot {
                 used_percent: 34.0,
                 reset_at: Some(Utc::now().timestamp() + 3600),
                 limit_multiplier: 1.0,
@@ -1129,8 +1144,8 @@ mod tests {
         elapsed_fraction: f64,
     ) -> i64 {
         let duration = match kind {
-            UsageWindowKind::Primary => chrono::Duration::hours(5),
-            UsageWindowKind::Secondary => chrono::Duration::days(7),
+            UsageWindowKind::FiveHour => chrono::Duration::hours(5),
+            UsageWindowKind::Weekly => chrono::Duration::days(7),
         };
         let remaining_seconds =
             ((1.0 - elapsed_fraction) * duration.num_seconds() as f64).round() as i64;

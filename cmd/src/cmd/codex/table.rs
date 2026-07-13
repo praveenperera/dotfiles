@@ -58,15 +58,11 @@ pub(super) fn print_current_usage_table(
     let current_utc = captured_at.with_timezone(&Utc);
     let time = current_local.format("%-I:%M %p").to_string();
     let five_hour =
-        current_usage_window_compact(usage, UsageWindowKind::Primary, current_local, current_utc);
-    let weekly = current_usage_window_compact(
-        usage,
-        UsageWindowKind::Secondary,
-        current_local,
-        current_utc,
-    );
-    let five_hour_rate = format_hourly_run_rate(rates.primary);
-    let weekly_rate = format_daily_run_rate(rates.secondary);
+        current_usage_window_compact(usage, UsageWindowKind::FiveHour, current_local, current_utc);
+    let weekly =
+        current_usage_window_compact(usage, UsageWindowKind::Weekly, current_local, current_utc);
+    let five_hour_rate = format_hourly_run_rate(rates.five_hour);
+    let weekly_rate = format_daily_run_rate(rates.weekly);
 
     let widths = CurrentUsageTableWidths {
         label: "EMAIL".len().max(label.len()),
@@ -112,7 +108,7 @@ pub(super) fn print_current_usage_table(
         render_usage_limit_cell(
             &weekly,
             widths.weekly,
-            usage_window_style(usage, UsageWindowKind::Secondary),
+            usage_window_style(usage, UsageWindowKind::Weekly),
         ),
     )
 }
@@ -665,13 +661,13 @@ pub(super) fn build_profile_rows(
                     five_hour_style: LimitStyleKind::Normal,
                     five_hour_usage: usage_window_snapshot(
                         &profile.usage,
-                        UsageWindowKind::Primary,
+                        UsageWindowKind::FiveHour,
                     ),
                     weekly: "-".into(),
                     weekly_reset: "-".into(),
                     weekly_compact: "-".into(),
                     weekly_style: LimitStyleKind::Normal,
-                    weekly_usage: usage_window_snapshot(&profile.usage, UsageWindowKind::Secondary),
+                    weekly_usage: usage_window_snapshot(&profile.usage, UsageWindowKind::Weekly),
                     status: ProfileStatus {
                         items: if profile.invalid_auth {
                             vec![ProfileStatusItem::InvalidAuth]
@@ -752,16 +748,16 @@ pub(super) fn build_profile_rows(
                     .map(shorten_id)
                     .unwrap_or_else(|| "-".into()),
                 plan: usage_plan(&profile.usage),
-                five_hour: usage_window_percent(&profile.usage, UsageWindowKind::Primary),
-                five_hour_reset: usage_window_reset(&profile.usage, UsageWindowKind::Primary),
-                five_hour_compact: usage_window_compact(&profile.usage, UsageWindowKind::Primary),
+                five_hour: usage_window_percent(&profile.usage, UsageWindowKind::FiveHour),
+                five_hour_reset: usage_window_reset(&profile.usage, UsageWindowKind::FiveHour),
+                five_hour_compact: usage_window_compact(&profile.usage, UsageWindowKind::FiveHour),
                 five_hour_style: five_hour_limit_style(&profile.usage),
-                five_hour_usage: usage_window_snapshot(&profile.usage, UsageWindowKind::Primary),
-                weekly: usage_window_percent(&profile.usage, UsageWindowKind::Secondary),
-                weekly_reset: usage_window_reset(&profile.usage, UsageWindowKind::Secondary),
-                weekly_compact: usage_window_compact(&profile.usage, UsageWindowKind::Secondary),
-                weekly_style: usage_window_style(&profile.usage, UsageWindowKind::Secondary),
-                weekly_usage: usage_window_snapshot(&profile.usage, UsageWindowKind::Secondary),
+                five_hour_usage: usage_window_snapshot(&profile.usage, UsageWindowKind::FiveHour),
+                weekly: usage_window_percent(&profile.usage, UsageWindowKind::Weekly),
+                weekly_reset: usage_window_reset(&profile.usage, UsageWindowKind::Weekly),
+                weekly_compact: usage_window_compact(&profile.usage, UsageWindowKind::Weekly),
+                weekly_style: usage_window_style(&profile.usage, UsageWindowKind::Weekly),
+                weekly_usage: usage_window_snapshot(&profile.usage, UsageWindowKind::Weekly),
                 status,
             }
         })
@@ -828,12 +824,6 @@ fn compact_profile_table_widths(
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(super) enum UsageWindowKind {
-    Primary,
-    Secondary,
-}
-
 fn usage_plan(usage: &ProfileUsageState) -> String {
     match usage {
         ProfileUsageState::Available(snapshot) => snapshot
@@ -897,7 +887,7 @@ pub(super) fn usage_window_style_at(
 }
 
 pub(super) fn five_hour_limit_style(usage: &ProfileUsageState) -> LimitStyleKind {
-    usage_window_style(usage, UsageWindowKind::Primary)
+    usage_window_style(usage, UsageWindowKind::FiveHour)
 }
 
 pub(super) fn usage_window_reset(usage: &ProfileUsageState, kind: UsageWindowKind) -> String {
@@ -995,16 +985,16 @@ fn compact_profile_totals_at(
     rows: &[ProfileRow],
     now: chrono::DateTime<Utc>,
 ) -> Option<CompactProfileTotals> {
-    let five_hour_windows = compact_total_windows(rows, UsageWindowKind::Primary);
-    let weekly_windows = compact_total_windows(rows, UsageWindowKind::Secondary);
+    let five_hour_windows = compact_total_windows(rows, UsageWindowKind::FiveHour);
+    let weekly_windows = compact_total_windows(rows, UsageWindowKind::Weekly);
 
     if five_hour_windows.is_empty() && weekly_windows.is_empty() {
         return None;
     }
 
     Some(CompactProfileTotals {
-        five_hour: compact_total_cell(&five_hour_windows, now, UsageWindowKind::Primary),
-        weekly: compact_total_cell(&weekly_windows, now, UsageWindowKind::Secondary),
+        five_hour: compact_total_cell(&five_hour_windows, now, UsageWindowKind::FiveHour),
+        weekly: compact_total_cell(&weekly_windows, now, UsageWindowKind::Weekly),
     })
 }
 
@@ -1014,8 +1004,8 @@ fn compact_total_windows(rows: &[ProfileRow], kind: UsageWindowKind) -> Vec<Usag
     rows.iter()
         .filter_map(|row| {
             let window = match kind {
-                UsageWindowKind::Primary => row.five_hour_usage.clone(),
-                UsageWindowKind::Secondary => row.weekly_usage.clone(),
+                UsageWindowKind::FiveHour => row.five_hour_usage.clone(),
+                UsageWindowKind::Weekly => row.weekly_usage.clone(),
             }?;
 
             if let Some(email) = row.total_dedupe_key.as_deref() {
@@ -1110,12 +1100,12 @@ fn ideal_used_percent(
     let reset_at = window.reset_at?;
     let reset_at = Utc.timestamp_opt(reset_at, 0).single()?;
     match kind {
-        UsageWindowKind::Primary => Some(linear_ideal_used_percent(
+        UsageWindowKind::FiveHour => Some(linear_ideal_used_percent(
             reset_at,
             now,
             usage_window_duration(kind),
         )),
-        UsageWindowKind::Secondary => weekly_ideal_used_percent(reset_at, now),
+        UsageWindowKind::Weekly => weekly_ideal_used_percent(reset_at, now),
     }
 }
 
@@ -1138,7 +1128,7 @@ fn weekly_ideal_used_percent(
     reset_at: chrono::DateTime<Utc>,
     now: chrono::DateTime<Utc>,
 ) -> Option<f64> {
-    let start_at = reset_at - usage_window_duration(UsageWindowKind::Secondary);
+    let start_at = reset_at - usage_window_duration(UsageWindowKind::Weekly);
     if now <= start_at {
         return Some(0.0);
     }
@@ -1209,8 +1199,8 @@ fn limit_weight(window: &UsageWindowSnapshot) -> f64 {
 
 fn usage_window_duration(kind: UsageWindowKind) -> chrono::Duration {
     match kind {
-        UsageWindowKind::Primary => chrono::Duration::hours(5),
-        UsageWindowKind::Secondary => chrono::Duration::days(7),
+        UsageWindowKind::FiveHour => chrono::Duration::hours(5),
+        UsageWindowKind::Weekly => chrono::Duration::days(7),
     }
 }
 
@@ -1312,8 +1302,8 @@ fn current_usage_window_reset_compact(
 fn usage_window(usage: &ProfileUsageState, kind: UsageWindowKind) -> Option<&UsageWindowSnapshot> {
     match usage {
         ProfileUsageState::Available(snapshot) => match kind {
-            UsageWindowKind::Primary => snapshot.primary.as_ref(),
-            UsageWindowKind::Secondary => snapshot.secondary.as_ref(),
+            UsageWindowKind::FiveHour => snapshot.five_hour.as_ref(),
+            UsageWindowKind::Weekly => snapshot.weekly.as_ref(),
         },
         _ => None,
     }
@@ -1356,9 +1346,9 @@ pub(super) fn format_reset_timestamp_compact(
     let time = dt.format("%-I:%M %p").to_string();
 
     match kind {
-        UsageWindowKind::Primary => time,
-        UsageWindowKind::Secondary if dt.date_naive() == captured_at.date_naive() => time,
-        UsageWindowKind::Secondary => format!("{} {time}", dt.format("%a %-d %b")),
+        UsageWindowKind::FiveHour => time,
+        UsageWindowKind::Weekly if dt.date_naive() == captured_at.date_naive() => time,
+        UsageWindowKind::Weekly => format!("{} {time}", dt.format("%a %-d %b")),
     }
 }
 
@@ -1370,9 +1360,9 @@ pub fn format_current_usage_reset_timestamp(
     let time = dt.format("%-I:%M %p").to_string();
 
     match kind {
-        UsageWindowKind::Primary => time,
-        UsageWindowKind::Secondary if dt.date_naive() == captured_at.date_naive() => time,
-        UsageWindowKind::Secondary => format!("{} {time}", dt.format("%a")),
+        UsageWindowKind::FiveHour => time,
+        UsageWindowKind::Weekly if dt.date_naive() == captured_at.date_naive() => time,
+        UsageWindowKind::Weekly => format!("{} {time}", dt.format("%a")),
     }
 }
 
@@ -1399,15 +1389,15 @@ mod tests {
         let rows = vec![
             profile_row_with_usage(
                 25.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
                 140.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 1.0)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Weekly, 1.0)),
             ),
             profile_row_with_usage(
                 75.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
                 60.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 1.0)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::Weekly, 1.0)),
             ),
         ];
 
@@ -1422,9 +1412,9 @@ mod tests {
         let now = Utc.timestamp_opt(0, 0).single().unwrap();
         let rows = vec![profile_row_with_usage(
             0.0,
-            Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.0)),
+            Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.0)),
             0.0,
-            Some(reset_at_for_elapsed(now, UsageWindowKind::Secondary, 0.0)),
+            Some(reset_at_for_elapsed(now, UsageWindowKind::Weekly, 0.0)),
         )];
 
         let totals = compact_profile_totals_at(&rows, now).expect("totals");
@@ -1448,7 +1438,7 @@ mod tests {
             .map(|_| {
                 profile_row_with_usage(
                     10.0,
-                    Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.1)),
+                    Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.1)),
                     10.0,
                     Some(weekly_reset_at),
                 )
@@ -1468,14 +1458,14 @@ mod tests {
         let rows = vec![
             profile_row_with_usage_and_multiplier(
                 10.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.1)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.1)),
                 10.0,
                 Some(weekly_reset_at),
                 10.0,
             ),
             profile_row_with_usage(
                 10.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.1)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.1)),
                 10.0,
                 Some(weekly_reset_at),
             ),
@@ -1494,14 +1484,14 @@ mod tests {
         let rows = vec![
             profile_row_with_usage_and_multiplier(
                 84.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
                 84.0,
                 Some(weekly_reset_at),
                 10.0,
             ),
             profile_row_with_usage(
                 100.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
                 100.0,
                 Some(weekly_reset_at),
             ),
@@ -1520,21 +1510,21 @@ mod tests {
         let rows = vec![
             profile_row_with_usage_and_email(
                 80.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
                 80.0,
                 Some(weekly_reset_at),
                 "dup@example.com",
             ),
             profile_row_with_usage_and_email(
                 20.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
                 20.0,
                 Some(weekly_reset_at),
                 "dup@example.com",
             ),
             profile_row_with_usage_and_email(
                 40.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
                 40.0,
                 Some(weekly_reset_at),
                 "other@example.com",
@@ -1553,7 +1543,7 @@ mod tests {
         let weekly_reset_at = weekly_pace_reset_at();
         let rows = vec![profile_row_with_usage(
             30.0,
-            Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+            Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
             30.0,
             Some(weekly_reset_at),
         )];
@@ -1570,7 +1560,7 @@ mod tests {
         let weekly_reset_at = weekly_pace_reset_at();
         let rows = vec![profile_row_with_usage(
             70.0,
-            Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+            Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
             70.0,
             Some(weekly_reset_at),
         )];
@@ -1587,13 +1577,13 @@ mod tests {
         let rows = vec![
             profile_row_with_usage(
                 70.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.5)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.5)),
                 70.0,
                 Some(weekly_pace_reset_at()),
             ),
             profile_row_with_usage(
                 30.0,
-                Some(reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2)),
+                Some(reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.2)),
                 30.0,
                 Some(weekly_pace_reset_at_for_20_percent()),
             ),
@@ -1606,9 +1596,9 @@ mod tests {
     }
 
     #[test]
-    fn pace_delta_uses_displayed_percent_for_primary_window() {
+    fn pace_delta_uses_displayed_percent_for_five_hour_window() {
         let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
-        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2);
+        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.2);
         let window = UsageWindowSnapshot {
             used_percent: 25.0,
             reset_at: Some(reset_at),
@@ -1616,16 +1606,16 @@ mod tests {
         };
 
         assert_eq!(
-            pace_delta_percent(&window, now, UsageWindowKind::Primary)
+            pace_delta_percent(&window, now, UsageWindowKind::FiveHour)
                 .map(|delta| delta.round() as i64),
             Some(5)
         );
     }
 
     #[test]
-    fn pace_delta_uses_displayed_percent_for_primary_window_under_pace() {
+    fn pace_delta_uses_displayed_percent_for_five_hour_window_under_pace() {
         let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
-        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.2);
+        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.2);
         let window = UsageWindowSnapshot {
             used_percent: 10.0,
             reset_at: Some(reset_at),
@@ -1633,7 +1623,7 @@ mod tests {
         };
 
         assert_eq!(
-            pace_delta_percent(&window, now, UsageWindowKind::Primary)
+            pace_delta_percent(&window, now, UsageWindowKind::FiveHour)
                 .map(|delta| delta.round() as i64),
             Some(-10)
         );
@@ -1650,7 +1640,7 @@ mod tests {
         };
 
         assert_eq!(
-            pace_delta_percent(&window, now, UsageWindowKind::Secondary)
+            pace_delta_percent(&window, now, UsageWindowKind::Weekly)
                 .map(|delta| delta.round() as i64),
             Some(5)
         );
@@ -1673,12 +1663,12 @@ mod tests {
         };
 
         assert_eq!(
-            pace_delta_percent(&saturday_window, saturday, UsageWindowKind::Secondary)
+            pace_delta_percent(&saturday_window, saturday, UsageWindowKind::Weekly)
                 .map(|delta| delta.round() as i64),
             Some(0)
         );
         assert_eq!(
-            pace_delta_percent(&sunday_window, sunday, UsageWindowKind::Secondary)
+            pace_delta_percent(&sunday_window, sunday, UsageWindowKind::Weekly)
                 .map(|delta| delta.round() as i64),
             Some(0)
         );
@@ -1688,27 +1678,27 @@ mod tests {
     fn current_usage_window_compact_shows_displayed_percent_delta() {
         let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
         let current_local = now.with_timezone(&Local);
-        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.8);
+        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.8);
         let usage = ProfileUsageState::Available(ProfileUsageSnapshot {
             user_id: None,
             account_id: None,
             email: None,
             plan_type: Some("prolite".into()),
-            primary: Some(UsageWindowSnapshot {
+            five_hour: Some(UsageWindowSnapshot {
                 used_percent: 81.0,
                 reset_at: Some(reset_at),
                 limit_multiplier: 10.0,
             }),
-            secondary: None,
+            weekly: None,
         });
         let reset = format_current_usage_reset_timestamp(
             Local.timestamp_opt(reset_at, 0).single().unwrap(),
             current_local,
-            UsageWindowKind::Primary,
+            UsageWindowKind::FiveHour,
         );
 
         assert_eq!(
-            current_usage_window_compact(&usage, UsageWindowKind::Primary, current_local, now,),
+            current_usage_window_compact(&usage, UsageWindowKind::FiveHour, current_local, now,),
             format!(" 81% (+1%) ({reset})")
         );
     }
@@ -1717,27 +1707,27 @@ mod tests {
     fn current_usage_window_compact_shows_fractional_percent_and_reset() {
         let now = Utc.timestamp_opt(9_000, 0).single().unwrap();
         let current_local = now.with_timezone(&Local);
-        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::Primary, 0.01);
+        let reset_at = reset_at_for_elapsed(now, UsageWindowKind::FiveHour, 0.01);
         let usage = ProfileUsageState::Available(ProfileUsageSnapshot {
             user_id: None,
             account_id: None,
             email: None,
             plan_type: Some("plus".into()),
-            primary: Some(UsageWindowSnapshot {
+            five_hour: Some(UsageWindowSnapshot {
                 used_percent: 0.42,
                 reset_at: Some(reset_at),
                 limit_multiplier: 1.0,
             }),
-            secondary: None,
+            weekly: None,
         });
         let reset = format_current_usage_reset_timestamp(
             Local.timestamp_opt(reset_at, 0).single().unwrap(),
             current_local,
-            UsageWindowKind::Primary,
+            UsageWindowKind::FiveHour,
         );
 
         assert_eq!(
-            current_usage_window_compact(&usage, UsageWindowKind::Primary, current_local, now,),
+            current_usage_window_compact(&usage, UsageWindowKind::FiveHour, current_local, now,),
             format!("0.42% (-1%) ({reset})")
         );
     }
