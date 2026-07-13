@@ -284,8 +284,8 @@ struct ProfileUsageSnapshot {
     account_id: Option<String>,
     email: Option<String>,
     plan_type: Option<String>,
-    primary: Option<UsageWindowSnapshot>,
-    secondary: Option<UsageWindowSnapshot>,
+    five_hour: Option<UsageWindowSnapshot>,
+    weekly: Option<UsageWindowSnapshot>,
 }
 
 #[derive(Debug, Clone)]
@@ -295,10 +295,29 @@ struct UsageWindowSnapshot {
     limit_multiplier: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UsageWindowKind {
+    FiveHour,
+    Weekly,
+}
+
+impl UsageWindowKind {
+    const FIVE_HOUR_SECONDS: u64 = 5 * 60 * 60;
+    const WEEKLY_SECONDS: u64 = 7 * 24 * 60 * 60;
+
+    fn from_window_seconds(seconds: u64) -> Option<Self> {
+        match seconds {
+            Self::FIVE_HOUR_SECONDS => Some(Self::FiveHour),
+            Self::WEEKLY_SECONDS => Some(Self::Weekly),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 struct UsageRunRates {
-    primary: Option<f64>,
-    secondary: Option<f64>,
+    five_hour: Option<f64>,
+    weekly: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -387,6 +406,7 @@ struct UsageRateLimit {
 #[derive(Debug, Deserialize)]
 struct UsageWindowResponse {
     used_percent: f64,
+    limit_window_seconds: u64,
     reset_at: i64,
 }
 
@@ -773,42 +793,42 @@ mod tests {
     }
 
     #[test]
-    fn format_reset_timestamp_compact_uses_time_only_for_primary_window() {
+    fn format_reset_timestamp_compact_uses_time_only_for_five_hour_window() {
         let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
         let reset_at = Local.with_ymd_and_hms(2026, 4, 2, 0, 30, 0).unwrap();
 
         let formatted = super::format_reset_timestamp_compact(
             reset_at,
             captured_at,
-            super::UsageWindowKind::Primary,
+            super::UsageWindowKind::FiveHour,
         );
 
         assert_eq!(formatted, "12:30 AM");
     }
 
     #[test]
-    fn format_reset_timestamp_compact_uses_calendar_day_for_future_secondary_window() {
+    fn format_reset_timestamp_compact_uses_calendar_day_for_future_weekly_window() {
         let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
         let reset_at = Local.with_ymd_and_hms(2026, 4, 2, 0, 30, 0).unwrap();
 
         let formatted = super::format_reset_timestamp_compact(
             reset_at,
             captured_at,
-            super::UsageWindowKind::Secondary,
+            super::UsageWindowKind::Weekly,
         );
 
         assert_eq!(formatted, "Thu 2 Apr 12:30 AM");
     }
 
     #[test]
-    fn current_usage_reset_timestamp_uses_weekday_without_date_for_future_secondary_window() {
+    fn current_usage_reset_timestamp_uses_weekday_without_date_for_future_weekly_window() {
         let captured_at = Local.with_ymd_and_hms(2026, 3, 31, 9, 15, 0).unwrap();
         let reset_at = Local.with_ymd_and_hms(2026, 4, 2, 0, 30, 0).unwrap();
 
         let formatted = super::format_current_usage_reset_timestamp(
             reset_at,
             captured_at,
-            super::UsageWindowKind::Secondary,
+            super::UsageWindowKind::Weekly,
         );
 
         assert_eq!(formatted, "Thu 12:30 AM");
@@ -823,16 +843,16 @@ mod tests {
             account_id: Some("acct-1".into()),
             email: Some("praveen@example.com".into()),
             plan_type: Some("plus".into()),
-            primary: Some(UsageWindowSnapshot {
+            five_hour: Some(UsageWindowSnapshot {
                 used_percent: 42.0,
                 reset_at: Some(reset_at_for_elapsed(
                     current_utc,
-                    super::UsageWindowKind::Primary,
+                    super::UsageWindowKind::FiveHour,
                     0.5,
                 )),
                 limit_multiplier: 1.0,
             }),
-            secondary: Some(UsageWindowSnapshot {
+            weekly: Some(UsageWindowSnapshot {
                 used_percent: 73.0,
                 reset_at: Some(
                     Local
@@ -844,20 +864,20 @@ mod tests {
             }),
         });
 
-        let primary = super::current_usage_window_compact(
+        let five_hour = super::current_usage_window_compact(
             &usage,
-            super::UsageWindowKind::Primary,
+            super::UsageWindowKind::FiveHour,
             current_local,
             current_utc,
         );
         let weekly = super::current_usage_window_compact(
             &usage,
-            super::UsageWindowKind::Secondary,
+            super::UsageWindowKind::Weekly,
             current_local,
             current_utc,
         );
 
-        assert_eq!(primary, " 42% (-8%) (11:45 AM)");
+        assert_eq!(five_hour, " 42% (-8%) (11:45 AM)");
         assert_eq!(weekly, " 73% (+2%) (Thu 12:30 AM)");
     }
 
@@ -866,28 +886,28 @@ mod tests {
         let usage =
             ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 73.0));
 
-        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::Primary);
+        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::FiveHour);
 
         assert!(formatted.starts_with(" 42% ("));
         assert!(formatted.ends_with(')'));
     }
 
     #[test]
-    fn usage_window_reset_hides_primary_reset_for_zero_percent_window() {
+    fn usage_window_reset_hides_five_hour_reset_for_zero_percent_window() {
         let usage =
             ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 0.0, 73.0));
 
-        let formatted = super::usage_window_reset(&usage, super::UsageWindowKind::Primary);
+        let formatted = super::usage_window_reset(&usage, super::UsageWindowKind::FiveHour);
 
         assert_eq!(formatted, "-");
     }
 
     #[test]
-    fn usage_window_compact_hides_primary_reset_for_zero_percent_window() {
+    fn usage_window_compact_hides_five_hour_reset_for_zero_percent_window() {
         let usage =
             ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 0.0, 73.0));
 
-        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::Primary);
+        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::FiveHour);
 
         assert_eq!(formatted, "  0%");
     }
@@ -897,7 +917,7 @@ mod tests {
         let usage =
             ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 0.0));
 
-        let formatted = super::usage_window_reset(&usage, super::UsageWindowKind::Secondary);
+        let formatted = super::usage_window_reset(&usage, super::UsageWindowKind::Weekly);
 
         assert_eq!(formatted, "-");
     }
@@ -907,17 +927,17 @@ mod tests {
         let usage =
             ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 0.0));
 
-        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::Secondary);
+        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::Weekly);
 
         assert_eq!(formatted, "  0%");
     }
 
     #[test]
-    fn usage_window_reset_shows_primary_reset_for_fractional_window() {
+    fn usage_window_reset_shows_five_hour_reset_for_fractional_window() {
         let usage =
             ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 0.42, 73.0));
 
-        let formatted = super::usage_window_reset(&usage, super::UsageWindowKind::Primary);
+        let formatted = super::usage_window_reset(&usage, super::UsageWindowKind::FiveHour);
 
         assert_ne!(formatted, "-");
     }
@@ -927,7 +947,7 @@ mod tests {
         let usage =
             ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 0.42, 73.0));
 
-        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::Primary);
+        let formatted = super::usage_window_compact(&usage, super::UsageWindowKind::FiveHour);
 
         assert!(formatted.starts_with("0.42% ("));
         assert!(formatted.ends_with(')'));
@@ -1095,20 +1115,20 @@ mod tests {
             account_id: None,
             email: None,
             plan_type: Some("prolite".into()),
-            primary: Some(UsageWindowSnapshot {
+            five_hour: Some(UsageWindowSnapshot {
                 used_percent: 51.0,
                 reset_at: Some(reset_at_for_elapsed(
                     now,
-                    super::UsageWindowKind::Primary,
+                    super::UsageWindowKind::FiveHour,
                     0.5,
                 )),
                 limit_multiplier: 10.0,
             }),
-            secondary: Some(UsageWindowSnapshot {
+            weekly: Some(UsageWindowSnapshot {
                 used_percent: 100.0,
                 reset_at: Some(reset_at_for_elapsed(
                     now,
-                    super::UsageWindowKind::Secondary,
+                    super::UsageWindowKind::Weekly,
                     1.0,
                 )),
                 limit_multiplier: 10.0,
@@ -1116,11 +1136,11 @@ mod tests {
         });
 
         assert_eq!(
-            super::usage_window_style_at(&usage, super::UsageWindowKind::Primary, now),
+            super::usage_window_style_at(&usage, super::UsageWindowKind::FiveHour, now),
             LimitStyleKind::Success
         );
         assert_eq!(
-            super::usage_window_style_at(&usage, super::UsageWindowKind::Secondary, now),
+            super::usage_window_style_at(&usage, super::UsageWindowKind::Weekly, now),
             LimitStyleKind::Success
         );
     }
@@ -1132,12 +1152,12 @@ mod tests {
             account_id: None,
             email: None,
             plan_type: Some("prolite".into()),
-            primary: Some(UsageWindowSnapshot {
+            five_hour: Some(UsageWindowSnapshot {
                 used_percent: 42.0,
                 reset_at: None,
                 limit_multiplier: 10.0,
             }),
-            secondary: Some(UsageWindowSnapshot {
+            weekly: Some(UsageWindowSnapshot {
                 used_percent: 100.0,
                 reset_at: None,
                 limit_multiplier: 10.0,
@@ -1146,7 +1166,7 @@ mod tests {
 
         assert_eq!(super::five_hour_limit_style(&usage), LimitStyleKind::Normal);
         assert_eq!(
-            super::usage_window_style(&usage, super::UsageWindowKind::Secondary),
+            super::usage_window_style(&usage, super::UsageWindowKind::Weekly),
             LimitStyleKind::Normal
         );
     }
@@ -1220,12 +1240,12 @@ mod tests {
             account_id: Some("acct-1".into()),
             email: None,
             plan_type: Some("plus".into()),
-            primary: Some(UsageWindowSnapshot {
+            five_hour: Some(UsageWindowSnapshot {
                 used_percent: 42.0,
                 reset_at: Some(now + 3600),
                 limit_multiplier: 1.0,
             }),
-            secondary: Some(UsageWindowSnapshot {
+            weekly: Some(UsageWindowSnapshot {
                 used_percent: 100.0,
                 reset_at: Some(now),
                 limit_multiplier: 1.0,
@@ -1388,8 +1408,8 @@ mod tests {
             account_id: Some("user-1".into()),
             email: Some("praveen@example.com".into()),
             plan_type: Some("plus".into()),
-            primary: None,
-            secondary: None,
+            five_hour: None,
+            weekly: None,
         };
         let identity = identity("sub-1", "user-1", "acct-1", Some("praveen@example.com"));
 
@@ -2179,14 +2199,14 @@ mod tests {
                 20.0,
                 now.timestamp() + 3600,
                 10.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.05),
+                reset_at_for_elapsed(now, super::UsageWindowKind::Weekly, 0.05),
             ),
             available_saved_profile_with_resets(
                 "b",
                 20.0,
                 now.timestamp() + 3600,
                 40.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.8),
+                reset_at_for_elapsed(now, super::UsageWindowKind::Weekly, 0.8),
             ),
         ];
 
@@ -2198,7 +2218,7 @@ mod tests {
     #[test]
     fn select_auto_launch_profile_uses_three_x_weekly_pace_weight() {
         let now = Utc::now();
-        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.5);
+        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Weekly, 0.5);
         let profiles = vec![
             available_saved_profile_with_resets(
                 "a",
@@ -2224,19 +2244,19 @@ mod tests {
     #[test]
     fn select_auto_launch_profile_prefers_earlier_five_hour_reset_when_pace_ties() {
         let now = Utc::now();
-        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.5);
+        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Weekly, 0.5);
         let profiles = vec![
             available_saved_profile_with_resets(
                 "later-reset",
                 10.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.1),
+                reset_at_for_elapsed(now, super::UsageWindowKind::FiveHour, 0.1),
                 50.0,
                 weekly_reset,
             ),
             available_saved_profile_with_resets(
                 "earlier-reset",
                 70.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.7),
+                reset_at_for_elapsed(now, super::UsageWindowKind::FiveHour, 0.7),
                 50.0,
                 weekly_reset,
             ),
@@ -2250,19 +2270,19 @@ mod tests {
     #[test]
     fn select_auto_launch_profile_prefers_better_five_hour_pace_over_lower_raw_usage() {
         let now = Utc::now();
-        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.5);
+        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Weekly, 0.5);
         let profiles = vec![
             available_saved_profile_with_resets(
                 "on-pace",
                 60.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.8),
+                reset_at_for_elapsed(now, super::UsageWindowKind::FiveHour, 0.8),
                 50.0,
                 weekly_reset,
             ),
             available_saved_profile_with_resets(
                 "behind-pace",
                 30.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.2),
+                reset_at_for_elapsed(now, super::UsageWindowKind::FiveHour, 0.2),
                 50.0,
                 weekly_reset,
             ),
@@ -2310,12 +2330,12 @@ mod tests {
                 account_id: Some("acct-incomplete".into()),
                 email: Some("incomplete@example.com".into()),
                 plan_type: Some("plus".into()),
-                primary: Some(UsageWindowSnapshot {
+                five_hour: Some(UsageWindowSnapshot {
                     used_percent: 5.0,
                     reset_at: Some(Local::now().timestamp() + 3600),
                     limit_multiplier: 1.0,
                 }),
-                secondary: None,
+                weekly: None,
             },
         );
 
@@ -2333,9 +2353,38 @@ mod tests {
     }
 
     #[test]
-    fn select_auto_launch_profile_keeps_candidate_when_primary_reset_is_missing() {
+    fn select_auto_launch_profile_accepts_weekly_only_usage() {
         let now = Utc::now();
-        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.2);
+        let weekly_only = profile_with_snapshot(
+            "weekly-only",
+            ProfileUsageSnapshot {
+                user_id: Some("user-weekly".into()),
+                account_id: Some("acct-weekly".into()),
+                email: Some("weekly@example.com".into()),
+                plan_type: Some("plus".into()),
+                five_hour: None,
+                weekly: Some(UsageWindowSnapshot {
+                    used_percent: 20.0,
+                    reset_at: Some(reset_at_for_elapsed(
+                        now,
+                        super::UsageWindowKind::Weekly,
+                        0.2,
+                    )),
+                    limit_multiplier: 1.0,
+                }),
+            },
+        );
+
+        let profiles = [weekly_only];
+        let selected = select_auto_launch_profile(&profiles).unwrap();
+
+        assert_eq!(selected.name, "weekly-only");
+    }
+
+    #[test]
+    fn select_auto_launch_profile_keeps_candidate_when_five_hour_reset_is_missing() {
+        let now = Utc::now();
+        let weekly_reset = reset_at_for_elapsed(now, super::UsageWindowKind::Weekly, 0.2);
         let profiles = vec![
             profile_with_snapshot(
                 "missing-reset",
@@ -2344,12 +2393,12 @@ mod tests {
                     account_id: Some("acct-missing-reset".into()),
                     email: Some("missing-reset@example.com".into()),
                     plan_type: Some("plus".into()),
-                    primary: Some(UsageWindowSnapshot {
+                    five_hour: Some(UsageWindowSnapshot {
                         used_percent: 10.0,
                         reset_at: None,
                         limit_multiplier: 1.0,
                     }),
-                    secondary: Some(UsageWindowSnapshot {
+                    weekly: Some(UsageWindowSnapshot {
                         used_percent: 20.0,
                         reset_at: Some(weekly_reset),
                         limit_multiplier: 1.0,
@@ -2359,7 +2408,7 @@ mod tests {
             available_saved_profile_with_resets(
                 "fully-timed",
                 40.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.2),
+                reset_at_for_elapsed(now, super::UsageWindowKind::FiveHour, 0.2),
                 20.0,
                 weekly_reset,
             ),
@@ -2377,16 +2426,16 @@ mod tests {
             available_saved_profile_with_resets(
                 "b",
                 40.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.4),
+                reset_at_for_elapsed(now, super::UsageWindowKind::FiveHour, 0.4),
                 30.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.3),
+                reset_at_for_elapsed(now, super::UsageWindowKind::Weekly, 0.3),
             ),
             available_saved_profile_with_resets(
                 "a",
                 40.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Primary, 0.4),
+                reset_at_for_elapsed(now, super::UsageWindowKind::FiveHour, 0.4),
                 30.0,
-                reset_at_for_elapsed(now, super::UsageWindowKind::Secondary, 0.3),
+                reset_at_for_elapsed(now, super::UsageWindowKind::Weekly, 0.3),
             ),
         ];
 
@@ -2506,12 +2555,12 @@ mod tests {
                 account_id: Some("acct-a".into()),
                 email: Some("a@example.com".into()),
                 plan_type: Some("plus".into()),
-                primary: Some(UsageWindowSnapshot {
+                five_hour: Some(UsageWindowSnapshot {
                     used_percent: 42.0,
                     reset_at: Some(Local::now().timestamp() + 3600),
                     limit_multiplier: 1.0,
                 }),
-                secondary: Some(UsageWindowSnapshot {
+                weekly: Some(UsageWindowSnapshot {
                     used_percent: 3.0,
                     reset_at: Some(weekly_reset),
                     limit_multiplier: 1.0,
@@ -2568,8 +2617,8 @@ mod tests {
 
     fn available_saved_profile(
         name: &str,
-        primary_used_percent: f64,
-        secondary_used_percent: f64,
+        five_hour_used_percent: f64,
+        weekly_used_percent: f64,
     ) -> SavedProfile {
         let subject = format!("sub-{name}");
         let user_id = format!("user-{name}");
@@ -2583,8 +2632,8 @@ mod tests {
                 "plus",
                 &user_id,
                 &account_id,
-                primary_used_percent,
-                secondary_used_percent,
+                five_hour_used_percent,
+                weekly_used_percent,
             )),
         )
     }
@@ -2617,10 +2666,10 @@ mod tests {
 
     fn available_saved_profile_with_resets(
         name: &str,
-        primary_used_percent: f64,
-        primary_reset_at: i64,
-        secondary_used_percent: f64,
-        secondary_reset_at: i64,
+        five_hour_used_percent: f64,
+        five_hour_reset_at: i64,
+        weekly_used_percent: f64,
+        weekly_reset_at: i64,
     ) -> SavedProfile {
         let subject = format!("sub-{name}");
         let user_id = format!("user-{name}");
@@ -2635,14 +2684,14 @@ mod tests {
                 account_id: Some(account_id),
                 email: Some(email),
                 plan_type: Some("plus".into()),
-                primary: Some(UsageWindowSnapshot {
-                    used_percent: primary_used_percent,
-                    reset_at: Some(primary_reset_at),
+                five_hour: Some(UsageWindowSnapshot {
+                    used_percent: five_hour_used_percent,
+                    reset_at: Some(five_hour_reset_at),
                     limit_multiplier: 1.0,
                 }),
-                secondary: Some(UsageWindowSnapshot {
-                    used_percent: secondary_used_percent,
-                    reset_at: Some(secondary_reset_at),
+                weekly: Some(UsageWindowSnapshot {
+                    used_percent: weekly_used_percent,
+                    reset_at: Some(weekly_reset_at),
                     limit_multiplier: 1.0,
                 }),
             }),
@@ -2724,8 +2773,8 @@ mod tests {
             &ProfileUsageState::Available(usage_snapshot("plus", "user-1", "acct-1", 42.0, 73.0)),
             captured_at,
             UsageRunRates {
-                primary: Some(4.5),
-                secondary: None,
+                five_hour: Some(4.5),
+                weekly: None,
             },
             &RateLimitResetCreditSummary::Unavailable,
         )
@@ -2752,6 +2801,48 @@ mod tests {
         assert!(!output.contains("TOTAL"));
         assert!(!output.contains("PLAN"));
         assert!(!output.contains("STATUS"));
+    }
+
+    #[test]
+    fn usage_windows_are_classified_by_duration_when_five_hour_limit_is_absent() {
+        let response = serde_json::from_value::<super::UsageResponse>(usage_response_with_windows(
+            Some((91.0, 604_800)),
+            None,
+        ))
+        .unwrap();
+
+        let usage = response.into_snapshot();
+
+        assert!(usage.five_hour.is_none());
+        assert_eq!(usage.weekly.unwrap().used_percent, 91.0);
+    }
+
+    #[test]
+    fn usage_windows_are_classified_by_duration_when_wire_slots_are_reversed() {
+        let response = serde_json::from_value::<super::UsageResponse>(usage_response_with_windows(
+            Some((91.0, 604_800)),
+            Some((37.0, 18_000)),
+        ))
+        .unwrap();
+
+        let usage = response.into_snapshot();
+
+        assert_eq!(usage.five_hour.unwrap().used_percent, 37.0);
+        assert_eq!(usage.weekly.unwrap().used_percent, 91.0);
+    }
+
+    #[test]
+    fn unknown_usage_window_duration_is_not_mislabeled() {
+        let response = serde_json::from_value::<super::UsageResponse>(usage_response_with_windows(
+            Some((42.0, 86_400)),
+            None,
+        ))
+        .unwrap();
+
+        let usage = response.into_snapshot();
+
+        assert!(usage.five_hour.is_none());
+        assert!(usage.weekly.is_none());
     }
 
     #[test]
@@ -3322,8 +3413,8 @@ mod tests {
         plan_type: &str,
         user_id: &str,
         account_id: &str,
-        primary_used_percent: f64,
-        secondary_used_percent: f64,
+        five_hour_used_percent: f64,
+        weekly_used_percent: f64,
     ) -> ProfileUsageSnapshot {
         let now = Local::now().timestamp();
         ProfileUsageSnapshot {
@@ -3331,13 +3422,13 @@ mod tests {
             account_id: Some(account_id.into()),
             email: None,
             plan_type: Some(plan_type.into()),
-            primary: Some(UsageWindowSnapshot {
-                used_percent: primary_used_percent,
+            five_hour: Some(UsageWindowSnapshot {
+                used_percent: five_hour_used_percent,
                 reset_at: Some(now + 3600),
                 limit_multiplier: 1.0,
             }),
-            secondary: Some(UsageWindowSnapshot {
-                used_percent: secondary_used_percent,
+            weekly: Some(UsageWindowSnapshot {
+                used_percent: weekly_used_percent,
                 reset_at: Some(now + 7200),
                 limit_multiplier: 1.0,
             }),
@@ -3350,8 +3441,8 @@ mod tests {
         elapsed_fraction: f64,
     ) -> i64 {
         let duration = match kind {
-            super::UsageWindowKind::Primary => chrono::Duration::hours(5),
-            super::UsageWindowKind::Secondary => chrono::Duration::days(7),
+            super::UsageWindowKind::FiveHour => chrono::Duration::hours(5),
+            super::UsageWindowKind::Weekly => chrono::Duration::days(7),
         };
         let remaining_seconds =
             ((1.0 - elapsed_fraction) * duration.num_seconds() as f64).round() as i64;
@@ -3483,30 +3574,43 @@ mod tests {
         user_id: &str,
         account_id: &str,
         plan_type: &str,
-        primary_used_percent: f64,
-        secondary_used_percent: f64,
+        five_hour_used_percent: f64,
+        weekly_used_percent: f64,
+    ) -> serde_json::Value {
+        let mut response = usage_response_with_windows(
+            Some((five_hour_used_percent, 18_000)),
+            Some((weekly_used_percent, 604_800)),
+        );
+        response["email"] = json!(email);
+        response["user_id"] = json!(user_id);
+        response["account_id"] = json!(account_id);
+        response["plan_type"] = json!(plan_type);
+        response
+    }
+
+    fn usage_response_with_windows(
+        primary: Option<(f64, u64)>,
+        secondary: Option<(f64, u64)>,
     ) -> serde_json::Value {
         let now = Local::now().timestamp();
+        let window = |(used_percent, limit_window_seconds): (f64, u64)| {
+            json!({
+                "used_percent": used_percent,
+                "limit_window_seconds": limit_window_seconds,
+                "reset_after_seconds": limit_window_seconds,
+                "reset_at": now + 3600,
+            })
+        };
         json!({
-            "email": email,
-            "user_id": user_id,
-            "account_id": account_id,
-            "plan_type": plan_type,
+            "email": "test@example.com",
+            "user_id": "user-1",
+            "account_id": "acct-1",
+            "plan_type": "plus",
             "rate_limit": {
                 "allowed": true,
                 "limit_reached": false,
-                "primary_window": {
-                    "used_percent": primary_used_percent,
-                    "limit_window_seconds": 18000,
-                    "reset_after_seconds": 18000,
-                    "reset_at": now + 3600,
-                },
-                "secondary_window": {
-                    "used_percent": secondary_used_percent,
-                    "limit_window_seconds": 604800,
-                    "reset_after_seconds": 604800,
-                    "reset_at": now + 7200,
-                }
+                "primary_window": primary.map(window),
+                "secondary_window": secondary.map(window),
             }
         })
     }
