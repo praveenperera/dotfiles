@@ -2,7 +2,6 @@
 
 - Do not leave tech debt or shortcuts behind; go back and do them right before finishing
 - Make impossible states impossible; prefer typed domain models over caller-specific conditionals, always figure out the proper data model first, avoid hacks and shortcuts, repeated bug fixes in the same area of the code might point to not having the right data model
-- I authorize subagent use according to the guidance below
 
 # General
 
@@ -41,6 +40,10 @@
 - Do not add tests that only restate edited literals or implementation details; before adding a test, identify the behavior or invariant it would catch
 - For static config/list changes, prefer compile/lint verification unless there is selection, fallback, parsing, migration, or filtering behavior that needs coverage
 
+# Copy
+
+- Never including your reasoning, thinking or conversation context details in public facing copy
+
 # Subagents
 
 - Use subagents for bounded, context-isolated work when delegation is likely to reduce total context or token usage, such as targeted exploration, log inspection, external research, or focused verification
@@ -50,6 +53,5 @@
 - Before launching any delegated review, define its scope, reasoning effort, time or runtime budget, evidence surface, and maximum review rounds. Default reviews to `high`; reserve `xhigh` for exceptional architectural, safety-critical, or unusually ambiguous work, `med` for quick reviews
 - Never define completion as launching fresh broad reviewers until one reports no findings. After the review-round cap, the primary agent must integrate and fix remaining actionable findings, run targeted verification, and record any genuine unresolved blocker or residual risk. The cap limits review repetition, not completion criteria, and never dismisses a known blocker
 - Prefer larger, phase-sized, non-overlapping ownership slices over many small assignments. Each worker verifies its own slice and returns one concise final report with changed files, verification results, risks, and integration notes
-- While a worker wave is active, the primary agent may do unrelated work but should not reread worker-owned files or duplicate focused verification. After all workers in the wave finish, perform one integration checkpoint: inspect the combined diff, reconcile boundaries, run cross-cutting checks, and update durable progress or audit state.
-- When waiting for a long-running command or subagent, choose the wait timeout from the expected remaining duration, capped at 120 secs. Prefer one appropriately sized wait over repeated short polls
+- Do not wait for every subagent when the results needed to proceed are available. Avoid rereading files while a worker is editing them, then integrate and verify the relevant results.
 - The primary agent remains responsible for integration and verification of delegated results
