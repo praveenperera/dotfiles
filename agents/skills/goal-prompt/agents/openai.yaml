@@ -1,0 +1,7 @@
+interface:
+  display_name: "Goal Prompt"
+  short_description: "Draft compact, evidence-based goal prompts"
+  default_prompt: "Use $goal-prompt to turn this request into a paste-ready Codex goal prompt."
+
+policy:
+  allow_implicit_invocation: false

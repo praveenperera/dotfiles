@@ -1,0 +1,4 @@
+interface:
+  display_name: "Visual Recap"
+  short_description: "Turn completed work into an interactive recap"
+  default_prompt: "Use $visual-recap to turn this completed work into an interactive Planport recap."

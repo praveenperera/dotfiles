@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Review Toolkit"
+  short_description: "Review diffs for actionable, evidence-backed risks"
+  default_prompt: "Use $pr-review-toolkit to review this change for actionable, evidence-backed risks."

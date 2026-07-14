@@ -1,6 +1,6 @@
 # Fresh Codex Thread Reference
 
-Every fix pass must be a new `codex exec` invocation. Do not resume a prior Codex session, even if the previous fix pass was close to correct.
+Every fix pass must be a new Codex exec invocation. Do not resume a prior Codex session, even if the previous fix pass was close to correct. Every pass consumes the orchestrator's single global fix budget, regardless of which reviewer or verification failure triggered it.
 
 The orchestrator chooses the fix effort before launching the pass:
 
@@ -8,7 +8,7 @@ The orchestrator chooses the fix effort before launching the pass:
 - `medium` for ordinary findings and the default repair path
 - `high` for broad, subtle, risky, or previously failed repairs
 
-Do not use `xhigh` for ordinary fix passes. Reserve xhigh for Codex review gates described in the main skill.
+Do not use `xhigh` for ordinary fix passes. Reserve xhigh for the final Codex review described in the main skill.
 
 ## Prompt Template
 
@@ -47,58 +47,12 @@ You are a fresh Codex thread fixing review findings for this repository.
 Summarize files changed, findings addressed, verification commands, and any remaining blockers.
 ```
 
-Do not grant fresh fix threads permission to commit, push, resolve PR threads, label the PR, or comment on the PR. When the user explicitly asked for commit, push, or PR comment finalization, the orchestrator performs those writes after verification and the final CodeRabbit gate are clean.
+Do not grant fresh fix threads permission to commit, push, resolve PR threads, label the PR, or comment on the PR. The orchestrator performs only independently authorized writes after the required local gates are clean.
 
-## Helper Command
+## Invocation
 
-Prefer the bundled helper:
-
-```bash
-python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
-  --repo "$repo" \
-  --prompt-file "$scratch/prompts/iteration-1.md" \
-  --output-file "$scratch/codex/iteration-1-summary.md" \
-  --sandbox danger-full-access \
-  --config model_reasoning_effort='"medium"'
-```
-
-Use `--dry-run` to print the exact command without running Codex:
-
-```bash
-python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
-  --repo "$repo" \
-  --prompt-file "$scratch/prompts/iteration-1.md" \
-  --output-file "$scratch/codex/iteration-1-summary.md" \
-  --sandbox danger-full-access \
-  --config model_reasoning_effort='"medium"' \
-  --dry-run
-```
-
-## Direct Command
-
-If the helper is unavailable, run Codex directly:
-
-```bash
-codex exec \
-  --cd "$repo" \
-  --config model_reasoning_effort='"medium"' \
-  --sandbox danger-full-access \
-  --output-last-message "$scratch/codex/iteration-1-summary.md" \
-  - < "$scratch/prompts/iteration-1.md"
-```
-
-The `-` prompt argument tells `codex exec` to read the initial instructions from stdin. Do not use the `resume` subcommand.
-
-Only add `--dangerously-bypass-approvals-and-sandbox` when the user explicitly approved that automation mode or the environment is already externally sandboxed.
+Load the Codex fix-pass section of `providers.md` for helper and direct invocation commands. Prefer the bundled helper and dry-run it when checking argument construction. Never use a resume or continuation option. Use dangerous bypass mode only when the user explicitly approved that automation mode or the environment is already externally sandboxed.
 
 ## Post-Pass Checks
 
-After each fresh thread exits:
-
-```bash
-git status --short
-git diff --stat
-git diff --check
-```
-
-Then run the project-specific verification from `AGENTS.md`, `justfile`, package scripts, CI config, or the fresh Codex thread's final message. If the fresh thread skipped verification, decide whether to run it in the orchestrator before continuing the loop.
+After each fresh thread exits, inspect worktree status, diff statistics, and whitespace errors, then run the project-specific verification from `AGENTS.md`, `justfile`, package scripts, or CI config. If the fresh thread skipped verification, the orchestrator must run it before continuing.

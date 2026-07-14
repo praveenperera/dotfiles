@@ -1,4 +1,0 @@
-interface:
-  display_name: "Visual Refine Plan"
-  short_description: "Create visual plans with deep refinement"
-  default_prompt: "Use $visual-refine-plan to refine this plan into a reviewable visual plan with all open questions at the bottom."

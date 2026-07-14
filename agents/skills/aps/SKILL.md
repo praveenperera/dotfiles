@@ -1,450 +1,123 @@
 ---
 name: aps
-description: Academic paper search CLI (Semantic Scholar, OpenAlex, ChinaRxiv preprints & local library). Use when the user needs to find papers, look up citations, get paper details, search authors, download papers, or do any academic research task.
+description: Search and manage academic literature with the local `aps` CLI across unified Semantic Scholar, OpenAlex, and ChinaRxiv discovery; paper, citation, reference, and author lookup; repeatable scan manifests; PDF download; and a local full-text/vector library. Use for scholarly literature discovery, citation-graph research, paper identifiers, author metrics, systematic update scans, or local paper-corpus work. Do not use for ordinary web search or non-academic sources.
 ---
 
 # aps — Academic Paper Search
 
-`aps` searches academic papers across Semantic Scholar (S2), OpenAlex (OA), and default-on preprint sources, and manages a local paper library with PDF downloads, full-text search, and semantic vector search. S2 and OA have backend-specific command groups; ChinaRxiv is handled like arXiv-style preprint support inside the unified commands, not as its own public command.
+Use `aps` as the execution surface. Start with `aps --help`, then read the selected
+subcommand's `--help` before relying on a flag: installed binaries can lag the source or this
+skill. Do not infer flags from examples.
 
-**Always search unified `aps search` first** for general paper discovery. It queries S2 and OA, includes arXiv-like records from those indexes, and also searches ChinaRxiv by default. Use `--skip-preprint` when the user wants journal/conference-style results without arXiv/ChinaRxiv preprints.
+## Route the task
 
-## When to Use
+1. Use unified `aps search` for general discovery.
+2. Use unified `aps paper`, `citations`, `references`, or `author` for ordinary lookups.
+3. Switch to `aps s2` or `aps oa` only for a provider-specific capability or filter.
+4. Use `aps scan` for repeatable, date-windowed discovery with persistent seen-state.
+5. Use `aps download` or `aps lib` when the user wants PDFs or local-corpus search.
+6. Add `-F json` when parsing, joining, deduplicating, or automating results.
 
-- User asks to find academic papers on a topic
-- User needs citation counts, references, or paper metadata
-- User wants to look up a specific paper by DOI, arXiv ID, ChinaRxiv ID, or title
-- User needs author information (h-index, paper count, affiliations)
-- User wants paper recommendations based on a seed paper
-- User needs to search full-text passages (S2 snippets)
-- User wants to aggregate/analyze publication data (OA group-by)
-- User wants to run a repeatable paper-discovery scan from a manifest
-- User wants to download a paper PDF for local reading
-- User wants to search across downloaded papers (hybrid/semantic/FTS search)
-- User wants to manage their local paper library
+Read [references/cli.md](references/cli.md) for command syntax, identifier formats, scan
+manifests, JSON output, authentication, and local-library operations. Read
+[references/research-strategy.md](references/research-strategy.md) for query design,
+provider selection, citation traversal, and evidence handling.
 
-## Quick Reference
+## Default discovery
 
-### Top-level Unified Commands
-
-These commands query Semantic Scholar and OpenAlex, with preprints included by default where supported
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `search <query>` | `s` | Search S2, OA, and default-on preprints, then merge results |
-| `search <query> --skip-preprint` | | Search S2/OA while suppressing arXiv-like records and ChinaRxiv |
-| `paper <id>` | `p` | Get paper details by DOI, S2 ID, OA ID, arXiv ID, or ChinaRxiv ID |
-| `citations <id>` | `c` | Get citations from both backends |
-| `references <id>` | `r` | Get references from both backends |
-| `author <query-or-id>` | `a` | Search authors across both backends |
-| `download <id>` | `dl` | Resolve DOI-backed IDs (DOI, S2, OA, arXiv) and download the PDF to the local library |
-| `scan --manifest <FILE> --from-date <DATE> --to-date <DATE> --seen-file <FILE>` | | Run a manifest of discovery jobs with date-window and seen-state filtering |
-| `login` | | Save API keys from env vars to `~/.config/aps/` |
-| `status` | | Show current auth status |
-
-### Backend-specific Commands (both `aps s2` and `aps oa`)
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `search <query>` | `s` | Keyword search for papers |
-| `search --semantic <query>` | | Semantic/embedding-based search |
-| `paper <id>` | `p` | Get paper details by ID |
-| `citations <id>` | `c` | Papers that cite this paper |
-| `references <id>` | `r` | Papers this paper cites |
-| `author <query-or-id>` | `a` | Search or get author details |
-
-### S2-only Commands
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `recommend <id>` | `rec` | Paper recommendations (SPECTER embeddings) |
-| `snippets <query>` | `snip` | Full-text passage search across S2ORC |
-| `match <title>` | `m` | Find paper by exact title match |
-
-### OA-only Commands
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `institutions <query>` | `i` | Search institutions |
-| `topics <query>` | `t` | Search topics |
-| `group-by <field>` | `g` | Aggregate works by field |
-
-### Shared Flags
-
-| Flag | Description |
-|------|-------------|
-| `-y, --year <YEAR>` | Exact year or range: `2020`, `2020-2024`, `2020-` |
-| `-s, --since <YEAR>` | Results from this year onwards (e.g. `2023`) |
-| `--field <FIELD>` | Field of study (S2) or topic filter (OA) |
-| `-m, --min-citations <N>` | Minimum citation count |
-| `--open-access` | Only open access papers |
-| `--skip-preprint` | Exclude preprints from unified `aps search` (aliases: `--no-preprint`, `--skip-preprints`, `--no-preprints`) |
-| `-l, --limit <N>` | Max results (default 50). Use smaller limits (5-10) for focused lookups like specific paper/author queries |
-| `--offset <N>` | Pagination offset |
-| `-F, --format plain\|json` | Output format (default plain) |
-
-## Examples
-
-### Search for Papers
+Run a focused unified search first:
 
 ```bash
-# merged search across S2, OA, and default-on preprint sources
-aps search "transformer attention"
-aps search "large language models" --since 2023 --min-citations 100
-aps search "nanophotonic sensors" --skip-preprint
-
-# keyword search (default limit is 50)
-aps s2 search "transformer attention"
-aps oa search "CRISPR gene editing"
-
-# with filters
-aps s2 search "large language models" --since 2023 --field "Computer Science"
-aps oa search "climate change" --year 2020-2024 --open-access --sort cited_by_count:desc
-
-# semantic search (embedding-based, finds conceptually related papers)
-aps oa search --semantic "effects of sleep on memory consolidation"
-
-# use --limit to restrict results for quick lookups
-aps s2 search "transformer attention" --limit 5
+aps search "retrieval augmented generation evaluation" --since 2024
 ```
 
-### Look Up a Specific Paper
+Unified search merges Semantic Scholar (S2), OpenAlex (OA), and ChinaRxiv. ChinaRxiv is a
+source inside unified commands, not an `aps chinarxiv` command. By default, preprints remain
+eligible. When supported by the installed binary, `--skip-preprint` (and its documented
+aliases) excludes ChinaRxiv plus arXiv-like S2/OA records.
 
-```bash
-# unified details across supported sources
-aps paper ARXIV:1706.03762
-aps paper chinaxiv-202606.00025
-aps paper "10.1038/s41586-020-2308-7"
+Do not claim that every filter applies equally to every source. In the current implementation:
 
-# by arXiv ID
-aps s2 paper ARXIV:1706.03762
+- year/since filters can constrain all three search sources
+- citation filters apply to S2/OA; a positive minimum-citation filter omits ChinaRxiv
+- open-access filtering maps to source-specific availability signals
+- unified ranking and deduplication can hide provider ordering
 
-# by ChinaRxiv ID (handled only by unified paper lookup; there is no aps chinarxiv command)
-aps paper chinaxiv-202606.00025
-aps paper 202606.00025
-aps paper "https://chinaxiv.org/abs/202606.00025"
+If the installed `aps search --help` lacks a required unified option, report the mismatch and
+use available backend commands rather than pretending the option worked.
 
-# by DOI
-aps s2 paper DOI:10.1038/s41586-020-2308-7
-aps oa paper "10.1038/s41586-020-2308-7"
+## Provider capabilities
 
-# by title (S2 fuzzy match)
-aps s2 match "Attention Is All You Need"
-```
+| Need | Command | Why |
+| --- | --- | --- |
+| broad discovery | `aps search` | merged S2/OA/ChinaRxiv results |
+| similar papers | `aps s2 recommend` | S2 recommendation graph/model |
+| passage search | `aps s2 snippets` | S2ORC snippets |
+| title match | `aps s2 match` | S2 title matching |
+| venue/publication type | `aps s2 search` | S2-specific filters |
+| institution/source/topic/raw filters | `aps oa search` | OA structured filters |
+| institutions or topics | `aps oa institutions`, `aps oa topics` | OA entities |
+| aggregations | `aps oa group-by` | OA group-by endpoint |
+| ChinaRxiv paper detail | `aps paper <china-id>` | unified lookup only |
 
-### Citations & References
+Unified citations, references, and authors combine S2 and OA; ChinaRxiv does not supply those
+unified graph/author results. Use more than one provider when ranking or coverage matters,
+because corpus coverage, metadata, identifiers, and citation counts differ.
 
-```bash
-# merged citations/references
-aps citations ARXIV:1706.03762
-aps references W2963403868
+## Paper identifiers
 
-# what cites this paper?
-aps s2 citations ARXIV:1706.03762
-aps oa citations W2963403868
+Prefer DOI for cross-provider work. Preserve provider prefixes when ambiguity matters.
+Unified paper lookup detects DOI, S2 ID, OA work ID, arXiv ID, and ChinaRxiv ID. Accepted
+ChinaRxiv forms in the current implementation include `chinaxiv-202606.00025`, the bare
+`202606.00025`, and an `https://chinaxiv.org/abs/...` URL.
 
-# what does this paper cite?
-aps s2 references ARXIV:1706.03762
-aps oa references W2963403868
-```
+Top-level download resolves DOI-backed DOI/S2/OA/arXiv identifiers before adding a paper to
+the local library. Current ChinaRxiv records do not expose a DOI to that downloader; use
+`aps paper <id>` to obtain source/PDF URLs and explain this limitation.
 
-### Authors
+## Repeatable scans
 
-```bash
-# merged author lookup
-aps author "Geoffrey Hinton"
-
-# search by name
-aps s2 author "Geoffrey Hinton"
-aps oa author "Geoffrey Hinton"
-
-# get details by ID
-aps s2 author 1695689        # S2 numeric author ID
-aps oa author A5023888391    # OpenAlex author ID (starts with A)
-```
-
-### S2-only: Recommendations & Snippets
-
-```bash
-# papers similar to "Attention Is All You Need"
-aps s2 recommend ARXIV:1706.03762 --pool recent
-
-# full-text passage search
-aps s2 snippets "backpropagation through time"
-```
-
-### Manifest Scans
-
-`aps scan` runs a manifest of discovery jobs and keeps a caller-managed
-seen-state file. The tool does not choose a default state file location
-for you, so reuse the same `--seen-file` path when you want incremental
-scans and use a different path when you want an independent state set
+Use a scan when the user wants recurring discovery rather than an ad hoc query:
 
 ```bash
 aps scan \
-  --manifest scans/ml.json \
-  --from-date 2026-04-01 \
-  --to-date 2026-04-16 \
-  --seen-file .cache/aps/ml-seen.json
-
-# machine-readable output for automation
-aps scan \
-  --manifest scans/ml.json \
-  --from-date 2026-04-01 \
-  --to-date 2026-04-16 \
-  --seen-file .cache/aps/ml-seen.json \
-  --format json
+  --manifest scans/topic.json \
+  --from-date 2026-07-01 \
+  --to-date 2026-07-13 \
+  --seen-file .cache/aps/topic-seen.json \
+  -F json
 ```
 
-### OA-only: Institutions, Topics, Group-by
+The date window is inclusive. The manifest and seen-state are versioned JSON. Reuse the same
+seen file for incremental scans; choose a different file for an independent history. `aps`
+creates a missing seen file and atomically updates it after successful output. Do not hand-edit
+seen-state unless repairing it deliberately.
 
-```bash
-# find institutions
-aps oa institutions "MIT"
+## Local library
 
-# find topics
-aps oa topics "machine learning"
+Use `aps lib search` for already-downloaded papers:
 
-# aggregate data
-aps oa group-by oa_status --filter "publication_year:2024"
-aps oa group-by publication_year --filter "authorships.institutions.id:I63966007"
-```
+- `hybrid` (default): normal concept-plus-keyword questions
+- `fts`: exact names, phrases, or identifiers
+- `semantic`: paraphrases and vocabulary mismatch
 
-### Local Library (`aps library` / `aps lib`)
+Search without tags first; add tag filters only when unrelated material overwhelms results.
+Use `aps lib read <doi>` for full context after passage search identifies a candidate. Keep
+local-library claims separate from remote search claims: a missing local hit only means the
+paper is absent from the downloaded/indexed corpus.
 
-```bash
-# top-level download resolves DOI-backed paper IDs first
-aps download ARXIV:1706.03762
-aps download W2963403868 --tag transformers
-# ChinaRxiv does not expose DOI metadata for the downloader; use `aps paper <id>` for URLs
+## Research integrity
 
-# download a paper by DOI (tries OA sources first, Sci-Hub fallback)
-# automatically chunks and embeds text for semantic search
-aps lib dl "10.1145/3442188.3445922"
-aps lib dl "https://doi.org/10.1145/3442188.3445922"  # URL prefixes auto-stripped
-aps lib dl --tag ml --tag nlp "10.1145/3442188.3445922"  # download with tags
+- Treat search results as leads, not evidence that a paper supports a claim.
+- Open details or full text before summarizing methods, results, or limitations.
+- Preserve DOI/provider IDs when deduplicating and cite the paper, not the search result.
+- Distinguish no result from source failure, authentication failure, or rate limiting.
+- Never invent metadata when providers disagree; report the disagreement or verify it.
+- For absence claims, search synonyms and adjacent terminology, then qualify the conclusion.
 
-# search across all downloaded papers (hybrid by default)
-aps lib search "boundary precision" --mode hybrid   # default, best of both
-aps lib search "combining improvements" --mode semantic  # vocabulary bridging
-aps lib search "WavLM Mamba" --mode fts  # exact keyword match
-aps lib search "attention" --tag ml  # search within tagged papers only
+## Authentication and failures
 
-# list all downloaded papers
-aps lib ls
-aps lib ls --tag ml  # filter by tag
-
-# manage tags
-aps lib tag add "10.1145/3442188.3445922" ml transformers  # add tags
-aps lib tag rm "10.1145/3442188.3445922" ml                # remove a tag
-aps lib tag ls                                              # list all tags with counts
-
-# show paper details and text extraction stats (includes tags)
-aps lib info "10.1145/3442188.3445922"
-
-# open PDF in default viewer
-aps lib open "10.1145/3442188.3445922"
-
-# remove a paper from the library (cascade-deletes tags + chunks)
-aps lib rm "10.1145/3442188.3445922"
-
-# re-extract text and rebuild semantic index for all papers
-aps lib reindex
-
-# configure Sci-Hub base URL
-aps lib config --set-url https://sci-hub.se
-aps lib config  # show current config
-```
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `download <doi>` | `dl` | Download PDF, resolve metadata, extract text, chunk + embed |
-| `search <query>` | `s` | Hybrid/FTS/semantic search across papers |
-| `list` | `ls` | List all downloaded papers |
-| `open <doi>` | `o` | Open PDF in default viewer |
-| `info <doi>` | `i` | Show paper details + text stats + tags |
-| `remove <doi>` | `rm` | Delete paper from DB + disk + chunks (cascade-deletes tags) |
-| `read <doi>` | `r` | Output extracted paper text to stdout (for piping) |
-| `tag add <doi> <tags...>` | | Add tag(s) to a paper |
-| `tag rm <doi> <tags...>` | | Remove tag(s) from a paper |
-| `tag ls` | | List all tags with paper counts |
-| `reindex` | | Resolve missing titles, re-extract text, rebuild search index |
-| `optimize` | `opt`, `compact` | Compact and prune lancedb (versions >1 day old) |
-| `config` | | Show/set Sci-Hub base URL |
-
-Flags: `dl --tag <TAG>` (repeatable), `search --tag <TAG>`, `search --mode <MODE>`, `ls --tag <TAG>`, `dl --force`
-
-Data stored at `~/.local/share/aps/` (turso DB at `papers.db`, PDFs in `pdfs/`, LanceDB at `lancedb/`). Config at `~/.config/aps/`.
-
-### Library Search Modes
-
-`aps lib search` supports three search modes via `--mode`:
-
-| Mode | Flag | Best for |
-|------|------|----------|
-| **hybrid** (default) | `--mode hybrid` | Most queries — combines keyword precision with semantic understanding |
-| **fts** | `--mode fts` | Known exact terms, specific model names, metric values |
-| **semantic** | `--mode semantic` | Conceptual queries, vocabulary bridging, paraphrased concepts |
-
-The hybrid mode uses BGE-small-en-v1.5 embeddings (384-dim) for vector search combined with full-text search, with decay-weighted grouping by paper. First run downloads the embedding model (~30MB).
-
-### How to Search Effectively
-
-**Use hybrid (default) for most queries** — it handles both keyword and conceptual matches:
-```bash
-aps lib search "missed speech dominant error type DER component"
-aps lib search "short segment embedding quality degradation speaker"
-aps lib search "discriminative VBx fine-tuning clustering end-to-end"
-```
-
-**Use FTS for exact term lookup** — when you know a specific term, model name, or metric:
-```bash
-aps lib search "DiariZen" --mode fts
-aps lib search "collar=0" --mode fts
-aps lib search "simulated data" --mode fts
-```
-
-**Use semantic for conceptual/paraphrased queries** — when you don't know the exact wording:
-```bash
-aps lib search "techniques from computer vision applied to speech" --mode semantic
-aps lib search "neural architecture comparison" --mode semantic
-```
-
-**Query writing tips:**
-- Include domain-specific terms to anchor results (e.g., "DER", "diarization", "speaker")
-- Hybrid mode excels when queries mix specific terms with natural language
-- For absence findings ("X has never been combined with Y"), search for each piece separately and reason across results
-- Cross-paper inferences (e.g., "diminishing returns from stacking") are hard to find via search — use `aps lib read` on candidate papers instead
-- Run multiple queries with different phrasings for important findings
-
-**Tags are for noisy results, not the default.** Search the full corpus first. Only add `--tag` if unrelated papers are drowning out relevant ones — hard-filtering by tag risks missing untagged papers that are relevant:
-```bash
-# start without tags
-aps lib search "boundary precision"
-# only add --tag if results are noisy with unrelated papers
-aps lib search "boundary precision" --tag diarization
-```
-
-### Research Workflow: Gather Broadly, Search Narrowly
-
-The hybrid search finds relevant passages even when papers use different vocabulary than your query. This means the best workflow is:
-
-1. **Gather broadly** — download 50-100 papers from S2/OA searches on a topic, tag them by topic
-2. **Search narrowly** — ask specific questions across the corpus, hybrid search surfaces the right passages
-3. **Read deeply** — use `aps lib read` on the papers search surfaces for full context
-
-The bottleneck is "did I ask the right question", not "did I download the right papers". Cast a wide net, then query cheaply.
-
-```bash
-# phase 1: gather papers broadly, tag by topic
-aps s2 search "speaker diarization" --since 2023 -F json | jq -r '.data[]?.externalIds?.DOI // empty'
-# download each DOI, tag them
-aps lib dl --tag diarization "10.xxxx/yyyy"
-
-# phase 2: search narrowly across the corpus
-aps lib search "missed speech dominant error" --tag diarization
-aps lib search "embedding quality short segments" --tag diarization
-
-# phase 3: read deeply when search surfaces something interesting
-aps lib read "10.xxxx/yyyy"
-```
-
-### Comprehensive Literature Search: Avoid Gaps
-
-Keyword search alone misses papers — even with 30+ queries across S2 and OA. The three failure modes:
-
-1. **Query bias** — queries centered on specific techniques miss papers about competing approaches, cross-cutting concerns, or negative results (e.g., searching for "VBx clustering" misses "spectral clustering-aware embeddings")
-2. **Pagination cutoff** — a low limit hides relevant papers ranked below the cutoff. The default is now 50, which covers most queries well. For very broad surveys, consider `--limit 100`
-3. **No graph exploration** — keyword search only finds papers that match your vocabulary. Citation graph traversal finds conceptually related work regardless of terminology
-
-**After keyword searches, always do citation graph exploration on your 5-10 most important seed papers:**
-
-```bash
-# step 1: identify seed papers (your most-cited/most-important results)
-# step 2: find what's building on them
-aps s2 citations ARXIV:2409.09408   # who cites DiariZen?
-aps s2 citations ARXIV:2401.12600   # who cites EEND-M2F?
-
-# step 3: find related work via SPECTER embeddings (finds papers keyword search misses)
-aps s2 recommend ARXIV:2409.09408 --pool recent
-aps s2 recommend ARXIV:2401.03506 --pool recent
-
-# step 4: check references of survey/benchmark papers (they've already done the lit review)
-aps s2 references ARXIV:2507.16136  # SDBench references
-```
-
-**Query design checklist for a new research topic:**
-- Technique-specific queries (what you're building): "WavLM speaker diarization", "VBx clustering"
-- Architecture-level queries (competing approaches): "end-to-end speaker diarization", "streaming speaker diarization"
-- Problem-level queries (the task broadly): "speaker diarization survey 2024", "speaker diarization benchmark"
-- Negative/analysis queries (what doesn't work): "speaker diarization limitations", "embedding quality diarization"
-- Cross-domain queries (adjacent ideas): "speech separation diarization joint", "audio-visual speaker diarization"
-
-**Practical rule:** for any research topic, plan for ~50 queries (not ~30) and run `recommend` + `citations` on your top 5 seed papers. This closes the gap that keyword search alone leaves open.
-
-### Local Library: When to Use What
-
-**`aps lib search <query>`** — search across your library
-- Hybrid search combining FTS + semantic vector search across all downloaded papers
-- Returns ranked results grouped by paper with best matching chunk snippet
-- Use when: looking for a concept/term across multiple papers, finding which downloaded papers discuss a topic
-- Papers must already be downloaded with `dl` to appear in search results
-
-**`aps lib read <doi>`** — read one paper's full text
-- Outputs the entire extracted text of a single paper to stdout
-- Auto-downloads the paper if not already in library (no `dl` needed first)
-- Use when: need to read/analyze one specific paper in detail, or pipe its text to another tool
-
-### JSON Output
-
-Any command supports `-F json` for structured output:
-
-```bash
-aps s2 search "attention" --limit 1 -F json
-aps oa search "CRISPR" --limit 1 -F json | jq '.results[0].title'
-```
-
-## Search Strategy
-
-For general discovery, use unified `aps search` first; it queries S2, OA, and default-on preprint support. If you need backend-specific behavior, run both `aps s2 search` and `aps oa search` because they have different corpora and ranking. For commands only available on one backend, use that backend.
-
-| Only on S2 | Only on OA |
-|------------|------------|
-| `recommend` (SPECTER embeddings) | `institutions` |
-| `snippets` (full-text passages) | `topics` |
-| `match` (exact title lookup) | `group-by` (aggregation) |
-
-## S2 Paper ID Formats
-
-S2 accepts multiple identifier formats:
-- S2 ID: `649def34f8be52c8b66281af98ae884c09aef38b`
-- DOI: `DOI:10.1038/nrn3241`
-- arXiv: `ARXIV:2106.09685`
-- PubMed: `PMID:19872477`
-- Corpus ID: `CorpusId:37220927`
-- URL: `https://arxiv.org/abs/2106.09685`
-
-## OA Filter Syntax
-
-The `--filter` flag accepts raw OpenAlex filter strings:
-
-```bash
-# combine filters with commas (AND)
-aps oa search "deep learning" --filter "is_oa:true,language:en,type:article"
-
-# OR within a filter using pipe
-aps oa search "neural" --filter "publication_year:2023|2024"
-```
-
-Key filters: `publication_year`, `is_oa`, `oa_status`, `type`, `language`, `has_fulltext`, `cited_by_count`
-
-## Rate Limits
-
-- **S2**: 1 RPS — the client automatically throttles across invocations via a tmp file
-- **OA**: 10 RPS, no delay needed for typical usage. Semantic search limited to 1 RPS and max 50 results
-
-## Auth
-
-- `SEMANTIC_SCHOLAR_API_KEY` env var → higher rate limits for S2
-- `OPENALEX_API_KEY` env var → higher rate limits for OA
-- Both work without keys but may hit rate limits
+Run `aps status` before diagnosing coverage or throttling. `aps login` persists available
+credentials from the documented environment variables. Never print secret values. Provider
+failure is not evidence of no literature; unified search can return partial results while
+warning that one source failed. If all relevant sources fail, surface the error and next step.

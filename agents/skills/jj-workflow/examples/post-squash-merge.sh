@@ -1,49 +1,70 @@
-#!/bin/bash
-# Post Squash-Merge Workflow
-# Rebase remaining stack after GitHub squash-merged your first PR
-#
-# Before: master had A, you have A → B → C locally
-# After squash-merge: master has squashed-A, you need to rebase B → C onto it
+#!/usr/bin/env bash
+# Template for rebasing B and descendants after A was squash-merged
 
-set -e
+set -eu
 
-# === FETCH UPDATED MASTER ===
-jj git fetch
+B=${B_CHANGE_ID:-}
+C=${C_CHANGE_ID:-}
+MERGED_FEATURE=${MERGED_FEATURE:-}
+FEATURE_B=${FEATURE_B:-}
+FEATURE_C=${FEATURE_C:-}
+TRUNK_BOOKMARK=${TRUNK_BOOKMARK:-}
+PR_NUMBER=${PR_NUMBER:-}
 
-# === SEE CURRENT STATE ===
-echo "=== Commits after merged PR ==="
-jj log -r 'master@origin..@'
+require_value() {
+  local name=$1
+  if [[ -z ${!name:-} ]]; then
+    echo "Set $name before enabling this phase" >&2
+    exit 2
+  fi
+}
 
-# Find B (first commit after the merged PR)
-# Replace <B-change-id> with actual change ID
+# inspect local state before any optional network or mutation phase
+jj status
+jj diff --stat
+jj log -r 'trunk() | trunk()..@ | bookmarks()'
+jj bookmark list --all-remotes
+jj git remote list
+jj log -r 'trunk()..@ & conflicts()'
 
-# === REBASE REMAINING STACK ===
-# -s (source) moves B and all descendants (C, D, etc.)
-jj rebase -s <B-change-id> -o master@origin
+if [[ ${JJ_AUTHORIZE_FETCH:-0} == 1 ]]; then
+  jj git fetch
+  jj log -r 'trunk() | trunk()..@ | bookmarks()'
+fi
 
-# === VERIFY CLEAN HISTORY ===
-echo "=== After rebase ==="
-jj log -r 'master@origin..@'
+if [[ ${JJ_AUTHORIZE_REWRITE:-0} == 1 ]]; then
+  require_value B_CHANGE_ID
+  jj rebase -s "$B" -o 'trunk()'
+fi
 
-# === HANDLE CONFLICTS (if any) ===
-# If B conflicts with squashed changes:
-#   jj status              # show conflicted files
-#   # edit files to resolve
-#   jj status              # verify resolved
+if [[ -n $B ]]; then
+  jj log -r "trunk() | $B::"
+  jj diff -r "$B"
+  jj log -r "($B::) & conflicts()"
+fi
 
-# === UPDATE BOOKMARKS ===
-jj bookmark set feature-b -r <B-change-id>
-jj bookmark set feature-c -r <C-change-id>
+if [[ ${JJ_AUTHORIZE_BOOKMARKS:-0} == 1 ]]; then
+  require_value B_CHANGE_ID
+  require_value C_CHANGE_ID
+  require_value MERGED_FEATURE
+  require_value FEATURE_B
+  require_value FEATURE_C
+  jj bookmark set "$FEATURE_B" -r "$B"
+  jj bookmark set "$FEATURE_C" -r "$C"
+  jj bookmark delete "$MERGED_FEATURE"
+  jj bookmark list --all-remotes
+fi
 
-# === DELETE MERGED BOOKMARK ===
-jj bookmark delete feature-a
+if [[ ${JJ_AUTHORIZE_PUSH:-0} == 1 ]]; then
+  require_value FEATURE_B
+  require_value FEATURE_C
+  jj git push --bookmark "$FEATURE_B"
+  jj git push --bookmark "$FEATURE_C"
+  jj bookmark list --all-remotes
+fi
 
-# === PUSH (force-push happens automatically) ===
-jj git push
-
-# === UPDATE PR BASE ON GITHUB ===
-# PR #2 was targeting feature-a, now should target master
-# Do this manually on GitHub or:
-# gh pr edit <pr-number> --base master
-
-echo "=== Done! Stack rebased onto squash-merged master ==="
+if [[ ${JJ_AUTHORIZE_PR_EDIT:-0} == 1 ]]; then
+  require_value PR_NUMBER
+  require_value TRUNK_BOOKMARK
+  gh pr edit "$PR_NUMBER" --base "$TRUNK_BOOKMARK"
+fi

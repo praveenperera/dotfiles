@@ -1,68 +1,73 @@
-# Independent PRs Workflow
+# Independent PRs
 
-Each commit rebased onto master. All PRs target master. Merge in any order.
+Use independent PRs only when each change applies and passes verification directly on trunk:
 
-```
-         ┌── A ──────── PR #1 (base: master)
-         │
-master ──┼── B ──────── PR #2 (base: master)
-         │
-         └── C ──────── PR #3 (base: master)
+```text
+          ┌─ A
+trunk ────┼─ B
+          └─ C
 ```
 
----
+All PRs target the trunk bookmark and may merge in any order.
 
-## Procedure
-
-### 1. Start with commits (may be stacked initially)
+## Inspect and test the model
 
 ```bash
-jj log -r 'master..@-' --no-graph -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
+jj status
+jj diff --stat
+jj log -r 'trunk() | trunk()..@ | bookmarks()'
+jj bookmark list --all-remotes
+jj log -r 'trunk()..@ & conflicts()'
+jj log -r 'trunk()..@' --no-graph \
+  -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
 ```
 
-### 2. Rebase each onto master (except first which is already there)
+Check imports, generated files, schema changes, and tests for hidden dependencies. If B needs anything introduced by A, use [stacked.md](stacked.md) or [hybrid.md](hybrid.md).
+
+## Arrange independent roots
+
+If A, B, and C currently form a chain and local rewriting is authorized, move only the revisions that should become independent:
 
 ```bash
-jj rebase -r <change-id-B> -o master
-jj rebase -r <change-id-C> -o master
+jj rebase -r <B> -o 'trunk()'
+jj rebase -r <C> -o 'trunk()'
 ```
 
-### 3. Create bookmarks
+Use stable change IDs, not `@-` positions that change after the first rebase. Verify the parentage visually and check the entire affected set for conflicts:
 
 ```bash
-jj bookmark create <feature-a> -r <change-id-A>
-jj bookmark create <feature-b> -r <change-id-B>
-jj bookmark create <feature-c> -r <change-id-C>
+jj log -r 'trunk() | <A> | <B> | <C>'
+jj log -r '(<A> | <B> | <C>) & conflicts()'
+jj diff -r <A>
+jj diff -r <B>
+jj diff -r <C>
 ```
 
-### 4. Push and create PRs
+Run the project's relevant verification from each independent tip. A clean rebase proves graph shape, not behavioral independence.
+
+## Name and publish
+
+Only when bookmark mutation is authorized:
 
 ```bash
-jj git push
-
-gh pr create --head <feature-a> --base master --title "<title>"
-gh pr create --head <feature-b> --base master --title "<title>"
-gh pr create --head <feature-c> --base master --title "<title>"
+jj bookmark create <feature-a> -r <A>
+jj bookmark create <feature-b> -r <B>
+jj bookmark create <feature-c> -r <C>
+jj bookmark list --all-remotes
 ```
 
-### 5. Optional: dev merge for combined testing
+Only when publication is authorized:
 
 ```bash
-jj new <feature-a> <feature-b> <feature-c> -m "dev: combined"
-# now @ contains all features merged
+jj git push --bookmark <feature-a>
+jj git push --bookmark <feature-b>
+jj git push --bookmark <feature-c>
+
+gh pr create --head <feature-a> --base <trunk-bookmark> --title "<title A>"
+gh pr create --head <feature-b> --base <trunk-bookmark> --title "<title B>"
+gh pr create --head <feature-c> --base <trunk-bookmark> --title "<title C>"
 ```
 
----
+Determine `<trunk-bookmark>` during inspection. Do not substitute `trunk()` in a `gh` command because GitHub expects a branch name.
 
-## Pitfall: Not Actually Independent
-
-If B uses types/exports from A, they're not truly independent.
-
-**Test each in isolation:**
-```bash
-jj new master -m "test B alone"
-jj squash --from <B> --into @ -u
-# run tests - if they fail, B depends on A
-```
-
-If they depend on each other, use stacked PRs instead.
+For combined local testing, an authorized `jj new <A> <B> <C> -m "test: combined changes"` creates a merge working copy. Treat it as local scaffolding, not a PR tip, unless explicitly requested.

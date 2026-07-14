@@ -1,49 +1,71 @@
-#!/bin/bash
-# Stacked PR Workflow
-# Creates dependent PRs where each targets the previous PR's branch
-#
-# Result:
-#   master ─── A ─── B ─── C
-#            │     │     │
-#            │     │     └── PR #3 (base: B)
-#            │     └──────── PR #2 (base: A)
-#            └────────────── PR #1 (base: master)
+#!/usr/bin/env bash
+# Template for verifying and optionally publishing an existing A → B → C stack
 
-set -e
+set -eu
 
-# === SETUP ===
-jj git fetch
-jj new master -m "working"
+A=${A_CHANGE_ID:-}
+B=${B_CHANGE_ID:-}
+C=${C_CHANGE_ID:-}
+FEATURE_A=${FEATURE_A:-}
+FEATURE_B=${FEATURE_B:-}
+FEATURE_C=${FEATURE_C:-}
+TRUNK_BOOKMARK=${TRUNK_BOOKMARK:-}
 
-# === MAKE YOUR CHANGES ===
-# ... edit files ...
+require_value() {
+  local name=$1
+  if [[ -z ${!name:-} ]]; then
+    echo "Set $name before enabling this phase" >&2
+    exit 2
+  fi
+}
 
-# === SPLIT INTO COMMITS ===
-# Split by file pattern (repeat for each feature)
-jj split "glob:src/feature-a/*"
-jj describe @- -m "feat: feature A"
+# inspect local state before any optional network or mutation phase
+jj status
+jj diff --stat
+jj log -r 'trunk() | trunk()..@ | bookmarks()'
+jj bookmark list --all-remotes
+jj git remote list
+jj log -r 'trunk()..@ & conflicts()'
 
-jj split "glob:src/feature-b/*"
-jj describe @- -m "feat: feature B"
+if [[ ${JJ_AUTHORIZE_FETCH:-0} == 1 ]]; then
+  jj git fetch
+  jj log -r 'trunk() | trunk()..@ | bookmarks()'
+fi
 
-jj describe -m "feat: feature C"
+if [[ -n $A && -n $B && -n $C ]]; then
+  jj log -r "trunk() | $A | $B | $C"
+  jj log -r "($A | $B | $C) & conflicts()"
+fi
 
-# === GET CHANGE IDs ===
-echo "=== Your commits ==="
-jj log -r 'master..@-' --no-graph -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
+if [[ ${JJ_AUTHORIZE_BOOKMARKS:-0} == 1 ]]; then
+  require_value A_CHANGE_ID
+  require_value B_CHANGE_ID
+  require_value C_CHANGE_ID
+  require_value FEATURE_A
+  require_value FEATURE_B
+  require_value FEATURE_C
+  jj bookmark create "$FEATURE_A" -r "$A"
+  jj bookmark create "$FEATURE_B" -r "$B"
+  jj bookmark create "$FEATURE_C" -r "$C"
+  jj bookmark list --all-remotes
+fi
 
-# === CREATE BOOKMARKS ===
-# Replace <change-id-X> with actual change IDs from above
-jj bookmark create feature-a -r <change-id-A>
-jj bookmark create feature-b -r <change-id-B>
-jj bookmark create feature-c -r <change-id-C>
+if [[ ${JJ_AUTHORIZE_PUSH:-0} == 1 ]]; then
+  require_value FEATURE_A
+  require_value FEATURE_B
+  require_value FEATURE_C
+  jj git push --bookmark "$FEATURE_A"
+  jj git push --bookmark "$FEATURE_B"
+  jj git push --bookmark "$FEATURE_C"
+  jj bookmark list --all-remotes
+fi
 
-# === PUSH ===
-jj git push
-
-# === CREATE PRs (stacked bases) ===
-gh pr create --head feature-a --base master --title "feat: feature A"
-gh pr create --head feature-b --base feature-a --title "feat: feature B"
-gh pr create --head feature-c --base feature-b --title "feat: feature C"
-
-echo "=== Done! PRs created with stacked bases ==="
+if [[ ${JJ_AUTHORIZE_PRS:-0} == 1 ]]; then
+  require_value FEATURE_A
+  require_value FEATURE_B
+  require_value FEATURE_C
+  require_value TRUNK_BOOKMARK
+  gh pr create --head "$FEATURE_A" --base "$TRUNK_BOOKMARK" --title "feat: feature A"
+  gh pr create --head "$FEATURE_B" --base "$FEATURE_A" --title "feat: feature B"
+  gh pr create --head "$FEATURE_C" --base "$FEATURE_B" --title "feat: feature C"
+fi

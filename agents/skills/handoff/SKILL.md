@@ -1,15 +1,25 @@
 ---
 name: handoff
-description: Compact the current conversation into a handoff document for another agent to pick up.
-argument-hint: "What will the next session be used for?"
+description: Create a concise, durable handoff document that lets a fresh agent resume the current work without relying on conversation history.
 ---
 
-Write a handoff document summarising the current conversation so a fresh agent can continue the work. Save it in the repo-root `_scratch/` directory, creating that directory if needed.
+# Handoff
 
-Include a "suggested skills" section in the document, which suggests skills that the agent should invoke.
+Write a handoff document under the repository-root `_scratch/` directory, creating it when needed. Tailor it to any focus the user supplied.
 
-Do not duplicate content already captured in other artifacts (PRDs, plans, ADRs, issues, commits, diffs). Reference them by path or URL instead.
+Make the document independently resumable. Include only current, actionable state:
 
-Redact any sensitive information, such as API keys, passwords, or personally identifiable information.
+- objective and completion condition
+- completed work and current repository state
+- binding decisions, constraints, and ownership boundaries
+- changed or relevant files, durable artifacts, and source links
+- verification commands and exact latest results
+- unresolved blockers, risks, and user input needed
+- the single best next action
+- suggested skills for the next agent
 
-If the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.
+Reference existing plans, ADRs, issues, commits, diffs, and reports instead of duplicating them. Distinguish completed, verified, unverified, and blocked work. Preserve unrelated changes and identify concurrent ownership when relevant.
+
+Redact credentials, secrets, and sensitive personal information. Exclude reasoning history, stale alternatives, and conversational narrative that do not help resumption.
+
+Stop when a fresh agent can identify the next action without conversation history. Return the handoff file path.

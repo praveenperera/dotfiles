@@ -1,127 +1,72 @@
 ---
 name: github
-description: Triage and orient GitHub repository, pull request, and issue work through the connected GitHub app. Use when the user asks for general GitHub help, wants PR or issue summaries, or needs repository context before choosing a more specific workflow.
-metadata:
-  author: Praveen Perera
-  version: "0.0.1"
+description: Read-only triage and routing for GitHub repositories, pull requests, issues, patches, and review comments through the connected GitHub app, local git, and compact prc exports. Use for general GitHub orientation or summaries before choosing a mutation, review-fix, CI, or publishing workflow.
 ---
 
 # GitHub
 
-## Overview
+Orient the repository, issue, or pull request and route work to the narrowest
+specialist workflow. This skill is read-only: do not comment, react, label,
+resolve threads, create or edit issues or pull requests, change local files,
+commit, push, or invoke mutating API operations.
 
-Use this skill as the umbrella entrypoint for general GitHub work. It should
-decide whether the task stays in repository and PR triage or should be handed
-off to a more specific review, CI, publish, or API workflow.
+## Resolve context
 
-This workflow is intentionally hybrid:
+1. Prefer a repository, issue, pull-request number, or URL supplied by the user.
+2. For “this branch” or “the current PR,” inspect the local repository and
+   branch, then use `gh` only as needed to identify its pull request.
+3. If the target remains ambiguous after read-only inspection, ask for the
+   repository or item identifier.
+4. Prefer the connected GitHub app for structured repository, issue, pull
+   request, patch, and flat-comment reads. Use local `git` for checkout context
+   and non-mutating `gh` commands only for gaps in connector coverage.
 
-- Prefer the GitHub app for repository, issue, pull request, comment, label,
-  reaction, and PR creation workflows.
-- Use local `git` and `gh` only when the connector does not cover the job well,
-  especially for current-branch PR discovery, branch creation, commit and push,
-  `gh auth status`, GitHub Actions log inspection, or raw API calls.
-- Keep connector state and local checkout context aligned. If the request is
-  about the current branch, resolve the local repo and branch before acting.
+## Triage
 
-Once the intent is clear, route to the specialist skill immediately and do not
-keep broad GitHub triage in scope longer than needed.
+Gather only the evidence needed to summarize the current state and classify the
+next action:
 
-## Connector-First Responsibilities
+- repository, issue, or pull-request orientation
+- metadata, patch, requested changes, labels, checks summary, and flat comments
+- actionable review feedback and its file or line context
+- whether the request concerns review fixes, failing CI, local commits, or
+  publishing
 
-Handle these directly in this skill when the request does not need a narrower
-specialist workflow:
+Do not infer unresolved-thread state from flat comments. Do not claim that a
+comment is current merely because it references a line in an older diff.
 
-- repository orientation once the repo, PR, issue, or local checkout is
-  identified
-- recent PR or issue triage
-- PR metadata summaries
-- PR patch inspection
-- PR comments, labels, and reactions
-- issue lookup and summarization
-- PR creation after a branch is already pushed
+## Compact review-comment export
 
-Prefer the GitHub app for those flows because it provides structured PR, issue,
-and review-adjacent data without depending on a local checkout. If the
-repository is not already identifiable from the user request or local git
-context, ask for the repo instead of pretending there is a repo-search flow that
-may not exist.
+When `prc` is installed and a compact flat export is useful, run one of:
 
-## CLI and API Responsibilities
+```bash
+prc 123 --compact
+prc https://github.com/OWNER/REPO/pull/123 --compact
+prc OWNER/REPO 123 --compact
+```
 
-Use `gh` subcommands when they cleanly support the operation. Use `gh api` when
-GitHub only exposes the feature through the API or when `gh` does not have a
-higher-level command.
+Use `--code-only` when a large export needs filtering to code-referenced
+comments. Treat this output as evidence about comment text, author, chronology,
+and recorded code references only. `prc` cannot determine review-thread
+resolution or reliably establish whether a comment is outdated against the
+current diff. Route any task that depends on those states to
+`../gh-address-comments/SKILL.md`, which performs thread-aware inspection.
 
-- keep commands non-interactive
-- verify auth with `gh auth status` before debugging API behavior
-- when an API field must be numeric, boolean, or null, prefer `-F/--field` over
-  `-f/--raw-field`
+## Route
 
-## Routing Rules
+- Unresolved threads, requested changes, inline feedback, or implementing
+  review fixes: `../gh-address-comments/SKILL.md`
+- Failing GitHub Actions checks or log diagnosis: `../gh-fix-ci/SKILL.md`
+- Focused local staging or commits only: `../git-commit/SKILL.md`
+- Commit, push, and open a draft pull request: `../yeet/SKILL.md`
 
-1. Resolve the operating context first:
-   - If the user provides a repository, PR number, issue number, or URL, use
-     that.
-   - If the request is about "this branch" or "the current PR", resolve local
-     git context and use `gh` only as needed to discover the branch PR.
-   - If the repository is still ambiguous after local inspection, ask for the
-     repo identifier.
-2. Classify the request before taking action:
-   - `repo or PR triage`: summarize PRs, issues, patches, comments, labels,
-     reactions, or repository state
-   - `review follow-up`: unresolved review threads, requested changes, or inline
-     review feedback
-   - `CI debugging`: failing checks, Actions logs, or CI root-cause analysis
-   - `publish changes`: create or switch branches, stage changes, commit, push,
-     and open a draft PR
-   - `GitHub API`: raw REST or GraphQL operations through `gh api`
-3. Route to the specialist skill as soon as the category is clear:
-   - Review comments and requested changes:
-     `../gh-address-comments/SKILL.md`
-   - Failing GitHub Actions checks:
-     `../gh-fix-ci/SKILL.md`
-   - Commit, push, and open PR:
-     `../yeet/SKILL.md`
-   - Raw `gh` or `gh api` work:
-     use the guides listed below
-4. Keep the hybrid model consistent after routing:
-   - connector first for PR and issue data
-   - local `git`, `gh`, and `gh api` only for the specific gaps the connector
-     does not cover
+Do not perform a routed workflow under this skill. Announce the specialist and
+load its instructions before continuing.
 
-## Default Workflow
+## Output
 
-1. Resolve repository and item scope.
-2. Gather structured PR or issue context through the GitHub app when useful.
-3. Decide whether the task stays in connector-backed triage or needs a
-   specialist skill.
-4. Route immediately when the work becomes review follow-up, CI debugging,
-   publish workflow, or raw API work.
-5. End with a clear summary of what was inspected, what changed, and what
-   remains.
-
-## Output Expectations
-
-- For triage requests, return a concise summary of the repository, PR, or issue
-  state and the next likely action.
-- For mixed requests, tell the user which specialist path you are taking and
-  why.
-- For connector-backed write actions, restate the exact PR, issue, label, or
-  reaction target before applying the change.
-- Never imply that GitHub Actions logs are available through the connector
-  alone. That remains a `gh` workflow.
-
-## Guides
-
-- Link sub-issues to parent issues:
-  [references/link-sub-issues.md](references/link-sub-issues.md)
-
-## Examples
-
-- "Use GitHub to summarize the open PRs in this repo and tell me what needs
-  attention."
-- "Help with this PR."
-- "Review the latest comments on PR 482 and tell me what is actionable."
-- "Debug the failing checks on this branch."
-- "Commit these changes, push them, and open a draft PR."
+Report the target inspected, evidence sources actually used, concise current
+state, actionable items, uncertainty about thread or outdated state, and the
+recommended specialist workflow. If the user requested a write action, explain
+that this entrypoint only triages and route it rather than treating the request
+as write authorization here.

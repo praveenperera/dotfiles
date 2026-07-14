@@ -1,191 +1,74 @@
-# Splitting Mixed Work
+# Split Mixed Work
 
-Split one commit with mixed changes into logical commits.
+`jj split` selects changes for the first commit; unselected changes remain in the second commit:
 
-**Mental model:** You select what goes into the FIRST commit. Everything else stays in SECOND.
-
-```
-BEFORE: master ─── @ (mixed: fileA, fileB, fileC)
-AFTER:  master ─── first (fileA) ─── second (fileB, fileC)
+```text
+before: parent ── @ (A + B)
+after:  parent ── A ── B
 ```
 
----
-
-## Methods
-
-**⚠️ Syntax Warning:** Files are positional arguments, NOT flags. There is no `--paths` or `--files` flag.
-- ✓ `jj split file1.ts file2.ts`
-- ✗ `jj split --paths file1.ts file2.ts`
-
-### Interactive TUI
+## Inspect and define ownership
 
 ```bash
+jj status
+jj diff --stat
+jj diff
+jj log -r 'trunk() | trunk()..@ | bookmarks()'
+jj log -r 'trunk()..@ & conflicts()'
+```
+
+Define the behavior or invariant owned by each resulting change before splitting. Record the source change ID and its descendants. Confirm that rewriting the source is authorized.
+
+## Choose a split method
+
+Filesets are positional arguments; there is no `--paths` or `--files` flag.
+
+```bash
+# interactive file and hunk selection
 jj split
+
+# select a fileset for the first commit
+jj split -m "feat: first change" 'glob:src/auth/**'
+
+# select explicit files for the first commit
+jj split -m "feat: first change" path/to/file1 path/to/file2
+
+# split an older revision; descendants rebase automatically
+jj split -r <source-change-id>
 ```
 
-Opens editor to select files/hunks for first commit.
+Supplying `-m` avoids the description editor in non-interactive environments. For repeated splits, identify the remainder by its new stable change ID after each operation; do not assume `@-` still names the same change.
 
-### By file pattern
+## Split hunks non-interactively
+
+If `jju` is installed, preview before mutating:
 
 ```bash
-jj split "glob:src/auth/*"
-```
-
-### Specific files
-
-```bash
-jj split path/to/file1.ts path/to/file2.ts
-```
-
-### Non-Interactive (for scripts/automation)
-
-**Important:** Even when specifying files, `jj split` opens an editor for the commit description. Use `-m` to skip the editor entirely:
-
-```bash
-jj split -m "feat: description for first commit" path/to/file1.ts path/to/file2.ts
-```
-
-This is required for:
-- Claude Code and other non-interactive environments
-- CI/CD pipelines
-- Shell scripts
-
----
-
-## Multi-Commit Split
-
-To split into 4 features:
-
-```bash
-# extract feature A (use -m to skip editor)
-jj split -m "feat: feature A" "glob:src/feature-a/*"
-
-# extract feature B from remainder
-jj split -m "feat: feature B" "glob:src/feature-b/*"
-
-# extract feature C
-jj split -m "feat: feature C" "glob:src/feature-c/*"
-
-# remainder is feature D
-jj describe -m "feat: feature D"
-
-# result: master → A → B → C → D
-```
-
----
-
-## Split Older Commit
-
-```bash
-jj split -r <change-id>
-# descendants auto-rebase
-```
-
----
-
-## Non-Interactive Hunk Selection with `jju sh`
-
-The `jju sh` (split-hunk) command enables non-interactive hunk-level splitting, useful for Claude Code and automation.
-
-### Preview hunks
-
-```bash
-jju sh --preview                     # all files
-jju sh --preview --file src/lib.rs   # specific file
-```
-
-Output shows hunks with indices:
-```
-[0]  modified (lines 1-8):
-     ...
-[1]  added (lines 60-105):
-     ...
-```
-
-### Split by hunk index
-
-```bash
-jju sh -m "Feature A" --hunks 0,2
-jju sh -m "Bug fix" --file src/lib.rs --hunks 1
-```
-
-### Split by line range
-
-```bash
-jju sh -m "Feature A" --file src/lib.rs --lines 10-50
-jju sh -m "Feature B" --lines 100-150,200-250
-```
-
-### Split by pattern
-
-```bash
-jju sh -m "Add logging" --pattern "log::|tracing::"
-jju sh -m "Error handling" --file src/lib.rs --pattern "Error|Result"
-```
-
-### Invert selection
-
-Use `--invert` to exclude matched hunks instead of including:
-
-```bash
-jju sh -m "Everything except logging" --pattern "log::" --invert
-```
-
-### Dry run
-
-Preview what would be committed without making changes:
-
-```bash
-jju sh --dry-run -m "Test" --hunks 0,2
-```
-
-### Split hunks from an older commit
-
-Use `-r` / `--revision` to split hunks from a commit other than `@`:
-
-```bash
-# preview hunks in an older commit
-jju sh -r <change-id> --preview
-
-# split specific hunks from an older commit
-jju sh -r <change-id> -m "extract logging" --pattern "log::"
-
-# split by hunk index from a parent commit
-jju sh -r @- -m "refactor: move helpers" --hunks 0,3
-```
-
-Descendants auto-rebase after the split, same as `jj split -r`.
-
-### Workflow Example
-
-```bash
-# 1. preview hunks to see indices
+command -v jju
 jju sh --preview
-
-# 2. split feature A (hunks 0 and 2)
-jju sh -m "feat: feature A" --hunks 0,2
-
-# 3. split feature B (lines 100-200)
-jju sh -m "feat: feature B" --lines 100-200
-
-# 4. remaining changes stay in @
-jj describe -m "feat: feature C"
+jju sh --preview --file src/lib.rs
 ```
 
----
+Then select by hunk, line range, or pattern:
 
-## Manual Hunk Splitting (without jju)
+```bash
+jju sh -m "feat: first change" --hunks 0,2
+jju sh -m "fix: bounded behavior" --file src/lib.rs --lines 10-50
+jju sh -m "refactor: tracing" --pattern 'tracing::'
+```
 
-If `jju` is not available, use this workaround:
+Use `--dry-run` for an additional preview. Use `-r <source-change-id>` for an older commit. Hunk indices and line numbers describe the current preview and may change after every split, so preview again before the next operation.
 
-1. Edit file to contain ONLY feature A code
-2. `jj split <file>` - captures current state
-3. Edit file to have ONLY feature B code
-4. `jj describe -m "feat B"`
+## Verify each result
 
-Or build from scratch:
+After every split:
 
-1. `jj new master`
-2. Write feature A code
-3. `jj describe -m "feat A"` && `jj new`
-4. Write feature B code
+```bash
+jj log -r 'trunk() | <first-change-id> | <remainder-change-id> | <affected-descendants>'
+jj diff -r <first-change-id>
+jj diff -r <remainder-change-id>
+jj log -r '(<first-change-id> | <remainder-change-id> | <affected-descendants>) & conflicts()'
+jj status
+```
+
+Check that each commit has one coherent responsibility and that later commits do not accidentally supply files needed by earlier commits. Run relevant verification at each intended PR tip. Do not create bookmarks or publish merely because the split succeeded; follow the selected PR mode after local verification.
