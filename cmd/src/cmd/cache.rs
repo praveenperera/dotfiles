@@ -178,9 +178,7 @@ fn validate_cache_component(value: &str, kind: &str) -> Result<String> {
                 }
             }
             Component::CurDir => {}
-            Component::RootDir
-            | Component::Prefix(_)
-            | Component::ParentDir => {
+            Component::RootDir | Component::Prefix(_) | Component::ParentDir => {
                 return Err(eyre!(
                     "invalid {kind}: {value}\n\
                      use a plain relative name like `aps` or `cove/wk1`; absolute paths and `..` are not allowed"
@@ -345,7 +343,13 @@ fn rsync_into(sh: &Shell, source: &Path, dest: &Path) -> Result<()> {
     let dest_slash = format!("{}/", dest.display());
     cmd!(sh, "rsync -a {source_slash} {dest_slash}")
         .run()
-        .map_err(|err| eyre!("failed to copy {} → {}: {err}", source.display(), dest.display()))
+        .map_err(|err| {
+            eyre!(
+                "failed to copy {} → {}: {err}",
+                source.display(),
+                dest.display()
+            )
+        })
 }
 
 fn show_status(sh: &Shell, path: Option<&str>) -> Result<()> {
@@ -471,8 +475,11 @@ mod tests {
     use xshell::Shell;
 
     fn write_cargo_toml(dir: &Path) {
-        fs::write(dir.join("Cargo.toml"), "[package]\nname = \"demo\"\nversion = \"0.1.0\"\n")
-            .unwrap();
+        fs::write(
+            dir.join("Cargo.toml"),
+            "[package]\nname = \"demo\"\nversion = \"0.1.0\"\n",
+        )
+        .unwrap();
     }
 
     #[test]
@@ -522,13 +529,8 @@ mod tests {
         fs::create_dir_all(&cache_root).unwrap();
         env::set_var("DEV_CACHE_ROOT", &cache_root);
 
-        let plan = resolve_link_plan(
-            &sh,
-            Some(local.to_str().unwrap()),
-            Some("myapp"),
-            None,
-        )
-        .unwrap();
+        let plan =
+            resolve_link_plan(&sh, Some(local.to_str().unwrap()), Some("myapp"), None).unwrap();
 
         assert_eq!(plan.local, local);
         assert_eq!(plan.leaf, "node_modules");
