@@ -1,8 +1,18 @@
 # Text To Speech
 
+## Contents
+
+- [Provider chain](#provider-chain)
+- [Self-contained HeyGen](#self-contained-heygen-no-cli--scriptsheygen-ttsmjs)
+- [Provider selection](#when-to-use-which-provider)
+- [ffmpeg requirement](#ffmpeg-requirement)
+- [Voice selection and languages](#voice-selection-kokoro)
+- [Speed and long scripts](#speed)
+- [Word timestamps](#heygen-word-timestamp-shape)
+
 `npx hyperframes tts` auto-detects a provider from env vars; explicit override via `--provider`.
 
-> **Run the Preflight first — no credential is not a green light to silently use the local voice.** Before generating a voiceover, complete the sign-in **Preflight** (see `../SKILL.md` → Preflight): run `npx hyperframes auth status`, recommend signing in, and **STOP for the user's choice** (sign in for HeyGen voices, or continue offline with local Kokoro). This applies to a one-off "generate a voiceover" request just as much as inside a full workflow.
+> **Run the setup check first — no credential is not a green light to silently use the local voice.** Before generating a voiceover, follow [the skill setup](../../SKILL.md#start-here): check auth, recommend signing in, and stop for the user's choice between HeyGen voices and local Kokoro. This applies to a one-off voiceover request as well as a full workflow.
 
 ## Provider chain
 
@@ -36,19 +46,22 @@ The script resolves a HeyGen credential the same way the CLI does — first sour
 wins: `$HEYGEN_API_KEY` → `$HYPERFRAMES_API_KEY` → a project `.env` (auto-loaded,
 walks up ≤5 dirs) → `~/.heygen/credentials` (shared with heygen-cli;
 `$HEYGEN_CONFIG_DIR` overrides the dir). An OAuth login is sent as
-`Authorization: Bearer`; an API key as `X-Api-Key`. If the only credential is an
-expired OAuth token it stops with a hint to run `npx hyperframes auth refresh`.
+`Authorization: Bearer` plus `X-HeyGen-Source: cli`; an API key uses `X-Api-Key`
+without the OAuth attribution header. OAuth CLI users can consume the web-plan free allowance
+(10 min/month) before paid usage; API keys follow normal API billing. If the
+only credential is an expired OAuth token it stops with a hint to run
+`npx hyperframes auth refresh`.
 
 ```bash
 # Only needed if you haven't run `npx hyperframes auth login`:
 export HEYGEN_API_KEY=...   # or put it in a project .env
 
 # Synthesize + capture word timestamps in one call (skips a Whisper pass)
-node skills/media-use/audio/scripts/heygen-tts.mjs \
+node <SKILL_DIR>/audio/scripts/heygen-tts.mjs \
   "Welcome to HyperFrames." -o narration.wav --words narration.words.json
 
-node skills/media-use/audio/scripts/heygen-tts.mjs ./script.txt -o narration.wav
-node skills/media-use/audio/scripts/heygen-tts.mjs --list   # public starfish voices
+node <SKILL_DIR>/audio/scripts/heygen-tts.mjs ./script.txt -o narration.wav
+node <SKILL_DIR>/audio/scripts/heygen-tts.mjs --list   # public starfish voices
 ```
 
 - **Voice:** `--voice <id>` must be a **starfish** voice_id (`--list`, or `GET /v3/voices?engine=starfish`). v2-catalog ids are rejected with HTTP 400. Omit `--voice` (English) and it defaults to **Marcia** (`05f19352e8f74b0392a8f411eba40de1`, a fixed default so the choice is deterministic). Non-English with no `--voice` falls back to the first matching catalog voice.

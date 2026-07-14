@@ -31,7 +31,7 @@ Scene 3 (~1.5s–end): the revealed/settled card holds to the end (the allocated
 
 - gentle fade-in + subtle scale-up settle (Benefits Scene 2) → `rules/scale-swap-transition.md` (restrained in/settle; cross-reference the fade ease in `techniques.md`)
 - single slide-up crossfade between two centered lines (Benefits Scene 3) → `rules/discrete-text-sequence.md` (one line hands off to the next; translate-up + crossfade)
-- diagonal pill-wipe reveal (Social_Proof Scene 2) → `rules/techniques.md` (clip-path reveal masks — the wipe)
+- diagonal pill-wipe reveal (Social_Proof Scene 2) → [clip-path reveal masks](../techniques.md#12-clip-path-reveal-masks)
 - icon stroke draw-on (Social_Proof Scene 2) → `rules/svg-path-draw.md`
 - "[N]+ teams" count-up (Social_Proof Scene 3, optional) → `rules/counting-dynamic-scale.md`
 - logo + tagline spring-settle-and-hold (Social_Proof Scene 3) → `rules/spring-pop-entrance.md` (single soft settle; intentionally one beat, not a chain)

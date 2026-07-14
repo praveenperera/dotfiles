@@ -2,6 +2,12 @@
 
 Use this after `SKILL.md` when choosing a concrete implementation mechanism. It is a parts shelf, not a style guide. Start with one primary mechanism; add supporting motion only when it clarifies the idea.
 
+## Contents
+
+- [Runtime skeletons](#runtime-skeletons)
+- [Mechanisms](#mechanisms)
+- [Source links](#source-links)
+
 ## Runtime Skeletons
 
 GSAP:
@@ -23,18 +29,18 @@ window.__timelines[id] = tl;
 CSS:
 
 ```css
-.<subject > {
-  animation: <name> <duration> <ease> both;
+.subject {
+  animation: subject-motion 1s ease both;
   animation-iteration-count: 1;
 }
-@keyframes <name> {
+@keyframes subject-motion {
   0% {
-    transform: <pose-a>;
-    opacity: <a>;
+    transform: translateX(0);
+    opacity: 0;
   }
   100% {
-    transform: <pose-b>;
-    opacity: <b>;
+    transform: translateX(12rem);
+    opacity: 1;
   }
 }
 ```

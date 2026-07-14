@@ -1,6 +1,6 @@
 # Blueprints (the proven shapes)
 
-> Entry point to the blueprint layer. Read this to find the shape for a frame; read `blueprints/<id>.md` to instantiate it. The Step-4 method (Reproduce / Adapt / Compose, what to write per frame) lives in `visual-design.md` — this file is the menu + the picker.
+> Entry point to the blueprint layer. Read this to find the shape for a frame; read `blueprints/<id>.md` to instantiate it. The Step-4 method (Reproduce / Adapt / Compose, what to write per frame) lives in [the visual-design method](../product-launch-video/references/visual-design.md) — this file is the menu + the picker.
 
 A **blueprint** is a product-agnostic, **time-coded shot template** — `Scene N (a–b s): …` with `[slots]` and one named **signature move** — reverse-engineered from 50 golden product-launch clips (plus 13 hyperframes-animation blueprints reverse-translated to the same brief format). It encodes a whole shot across its full duration — reveals paced to the spoken line, not dumped at t=0 — so instantiating one structurally keeps content arriving instead of freezing. The full template lives in `blueprints/<id>.md`. **Step 4 (visual design) instantiates one blueprint per frame** (or composes from the motion vocabulary when none fits).
 
@@ -136,8 +136,8 @@ Roles here map 1:1 to the storyboard frame `type` enum: **Hook**=`hook` · **Pro
 
 1. Find the frame's **role** in the menu above; pick the blueprint whose **shape fits this beat** (story may already have named a candidate id — confirm or override). If two fit, prefer the one whose motions are closer to your plan.
 2. Open `blueprints/<id>.md` — read its time-coded template, `[slots]`, and named **signature move**.
-3. Choose a posture — **Reproduce** (slots map cleanly), **Adapt** (structure fits, content/surface differs; keep the signature move), or **Compose** (nothing fits → build from the motion vocabulary). The _how_ of writing each — what to keep/change, the per-frame fields — is `visual-design.md`'s job; defer to it.
-4. If nothing in the menu fits the beat, **compose** from the motion vocabulary in `motion-language.md` — still pace the reveals to the VO across the shot. Don't force a wrong blueprint.
+3. Choose a posture — **Reproduce** (slots map cleanly), **Adapt** (structure fits, content/surface differs; keep the signature move), or **Compose** (nothing fits → build from the motion vocabulary). Defer to [the visual-design method](../product-launch-video/references/visual-design.md) for what to keep, change, and record per frame.
+4. If nothing in the menu fits the beat, **compose** with [the motion vocabulary](../product-launch-video/references/motion-language.md) and pace reveals to the voiceover across the shot. Do not force a wrong blueprint.
 
 ## Motion coverage
 

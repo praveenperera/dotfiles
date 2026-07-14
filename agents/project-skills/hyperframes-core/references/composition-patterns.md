@@ -1,5 +1,13 @@
 # Composition Patterns
 
+## Contents
+
+- [Two architectures](#two-architectures)
+- [Modular orchestrator pattern](#modular-orchestrator-pattern)
+- [Sub-composition archetypes](#sub-composition-archetypes)
+- [Naming conventions](#naming-conventions)
+- [Editing existing projects](#editing-existing-projects)
+
 How to architect a project — when to inline everything in one HTML, when to split into sub-compositions, what the `index.html` orchestrator looks like at scale, and the common sub-composition archetypes seen in real projects. Pair with `minimal-composition.md` (single-file shape) and `sub-compositions.md` (mechanics of a sub-comp file).
 
 ## Two Architectures

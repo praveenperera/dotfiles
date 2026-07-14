@@ -297,7 +297,7 @@ For a single kinetic phrase that "zooms past," keep the streak slightly visible 
 - **Directional blur on the motion axis** (Path A) — `stdDeviation="X 0"` for horizontal, `"0 Y"` for vertical, `"B B"` only for a depth/scale push. A symmetric blur on a sideways move looks like defocus, not speed.
 - **Tween a proxy, write the attribute** (Path A) — GSAP tweens the plain `{ v }` object; `onUpdate` calls `setAttribute("stdDeviation", …)`. You cannot tween the SVG attribute directly, and you must **seed it once at setup** so a seek to `t=0` shows the streaked start.
 - **Ghosts are deterministic, by index** (Path B) — offset `i * ECHO_STEP_PX`, opacity `BASE / i`. Never `Math.random` for the trail; index drives all per-ghost variation so every seek is identical.
-- **Entrances only, never a mid-composition exit** — a streak is an _arrival_. A blurred element leaving on a non-final frame reads as a glitch; scene-to-scene exits are the transition's job (see `../../transitions/overview.md`).
+- **Entrances only, never a mid-composition exit** — a streak is an _arrival_. A blurred element leaving on a non-final frame reads as a glitch; scene-to-scene exits are the transition's job (see `../transitions/overview.md`).
 - **Earn the sharp hold** — after the snap, the crisp element must dwell ≥1 s. The contrast between the violent streak and the still, sharp settle _is_ the effect.
 - **Heavy element, solid background** — thin type or a busy backdrop both swallow the smear. Big bold mass on a clean field reads.
 
@@ -322,7 +322,7 @@ For a single kinetic phrase that "zooms past," keep the streak slightly visible 
 
 ## Pairs with HF skills
 
-- `/hyperframes-animation` — `out`-family easing, proxy-driven `onUpdate` attribute tweens, and locked-envelope coordination (`../../adapters/gsap-easing-and-stagger.md`)
+- `/hyperframes-animation` — `out`-family easing, proxy-driven `onUpdate` attribute tweens, and locked-envelope coordination (`../adapters/gsap-easing-and-stagger.md`)
 - `/hyperframes-creative` — `references/typography.md` (embedded display face for a text streak), `references/video-composition.md` (solid field behind the smear)
 - `/hyperframes-core` — composition wiring, determinism (finite tweens, no `Math.random`)
 - `/hyperframes-cli` — `hyperframes lint` / `hyperframes validate` (validate catches a missing `#streak-blur` node or an unreferenced filter)

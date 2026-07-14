@@ -1,4 +1,4 @@
-# info, upgrade, compositions, docs, benchmark, telemetry, asset preprocessing
+# info, upgrade, compositions, docs, benchmark, auth, telemetry, asset preprocessing
 
 Catch-all reference for commands that don't fit the main dev loop.
 
@@ -61,6 +61,17 @@ Events include two fingerprint properties used to distinguish managed-sandbox ru
 
 - **`sandbox_runtime`**: `gvisor` / `firecracker` / `docker` / `kvm` / `wsl` / `null`. gVisor via kernel string + `/proc/version`. Firecracker via `/dev/vsock` + DMI sys_vendor. Docker via `/.dockerenv` + cgroup.
 - **`agent_runtime`**: `claude_code` / `codex` / `cursor` / `copilot_agent` / `jules` / `replit` / `devin` / `aider` / `gemini_cli` / `hermes` / `openclaw` / `null`. Detected by the existence of well-known vendor env vars; the values themselves are never read.
+
+## auth
+
+```bash
+npx hyperframes auth login       # OAuth sign-in; --api-key is available for long-lived keys
+npx hyperframes auth status      # inspect the active credential
+npx hyperframes auth refresh     # force-refresh OAuth access
+npx hyperframes auth logout      # remove the stored credential
+```
+
+Authentication is required for the managed `hyperframes cloud` service. Do not print, log, or commit credential values.
 
 ## Asset Preprocessing
 

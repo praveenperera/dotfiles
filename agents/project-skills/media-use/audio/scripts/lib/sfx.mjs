@@ -5,7 +5,7 @@
 //   HeyGen credential present  →  retrieve EVERY cue from HeyGen's audio library
 //        (/v3/audio/sounds, type=sound_effects, min_score=0.4). The bundled
 //        library is NOT consulted.
-//   HeyGen credential absent   →  resolve cues against the bundled 21-file
+//   HeyGen credential absent   →  resolve cues against the bundled 19-file
 //        library (assets/sfx/manifest.json), copying matched files into the
 //        project. Offline, deterministic, free.
 //

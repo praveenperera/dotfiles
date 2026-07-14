@@ -18,7 +18,7 @@ Each has `.in`, `.out`, `.inOut` variants.
 
 Pick `.out` for entrances, `.in` for exits, `.inOut` for symmetric moves and continuous motion.
 
-**Smooth beats bouncy** — the motion doctrine (`rules/spring-pop-entrance.md`, the workflows' `motion-language.md`): entrances default to `power3.out` or the baked critically-damped spring (see Spring Eases below); overshoot eases (`back` / `elastic` / `bounce`) are a rare, explicitly-playful register, never the house style.
+**Smooth beats bouncy** — the [motion doctrine](../../product-launch-video/references/motion-language.md) and [spring-pop rule](../rules/spring-pop-entrance.md) make `power3.out` or a baked critically-damped spring the entrance defaults. Overshoot eases (`back` / `elastic` / `bounce`) are a rare, explicitly playful register, never the house style.
 
 ## Easing Vocabulary (character & mood)
 

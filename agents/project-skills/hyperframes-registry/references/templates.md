@@ -1,6 +1,13 @@
 # Contribute Templates
 
-Copy-paste starter templates for each component type. These embed the proven patterns that pass lint and validate.
+Copy-paste starter templates for each component type. These embed the proven patterns that pass lint and check.
+
+## Contents
+
+- [Caption template](#caption-template)
+- [VFX template](#vfx-template)
+- [registry-item.json templates](#registry-itemjson-templates)
+- [Component template](#component-template)
 
 ## Caption Template
 

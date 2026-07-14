@@ -1,5 +1,15 @@
 # Background Removal
 
+## Contents
+
+- [Output format](#output-format)
+- [Quality](#quality---quality)
+- [Device](#device---device)
+- [Compositing patterns](#compositing-patterns--pick-the-right-one)
+- [Text behind subject](#text-behind-subject-pattern-two-non-obvious-rules)
+- [Layer separation](#layer-separation---background-output)
+- [When to use another tool](#when-remove-background-is-not-the-right-tool)
+
 Make a transparent overlay (typical: a talking head over an arbitrary scene). Uses `u2net_human_seg` (MIT).
 
 ```bash

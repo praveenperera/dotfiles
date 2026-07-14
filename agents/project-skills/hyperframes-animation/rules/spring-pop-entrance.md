@@ -7,7 +7,7 @@ metadata:
 
 # Spring-Pop Entrance
 
-> **Smooth beats bouncy.** Per the motion doctrine (`references/motion-language.md`), this entrance **defaults to a smooth long-tail settle — `power3.out` (or `expo.out` for a faster arrival)** that decelerates cleanly into the resting size with **no overshoot**. Bouncy `back.out` overshoot is the **#1 instant turn-off** in agent-made videos and is almost never executed well; it is demoted here to a **rare, explicitly-playful exception** (a consumer / fun brand), never the default. When unsure, settle smoothly.
+> **Smooth beats bouncy.** Per the [motion doctrine](../../product-launch-video/references/motion-language.md), this entrance **defaults to a smooth long-tail settle — `power3.out` (or `expo.out` for a faster arrival)** that decelerates cleanly into the resting size with **no overshoot**. Bouncy `back.out` overshoot is the **#1 instant turn-off** in agent-made videos and is almost never executed well; it is demoted here to a **rare, explicitly-playful exception** (a consumer / fun brand), never the default. When unsure, settle smoothly.
 
 THE entrance primitive: an element (or a staggered group of them) arrives on screen by springing from nothing — `scale: 0 → 1`, optionally with a small `y` rise — riding a **smooth long-tail ease (`power3.out` default)** so it grows confidently into its resting size and settles without bouncing. This is **arrival**, not reaction.
 

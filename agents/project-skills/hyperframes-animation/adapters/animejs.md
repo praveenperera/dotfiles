@@ -110,5 +110,5 @@ npx hyperframes validate
 
 ## Credits And References
 
-- HyperFrames adapter source: `packages/core/src/runtime/adapters/animejs.ts`.
+- HyperFrames core Anime.js adapter implementation.
 - Anime.js documentation for `autoplay`, `pause()`, and `seek()`: https://animejs.com/documentation/

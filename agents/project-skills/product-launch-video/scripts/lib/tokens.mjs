@@ -48,6 +48,10 @@ export const UA_DEFAULT_COLORS = new Set(
   ["#0000EE", "#0000FF", "#0000CC", "#1A0DAB", "#551A8B", "#EE0000"].map((c) => c.toUpperCase()),
 );
 
+// Semantic status roles carry meaning through hue and must never become brand accents
+export const STATUS_ROLE_KEY =
+  /(?:^|[-_])(?:positive|negative|success|error|warning|danger|good|bad|up|down|info|neutral|alert|caution|critical)(?:[-_]|$)/i;
+
 // Pick the brand ACCENT — never by raw chroma alone, never a UA-default link color.
 // Priority:
 //   1) with capture colorStats → the colorful color that RECURS across the UI. The brand
@@ -134,7 +138,7 @@ export function brandRolesFromStats(stats, colorsInOrder) {
 // Map a list of [key, value] colors to semantic roles. ink = a dark/ink-named
 // color (else darkest); canvas = a paper/cream/white-named color (else lightest);
 // accents = whatever's left, ranked by chroma (the loudest color is almost always
-// the brand accent) — UA-default link colors excluded so a stray <a> color never wins.
+// the brand accent) — UA-default link colors and status colors excluded so neither wins.
 // For an unkeyed brand list, pass synthetic keys — name matching simply no-ops and it
 // falls back to luminance/chroma, which is what we want. NOTE: when capture colorStats
 // exist, prefer brandRolesFromStats() — it picks by function, not these proxies.
@@ -154,7 +158,13 @@ export function semanticColors(colors) {
     byLum[byLum.length - 1] ?? colors[colors.length - 1],
   );
   const accents = colors
-    .filter(([, v]) => v !== ink && v !== canvas && !UA_DEFAULT_COLORS.has(String(v).toUpperCase()))
+    .filter(
+      ([k, v]) =>
+        v !== ink &&
+        v !== canvas &&
+        !UA_DEFAULT_COLORS.has(String(v).toUpperCase()) &&
+        !STATUS_ROLE_KEY.test(k),
+    )
     .sort((a, b) => chroma(b[1]) - chroma(a[1]))
     .map(([, v]) => v);
   return { ink, canvas, accent: accents[0] ?? ink, accent2: accents[1] ?? accents[0] ?? ink };

@@ -1,6 +1,16 @@
 # Cut catalog — within-frame seams (worker-built)
 
-> **A worker build-recipe (Step 5) — the sibling of `../hyperframes-animation/rules/`, not a second motion doc.** These are within-frame cuts the **frame worker builds INSIDE its own composition** (Z-scale + blur + opacity tweens, or per-word x-staggers, all on the frame's own paused GSAP timeline). They are **not** the between-frame transition: story owns that via `transition_in`, which the harness's injector stamps from a **separate registry vocabulary** (`crossfade` / `blur-crossfade` / `push-slide` / `zoom-through` / `squeeze`) — the catalog names here (**cut-the-curve / inverse-zoom / waterfall**) are **not** valid `transition_in` values. Use this catalog when a frame's shot sequence has an internal seam — a within-scene text/element swap, a **Scene-to-Scene** cut (a `Scene` is a time window WITHIN one frame, **not** a frame-to-frame boundary), or a text-to-text line change — and you want it to read as one continuous move instead of a hard slideshow cut. (`zoom-through` lives in both worlds: a whole-frame wrapper transition in the registry, an element-level Z-cut here — same idea, different scope.)
+## Contents
+
+- [Blur logic](#blur-logic-applies-to-all-z-axis-variants)
+- [Zoom-through](#1-zoom-through-forward)
+- [Inverse zoom-through](#2-inverse-zoom-through-backward)
+- [Cut the curve](#3-cut-the-curve-scene-transitions)
+- [Waterfall cut](#4-waterfall-cut-word-by-word-cut-the-curve)
+- [Choosing a variant](#choosing-a-variant)
+- [Anti-patterns](#anti-patterns)
+
+> **A worker build-recipe (Step 5) — the sibling of [`../../hyperframes-animation/rules/`](../../hyperframes-animation/rules/), not a second motion doc.** These are within-frame cuts the **frame worker builds INSIDE its own composition** (Z-scale + blur + opacity tweens, or per-word x-staggers, all on the frame's own paused GSAP timeline). They are **not** the between-frame transition: story owns that via `transition_in`, which the harness's injector stamps from a **separate registry vocabulary** (`crossfade` / `blur-crossfade` / `push-slide` / `zoom-through` / `squeeze`) — the catalog names here (**cut-the-curve / inverse-zoom / waterfall**) are **not** valid `transition_in` values. Use this catalog when a frame's shot sequence has an internal seam — a within-scene text/element swap, a **Scene-to-Scene** cut (a `Scene` is a time window WITHIN one frame, **not** a frame-to-frame boundary), or a text-to-text line change — and you want it to read as one continuous move instead of a hard slideshow cut. (`zoom-through` lives in both worlds: a whole-frame wrapper transition in the registry, an element-level Z-cut here — same idea, different scope.)
 
 Four techniques that create depth and continuity:
 

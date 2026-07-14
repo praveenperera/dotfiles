@@ -73,7 +73,7 @@ HyperFrames is stricter than vanilla GSAP. Animate only:
 - `display`, `visibility` — never tween these directly. Use `autoAlpha` (sets opacity + visibility together at endpoints, doesn't tween the discrete property).
 - Anything driven by `Math.random()`, `Date.now()`, `performance.now()`, or event handlers — animation state must be deterministic from time alone.
 
-> **Note**: `docs/guides/gsap-animation.mdx` lists `width`/`height`/`visibility` in its "Supported Properties" — that list is too permissive for HyperFrames composition rules. This allowlist is the canonical one. See `hyperframes-core/references/determinism-rules.md` for the full deterministic-render contract.
+> **Note**: Older HyperFrames GSAP guidance lists `width`, `height`, and `visibility` as supported properties. That list is too permissive for compositions; this allowlist is canonical. See [the deterministic-render contract](../../hyperframes-core/references/determinism-rules.md) for the complete rules.
 
 ## References
 
@@ -100,6 +100,6 @@ HyperFrames is stricter than vanilla GSAP. Animate only:
 
 ## Credits And References
 
-- HyperFrames adapter source: `packages/core/src/runtime/adapters/gsap.ts`.
+- HyperFrames core GSAP adapter implementation.
 - GSAP documentation: https://gsap.com/docs/v3/
 - GSAP timeline pause and seek behavior: https://gsap.com/docs/v3/GSAP/Timeline/pause%28%29/
