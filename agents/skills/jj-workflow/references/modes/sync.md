@@ -1,58 +1,64 @@
-# Syncing After PR Merges
+# Sync After a Merge
 
-Update your local state after a PR is merged on GitHub.
+Synchronize only when fetching remote state and rewriting the remaining local stack are both within scope. Fetching, rebasing, bookmark cleanup, pushing, and changing PR bases are separate actions.
 
----
+## Inspect before fetching
 
-## After a PR Merges
+```bash
+jj status
+jj diff --stat
+jj log -r 'trunk() | trunk()..@ | bookmarks()'
+jj bookmark list --all-remotes
+jj git remote list
+jj log -r 'trunk()..@ & conflicts()'
+```
 
-### 1. Fetch latest
+Record the first unmerged change ID, remaining descendants, current bookmark targets, and the trunk bookmark name.
+
+## Refresh remote state
+
+If fetching is authorized:
 
 ```bash
 jj git fetch
+jj log -r 'trunk() | trunk()..@ | bookmarks()'
+jj bookmark list --all-remotes
 ```
 
-### 2. Rebase remaining stack onto new master
+Confirm that `trunk()` now contains the merged PR before rewriting anything. If the upstream PR was squash-merged, also read [rebase-after-squash.md](../rebase-after-squash.md).
+
+## Rebase the remaining stack
+
+If local rewriting is authorized, move the first unmerged change and its descendants onto trunk:
 
 ```bash
-jj rebase -o master@origin -s <next-feature>
+jj rebase -s <first-unmerged-change-id> -o 'trunk()'
 ```
 
-**Key:** Use `-s` (source) to bring descendants along, not `-r` (revision).
-
-### 3. Delete merged bookmark
+Verify the full remaining stack and conflict set:
 
 ```bash
+jj log -r 'trunk() | <first-unmerged-change-id>::'
+jj log -r '(<first-unmerged-change-id>::) & conflicts()'
+jj status
+```
+
+Run relevant checks at every remaining PR tip affected by the rebase.
+
+## Reconcile publication state
+
+Only when bookmark cleanup is authorized, inspect whether the merged bookmark is still needed before deleting it:
+
+```bash
+jj bookmark list --all-remotes
 jj bookmark delete <merged-feature>
 ```
 
-### 4. Update PR base on GitHub
-
-If PR #2 was targeting PR #1's branch, update it to target master.
-
-### 5. Push updated stack
+Move remaining bookmarks only when inspection shows they do not follow the intended rebased change IDs. Only when publication is authorized, push bookmarks individually:
 
 ```bash
-jj git push
+jj git push --bookmark <remaining-feature>
+jj bookmark list --all-remotes
 ```
 
----
-
-## After Squash-Merge (Special Case)
-
-If GitHub squash-merged your PR, see: `references/rebase-after-squash.md`
-
-The key difference: your original commits are gone, replaced by a single squashed commit. jj handles this cleanly with the same rebase command.
-
----
-
-## Staying Up to Date
-
-Regular sync workflow:
-
-```bash
-jj git fetch
-jj log -r 'master@origin..@'  # see your commits
-jj rebase -o master@origin    # rebase onto latest
-jj git push                   # update PRs
-```
+Change a remaining PR's base to `<trunk-bookmark>` only when PR mutation is authorized. Verify the remote bookmark targets and PR bases after publication.

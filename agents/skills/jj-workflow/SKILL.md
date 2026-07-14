@@ -1,157 +1,98 @@
 ---
 name: jj-workflow
-description: Guide for jj (Jujutsu) version control workflows including splitting changes, creating stacked PRs, independent PRs, and hybrid approaches. Use when working with jj commands, feature branches, or preparing commits for pull requests.
-version: "2.0.0"
-model: inherit
+description: Plan and execute Jujutsu (jj) version-control workflows, including inspecting repository state, splitting or updating changes, arranging stacked, independent, or hybrid PR graphs, syncing after merges, and publishing bookmarks. Use for jj commands, change IDs, revsets, bookmarks, history rewriting, Git interoperability, or preparing commits and pull requests in a jj repository.
 ---
 
-# jj Workflow Skill
+# jj workflow
 
-## What is jj?
+Treat the working copy (`@`) as a commit, use stable change IDs while rewriting, and remember that bookmarks do not move automatically.
 
-jj (Jujutsu) is a Git-compatible version control system with a simpler mental model for history editing.
+## Start with inspection
 
-**When to use jj:**
-- Working on multiple features that touch overlapping files
-- Maintaining stacks of dependent PRs
-- Frequently reordering, squashing, or splitting commits
-- You want to split changes after-the-fact rather than commit perfectly upfront
-
-**Why jj over Git:**
-- No staging area complexity - working copy is always a commit
-- Edit any commit and descendants auto-rebase
-- Conflicts are first-class - defer resolution, operations don't stop
-- Every operation is undoable with `jj undo`
-- Splitting commits is trivial with `jj split`
-
----
-
-## Core Mental Model
-
-- **Working copy (@) is always a commit** - no staging area, changes auto-track
-- **Bookmarks don't auto-move** - must explicitly `jj bookmark set` (unlike Git branches)
-- **Descendants auto-rebase** - edit commit A and B/C/D rebase automatically
-- **Change IDs persist** - commit hashes change on rebase, change IDs don't
-- **Conflicts are first-class** - can exist in commits; resolve when ready
-- **Every operation is undoable** - `jj undo` or `jj op restore`
-
----
-
-## Which Reference to Read
-
-### Creating PRs from Commits
-
-**Read `references/modes/stacked.md` when:**
-- Features genuinely depend on each other (B needs A's code)
-- You want PR B to include PR A's changes
-- Merge order matters (must merge A before B before C)
-
-**Read `references/modes/independent.md` when:**
-- Features are truly separate and don't share code
-- PRs can merge in any order
-- You don't want to wait for other PRs to merge first
-
-**Read `references/modes/hybrid.md` when:**
-- Some features depend on each other, others don't
-- Example: A→B are stacked, but C is independent
-
-### Preparing Commits
-
-**Read `references/modes/split.md` when:**
-- You have one commit with mixed changes from multiple features
-- You need to separate changes into logical commits
-- You want to split by file pattern or interactively
-
-### After PR Review
-
-**Read `references/modes/update.md` when:**
-- You received review feedback and need to update a commit
-- You need to edit an older commit in your stack
-- You're confused about `jj edit` vs `jj new`
-
-### After PR Merges
-
-**Read `references/modes/sync.md` when:**
-- A PR was merged and you need to update remaining stack
-- You want to sync with latest master
-- You need to delete merged bookmarks and update PR bases
-
-**Read `references/rebase-after-squash.md` when:**
-- GitHub squash-merged your PR (not regular merge)
-- You're confused why Git rebase is painful but jj is easy
-- You need the specific command for post-squash-merge rebase
-
-### Reference
-
-**Read `references/quick-reference.md` when:**
-- You need command syntax or revset expressions
-
-**Read `references/full-guide.md` when:**
-- You want comprehensive documentation or deep jj vs Git comparison
-- Other references don't answer your question
-
-**See `examples/` folder for:**
-- Complete copy-paste workflow scripts (stacked, independent, post-squash-merge)
-
----
-
-## Quick Start Commands
+Inspect before choosing a workflow or running a mutating command:
 
 ```bash
-# assess current state
-jj git fetch
-jj log -r 'master..@'
+jj root
 jj status
-
-# get change IDs for commits
-jj log -r 'master..@-' --no-graph -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
+jj diff --stat
+jj log -r 'trunk() | trunk()..@ | bookmarks()'
+jj bookmark list --all-remotes
+jj git remote list
+jj log -r 'trunk()..@ & conflicts()'
 ```
 
-Then read the appropriate reference above based on your goal.
+Use `trunk()` for the repository's configured trunk revision. Determine the actual trunk bookmark name from the bookmark output only when another tool, such as `gh pr create --base`, requires a branch name.
 
----
+Record the relevant change IDs before rewriting:
 
-## Common Pitfalls
-
-### Bookmark didn't move
-jj bookmarks don't auto-move. After changes: `jj bookmark set feature -r @`
-
-### Can't push conflicted commit
-jj won't push conflicts. Resolve first: `jj edit <commit>`, fix files, `jj new`, then push.
-
-### Undo doesn't undo push
-`jj undo` is local only. To undo a push: `jj bookmark set X -r @~1` then `jj git push`
-
-### File edits not checkpointed
-jj snapshots only when you run a command. Run `jj status` before risky work to checkpoint.
-
-### Detached HEAD in Git tools
-Normal in colocated mode. jj doesn't track "current branch". Use jj commands, not git checkout.
-
-### Interactive commands hang in automation
-Commands like `jj split` and `jj squash` open an editor by default. Use flags to skip:
 ```bash
-jj split -m "feat: description" file1.ts file2.ts
-
-# squash without editor — use one of:
-jj squash -u                    # -u / --use-destination-message: keeps destination description
-jj squash -m "combined message" # explicit message
-jj squash --from X --into Y -u
+jj log -r 'trunk()..@' --no-graph \
+  -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
 ```
-**Note:** Without `-u` or `-m`, squash opens an editor when both source and destination have descriptions.
 
-For hunk-level splitting (same file, different features), use `jju sh`:
+If the repository is not a jj repository, report that fact. Do not initialize or colocate it unless requested.
+
+## Establish mutation scope
+
+Infer the smallest scope authorized by the request and state any material assumption. Keep these capabilities separate:
+
+- network synchronization: `jj git fetch`
+- local history rewrites: `jj split`, `jj squash`, `jj rebase`, `jj edit`, `jj abandon`, and `jj duplicate`
+- bookmark mutations: `jj bookmark create`, `set`, `move`, `delete`, `forget`, or `track`
+- remote publication: `jj git push`, PR creation, and PR base edits
+
+Do not fetch merely to inspect. Do not rewrite history, mutate bookmarks, push, or change PRs unless that capability is within the user's requested scope. A request to prepare or reorganize local commits does not authorize publishing. A request to push one bookmark does not authorize pushing every tracking bookmark; prefer `jj git push --bookmark <name>`.
+
+Before a rewrite, show or summarize the current graph, the intended graph, affected change IDs, and expected bookmark effects. Use `jj op log` and `jj undo` for local recovery, but never imply that `jj undo` reverses a remote push.
+
+## Choose a workflow
+
+- Read [stacked.md](references/modes/stacked.md) for dependent changes and ordered PR bases.
+- Read [independent.md](references/modes/independent.md) for changes that each apply directly to trunk.
+- Read [hybrid.md](references/modes/hybrid.md) for a graph containing both dependent and independent work.
+- Read [split.md](references/modes/split.md) to separate mixed changes by file or hunk.
+- Read [update.md](references/modes/update.md) to address feedback in an existing change.
+- Read [sync.md](references/modes/sync.md) after a merge or when explicitly asked to synchronize.
+- Read [rebase-after-squash.md](references/rebase-after-squash.md) when an upstream PR was squash-merged.
+- Read [quick-reference.md](references/quick-reference.md) for command and revset syntax.
+- Read [full-guide.md](references/full-guide.md) for graph design, safety boundaries, and Git interoperability.
+
+Use the templates in `examples/` only after replacing every placeholder and confirming the mutation and publication scope. They intentionally stop after inspection by default.
+
+## Verify every mutation
+
+After each rewrite, inspect the exact affected graph rather than relying only on command success:
+
 ```bash
-jju sh --preview                      # see hunks with indices
-jju sh -m "feat A" --hunks 0,2        # split by index
-jju sh -m "feat B" --lines 50-100     # split by line range
-jju sh -m "logging" --pattern "log::" # split by pattern
+jj log -r 'trunk() | <affected-revset>'
+jj diff -r <change-id>
+jj log -r '(<affected-revset>) & conflicts()'
+jj status
 ```
 
----
+No output from the conflict query means the selected revisions are conflict-free. If conflicts exist, list the conflicted revisions and files with:
 
-## Branch Naming Preferences
+```bash
+jj log -r '(<affected-revset>) & conflicts()'
+jj resolve --list -r <conflicted-change-id>
+```
 
-Use simple, descriptive names without path-style prefixes:
-- ✓ `auth`, `api-refactor`, `fix-login-bug`
-- ✗ `fix/login-bug`, `pr/auth`, `feat/api-refactor`
+After bookmark mutations, run `jj bookmark list --all-remotes`. Before an authorized push, inspect the exact bookmark and its range, then push only that bookmark. After a push, inspect local and remote bookmark targets again.
+
+## Non-interactive commands
+
+Avoid commands that open editors in automation:
+
+```bash
+jj split -m "feat: description" path/to/file
+jj squash --from <source> --into <destination> -u
+```
+
+Use `jju sh` for non-interactive hunk selection only after `command -v jju` confirms it is installed. Preview before splitting:
+
+```bash
+jju sh --preview
+jju sh -m "feat: description" --hunks 0,2
+```
+
+For command behavior that may vary by installed jj version, inspect `jj <command> --help` instead of guessing.

@@ -5,6 +5,14 @@ This file is the canonical quality bar for HTML wireframes / `<Screen>` /
 `/visual-recap`. Read it in full before authoring ANY wireframe; do not
 author wireframes from memory or paraphrase these rules per command.
 
+## Contents
+
+- Canonical `WireframeBlock` and `Screen` shape
+- Semantic HTML, renderer tokens, icons, and visual constraints
+- Realistic product content, chrome, roles, and interaction states
+- Surface selection and before/after comparability
+- Pre-handoff wireframe quality checks
+
 <!-- SHARED-CORE:wireframe-quality START -->
 
 **A wireframe is an HTML mockup. The renderer owns the look; you write the

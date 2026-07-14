@@ -1,80 +1,89 @@
-# Updating After PR Review
+# Update a Change After Review
 
-Make changes to a commit after receiving review feedback.
+Apply review feedback to the change that owns the behavior. Do not create a caller-specific workaround in a later change merely to avoid rewriting the target.
 
----
-
-## Procedure
-
-### 1. Find the commit to edit
+## Inspect and preserve navigation points
 
 ```bash
-jj log -r 'master..@'
+jj status
+jj diff --stat
+jj log -r 'trunk() | trunk()..@ | bookmarks()'
+jj bookmark list --all-remotes
+jj log -r 'trunk()..@ & conflicts()'
+jj log -r 'trunk()..@' --no-graph \
+  -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
 ```
 
-### 2. Edit the commit
+Identify the target change, the current working-copy change ID, all affected descendants, and any bookmarks on them. Confirm that local history rewriting is authorized. Choose one update method; do not combine both.
+
+## Alternative A: fixup commit and squash
+
+Prefer this method because it keeps the review edits isolated until they are ready.
 
 ```bash
-jj edit <change-id>
+# create an isolated child of the target
+jj new <target-change-id> -m "fixup: address review feedback"
+
+# edit files, then inspect the fixup
+jj status
+jj diff
+
+# move the fixup into the target without opening an editor
+jj squash --from @ --into <target-change-id> -u
 ```
 
-### 3. Make your changes
-
-Files modified are auto-tracked.
-
-### 4. Create new working copy when done
+The target and its descendants are rewritten. If you need to return to the prior working-copy commit, use its saved change ID:
 
 ```bash
-jj new
+jj edit <saved-working-copy-change-id>
 ```
 
-**Critical:** Without this, future changes keep amending the edited commit!
+Use `jj new <rebased-stack-tip>` instead when the old working-copy commit should not remain the workspace commit.
 
-### 5. Squash review changes into the target commit
+## Alternative B: edit the target directly
 
-If you made review fixes in a new commit on top, squash them back:
+Use this method for a small, well-bounded edit when temporarily making the target the working copy is acceptable:
 
 ```bash
-jj squash -u  # keeps the original commit message, skips editor
+jj edit <target-change-id>
+
+# edit files, then inspect the amended target
+jj status
+jj diff
+
+# return to the exact workspace commit saved during inspection
+jj edit <saved-working-copy-change-id>
 ```
 
-### 6. Verify descendants auto-rebased
+Do not use a bare `jj new` to "return to the stack." It creates a child of whichever revision is currently being edited and may leave the working copy below rebased descendants.
+
+## Verify the update
+
+Inspect graph shape, target content, bookmarks, and conflicts across all affected descendants:
 
 ```bash
-jj log -r 'master..@'
-```
-
-### 7. Update bookmarks if needed
-
-```bash
-jj bookmark set feature -r <change-id>
-```
-
-### 8. Push updates
-
-```bash
-jj git push
-```
-
-Force-push happens automatically. jj handles this safely.
-
-**Note:** Force-push may collapse GitHub review comments into "outdated diff". Consider using `gh pr comment` to summarize addressed feedback.
-
----
-
-## If Descendants Have Conflicts
-
-After editing, descendants may conflict. Check:
-
-```bash
-jj log  # conflicted commits shown
+jj log -r 'trunk() | <target-change-id>::'
+jj diff -r <target-change-id>
+jj log -r '(<target-change-id>::) & conflicts()'
+jj bookmark list --all-remotes
 jj status
 ```
 
-To resolve:
+If conflicts appear, inspect each conflicted revision and its files before resolving:
 
 ```bash
-jj edit <conflicted-commit>
-# fix conflicts in files
-jj new
+jj log -r '(<target-change-id>::) & conflicts()'
+jj resolve --list -r <conflicted-change-id>
 ```
+
+Resolve only within the authorized rewrite scope, then repeat graph, diff, and conflict verification. Run relevant tests at the updated PR tip and at affected descendant PR tips.
+
+Move a bookmark only if verification shows that it no longer identifies the intended PR tip and bookmark mutation is authorized. Push only the reviewed bookmark when publication is authorized:
+
+```bash
+jj bookmark set <feature> -r <intended-tip>
+jj git push --bookmark <feature>
+jj bookmark list --all-remotes
+```
+
+History rewriting may make GitHub inline comments appear outdated. Do not post comments or alter PR state unless requested.

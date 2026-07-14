@@ -70,9 +70,8 @@ screen, or visual comparison, make the canvas the primary home for that static
 visual. When the user asks for a prototype or the plan contains a sequence the
 reviewer must feel, keep the canvas artboards and add `prototype.mdx` so the top
 surface shows Wireframes / Prototype tabs. Architecture/code diagrams stay
-inline in the document (the SKILL.md Visual Surface Choice section owns that
-rule) unless the user explicitly asks for a spatial board. Document blocks
-can explain, compare, or map implementation, but they should not host the
+inline in the document unless the user explicitly asks for a spatial board.
+Document blocks can explain, compare, or map implementation, but they should not host the
 primary UI mockup or prototype just because `custom-html`, screenshots, or prose
 are easier to produce. If the canvas/prototype surface cannot represent the
 requested UI fidelity, still keep the closest top-surface representation and

@@ -6,6 +6,14 @@ pre-handoff check. Read it in full before authoring the plan document; it is the
 quality bar. Do not write the document from memory or paraphrase these rules per
 mode.
 
+## Contents
+
+- Standalone, outcome-first technical plan structure
+- Abstraction level, concrete examples, and visual/document separation
+- Native block selection and prose discipline
+- Open-question placement and recommended defaults
+- Pre-handoff completeness and render checks
+
 <!-- SHARED-CORE:document-quality START -->
 
 **The document is a serious technical plan, not marketing.** Write it the way a
@@ -59,9 +67,9 @@ clean rich document. For a simple binary UI visual choice, show the two
 directions in the canvas only; do not repeat the same options as body
 wireframes or prose. Put the actual choice in the bottom "Open Questions" form.
 
-**Use the right block, and make it carry substance.** For the local Planport
-component list, read `references/blocks.md` before authoring structured MDX so
-you emit canonical tags the renderer can display and round-trip:
+**Use the right block, and make it carry substance.** Use the canonical shapes
+from the block component reference selected by the skill router so the renderer
+can display and round-trip the structured MDX:
 
 - `rich-text` for plan prose with real bold/italic/code/links and nested lists.
 - `annotated-code` for the file map: when a load-bearing file is worth
@@ -119,8 +127,8 @@ you emit canonical tags the renderer can display and round-trip:
   visual unless the tab is intentionally document-only.
 - `data-model`, `api-endpoint`, `json-explorer`, `custom-html`, `mermaid`,
   `table`, `checklist`, and `callout` when the matching native block carries the
-  information better than prose. Use the canonical tags listed in
-  `references/blocks.md`.
+  information better than prose. Use the canonical tags from the block
+  component reference selected by the skill router.
 
 **Open questions live at the bottom as a form when answers would change the
 plan.** Surface answerable unresolved decisions in a final `question-form`

@@ -1,153 +1,110 @@
 # jj Quick Reference
 
-## Essential Commands
+Inspect command help for the installed jj version when behavior matters. Commands marked as mutations require matching user scope.
+
+## Inspection
 
 | Command | Purpose |
-|---------|---------|
-| `jj status` | Working copy status + trigger snapshot |
-| `jj diff` | Changes in working copy |
-| `jj log` | Commit graph |
-| `jj log -r 'master..@'` | Commits since master |
-| `jj file show <path> -r X` | Show file contents at revision X |
+|---|---|
+| `jj root` | Find the repository root |
+| `jj status` | Snapshot and show working-copy status |
+| `jj diff --stat` | Summarize working-copy changes |
+| `jj log -r 'trunk() \| trunk()..@ \| bookmarks()'` | Inspect trunk, local work, and bookmarks |
+| `jj bookmark list --all-remotes` | Compare local and remote bookmarks |
+| `jj git remote list` | List configured Git remotes |
+| `jj log -r 'trunk()..@ & conflicts()'` | Find conflicted local changes |
+| `jj resolve --list -r X` | List conflicted files in X |
+| `jj file show <path> -r X` | Show a file at X |
 
-## Creating & Editing
+## Creating and editing
 
-| Command | Purpose |
-|---------|---------|
-| `jj new` | Create new empty commit on @ |
-| `jj new X` | Create commit based on X |
-| `jj new A B` | Create merge commit |
-| `jj describe -m "msg"` | Set commit message |
-| `jj edit X` | Make X the working copy (edit older commit) |
-| `jj commit -m "msg"` | Describe @ and create new |
+| Command | Effect |
+|---|---|
+| `jj new X` | Create a new working-copy commit on X |
+| `jj new A B` | Create a merge working-copy commit on A and B |
+| `jj describe -m "message"` | Set the working-copy description |
+| `jj commit -m "message"` | Describe the working copy and create a new one |
+| `jj edit X` | Make X the working-copy revision |
 
-## Splitting & Squashing
+`jj edit X` rewrites X as files change. Save the previous working-copy change ID before editing an older change and return with `jj edit <saved-id>`; a bare `jj new` creates a child of X rather than returning to the prior stack tip.
 
-| Command | Purpose |
-|---------|---------|
-| `jj split` | Interactive split |
-| `jj split "glob:pattern"` | Split by file pattern |
-| `jj split -r X` | Split older commit |
-| `jj squash` | Squash @ into parent |
-| `jj squash --into X` | Move @ changes into X |
-| `jj squash -u` / `--use-destination-message` | Squash, keep destination message, skip editor |
-| `jj squash -m "msg"` | Squash with explicit message, skip editor |
+## Splitting and squashing
 
-### Non-Interactive Hunk Selection (`jju sh`)
+| Command | Effect |
+|---|---|
+| `jj split` | Interactively split `@` |
+| `jj split -m "message" <fileset>` | Put selected paths in the first commit without opening a message editor |
+| `jj split -r X` | Split X and rebase descendants |
+| `jj squash --from X --into Y -u` | Move X's changes into Y and retain Y's description |
+| `jj squash -m "message"` | Squash `@` into its parent with an explicit description |
 
-| Command | Purpose |
-|---------|---------|
-| `jju sh --preview` | Show hunks with indices |
-| `jju sh --preview --file F` | Preview hunks in specific file |
-| `jju sh -m "msg" --hunks 0,2` | Split by hunk index |
-| `jju sh -m "msg" --lines 10-50` | Split by line range |
-| `jju sh -m "msg" --pattern "regex"` | Split by pattern match |
-| `jju sh -m "msg" --invert --hunks 0` | Exclude matched hunks |
-| `jju sh --dry-run -m "msg" --hunks 0` | Preview without committing |
-| `jju sh -r X --preview` | Preview hunks in older commit |
-| `jju sh -r X -m "msg" --hunks 0,2` | Split hunks from older commit |
+Preview `jju sh` hunk indices before using `--hunks`, `--lines`, or `--pattern`; selections can change after each split.
 
 ## Rebasing
 
-`-o` is short for `--onto` (NOT `--to`)
+`-o` means `--onto`.
 
-| Command | Purpose |
-|---------|---------|
-| `jj rebase -r X -o Y` | Move commit X onto Y |
-| `jj rebase -s X -o Y` | Move X and descendants onto Y |
-| `jj rebase -o master@origin` | Rebase current work onto latest master |
+| Command | Effect |
+|---|---|
+| `jj rebase -r X -o Y` | Move only X onto Y and close the old graph hole |
+| `jj rebase -s X -o Y` | Move X and all descendants onto Y |
+| `jj rebase -b X -o Y` | Move the branch containing X relative to Y |
+| `jj rebase -r X -A Y` | Insert X after Y |
+| `jj rebase -r X -B Y` | Insert X before Y |
 
-## Bookmarks
+Prefer stable change IDs over positional revisions across multiple rewrites. Use `trunk()` as the destination instead of assuming a branch or remote name.
 
-| Command | Purpose |
-|---------|---------|
-| `jj bookmark create X -r Y` | Create bookmark at commit |
-| `jj bookmark set X -r Y` | Move bookmark |
-| `jj bookmark delete X` | Delete bookmark |
-| `jj bookmark list` | List all bookmarks |
+## Bookmarks and remotes
 
-## Remote Operations
+| Command | Effect |
+|---|---|
+| `jj bookmark create X -r Y` | Create X at Y |
+| `jj bookmark set X -r Y` | Move X to Y |
+| `jj bookmark delete X` | Delete local X; remote deletion is separate |
+| `jj bookmark list --all-remotes` | Inspect local and remote targets |
+| `jj git fetch` | Refresh remote Git state |
+| `jj git push --dry-run --bookmark X` | Preview publication of X |
+| `jj git push --bookmark X` | Publish only X |
 
-| Command | Purpose |
-|---------|---------|
-| `jj git fetch` | Fetch from remote |
-| `jj git push` | Push all tracking bookmarks |
-| `jj git push --bookmark X` | Push specific bookmark |
+Do not fetch, mutate bookmarks, or publish without matching authorization. Avoid bare `jj git push` when only specific bookmarks are in scope.
 
-## Undo & Recovery
+## Undo and recovery
 
-| Command | Purpose |
-|---------|---------|
-| `jj undo` | Undo last operation |
-| `jj op log` | Operation history |
-| `jj op restore X` | Restore to operation X |
+| Command | Effect |
+|---|---|
+| `jj op log` | Inspect local operation history |
+| `jj undo` | Undo the last local operation |
+| `jj op restore X` | Restore repository state to operation X |
 
-## Conflicts
+These commands do not reverse a remote push or a hosting-service action.
 
-| Command | Purpose |
-|---------|---------|
-| `jj resolve` | Open merge tool |
-| `jj resolve --list` | List conflicted files |
-
----
-
-## Revset Expressions
-
-### Symbols
+## Revsets
 
 | Expression | Meaning |
-|------------|---------|
-| `@` | Working copy commit |
-| `@-` | Parent of @ |
-| `@--` | Grandparent |
-| `master` | Main bookmark |
-| `master@origin` | Remote master |
+|---|---|
+| `@` | Working-copy commit |
+| `@-` | Parent of `@` |
+| `trunk()` | Configured default remote's trunk head |
+| `X..Y` | Ancestors of Y that are not ancestors of X |
+| `::X` | X and its ancestors |
+| `X::` | X and its descendants |
+| `roots(X)` | Roots of set X |
+| `heads(X)` | Heads of set X |
+| `X \| Y` | Union |
+| `X & Y` | Intersection |
+| `X ~ Y` | Set difference |
+| `conflicts()` | Revisions containing conflicts |
+| `bookmarks()` | Revisions with local bookmarks |
+| `empty()` | Empty revisions |
 
-### Set Operators
-
-| Operator | Meaning | Example |
-|----------|---------|---------|
-| `x \| y` | Union (in x OR y) | `main \| feature` |
-| `x & y` | Intersection (in x AND y) | `author(me) & files(src)` |
-| `x ~ y` | Difference (in x but NOT y) | `master..@ ~ @` |
-| `~x` | Complement (NOT in x) | `~empty()` |
-
-### Range Operators
-
-| Operator | Meaning |
-|----------|---------|
-| `x..y` | Ancestors of y that aren't ancestors of x |
-| `::x` | All ancestors of x (including x) |
-| `x::` | All descendants of x (including x) |
-| `x-` | Parents of x |
-| `x+` | Children of x |
-
-### Functions
-
-| Function | Meaning |
-|----------|---------|
-| `roots(X)` | Root commits of set X |
-| `heads(X)` | Head commits of set X |
-| `ancestors(X)` | All ancestors including X |
-| `descendants(X)` | All descendants including X |
-| `author(pattern)` | Commits by author |
-| `description(pattern)` | Commits with message matching pattern |
-| `files(pattern)` | Commits touching files |
-| `conflicts()` | Commits with merge conflicts |
-| `empty()` | Empty commits |
-| `bookmarks()` | Commits with bookmarks |
-
----
-
-## Common Patterns
+## Verification pattern
 
 ```bash
-# see what you'll push
-jj log -r 'master..@-'
-
-# get change IDs for scripting
-jj log -r 'master..@-' --no-graph -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
-
-# update and rebase in one go
-jj git fetch && jj rebase -o master@origin
+jj log -r 'trunk() | <affected-revset>'
+jj diff -r <change-id>
+jj log -r '(<affected-revset>) & conflicts()'
+jj bookmark list --all-remotes
+jj status
 ```
+
+No output from the conflict query means the selected revisions are conflict-free. Still run the project's relevant checks at every intended PR tip.

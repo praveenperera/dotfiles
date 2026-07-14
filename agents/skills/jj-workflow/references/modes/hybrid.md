@@ -1,65 +1,69 @@
-# Hybrid Workflow
+# Hybrid PR Graphs
 
-Some commits stacked, some independent.
+Use a hybrid graph when some changes depend on each other and others are independent. For example, A → B → D is a stack while C applies directly to trunk:
 
-Example: A→B stacked, C independent, D depends on B
-
-```
-         ┌── A ─── B ─── D   (stacked: A→B→D)
-master ──┤
-         └── C               (independent)
+```text
+          ┌─ A ── B ── D
+trunk ────┤
+          └─ C
 ```
 
----
-
-## Procedure
-
-### 1. Get change IDs
+## Inspect and model dependencies
 
 ```bash
-jj log -r 'master..@-' --no-graph -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
+jj status
+jj diff --stat
+jj log -r 'trunk() | trunk()..@ | bookmarks()'
+jj bookmark list --all-remotes
+jj log -r 'trunk()..@ & conflicts()'
+jj log -r 'trunk()..@' --no-graph \
+  -T 'change_id.short() ++ " " ++ description.first_line() ++ "\n"'
 ```
 
-### 2. Decide which are stacked vs independent
+Write down the intended parent of every change before rewriting. Confirm that C does not consume A or B and that D depends on B rather than C.
 
-Ask: does this commit depend on another's code?
+## Arrange the graph
 
-### 3. Rebase independent commits onto master
+If the current graph is `trunk → A → B → C → D` and local rewriting is authorized:
 
 ```bash
-jj rebase -r <change-id-C> -o master
+jj rebase -r <C> -o 'trunk()'
+jj rebase -r <D> -o <B>
 ```
 
-### 4. Rebase dependent commits to correct parent
+Use stable change IDs because positional expressions can change after each operation. Verify the whole planned graph and conflict set:
 
 ```bash
-jj rebase -r <change-id-D> -o <change-id-B>
+jj log -r 'trunk() | <A> | <B> | <C> | <D>'
+jj log -r '(<A> | <B> | <C> | <D>) & conflicts()'
 ```
 
-### 5. Create bookmarks and push
+Run relevant checks at B, C, and D. The graph alone cannot prove that C is independent.
+
+## Name and publish
+
+Only when bookmark mutation is authorized:
 
 ```bash
-jj bookmark create feat-a -r <A>
-jj bookmark create feat-b -r <B>
-jj bookmark create feat-c -r <C>
-jj bookmark create feat-d -r <D>
-jj git push
+jj bookmark create <feature-a> -r <A>
+jj bookmark create <feature-b> -r <B>
+jj bookmark create <feature-c> -r <C>
+jj bookmark create <feature-d> -r <D>
+jj bookmark list --all-remotes
 ```
 
-### 6. Create PRs with correct bases
+Only when publication and PR creation are authorized:
 
 ```bash
-gh pr create --head feat-a --base master --title "A"
-gh pr create --head feat-b --base feat-a --title "B"
-gh pr create --head feat-c --base master --title "C (independent)"
-gh pr create --head feat-d --base feat-b --title "D"
+jj git push --bookmark <feature-a>
+jj git push --bookmark <feature-b>
+jj git push --bookmark <feature-c>
+jj git push --bookmark <feature-d>
+
+gh pr create --head <feature-a> --base <trunk-bookmark> --title "<title A>"
+gh pr create --head <feature-b> --base <feature-a> --title "<title B>"
+gh pr create --head <feature-c> --base <trunk-bookmark> --title "<title C>"
+gh pr create --head <feature-d> --base <feature-b> --title "<title D>"
 ```
 
----
-
-## Dev Merge for Combined Work
-
-```bash
-jj new feat-d feat-c -m "dev: all features"
-# work here; edits to specific commits via jj edit
-```
+Determine `<trunk-bookmark>` during inspection. For combined local testing, create a merge working copy from `<D>` and `<C>` only when local mutation is in scope.
