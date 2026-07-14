@@ -6,10 +6,17 @@ import sys
 from pathlib import Path
 
 
-REQUIRED_FILES = ("original-spec.md", "spec.md", "progress.md", "audit.md")
+REQUIRED_FILES = (
+    "original-spec.md",
+    "spec.md",
+    "progress.md",
+    "decisions.md",
+    "audit.md",
+)
 HOT_LIMITS = {
     "spec.md": 200,
     "progress.md": 60,
+    "decisions.md": 100,
     "audit.md": 150,
 }
 SUPPORT_DIRS = ("phases", "audits", "context", "decisions", "evidence")

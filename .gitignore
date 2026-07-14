@@ -5,6 +5,10 @@ zsh_plugins.sh
 zshrc
 nvim/lazy-lock.json
 
+# Python bytecode
+__pycache__/
+*.py[cod]
+
 # .claude machine-specific files
 /claude/.credentials.json
 claude/*.jsonl
@@ -34,7 +38,6 @@ claude/stats-cache.json
 /claude/cache
 /claude/chrome
 /claude/telemetry
-/claude/skills/skill-creator/scripts/__pycache__
 /claude/tasks
 /claude/teams
 /claude/image-cache/
