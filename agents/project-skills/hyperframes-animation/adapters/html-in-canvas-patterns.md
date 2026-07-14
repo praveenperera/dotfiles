@@ -192,7 +192,7 @@ void main() {
 }`;
 
 // Compile, link, setup quad geometry, upload texture...
-// (See registry/blocks/vfx-magnetic/vfx-magnetic.html for complete implementation)
+// The vfx-magnetic registry block contains the complete implementation
 
 // Drive cursor position from GSAP
 var proxy = { cx: 0.2, cy: 0.5, strength: 0.0 };
@@ -226,7 +226,7 @@ tl.to(
 
 **Key technique:** Subdivide the source texture into triangle mesh fragments using BufferGeometry, then animate each fragment's position/rotation with GSAP.
 
-Study `registry/blocks/vfx-shatter/vfx-shatter.html` for the complete 1156-line implementation. The core idea:
+Install the `vfx-shatter` registry block for a complete implementation. The core idea:
 
 ```js
 // 1. Capture content to texture (same boilerplate)
@@ -283,7 +283,7 @@ fragments.forEach(function (frag) {
 
 **Key technique:** Subdivided PlaneGeometry with vertex displacement driven by noise functions in a vertex shader.
 
-Study `registry/blocks/vfx-liquid-background/vfx-liquid-background.html` for the 1244-line implementation. Core idea:
+Install the `vfx-liquid-background` registry block for a complete implementation. The core idea:
 
 ```js
 // Custom vertex shader with wave displacement
@@ -322,7 +322,7 @@ var mesh = new THREE.Mesh(
 
 **When to use:** Product reveal, "entering the app" moment, hero feature introduction.
 
-Study `registry/blocks/vfx-portal/vfx-portal.html` for the complete 863-line implementation.
+Install the `vfx-portal` registry block for a complete implementation.
 
 ---
 

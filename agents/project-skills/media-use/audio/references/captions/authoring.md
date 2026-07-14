@@ -1,5 +1,16 @@
 # Captions
 
+## Contents
+
+- [Transcript source](#transcript-source)
+- [Style detection](#style-detection-when-no-style-specified)
+- [Per-word styling](#per-word-styling)
+- [Script-to-style mapping](#script-to-style-mapping)
+- [Word grouping](#word-grouping)
+- [Positioning and overflow](#positioning)
+- [Caption exits](#caption-exit-guarantee)
+- [Components and constraints](#pre-built-caption-components)
+
 Before authoring: confirm the transcript came from the right Whisper model. CLI default `small.en` silently translates non-English audio — see [`../transcribe.md`](../transcribe.md) → "Language Rule" and [`transcript-handling.md`](transcript-handling.md) for the mandatory quality check.
 
 Analyze spoken content to determine caption style. If user specifies a style, use that. Otherwise, detect tone from the transcript.

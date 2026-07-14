@@ -1,6 +1,16 @@
-# preview, play, render, publish
+# preview, play, present, render, publish
 
 Serve, render, and share commands.
+
+## Contents
+
+- [preview](#preview)
+- [play](#play-lightweight-player)
+- [present](#present-slideshow-decks)
+- [External browsers](#launching-with-an-external-browser)
+- [render](#render)
+- [feedback](#feedback-report-after-rendering)
+- [publish](#publish)
 
 ## preview
 
@@ -73,9 +83,19 @@ npx hyperframes play --port 8080      # custom port
 
 The player's `playback-rate` attribute (preview speed control, drives the timeline's `timeScale`) is clamped to `[0.1, 5]`; values `≤ 0` or non-finite fall back to `1`. This is a preview/playback knob, not a composition `data-*` attribute — authored motion still renders at `1×`.
 
-### Launching with an external browser (preview + play)
+## present (slideshow decks)
 
-Both `preview` and `play` can open inside an explicit Chromium-compatible browser instead of the OS default. Two use cases: isolated Chromium profile, or external CDP attach (DevTools / Playwright / Puppeteer / browser-MCP). **HyperFrames itself does not own CDP automation** — this only exposes the endpoint; whatever connects to it is your problem. Not to be confused with `--browser-gpu` (a `render` flag controlling Chrome GPU access during capture).
+```bash
+npx hyperframes present                  # current deck, port 3004
+npx hyperframes present ./my-deck        # specific project
+npx hyperframes present --port 8080      # custom port
+```
+
+Use `present` for slideshow compositions that need presenter mode and audience synchronization. Like `preview` and `play`, it supports `--open` / `--no-open` and the explicit browser flags below.
+
+## Launching with an external browser
+
+`preview`, `play`, and `present` can open inside an explicit Chromium-compatible browser instead of the OS default. Use this for an isolated Chromium profile or external CDP attachment. This is separate from `render --browser-gpu`.
 
 | Flag                      | Type            | Notes                                                                                                                                                                                           |
 | ------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -108,14 +128,14 @@ npx hyperframes render --format webm                  # transparent WebM
 npx hyperframes render --docker                       # byte-identical
 ```
 
-> Default `--output` is `renders/<project-name>_<YYYY-MM-DD>_<HH-MM-SS>.<ext>` — timestamped per render so successive runs don't clobber each other. Pass `--output` to get a stable name.
+> Default `--output` is `renders/<project-name>.<ext>`. Pass `--output` to choose a different path.
 
 | Flag                                 | Options                                                                                            | Default                        | Notes                                                                                                                                                                                                                                                                                    |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dir` (positional)                   | path                                                                                               | cwd                            | Project directory. Omit to use current working directory.                                                                                                                                                                                                                                |
 | `--composition`, `-c`                | path to composition file                                                                           | `index.html`                   | Render a specific composition file (e.g. `compositions/intro.html`) instead of the project's `index.html`.                                                                                                                                                                               |
-| `--output`, `-o`                     | path                                                                                               | `renders/<project>_<ts>.<ext>` | Output path. Default is timestamped (`<project-name>_YYYY-MM-DD_HH-MM-SS.<ext>`).                                                                                                                                                                                                        |
-| `--fps`                              | 24, 30, 60                                                                                         | 30                             | 60fps doubles render time                                                                                                                                                                                                                                                                |
+| `--output`, `-o`                     | path                                                                                               | `renders/<project>.<ext>`      | Output path.                                                                                                                                                                                                                                                                             |
+| `--fps`                              | integer or ffmpeg rational, 1-240                                                                  | composition `data-fps` or 30   | Rational values support NTSC rates such as `30000/1001`.                                                                                                                                                                                                                                 |
 | `--quality`                          | draft, standard, high                                                                              | standard                       | draft for iterating                                                                                                                                                                                                                                                                      |
 | `--format`                           | mp4, webm, mov, gif, png-sequence                                                                  | mp4                            | WebM/MOV render with transparency; gif for inline autoplay in GitHub PRs/READMEs/docs (two-pass palette encode, fps capped at 30 — prefer `--fps 15` — no audio, 1-bit transparency only, HDR falls back to SDR); png-sequence writes RGBA frames to a directory (AE/Nuke/Fusion ingest) |
 | `--gif-loop`                         | 0-65535                                                                                            | 0                              | GIF loop count; `0` loops forever. Only with `--format gif`.                                                                                                                                                                                                                             |

@@ -16,7 +16,10 @@ import { validateCube, validateCubeFile } from "./cube-validate.mjs";
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..", "..");
 
 function corePresetIdsFromSource() {
-  const src = readFileSync(join(REPO_ROOT, "packages/core/src/colorGrading.ts"), "utf8");
+  const hyperframesRoot = process.env.HYPERFRAMES_REPO || REPO_ROOT;
+  const sourcePath = join(hyperframesRoot, "packages/core/src/colorGrading.ts");
+  if (!existsSync(sourcePath)) return null;
+  const src = readFileSync(sourcePath, "utf8");
   const match = src.match(/export type HfColorGradingPresetId =([\s\S]*?);/);
   assert.ok(match, "core preset union should be readable");
   return [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
@@ -53,8 +56,13 @@ test("library look freezes a validated cube from params offline (--local-only)",
   }
 });
 
-test("preset IDs stay in sync with packages/core/src/colorGrading.ts", () => {
-  assert.deepEqual(CORE_PRESET_IDS, corePresetIdsFromSource());
+test("preset IDs stay in sync with packages/core/src/colorGrading.ts", (t) => {
+  const corePresetIds = corePresetIdsFromSource();
+  if (!corePresetIds) {
+    t.skip("set HYPERFRAMES_REPO to validate against a separate HyperFrames checkout");
+    return;
+  }
+  assert.deepEqual(CORE_PRESET_IDS, corePresetIds);
   for (const id of CORE_PRESET_IDS) {
     const match = matchColorLook(id);
     assert.equal(match.kind, "preset");

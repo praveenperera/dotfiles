@@ -7,6 +7,8 @@ description: "Turn a product or marketing URL, pasted script, or brief into a pr
 
 > **media-use**: Before sourcing audio/images/logos, call `/media-use` to resolve BGM/SFX/images from the HeyGen catalog and brand logos from their official sources. Run `--adopt` first to register existing assets. See `/media-use` skill.
 
+> **figma source**: If the source is a figma.com URL, run `/figma` first to export assets, capture brand tokens, and reconstruct components or storyboard states. Build this workflow from that output. Do not drive Figma through raw MCP tools because that bypasses SVG sanitization, `.media/manifest.jsonl` provenance, and brand-token `var()` bindings.
+
 # Product Launch to HyperFrames
 
 Use this skill to capture a product, understand its brand, plan a launch video, and build it frame by frame in HyperFrames.
@@ -104,7 +106,9 @@ Goal: Generate narration, word timings, music, and audio metadata from the appro
 
 Start audio after Step 3 approval. Run it in the background, then continue to Step 4.
 
-`node <SKILL_DIR>/scripts/audio.mjs --script ./SCRIPT.md --storyboard ./STORYBOARD.md --hyperframes . --out ./audio_meta.json &`
+Choose narration from the user's request before invoking. When the request specifies a voice, gender, or tone, resolve a matching provider-specific voice id and pass `--voice <id>`. The default is Marcia (female) on HeyGen or `am_michael` on Kokoro, so omitting the flag does not honor a different requested voice. List HeyGen voices with `node ../media-use/audio/scripts/heygen-tts.mjs --list` (or `GET /v3/voices?engine=starfish`); for Kokoro, read [`../media-use/audio/references/tts.md`](../media-use/audio/references/tts.md). Omit `--voice` only when the user expressed no preference.
+
+`node <SKILL_DIR>/scripts/audio.mjs --script ./SCRIPT.md --storyboard ./STORYBOARD.md --hyperframes . --out ./audio_meta.json [--voice <voice-id>] &`
 
 The audio script handles narration, word timings, BGM lookup from HeyGen's music library, and timing metadata. BGM mood comes from the storyboard's `music:` field. This uses the HeyGen Audio API for retrieval, not generation, and uses the same `~/.heygen` credential as TTS. For provider details, read `../media-use/audio/references/tts.md`.
 

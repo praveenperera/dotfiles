@@ -45,7 +45,10 @@ Captures a live URL as an editable HyperFrames project: screenshots become layer
 ## skills
 
 ```bash
-npx hyperframes skills    # install HyperFrames skills for AI coding tools
+npx hyperframes skills                 # install all skills to supported AI tools
+npx hyperframes skills check --json    # report stale installed skills
+npx hyperframes skills update          # update installed skills without expanding a partial install
+npx hyperframes skills update <name>   # update and explicitly install named workflow skills
 ```
 
-One-time setup that adds the HyperFrames skill pack (`hyperframes-core`, `-creative`, `-animation`, `-cli`, `-registry`, `-media`, plus the `product-launch-video` and `hyperframes` orchestrators) to the local AI coding environment so agents follow the framework conventions. Re-run after major HyperFrames upgrades.
+Use the bare command for first-time installation. `skills check` and `skills update` accept `--dir` and `--source` for non-default installations or local registry testing. An update preserves a partial installation unless explicit skill names are supplied, and removes installed skills that are no longer published.

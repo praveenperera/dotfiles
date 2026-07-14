@@ -15,10 +15,10 @@ This skill is the **technical contract** — how to build one hyperframes projec
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `references/minimal-composition.md`  | start from the smallest renderable composition skeleton                                                                 |
 | `references/composition-patterns.md` | choose monolithic vs modular; structure a modular `index.html`; pick a sub-comp archetype                               |
-| `references/data-attributes.md`      | look up any `data-*` (root / clip / sub-comp host / legacy aliases); use `class="clip"`                                 |
+| `references/data-attributes.md`      | look up any `data-*` (root / clip / sub-comp host / variable binding / legacy aliases); use `class="clip"`              |
 | `references/tracks-and-clips.md`     | pick `data-track-index`, handle same-track overlap / z-index, time a clip relative to another                           |
 | `references/sub-compositions.md`     | wire a sub-composition (host attrs, `<template>`, per-instance vars) and animate inside it                              |
-| `references/variables-and-media.md`  | declare variables; place `<video>`/`<audio>`, set volume, trim                                                          |
+| `references/variables-and-media.md`  | declare and bind variables; place `<video>`/`<audio>`, set volume, trim                                                 |
 | `references/determinism-rules.md`    | build a seekable timeline; determinism bans; the animatable-property allowlist; layout / text fit                       |
 | `references/full-screen-motion.md`   | author full-frame motion with shared backgrounds                                                                        |
 | `references/storyboard-format.md`    | author a `STORYBOARD.md` plan (+ the parsed manifest)                                                                   |

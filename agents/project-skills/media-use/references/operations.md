@@ -1,5 +1,15 @@
 # Media operations: agent guidance
 
+## Contents
+
+- [Cut and reframe](#cut--trim-keep-a-slice)
+- [Montage and silence cutting](#montage--stitch-join-clips)
+- [Transforms](#transforms-with-a-quality-choice-process)
+- [Transcription and transcript cuts](#transcription-default-parakeet-better-than-whispercpp)
+- [Ducking and loudness](#ducking-declare-in-composition--bake-for-export)
+- [Image generation](#generate-images-local-first-cloud-upsell)
+- [Video generation](#generate-video-local-first-heygen-avatar-upsell)
+
 media-use resolves and remembers assets. For **operating** on them: cutting,
 reframing, stitching, transforming, it does not wrap every action as a bespoke
 command. Instead it points you at the right local tool (decision OP1). Run the
@@ -207,7 +217,9 @@ avatar upsell (decision X3).
   Verified on 24GB: 512x320 x 33f with audio.
 - **HeyGen avatar upsell (better, script-driven): the `heygen` CLI**, NOT the
   raw API. For a talking-head / avatar video, `heygen video create` (avatar
-  engine IV by default) beats a generative clip when you want a real presenter:
+  engine IV by default) beats a generative clip when you want a real presenter.
+  Browser OAuth uses the web-plan/free avatar-video allowance where eligible;
+  API keys follow the normal API billing path:
 
   ```bash
   # discover an avatar + a starfish voice, then create + wait

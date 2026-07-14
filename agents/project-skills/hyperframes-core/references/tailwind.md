@@ -1,5 +1,16 @@
 # HyperFrames Tailwind
 
+## Contents
+
+- [When to use](#when-to-use)
+- [Version contract](#version-contract)
+- [v4 browser runtime rules](#v4-browser-runtime-rules)
+- [Composition pattern](#composition-pattern)
+- [Dynamic class safety](#dynamic-class-safety)
+- [Video-specific guardrails](#video-specific-guardrails)
+- [Validation](#validation)
+- [Quick debug checklist](#quick-debug-checklist)
+
 HyperFrames `init --tailwind` uses the Tailwind browser runtime pinned by the scaffold. Treat it as Tailwind v4, not Studio's Tailwind v3 setup.
 
 ## When To Use

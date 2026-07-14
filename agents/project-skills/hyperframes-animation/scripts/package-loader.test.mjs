@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -22,16 +22,33 @@ test("hyperframesPackageSpec: env override wins", async () => {
   }
 });
 
-// (b) resolvable version (in-repo) pins the bundled hyperframes/@hyperframes/cli version.
-test("hyperframesPackageSpec: resolvable in-repo version pins it", async () => {
-  const prev = process.env[ENV];
-  delete process.env[ENV];
+// (b) an ancestor hyperframes manifest pins the bundled version
+test("hyperframesPackageSpec: ancestor manifest pins it", () => {
+  const dir = mkdtempSync(join(tmpdir(), "hf-pkgloader-version-"));
   try {
-    const { hyperframesPackageSpec } = await import("./package-loader.mjs");
-    const spec = hyperframesPackageSpec("@hyperframes/producer");
-    assert.match(spec, /^@hyperframes\/producer@\d+\.\d+\.\d+/);
+    const scriptDir = join(dir, "skills", "hyperframes-animation", "scripts");
+    mkdirSync(scriptDir, { recursive: true });
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "hyperframes", version: "1.2.3" }),
+    );
+    copyFileSync(join(HERE, "package-loader.mjs"), join(scriptDir, "package-loader.mjs"));
+    const probe = join(scriptDir, "probe.mjs");
+    writeFileSync(
+      probe,
+      [
+        'import { hyperframesPackageSpec } from "./package-loader.mjs";',
+        'process.stdout.write(hyperframesPackageSpec("@hyperframes/producer"));',
+        "",
+      ].join("\n"),
+    );
+    const env = { ...process.env };
+    delete env[ENV];
+    const res = spawnSync(process.execPath, [probe], { cwd: dir, env, encoding: "utf8" });
+    assert.equal(res.status, 0, res.stderr);
+    assert.equal(res.stdout.trim(), "@hyperframes/producer@1.2.3");
   } finally {
-    if (prev !== undefined) process.env[ENV] = prev;
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 

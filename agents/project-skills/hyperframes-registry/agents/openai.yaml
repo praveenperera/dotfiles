@@ -1,4 +1,4 @@
 interface:
   display_name: "HyperFrames Registry"
-  short_description: "Install and wire HyperFrames registry blocks"
-  default_prompt: "Use $hyperframes-registry to install and wire HyperFrames registry blocks."
+  short_description: "Discover and wire HyperFrames registry items"
+  default_prompt: "Use $hyperframes-registry to discover, install, and wire a registry item."

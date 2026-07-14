@@ -38,7 +38,7 @@ These cause real bugs if violated.
 
 ## Shader Transitions
 
-Shader setup, WebGL init, capture, and fragment shaders are handled by `@hyperframes/shader-transitions` (`packages/shader-transitions/`). Read the package source for API details. Compositions using shaders must follow the shader-compatible CSS rules in `overview.md` (this directory).
+Shader setup, WebGL initialization, capture, and fragment shaders are handled by `@hyperframes/shader-transitions`. Inspect the installed package for API details. Compositions using shaders must follow the [shader-compatible CSS rules](overview.md#shader-compatible-css-rules).
 
 ## Scene Template
 
@@ -106,22 +106,22 @@ All code examples use `old` for the outgoing scene-inner selector and `new` for 
 
 | Type           | Transitions                                          | Reference                        |
 | -------------- | ---------------------------------------------------- | -------------------------------- |
-| Push           | Push slide, vertical push, elastic push, squeeze     | `transitions/css-push.md`        |
-| Radial / Shape | Circle iris, diamond iris, diagonal split            | `transitions/css-radial.md`      |
-| 3D             | 3D card flip                                         | `transitions/css-3d.md`          |
-| Scale / Zoom   | Zoom through, zoom out                               | `transitions/css-scale.md`       |
-| Dissolve       | Crossfade, blur crossfade, focus pull, color dip     | `transitions/css-dissolve.md`    |
-| Cover          | Staggered blocks, horizontal blinds, vertical blinds | `transitions/css-cover.md`       |
-| Light          | Light leak, overexposure burn, film burn             | `transitions/css-light.md`       |
-| Distortion     | Glitch, chromatic aberration, ripple, VHS tape       | `transitions/css-distortion.md`  |
-| Mechanical     | Shutter, clock wipe                                  | `transitions/css-mechanical.md`  |
-| Grid           | Grid dissolve                                        | `transitions/css-grid.md`        |
-| Other          | Gravity drop, morph circle                           | `transitions/css-other.md`       |
-| Blur           | Blur through, directional blur                       | `transitions/css-blur.md`        |
-| Destruction    | Page burn                                            | `transitions/css-destruction.md` |
+| Push           | Push slide, vertical push, elastic push, squeeze     | [Push](css-push.md)               |
+| Radial / Shape | Circle iris, diamond iris, diagonal split            | [Radial](css-radial.md)           |
+| 3D             | 3D card flip                                         | [3D](css-3d.md)                   |
+| Scale / Zoom   | Zoom through, zoom out                               | [Scale](css-scale.md)             |
+| Dissolve       | Crossfade, blur crossfade, focus pull, color dip     | [Dissolve](css-dissolve.md)       |
+| Cover          | Staggered blocks, horizontal blinds, vertical blinds | [Cover](css-cover.md)             |
+| Light          | Light leak, overexposure burn, film burn             | [Light](css-light.md)             |
+| Distortion     | Glitch, chromatic aberration, ripple, VHS tape       | [Distortion](css-distortion.md)   |
+| Mechanical     | Shutter, clock wipe                                  | [Mechanical](css-mechanical.md)   |
+| Grid           | Grid dissolve                                        | [Grid](css-grid.md)               |
+| Other          | Gravity drop, morph circle                           | [Other](css-other.md)             |
+| Blur           | Blur through, directional blur                       | [Blur](css-blur.md)               |
+| Destruction    | Page burn                                            | [Destruction](css-destruction.md) |
 
 ## Shader Transitions
 
-WebGL shader transitions are provided by `@hyperframes/shader-transitions` (`packages/shader-transitions/`). The package handles setup, capture, WebGL init, render loop, and GSAP integration. Read the package source for available shaders and API — do not copy raw GLSL manually.
+WebGL shader transitions are provided by `@hyperframes/shader-transitions`. The package handles setup, capture, WebGL initialization, the render loop, and GSAP integration. Inspect the installed package for available shaders and APIs; do not copy raw GLSL manually.
 
 The built-ins are not a ceiling. For an effect no built-in covers, you can write custom GLSL from scratch, adapt shader code found online (ShaderToy, GLSL Sandbox, GitHub), or build a custom CSS transition that fits no existing category — combine clip-path, transforms, and filters in new ways. If the storyboard calls for an effect that doesn't exist yet, build it; the framework renders anything a browser can run.

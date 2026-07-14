@@ -1,5 +1,14 @@
 # Sub-Compositions
 
+## Contents
+
+- [Host wiring](#host-wiring)
+- [Sub-composition file structure](#sub-composition-file-structure)
+- [Common render-time pitfalls](#common-pitfalls-that-pass-static-checks-but-break-at-render)
+- [What HyperFrames does with the sub-composition](#what-hyperframes-does-with-the-sub-composition)
+- [Animations inside sub-compositions](#animations-inside-sub-compositions)
+- [Per-instance variables](#per-instance-variables)
+
 A sub-composition is a separate HTML file embedded in a host composition. HyperFrames loads it, seeks it independently, and composites the result into the host at `data-start`.
 
 ## Host Wiring

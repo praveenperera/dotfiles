@@ -1,5 +1,12 @@
 # Registry Discovery
 
+## Contents
+
+- [Reading the registry manifest](#reading-the-registry-manifest)
+- [Reading an item's manifest](#reading-an-items-manifest)
+- [Item manifest fields](#item-manifest-fields)
+- [Selected items](#selected-items)
+
 ## Reading the registry manifest
 
 The top-level `registry.json` lists all available items:
@@ -34,11 +41,11 @@ Where `<type-dir>` is `examples`, `blocks`, or `components`.
 | `files`                | array    | yes      | Files to install (`path`, `target`, `type`)    |
 | `registryDependencies` | string[] | no       | Other registry items this depends on           |
 
-## Available items
+## Selected items
 
 ### Blocks
 
-For an always-current list run `npx hyperframes catalog --type block`. The tables below group the 97 blocks by category. **Block name ≠ shader name**: shader-transition blocks (e.g. `domain-warp-dissolve`) wrap a HyperShader runtime whose internal name omits the `-dissolve`/`-warp` suffix — see the showcase HTML installed alongside the block for the canonical name.
+For an always-current list run `npx hyperframes catalog --type block --json`. The tables below are a curated selection, not an exhaustive manifest. **Block name ≠ shader name**: shader-transition blocks (e.g. `domain-warp-dissolve`) wrap a HyperShader runtime whose internal name omits the `-dissolve`/`-warp` suffix — see the showcase HTML installed alongside the block for the canonical name.
 
 #### Shader transitions (14)
 
@@ -204,6 +211,8 @@ The richer, motion-first counterpart to the static `code-snippet-*` window theme
 | `code-particle-assemble` | Thousands of GPU points fly to the exact glyph pixels and resolve into readable syntax-highlighted code         |
 
 ### Components
+
+Run `npx hyperframes catalog --type component --json` for the complete current list; these are representative components.
 
 | Name                 | Description                                                                                               | Tags                                             |
 | -------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |

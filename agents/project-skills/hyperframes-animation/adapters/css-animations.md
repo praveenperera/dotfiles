@@ -137,7 +137,7 @@ npx hyperframes validate
 
 ## Credits And References
 
-- HyperFrames adapter source: `packages/core/src/runtime/adapters/css.ts`.
-- Duration auto-inference: `packages/core/src/runtime/init.ts` (`resolveAdapterDurationFloorSeconds`), `getInferredDurationSeconds` in the adapter above.
+- HyperFrames core CSS adapter implementation.
+- HyperFrames core duration inference through `resolveAdapterDurationFloorSeconds` and the adapter's `getInferredDurationSeconds`.
 - MDN CSS animation documentation: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/animation
 - MDN `animation-fill-mode`: https://developer.mozilla.org/en-US/docs/Web/CSS/animation-fill-mode

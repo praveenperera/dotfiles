@@ -8,6 +8,14 @@ npx hyperframes lambda render ./my-project --width 1920 --height 1080 --wait
 npx hyperframes lambda destroy
 ```
 
+## Contents
+
+- [When to use Lambda](#when-to-use-lambda-vs-local-render)
+- [Prerequisites](#prerequisites)
+- [Subcommands](#subcommands)
+- [State files](#state-files)
+- [Cost and cleanup](#cost-and-cleanup)
+
 ## When to Use Lambda vs Local Render
 
 - **Local `render`** — dev-loop iteration, single host, anything under a few minutes at 1080p.
@@ -71,7 +79,7 @@ Starts a Step Functions execution. Returns immediately with a `renderId` unless 
 | `--width` / `--height`  | Output dimensions in pixels                                                                                                                                                                                                                                                                                                                                   |
 | `--output-resolution`   | Supersampling preset (engages Chrome `deviceScaleFactor`) — `landscape` / `landscape-4k` / `portrait` / `portrait-4k` / `square` / `square-4k`, plus aliases (`1080p`, `4k`, `uhd`, `hd`, `1080p-portrait`, `4k-portrait`, `1080p-square`, `4k-square`). Use this to render an authored-at-1080p composition at 4K without re-laying-out — see footgun below. |
 | `--fps`                 | `24` / `30` / `60`                                                                                                                                                                                                                                                                                                                                            |
-| `--format`              | `mp4` / `mov` / `png-sequence` (default `mp4`)                                                                                                                                                                                                                                                                                                                |
+| `--format`              | `mp4` / `mov` / `png-sequence` / `webm` (default `mp4`)                                                                                                                                                                                                                                                                                                       |
 | `--codec`               | `h264` / `h265` (mp4 only)                                                                                                                                                                                                                                                                                                                                    |
 | `--quality`             | `draft` / `standard` / `high`                                                                                                                                                                                                                                                                                                                                 |
 | `--chunk-size`          | Frames per chunk (default `240`)                                                                                                                                                                                                                                                                                                                              |

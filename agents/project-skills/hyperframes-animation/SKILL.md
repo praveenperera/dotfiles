@@ -7,43 +7,43 @@ description: "All animation knowledge for HyperFrames — atomic motion rules, m
 
 All motion knowledge in one skill: **rules** (atomic recipes), **blueprints** (multi-phase scene templates), **transitions** (scene-to-scene), **techniques** (broader motion-design patterns), and **adapters** (per-runtime APIs).
 
-For the composition contract (data attributes, sub-compositions, determinism) see `hyperframes-core`.
+For the composition contract (data attributes, sub-compositions, determinism), use `hyperframes-core`.
 
 ## Default: compose atomic rules
 
-Pick 2-4 rules from `rules-index.md`, glue them together with a single paused GSAP timeline, done. This is faster and produces less code than starting from a blueprint.
+Pick 2-4 rules from the [rules index](rules-index.md) and compose them with a single paused GSAP timeline. This is faster and produces less code than starting from a blueprint.
 
 ## Load a blueprint when
 
 - The scene matches an existing pre-designed multi-phase template (brand-reveal, social-proof, etc.) and reusing its phase pipeline saves real authoring time
 - You want runnable ground-truth code for a complex 4-5 phase choreography
 
-Blueprints live in `blueprints-index.md`. Each entry points to `blueprints/<id>.md` (recipe). Do not read it speculatively; load it when you've already decided you need scene-level orchestration.
+Blueprints live in the [blueprints index](blueprints-index.md). Each entry points to one recipe and, where available, runnable example HTML with relative bundled assets. Do not load a blueprint speculatively; use one only after deciding that scene-level orchestration is needed.
 
 ## Routing
 
 | Want to…                                                                       | Read                                                |
 | ------------------------------------------------------------------------------ | --------------------------------------------------- |
-| Pick an atomic motion pattern by trigger / tag                                 | `rules-index.md`                                    |
-| Read one rule's full HTML / CSS / GSAP recipe                                  | `rules/<name>.md`                                   |
-| Pick a multi-phase scene template                                              | `blueprints-index.md`                               |
-| Read one blueprint's full recipe                                               | `blueprints/<id>.md`                                |
-| Author a scene transition (CSS-driven, between two clips)                      | `transitions/overview.md`, `transitions/catalog.md` |
-| Look up a broader motion-design technique                                      | `techniques.md`                                     |
-| Analyze an existing composition's animation map                                | `scripts/animation-map.mjs`                         |
-| GSAP API — timeline / tweens / position parameters                             | `adapters/gsap.md`                                  |
-| GSAP — drop-in effect recipes                                                  | `rules/gsap-effects.md`                             |
-| GSAP — transforms / perf                                                       | `adapters/gsap-transforms-and-perf.md`              |
-| GSAP — eases / stagger                                                         | `adapters/gsap-easing-and-stagger.md`               |
-| GSAP — timeline / labels                                                       | `adapters/gsap-timeline-and-labels.md`              |
-| Lottie / dotLottie (After Effects exports, `window.__hfLottie`)                | `adapters/lottie.md`                                |
-| Three.js / WebGL (3D scenes, `AnimationMixer`, `hf-seek`)                      | `adapters/three.md`                                 |
-| Anime.js (`window.__hfAnime`)                                                  | `adapters/animejs.md`                               |
-| CSS keyframes (`animation-delay` / `play-state` / `fill-mode`)                 | `adapters/css-animations.md`                        |
-| Web Animations API (`element.animate()`, `currentTime` seek)                   | `adapters/waapi.md`                                 |
-| TypeGPU / WebGPU (`navigator.gpu`, WGSL, compute pipelines)                    | `adapters/typegpu.md`                               |
-| HTML-as-texture + WebGL/GLSL post-fx (capture live DOM via `drawElementImage`) | `adapters/html-in-canvas-patterns.md`               |
-| Named text-animation effects (24 IDs via external `animate-text` skill)        | `adapters/animate-text.md`                          |
+| Pick an atomic motion pattern by trigger or tag                                | [Rules index](rules-index.md)                                                   |
+| Read one rule's full HTML, CSS, and GSAP recipe                                | Follow its direct link from the [rules index](rules-index.md)                   |
+| Pick a multi-phase scene template                                              | [Blueprints index](blueprints-index.md)                                         |
+| Read one blueprint and its runnable example                                    | Follow its direct links from the [blueprints index](blueprints-index.md)        |
+| Author a scene transition between two clips                                    | [Transition overview](transitions/overview.md) and [catalog](transitions/catalog.md) |
+| Look up a broader motion-design technique                                      | [Techniques](techniques.md)                                                     |
+| Analyze an existing composition's animation map                                | [Animation-map script](scripts/animation-map.mjs)                               |
+| GSAP timeline, tweens, and position parameters                                 | [GSAP adapter](adapters/gsap.md)                                                |
+| GSAP drop-in effect recipes                                                    | [GSAP effects](rules/gsap-effects.md)                                           |
+| GSAP transforms and performance                                                | [Transform guide](adapters/gsap-transforms-and-perf.md)                         |
+| GSAP eases and stagger                                                         | [Easing guide](adapters/gsap-easing-and-stagger.md)                             |
+| GSAP timeline and labels                                                       | [Timeline guide](adapters/gsap-timeline-and-labels.md)                          |
+| Lottie or dotLottie (`window.__hfLottie`)                                      | [Lottie adapter](adapters/lottie.md)                                            |
+| Three.js or WebGL (`AnimationMixer`, `hf-seek`)                                | [Three.js adapter](adapters/three.md)                                           |
+| Anime.js (`window.__hfAnime`)                                                  | [Anime.js adapter](adapters/animejs.md)                                         |
+| CSS keyframes                                                                  | [CSS animation adapter](adapters/css-animations.md)                             |
+| Web Animations API (`element.animate()`, `currentTime`)                        | [WAAPI adapter](adapters/waapi.md)                                              |
+| TypeGPU or WebGPU (`navigator.gpu`, WGSL, compute pipelines)                   | [TypeGPU adapter](adapters/typegpu.md)                                          |
+| HTML-as-texture with WebGL or GLSL post-effects                                | [HTML-in-canvas patterns](adapters/html-in-canvas-patterns.md)                   |
+| Named text-animation effects                                                  | [Text-effects adapter](adapters/animate-text.md)                                |
 
 ## Picking a runtime
 
