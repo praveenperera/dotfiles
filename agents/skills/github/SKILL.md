@@ -1,6 +1,6 @@
 ---
 name: github
-description: Read-only triage and routing for GitHub repositories, pull requests, issues, patches, and review comments through the connected GitHub app, local git, and compact prc exports. Use for general GitHub orientation or summaries before choosing a mutation, review-fix, CI, or publishing workflow.
+description: Read-only triage and routing for GitHub repositories, pull requests, issues, patches, and review comments through the connected GitHub app and local git. Use for general GitHub orientation or summaries before choosing a mutation, review-fix, CI, or publishing workflow.
 ---
 
 # GitHub
@@ -35,25 +35,9 @@ next action:
 Do not infer unresolved-thread state from flat comments. Do not claim that a
 comment is current merely because it references a line in an older diff.
 
-## Compact review-comment export
-
-When `prc` is installed and a compact flat export is useful, run one of:
-
-```bash
-prc 123 --compact
-prc https://github.com/OWNER/REPO/pull/123 --compact
-prc OWNER/REPO 123 --compact
-```
-
-Use `--code-only` when a large export needs filtering to code-referenced
-comments. Treat this output as evidence about comment text, author, chronology,
-and recorded code references only. `prc` cannot determine review-thread
-resolution or reliably establish whether a comment is outdated against the
-current diff. Route any task that depends on those states to
-`../gh-address-comments/SKILL.md`, which performs thread-aware inspection.
-
 ## Route
 
+- Compact PR review-comment export via `prc`: `../pr-review-comments/SKILL.md`
 - Unresolved threads, requested changes, inline feedback, or implementing
   review fixes: `../gh-address-comments/SKILL.md`
 - Failing GitHub Actions checks or log diagnosis: `../gh-fix-ci/SKILL.md`
