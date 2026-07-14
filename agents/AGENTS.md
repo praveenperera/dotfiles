@@ -42,7 +42,7 @@
 
 - Delegate bounded, context-isolated work only when it is likely to reduce total context, cost, or elapsed time.
 - Give each worker a self-contained objective, evidence surface, relevant files or commands, constraints, ownership boundary, expected concise result, and an appropriate effort and runtime budget. Prefer phase-sized, non-overlapping slices.
-- When the runtime supports it, default to non-forked delegation (`fork_turns="none"` in Codex). Fork only the smallest recent context that cannot be supplied explicitly.
+- Launch Codex subagents with `agents.spawn_agent` and `fork_turns="none"` by default. Fork only the smallest recent context that cannot be supplied explicitly.
 - Where supported, use `low` effort for simple mechanical work, `medium` by default, `high` for complex work and reviews, and `xhigh` only for exceptional architectural, safety-critical, or unusually ambiguous work.
 - Bound reviews by scope, effort, evidence, runtime, and maximum rounds. Prefer one broad review and at most one targeted follow-up; do not repeat broad reviews until one reports no findings.
 - Keep architecture, integration, known-finding repair, and final verification with the primary agent. Inspect delegated results before relying on them, avoid duplicating active work, and proceed once the results needed for the next step are available.
