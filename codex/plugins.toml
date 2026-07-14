@@ -1,5 +1,1 @@
 version = 1
-
-[[plugins]]
-selector = "codex-supervisor@codex-supervisor-local"
-marketplace_source = "../codex-supervisor"
