@@ -1,6 +1,7 @@
 ---
 name: pr-review-comments
-description: Fetch and analyze GitHub PR review comments and code-level feedback using the prc CLI. Use whenever the user mentions PR comments, PR feedback, reviewer feedback, review comments, checking what reviewers said, loading PR comment context, or working from PR revisions. Accepts PR numbers (auto-detects repo), PR URLs, or owner/repo format.
+description: Fetch and analyze GitHub PR review comments and code-level feedback using the prc CLI. Accepts PR numbers (auto-detects repo), PR URLs, or owner/repo format.
+disable-model-invocation: true
 ---
 
 # PR Review Comments

@@ -1,6 +1,7 @@
 ---
 name: delegate-glm
-description: "Explicit-only helper for delegating coding work or read-only analysis to OpenCode with Z.ai Coding Plan GLM 5.2. Use only when the user explicitly invokes $delegate-glm or explicitly asks to delegate to OpenCode Z.ai Coding Plan / zai-coding-plan/glm-5.2."
+description: "Helper for delegating coding work or read-only analysis to OpenCode with Z.ai Coding Plan GLM 5.2."
+disable-model-invocation: true
 ---
 
 # Delegate GLM

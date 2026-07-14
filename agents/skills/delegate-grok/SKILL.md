@@ -1,6 +1,7 @@
 ---
 name: delegate-grok
-description: "Explicit-only helper for delegating coding work or read-only analysis to the Grok CLI (grok-4.5). Use only when the user explicitly invokes $delegate-grok or explicitly asks to delegate to Grok / the Grok CLI."
+description: "Helper for delegating coding work or read-only analysis to the Grok CLI (grok-4.5)."
+disable-model-invocation: true
 ---
 
 # Delegate Grok
