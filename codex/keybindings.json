@@ -5,10 +5,10 @@
   },
   {
     "command": "globalDictationHold",
-    "key": null
+    "key": "Command+F1"
   },
   {
     "command": "globalDictationToggle",
-    "key": null
+    "key": "Command+F2"
   }
 ]
