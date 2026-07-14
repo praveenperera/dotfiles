@@ -14,6 +14,7 @@ const MARKETPLACE_MANIFEST_PATH: &str = ".agents/plugins/marketplace.json";
 #[serde(deny_unknown_fields)]
 struct DesiredState {
     version: u32,
+    #[serde(default)]
     plugins: Vec<DesiredPlugin>,
 }
 
@@ -117,6 +118,10 @@ impl Reconciler {
         }
 
         let desired = self.read_desired_state()?;
+        if desired.plugins.is_empty() {
+            return Ok(());
+        }
+
         let resolved = desired
             .plugins
             .iter()
@@ -416,6 +421,16 @@ esac
             fixture.calls(),
             vec!["plugin marketplace list --json", "plugin list --json"]
         );
+    }
+
+    #[test]
+    fn accepts_empty_plugin_desired_state() {
+        let fixture = Fixture::new(r#"{"marketplaces":[]}"#, r#"{"installed":[]}"#);
+        fs::write(&fixture.reconciler.desired_state_path, "version = 1\n").unwrap();
+
+        fixture.reconciler.reconcile().unwrap();
+
+        assert!(fixture.calls().is_empty());
     }
 
     #[test]

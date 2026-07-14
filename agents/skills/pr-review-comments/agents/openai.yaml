@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Review Comments"
+  short_description: "Fetch GitHub PR review comments with prc"
+  default_prompt: "Use $pr-review-comments to fetch and summarize PR review feedback."
