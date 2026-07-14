@@ -182,15 +182,24 @@ fn build_link_specs(home: &Path, dotfiles_dir: &Path) -> Result<Vec<LinkSpec>> {
         target: vscode_user_dir.join("keybindings.json"),
     });
 
-    for entry in CUSTOM_CONFIG_DIR_ENTRIES {
-        let src_dir = dotfiles_dir.join(entry.source);
-        let dest_dir = home.join(entry.target);
+    for managed in CUSTOM_CONFIG_DIR_ENTRIES {
+        let src_dir = dotfiles_dir.join(managed.source);
+        let dest_dir = home.join(managed.target);
 
         for entry in fs::read_dir(&src_dir)? {
             let entry = entry?;
+            let name = entry.file_name();
+            if managed
+                .exclude
+                .iter()
+                .any(|excluded| name.as_os_str() == *excluded)
+            {
+                continue;
+            }
+
             specs.push(LinkSpec {
                 source: entry.path(),
-                target: dest_dir.join(entry.file_name()),
+                target: dest_dir.join(name),
             });
         }
     }
@@ -362,10 +371,17 @@ fn prune_managed_dir_entry(
     let managed_entries = fs::read_dir(source_dir)?
         .map(|entry| entry.map(|entry| entry.file_name()))
         .collect::<std::io::Result<HashSet<OsString>>>()?;
+    let excluded_entries = entry
+        .exclude
+        .iter()
+        .map(|name| OsString::from(*name))
+        .collect::<HashSet<_>>();
 
     for target_entry in fs::read_dir(target_dir)? {
         let target_entry = target_entry?;
-        if managed_entries.contains(&target_entry.file_name()) {
+        let file_name = target_entry.file_name();
+        let is_excluded = excluded_entries.contains(&file_name);
+        if managed_entries.contains(&file_name) && !is_excluded {
             continue;
         }
 
@@ -494,11 +510,77 @@ mod tests {
         let entry = ManagedDirEntry {
             source: "agents/skills",
             target: ".codex/skills",
+            exclude: &[],
         };
 
         prune_managed_dir_entry(&source_dir, &target_dir, &dotfiles_dir, &entry).unwrap();
 
         assert!(unmanaged_dir.is_dir());
+    }
+
+    #[test]
+    fn excludes_codex_skill_entries_from_link_specs() {
+        let dir = tempdir().unwrap();
+        let home = dir.path().join("home");
+        let dotfiles_dir = dir.path().join("dotfiles");
+        let skills_dir = dotfiles_dir.join("agents/skills");
+
+        fs::create_dir_all(&home).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("agents")).unwrap();
+        fs::create_dir_all(skills_dir.join("git-commit")).unwrap();
+        fs::create_dir_all(skills_dir.join("pr-review-toolkit")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("zed/snippets")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("zed/themes")).unwrap();
+        fs::write(dotfiles_dir.join("zed/settings.json"), "{}").unwrap();
+        fs::write(dotfiles_dir.join("zed/keymap.json"), "[]").unwrap();
+        fs::write(dotfiles_dir.join("zed/tasks.json"), "[]").unwrap();
+        fs::write(dotfiles_dir.join("zed/debug.json"), "[]").unwrap();
+
+        let specs = build_link_specs(&home, &dotfiles_dir).unwrap();
+
+        assert!(specs.iter().any(|spec| {
+            spec.source == skills_dir.join("git-commit")
+                && spec.target == home.join(".codex/skills/git-commit")
+        }));
+        assert!(!specs.iter().any(|spec| {
+            spec.source == skills_dir.join("pr-review-toolkit")
+                || spec.target == home.join(".codex/skills/pr-review-toolkit")
+        }));
+        // Still linked for shared agents tooling
+        assert!(specs.iter().any(|spec| {
+            spec.source == skills_dir && spec.target == home.join(".agents/skills")
+        }));
+    }
+
+    #[test]
+    fn prunes_excluded_managed_symlinks_from_target_dir() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempdir().unwrap();
+        let dotfiles_dir = dir.path().join("dotfiles");
+        let source_dir = dotfiles_dir.join("agents/skills");
+        let target_dir = dir.path().join("target");
+        let excluded_source = source_dir.join("pr-review-toolkit");
+        let excluded_target = target_dir.join("pr-review-toolkit");
+        let kept_source = source_dir.join("git-commit");
+        let kept_target = target_dir.join("git-commit");
+
+        fs::create_dir_all(&excluded_source).unwrap();
+        fs::create_dir_all(&kept_source).unwrap();
+        fs::create_dir_all(&target_dir).unwrap();
+        symlink(&excluded_source, &excluded_target).unwrap();
+        symlink(&kept_source, &kept_target).unwrap();
+
+        let entry = ManagedDirEntry {
+            source: "agents/skills",
+            target: ".codex/skills",
+            exclude: &["pr-review-toolkit"],
+        };
+
+        prune_managed_dir_entry(&source_dir, &target_dir, &dotfiles_dir, &entry).unwrap();
+
+        assert!(!excluded_target.exists());
+        assert!(kept_target.is_symlink());
     }
 
     #[test]

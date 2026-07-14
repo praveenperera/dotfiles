@@ -175,16 +175,21 @@ const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
 struct ManagedDirEntry {
     source: &'static str,
     target: &'static str,
+    /// Entry names under `source` that should not be linked into `target`
+    exclude: &'static [&'static str],
 }
 
 const CUSTOM_CONFIG_DIR_ENTRIES: &[ManagedDirEntry] = &[
     ManagedDirEntry {
         source: "agents",
         target: ".agents",
+        exclude: &[],
     },
     ManagedDirEntry {
         source: "agents/skills",
         target: ".codex/skills",
+        // Shared skill for other agents (Grok/OpenCode); keep out of Codex
+        exclude: &["pr-review-toolkit"],
     },
 ];
 
