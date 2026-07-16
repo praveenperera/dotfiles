@@ -8,3 +8,6 @@
 [2026-07-16T15:41:23.490Z] [bg] bg spawned ca93b498 (spare)
 [2026-07-16T15:41:23.492Z] [bg] bg spare spawned host pid=51333
 [2026-07-16T15:41:30.654Z] [bg] bg settled ca93b498 (killed)
+[2026-07-16T16:42:23.373Z] [bg] bg settled a1b8e865 (done)
+[2026-07-16T16:42:28.374Z] [supervisor] idle 5s with no clients — exiting
+[2026-07-16T16:42:28.375Z] [supervisor] shutting down (cause=idle_exit, uptime=3665s, leases=0, live_workers=0)

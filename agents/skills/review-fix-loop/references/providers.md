@@ -223,7 +223,7 @@ When provider output exists only as GitHub comments, collect it without changing
 
 ```bash
 gh pr view --json number,url,headRefName,baseRefName
-prc "$pr_number" --compact --code-only
+prc "$pr_number" --compact --code-only --unresolved-only
 ```
 
-Use `prc` for flat context and `gh-address-comments` when thread status or anchors matter. Posting comments, applying labels, and resolving threads each require the independent authorization recorded by the orchestrator.
+Use `prc` for grouped thread state and anchors, then follow `gh-address-comments` for fix implementation. Posting comments, applying labels, and resolving threads each require the independent authorization recorded by the orchestrator.
