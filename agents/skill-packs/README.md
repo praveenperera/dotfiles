@@ -51,9 +51,10 @@ cmd pack add video
 ```
 
 Do not also keep a vendored copy under `agents/skills`, because `cmd cfg`
-syncs that directory into `~/.codex/skills` as global skills. Plugin-backed
-packs should point at the installed plugin cache through `plugin_sources` so
-`cmd pack refresh` can update links after Codex updates plugins.
+syncs that directory into both `~/.codex/skills` and `~/.claude/skills` as
+global skills. Plugin-backed packs should point at the installed plugin cache
+through `plugin_sources` so `cmd pack refresh` can update links after Codex
+updates plugins.
 
 ## Pack format
 

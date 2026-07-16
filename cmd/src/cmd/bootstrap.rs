@@ -179,6 +179,8 @@ struct ManagedDirEntry {
     exclude: &'static [&'static str],
 }
 
+const GLOBAL_SKILL_EXCLUSIONS: &[&str] = &["pr-review-toolkit"];
+
 const CUSTOM_CONFIG_DIR_ENTRIES: &[ManagedDirEntry] = &[
     ManagedDirEntry {
         source: "agents",
@@ -189,7 +191,13 @@ const CUSTOM_CONFIG_DIR_ENTRIES: &[ManagedDirEntry] = &[
         source: "agents/skills",
         target: ".codex/skills",
         // Shared skill for other agents (Grok/OpenCode); keep out of Codex
-        exclude: &["pr-review-toolkit"],
+        exclude: GLOBAL_SKILL_EXCLUSIONS,
+    },
+    ManagedDirEntry {
+        source: "agents/skills",
+        target: ".claude/skills",
+        // Claude exposes this through its dedicated plugin instead
+        exclude: GLOBAL_SKILL_EXCLUSIONS,
     },
 ];
 

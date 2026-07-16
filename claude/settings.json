@@ -46,7 +46,7 @@
     "deny": [],
     "ask": []
   },
-  "model": "claude-fable-5[1m]",
+  "model": "gpt-5.6-sol",
   "hooks": {
     "Stop": [
       {
@@ -55,17 +55,6 @@
           {
             "type": "command",
             "command": "notf -T bell,macos -t Claude"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/praveen/.claude/hooks/rtk-rewrite.sh"
           }
         ]
       }
@@ -83,12 +72,7 @@
     "commit-commands@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
-    "swift-lsp@claude-plugins-official": true,
-    "rust-analyzer-lsp@claude-plugins-official": true,
-    "ralph-wiggum@claude-plugins-official": true,
-    "safety-net@cc-marketplace": true,
-    "greptile@claude-plugins-official": true,
-    "figma@claude-plugins-official": true
+    "safety-net@cc-marketplace": true
   },
   "extraKnownMarketplaces": {
     "claude-code-plugins": {

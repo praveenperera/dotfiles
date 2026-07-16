@@ -519,7 +519,7 @@ mod tests {
     }
 
     #[test]
-    fn excludes_codex_skill_entries_from_link_specs() {
+    fn keeps_codex_and_claude_global_skills_in_sync() {
         let dir = tempdir().unwrap();
         let home = dir.path().join("home");
         let dotfiles_dir = dir.path().join("dotfiles");
@@ -542,9 +542,14 @@ mod tests {
             spec.source == skills_dir.join("git-commit")
                 && spec.target == home.join(".codex/skills/git-commit")
         }));
+        assert!(specs.iter().any(|spec| {
+            spec.source == skills_dir.join("git-commit")
+                && spec.target == home.join(".claude/skills/git-commit")
+        }));
         assert!(!specs.iter().any(|spec| {
             spec.source == skills_dir.join("pr-review-toolkit")
                 || spec.target == home.join(".codex/skills/pr-review-toolkit")
+                || spec.target == home.join(".claude/skills/pr-review-toolkit")
         }));
         // Still linked for shared agents tooling
         assert!(specs.iter().any(|spec| {
