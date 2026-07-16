@@ -539,7 +539,7 @@ dependencies = [
 
 [[package]]
 name = "cmd"
-version = "0.0.176"
+version = "0.0.177"
 dependencies = [
  "age",
  "arboard",
