@@ -187,7 +187,9 @@ gbd() {
     fzf --height 60% --reverse --border --ansi --multi --tac | sed 's/^..//' | awk '{print $1}')
 
   echo $branch | xargs git bd
-}
+  }
+
+alias gupc="git up && gclean"
 
 # remove remote branches
 gclean() {
@@ -409,3 +411,5 @@ export MANPAGER="col -b | nvim -MR - "
 
 # if secret zshrc exists, source it
 [ -f ~/.secrets.zsh ] && source ~/.secrets.zsh
+
+
