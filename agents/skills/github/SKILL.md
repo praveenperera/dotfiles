@@ -27,8 +27,8 @@ Gather only the evidence needed to summarize the current state and classify the
 next action:
 
 - repository, issue, or pull-request orientation
-- metadata, patch, requested changes, labels, checks summary, and flat comments
-- actionable review feedback and its file or line context
+- metadata, patch, requested changes, labels, and checks summary
+- thread-aware review feedback, resolution state, and file or line context via `prc`
 - whether the request concerns review fixes, failing CI, local commits, or
   publishing
 
@@ -37,7 +37,7 @@ comment is current merely because it references a line in an older diff.
 
 ## Route
 
-- Compact PR review-comment export via `prc`: `../pr-review-comments/SKILL.md`
+- Thread-aware PR review export via `prc`: `../pr-review-comments/SKILL.md`
 - Unresolved threads, requested changes, inline feedback, or implementing
   review fixes: `../gh-address-comments/SKILL.md`
 - Failing GitHub Actions checks or log diagnosis: `../gh-fix-ci/SKILL.md`
@@ -50,7 +50,7 @@ load its instructions before continuing.
 ## Output
 
 Report the target inspected, evidence sources actually used, concise current
-state, actionable items, uncertainty about thread or outdated state, and the
-recommended specialist workflow. If the user requested a write action, explain
+state, actionable items, any uncertainty remaining after thread-aware reads,
+and the recommended specialist workflow. If the user requested a write action, explain
 that this entrypoint only triages and route it rather than treating the request
 as write authorization here.
