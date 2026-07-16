@@ -40,10 +40,8 @@
 
 # Subagents
 
-- Delegate bounded, context-isolated work only when it is likely to reduce total context, cost, or elapsed time.
-- Give each worker a self-contained objective, evidence surface, relevant files or commands, constraints, ownership boundary, expected concise result, and an appropriate effort and runtime budget. Prefer phase-sized, non-overlapping slices.
-- Launch Codex subagents with `agents.spawn_agent` and `fork_turns="none"` by default. Fork only the smallest recent context that cannot be supplied explicitly.
-- Where supported, use `low` effort for simple mechanical work, `medium` by default, `high` for complex work and reviews, and `xhigh` only for exceptional architectural, safety-critical, or unusually ambiguous work.
-- Bound reviews by scope, effort, evidence, runtime, and maximum rounds. Prefer one broad review and at most one targeted follow-up; do not repeat broad reviews until one reports no findings.
-- Keep architecture, integration, known-finding repair, and final verification with the primary agent. Inspect delegated results before relying on them, avoid duplicating active work, and proceed once the results needed for the next step are available.
-- Require each worker to report changed files, verification results, risks, and integration notes. After the review cap, integrate and fix actionable findings directly, then record any genuine blocker or residual risk.
+- Delegate only bounded, independent work when doing so is likely to reduce total context, cost, or elapsed time; prefer phase-sized, non-overlapping slices.
+- Give each worker a self-contained objective, evidence surface, relevant files or commands, constraints, ownership boundary, expected concise result, and an effort and runtime budget. Use `agents.spawn_agent` with `fork_turns="none"` by default, and fork only the smallest context that cannot be supplied explicitly.
+- Where supported, use `low` effort for mechanical work, `medium` by default, `high` for complex work and reviews, and `xhigh` only for exceptional architectural, safety-critical, or unusually ambiguous work. Bound reviews by scope, evidence, runtime, and rounds; prefer one broad review and at most one targeted follow-up.
+- Keep architecture, integration, known-finding repair, and final verification with the primary agent. Avoid duplicating active work, inspect delegated results, and require reports of changed files, verification, risks, and integration notes. After the review cap, fix actionable findings directly and record genuine blockers or residual risks.
+- In codex never use `service_tier: priority` unless the user explicitly requests it, always default to omiting it.
