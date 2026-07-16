@@ -1,3 +1,4 @@
+pub(crate) mod app_server;
 mod auth;
 mod fs;
 mod ops;
@@ -335,17 +336,6 @@ enum RateLimitResetCreditSummary {
     Unavailable,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct SessionMarker {
-    pid: u32,
-    started_at: chrono::DateTime<Utc>,
-    launch_home: PathBuf,
-    #[serde(default)]
-    thread_id: Option<String>,
-    #[serde(default)]
-    rollout_path: Option<PathBuf>,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RefreshAllResultKind {
     Refreshed,
@@ -620,22 +610,22 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
 
 #[cfg(test)]
 mod tests {
+    use super::app_server::{ConfigOverride, SessionControl, SessionMarker, SessionThread};
     use super::{
         active_session_markers, build_profile_rows, create_launch_home, current_reset_credits_view,
         current_usage_view, delete_profile_home, enrich_active_profiles_from_global_auth,
         enrich_active_profiles_with_global_auth, format_launch_banner, launch_banner_details,
-        needs_proactive_refresh, parse_auth_identity, parse_captured_threads, parse_jwt_expiration,
-        parse_raw_args, prepare_config_group_home, prepare_resume_group_home,
+        materialize_config_overrides, needs_proactive_refresh, parse_auth_identity,
+        parse_jwt_expiration, parse_raw_args, prepare_config_group_home, prepare_resume_group_home,
         print_current_usage_table, promote_launch_auth_if_unchanged, read_auth_snapshot,
         read_stored_auth, replace_global_auth_with_profile, resolve_launch_auth_mode,
         resolve_launch_groups, resolve_launch_target, save_profile_auth,
         select_auto_launch_profile, select_auto_launch_profile_except, sync_launch_codex_home,
-        sync_login_codex_home, update_session_marker_thread, validate_group_name,
-        write_auth_raw_if_unchanged, write_session_marker, AuthIdentity, CapturedThread, CodexCmd,
-        LaunchAuthMode, LaunchGroups, LaunchTarget, LimitStyleKind, ProfileAuthRefresher,
-        ProfileStyleKind, ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState,
-        RateLimitResetCredit, RateLimitResetCreditLoader, RateLimitResetCreditSummary,
-        SavedProfile, SessionMarker, StoredAuth, UsageFetchResult, UsageRunRates,
+        sync_login_codex_home, validate_group_name, write_auth_raw_if_unchanged,
+        write_session_marker, AuthIdentity, CodexCmd, LaunchAuthMode, LaunchGroups, LaunchTarget,
+        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
+        ProfileUsageSnapshot, ProfileUsageState, RateLimitResetCredit, RateLimitResetCreditLoader,
+        RateLimitResetCreditSummary, SavedProfile, StoredAuth, UsageFetchResult, UsageRunRates,
         UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -1002,16 +992,22 @@ mod tests {
     }
 
     #[test]
-    fn active_session_markers_prunes_stale_or_non_codex_processes() {
+    fn active_session_markers_prunes_stale_owner_processes() {
         let dir = tempdir().unwrap();
         let profile_home = dir.path().join("profiles").join("a");
-        let marker_path =
-            write_session_marker(&profile_home, std::process::id(), dir.path()).unwrap();
+        let marker = write_session_marker(
+            &profile_home,
+            u32::MAX,
+            dir.path(),
+            None,
+            SessionControl::Embedded,
+        )
+        .unwrap();
 
         let active = active_session_markers(&profile_home).unwrap();
 
         assert!(active.is_empty());
-        assert!(!marker_path.exists());
+        assert!(!marker.path().exists());
     }
 
     #[test]
@@ -1046,53 +1042,47 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(marker.pid, 1);
-        assert_eq!(marker.thread_id, None);
-        assert_eq!(marker.rollout_path, None);
+        assert_eq!(marker.owner_pid, 1);
+        assert_eq!(marker.control, SessionControl::Legacy);
+        assert_eq!(marker.current_thread, None);
     }
 
     #[test]
-    fn update_session_marker_thread_adds_captured_thread() {
+    fn session_marker_handle_updates_current_thread_atomically() {
         let dir = tempdir().unwrap();
         let profile_home = dir.path().join("profiles").join("a");
-        let marker_path = write_session_marker(&profile_home, 42, dir.path()).unwrap();
+        let marker_handle = write_session_marker(
+            &profile_home,
+            42,
+            dir.path(),
+            Some("%1".into()),
+            SessionControl::Local {
+                socket_path: dir.path().join("control.sock"),
+            },
+        )
+        .unwrap();
         let rollout_path = dir.path().join("sessions").join("rollout.jsonl");
 
-        let updated =
-            update_session_marker_thread(&marker_path, "thread-1".into(), rollout_path.clone())
-                .unwrap();
+        let updated = marker_handle
+            .set_current_thread(Some(SessionThread {
+                id: "thread-1".into(),
+                rollout_path: Some(rollout_path.clone()),
+                name: Some("Live name".into()),
+            }))
+            .unwrap();
         let marker =
-            serde_json::from_slice::<SessionMarker>(&fs::read(&marker_path).unwrap()).unwrap();
+            serde_json::from_slice::<SessionMarker>(&fs::read(marker_handle.path()).unwrap())
+                .unwrap();
 
         assert!(updated);
-        assert_eq!(marker.thread_id.as_deref(), Some("thread-1"));
-        assert_eq!(marker.rollout_path.as_deref(), Some(rollout_path.as_path()));
-    }
-
-    #[test]
-    fn parse_captured_threads_returns_one_exact_candidate() {
-        let output = "thread-1\u{1f}/tmp/launch/sessions/rollout.jsonl\n";
-
-        let captured = parse_captured_threads(output);
-
         assert_eq!(
-            captured,
-            Some(CapturedThread {
-                id: "thread-1".into(),
-                rollout_path: Path::new("/tmp/launch/sessions/rollout.jsonl").to_path_buf(),
-            })
+            marker.current_thread.unwrap().rollout_path,
+            Some(rollout_path)
         );
     }
 
     #[test]
-    fn parse_captured_threads_rejects_multiple_candidates() {
-        let output = "thread-1\u{1f}/tmp/launch/sessions/one.jsonl\nthread-2\u{1f}/tmp/launch/sessions/two.jsonl\n";
-
-        assert_eq!(parse_captured_threads(output), None);
-    }
-
-    #[test]
-    fn create_launch_home_creates_unique_dirs_under_profile_launch_root() {
+    fn create_launch_home_creates_unique_short_homes() {
         let dir = tempdir().unwrap();
         let profile_home = dir.path().join("profiles").join("a");
         fs::create_dir_all(&profile_home).unwrap();
@@ -1101,10 +1091,43 @@ mod tests {
         let second = create_launch_home(&profile_home).unwrap();
 
         assert_ne!(first, second);
-        assert!(first.starts_with(profile_home.join(".launch")));
-        assert!(second.starts_with(profile_home.join(".launch")));
+        assert!(first.starts_with(dir.path().join("l")));
+        assert!(second.starts_with(dir.path().join("l")));
         assert!(first.is_dir());
         assert!(second.is_dir());
+    }
+
+    #[test]
+    fn materialized_config_overrides_do_not_mutate_shared_config() {
+        let dir = tempdir().unwrap();
+        let shared_config = dir.path().join("shared-config.toml");
+        let launch_home = dir.path().join("launch");
+        fs::create_dir(&launch_home).unwrap();
+        fs::write(&shared_config, "model = \"original\"\n").unwrap();
+        symlink(&shared_config, launch_home.join("config.toml")).unwrap();
+
+        materialize_config_overrides(
+            &launch_home,
+            &[
+                ConfigOverride {
+                    key: "model".into(),
+                    value: "\"override\"".into(),
+                },
+                ConfigOverride {
+                    key: "features.web_search".into(),
+                    value: "true".into(),
+                },
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(
+            fs::read_to_string(&shared_config).unwrap(),
+            "model = \"original\"\n"
+        );
+        let config = fs::read_to_string(launch_home.join("config.toml")).unwrap();
+        assert!(config.contains("model = \"override\""));
+        assert!(config.contains("web_search = true"));
     }
 
     #[test]
@@ -1593,6 +1616,8 @@ mod tests {
 
         fs::create_dir_all(global_codex.join("profiles").join("a")).unwrap();
         fs::create_dir_all(global_codex.join("skills")).unwrap();
+        fs::create_dir_all(global_codex.join("app-server-control")).unwrap();
+        fs::create_dir_all(global_codex.join("l")).unwrap();
         fs::create_dir_all(&config_home).unwrap();
         fs::create_dir_all(resume_home.join("sessions")).unwrap();
         fs::write(global_codex.join("AGENTS.md"), "shared").unwrap();
@@ -1645,6 +1670,8 @@ mod tests {
             global_codex.join("skills")
         );
         assert!(!launch_home.join("profiles").exists());
+        assert!(!launch_home.join("app-server-control").exists());
+        assert!(!launch_home.join("l").exists());
     }
 
     #[test]

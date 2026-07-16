@@ -1,6 +1,8 @@
+use super::app_server::{ConfigOverride, SessionControl, SessionMarker, SessionThread};
 use super::*;
 use crate::fsutil;
 use std::collections::BTreeSet;
+use std::sync::{Arc, Mutex};
 
 const SHARED_GROUP_NAME: &str = "shared";
 
@@ -56,20 +58,26 @@ fn remodex_bridge_control_socket_path() -> Result<PathBuf> {
     Ok(remodex_state_dir()?.join("bridge-control.sock"))
 }
 
-fn profile_launches_dir(profile_home: &Path) -> PathBuf {
-    profile_home.join(".launch")
+fn launches_dir(profile_home: &Path) -> Result<PathBuf> {
+    let profiles_dir = profile_home
+        .parent()
+        .ok_or_else(|| eyre!("Profile home has no profiles directory"))?;
+    let codex_home = profiles_dir
+        .parent()
+        .ok_or_else(|| eyre!("Profiles directory has no Codex home"))?;
+    Ok(codex_home.join("l"))
 }
 
 pub(super) fn create_launch_home(profile_home: &Path) -> Result<PathBuf> {
-    let launches_dir = profile_launches_dir(profile_home);
+    let launches_dir = launches_dir(profile_home)?;
     stdfs::create_dir_all(&launches_dir)?;
 
     for attempt in 0..10 {
-        let timestamp = Utc::now().format("%Y%m%dT%H%M%S%fZ");
+        let timestamp = Utc::now().timestamp_millis();
         let suffix = if attempt == 0 {
-            format!("pid{}", std::process::id())
+            std::process::id().to_string()
         } else {
-            format!("pid{}-{attempt}", std::process::id())
+            format!("{}-{attempt}", std::process::id())
         };
         let launch_home = launches_dir.join(format!("{timestamp}-{suffix}"));
 
@@ -96,44 +104,126 @@ pub(super) fn profile_session_markers_dir(profile_home: &Path) -> PathBuf {
 
 pub(super) fn write_session_marker(
     profile_home: &Path,
-    pid: u32,
+    owner_pid: u32,
     launch_home: &Path,
-) -> Result<PathBuf> {
+    pane_id: Option<String>,
+    control: SessionControl,
+) -> Result<SessionMarkerHandle> {
     let markers_dir = profile_session_markers_dir(profile_home);
     stdfs::create_dir_all(&markers_dir)?;
-    let marker_path = markers_dir.join(format!("{pid}.json"));
-    let marker = SessionMarker {
-        pid,
-        started_at: Utc::now(),
-        launch_home: launch_home.to_path_buf(),
-        thread_id: None,
-        rollout_path: None,
-    };
+    let marker_path = markers_dir.join(format!("{owner_pid}.json"));
+    let marker = SessionMarker::new(owner_pid, launch_home.to_path_buf(), pane_id, control);
     stdfs::write(&marker_path, serde_json::to_vec_pretty(&marker)?)?;
-    Ok(marker_path)
+    Ok(SessionMarkerHandle {
+        path: marker_path,
+        write_lock: Arc::new(Mutex::new(())),
+    })
 }
 
-pub(super) fn update_session_marker_thread(
-    marker_path: &Path,
-    thread_id: String,
-    rollout_path: PathBuf,
-) -> Result<bool> {
-    if !marker_path.exists() {
-        return Ok(false);
+#[derive(Clone)]
+pub(crate) struct SessionMarkerHandle {
+    path: PathBuf,
+    write_lock: Arc<Mutex<()>>,
+}
+
+impl SessionMarkerHandle {
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
     }
 
-    let mut marker = read_session_marker(marker_path)?;
-    marker.thread_id = Some(thread_id);
-    marker.rollout_path = Some(rollout_path);
+    pub(crate) fn set_session_pid(&self, session_pid: u32) -> Result<bool> {
+        self.update(|marker| marker.session_pid = Some(session_pid))
+    }
 
+    pub(crate) fn set_current_thread(&self, thread: Option<SessionThread>) -> Result<bool> {
+        self.update(|marker| marker.current_thread = thread)
+    }
+
+    pub(crate) fn update_current_thread_name(&self, name: Option<String>) -> Result<bool> {
+        self.update(|marker| {
+            if let Some(thread) = marker.current_thread.as_mut() {
+                thread.name = name;
+            }
+        })
+    }
+
+    fn update(&self, update: impl FnOnce(&mut SessionMarker)) -> Result<bool> {
+        let _guard = self
+            .write_lock
+            .lock()
+            .map_err(|_| eyre!("Session marker lock is poisoned"))?;
+        if !self.path.exists() {
+            return Ok(false);
+        }
+
+        let mut marker = read_session_marker(&self.path)?;
+        update(&mut marker);
+        write_session_marker_atomic(&self.path, &marker)?;
+        Ok(true)
+    }
+}
+
+fn write_session_marker_atomic(marker_path: &Path, marker: &SessionMarker) -> Result<()> {
     let parent = marker_path
         .parent()
         .ok_or_else(|| eyre!("Session marker path has no parent"))?;
-    let temp = tempfile::NamedTempFile::new_in(parent)?;
-    stdfs::write(temp.path(), serde_json::to_vec_pretty(&marker)?)?;
+    let mut temp = tempfile::NamedTempFile::new_in(parent)?;
+    serde_json::to_writer_pretty(&mut temp, marker)?;
     temp.persist(marker_path)?;
+    Ok(())
+}
 
-    Ok(true)
+pub(super) fn materialize_config_overrides(
+    launch_home: &Path,
+    overrides: &[ConfigOverride],
+) -> Result<()> {
+    if overrides.is_empty() {
+        return Ok(());
+    }
+
+    let config_path = launch_home.join("config.toml");
+    let mut config = if config_path.exists() {
+        toml::from_str::<toml::Value>(&stdfs::read_to_string(&config_path)?)?
+    } else {
+        toml::Value::Table(toml::Table::new())
+    };
+    for config_override in overrides {
+        apply_config_override(&mut config, config_override)?;
+    }
+
+    fsutil::remove_existing_path(&config_path)?;
+    stdfs::write(&config_path, toml::to_string_pretty(&config)?)?;
+    Ok(())
+}
+
+fn apply_config_override(config: &mut toml::Value, config_override: &ConfigOverride) -> Result<()> {
+    let source = format!("{} = {}", config_override.key, config_override.value);
+    let parsed = match toml::from_str::<toml::Value>(&source) {
+        Ok(parsed) => parsed,
+        Err(_) => toml::from_str::<toml::Value>(&format!(
+            "{} = {}",
+            config_override.key,
+            serde_json::to_string(&config_override.value)?
+        ))
+        .wrap_err_with(|| format!("Invalid Codex config override: {}", config_override.key))?,
+    };
+    merge_toml(config, parsed);
+    Ok(())
+}
+
+fn merge_toml(target: &mut toml::Value, overlay: toml::Value) {
+    match (target, overlay) {
+        (toml::Value::Table(target), toml::Value::Table(overlay)) => {
+            for (key, value) in overlay {
+                if let Some(target_value) = target.get_mut(&key) {
+                    merge_toml(target_value, value);
+                } else {
+                    target.insert(key, value);
+                }
+            }
+        }
+        (target, overlay) => *target = overlay,
+    }
 }
 
 pub(super) fn active_session_markers(profile_home: &Path) -> Result<Vec<SessionMarker>> {
@@ -169,20 +259,12 @@ fn read_session_marker(path: &Path) -> Result<SessionMarker> {
 }
 
 fn session_marker_is_active(marker: &SessionMarker) -> Result<bool> {
-    let pid = marker.pid.to_string();
-    let output = std::process::Command::new("ps")
-        .args(["-o", "comm=", "-p", &pid])
-        .output()?;
-    if !output.status.success() {
-        return Ok(false);
-    }
-
-    let command = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if command.is_empty() {
-        return Ok(false);
-    }
-
-    Ok(command.contains("codex"))
+    Ok(std::process::Command::new("ps")
+        .args(["-p", &marker.owner_pid.to_string()])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()?
+        .success())
 }
 
 pub(super) fn codex_command(codex_home: &Path) -> std::process::Command {
@@ -336,7 +418,10 @@ fn entry_owner(name: &str) -> EntryOwner {
     if name == "auth.json" {
         return EntryOwner::LocalAuth;
     }
-    if matches!(name, "profiles" | "config-groups" | "resume-groups") {
+    if matches!(
+        name,
+        "profiles" | "config-groups" | "resume-groups" | "app-server-control" | "l"
+    ) {
         return EntryOwner::Ignored;
     }
     if is_config_group_entry(name) {
