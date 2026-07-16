@@ -296,6 +296,12 @@ pub(crate) fn control_socket_path(launch_home: &Path) -> PathBuf {
         .join(APP_SERVER_SOCKET_NAME)
 }
 
+pub(crate) fn remote_endpoint(socket_path: &Path) -> std::ffi::OsString {
+    let mut endpoint = std::ffi::OsString::from("unix://");
+    endpoint.push(socket_path);
+    endpoint
+}
+
 pub(crate) struct ManagedAppServer {
     child: Child,
     monitor: SessionMonitor,
@@ -469,7 +475,7 @@ async fn run_monitor(
         };
 
         match event {
-            SessionEvent::ThreadStarted(thread) if thread.is_top_level_cli() => {
+            SessionEvent::ThreadStarted(thread) if thread.is_top_level() => {
                 current_thread_id = Some(thread.id.clone());
                 let session_thread = SessionThread {
                     id: thread.id,
@@ -516,15 +522,14 @@ fn sync_pane_name(pane_id: Option<&str>, name: Option<&str>) {
 struct AppServerThread {
     id: String,
     path: Option<PathBuf>,
-    source: String,
     parent_thread_id: Option<String>,
     agent_role: Option<String>,
     name: Option<String>,
 }
 
 impl AppServerThread {
-    fn is_top_level_cli(&self) -> bool {
-        self.source == "cli" && self.parent_thread_id.is_none() && self.agent_role.is_none()
+    fn is_top_level(&self) -> bool {
+        self.parent_thread_id.is_none() && self.agent_role.is_none()
     }
 }
 
@@ -704,8 +709,9 @@ struct RpcError {
 #[cfg(test)]
 mod tests {
     use super::{
-        plan_app_server_launch, session_event, set_thread_name_async, validate_socket_path,
-        AppServerLaunch, SessionControl, SessionEvent, SessionMarker, SessionMonitor,
+        plan_app_server_launch, remote_endpoint, session_event, set_thread_name_async,
+        validate_socket_path, AppServerLaunch, SessionControl, SessionEvent, SessionMarker,
+        SessionMonitor,
     };
     use futures_util::{SinkExt, StreamExt};
     use serde_json::{json, Value};
@@ -797,6 +803,14 @@ mod tests {
     }
 
     #[test]
+    fn remote_endpoint_targets_the_managed_unix_socket() {
+        assert_eq!(
+            remote_endpoint(std::path::Path::new("/tmp/codex.sock")),
+            OsString::from("unix:///tmp/codex.sock")
+        );
+    }
+
+    #[test]
     fn thread_started_filters_subagents() {
         let message = Message::Text(
             json!({
@@ -817,7 +831,31 @@ mod tests {
         let Some(SessionEvent::ThreadStarted(thread)) = session_event(message) else {
             panic!("expected thread event");
         };
-        assert!(!thread.is_top_level_cli());
+        assert!(!thread.is_top_level());
+    }
+
+    #[test]
+    fn thread_started_accepts_top_level_remote_tui_sessions() {
+        let message = Message::Text(
+            json!({
+                "method": "thread/started",
+                "params": { "thread": {
+                    "id": "thread-1",
+                    "path": "/tmp/rollout.jsonl",
+                    "source": "vscode",
+                    "parentThreadId": null,
+                    "agentRole": null,
+                    "name": null
+                }}
+            })
+            .to_string()
+            .into(),
+        );
+
+        let Some(SessionEvent::ThreadStarted(thread)) = session_event(message) else {
+            panic!("expected thread event");
+        };
+        assert!(thread.is_top_level());
     }
 
     #[test]

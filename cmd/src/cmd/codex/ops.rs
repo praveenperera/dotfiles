@@ -1,5 +1,6 @@
 use super::app_server::{
-    control_socket_path, plan_app_server_launch, AppServerLaunch, ManagedAppServer, SessionControl,
+    control_socket_path, plan_app_server_launch, remote_endpoint, AppServerLaunch,
+    ManagedAppServer, SessionControl,
 };
 use super::*;
 use crate::{fsutil, runtime};
@@ -142,6 +143,11 @@ fn launch_with_profile(
         AppServerLaunch::External | AppServerLaunch::Embedded => None,
     };
     let mut child = codex_command(&launch_home);
+    if matches!(&app_server_launch, AppServerLaunch::Managed { .. }) {
+        child
+            .arg("--remote")
+            .arg(remote_endpoint(&control_socket_path(&launch_home)));
+    }
     child.args(tui_args);
     let mut child = match child.spawn() {
         Ok(child) => child,

@@ -8,6 +8,7 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 use tempfile::{Builder as TempFileBuilder, NamedTempFile};
 use xshell::{cmd, Shell};
 
@@ -596,6 +597,8 @@ const MAX_FIRST_USER_CHARS: usize = 1500;
 const MAX_RECENT_USER_CHARS: usize = 1500;
 const MAX_VISIBLE_TEXT_CHARS: usize = 1500;
 const MAX_NAME_WORDS: usize = 6;
+const SESSION_THREAD_WAIT_TIMEOUT: Duration = Duration::from_secs(3);
+const SESSION_THREAD_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 #[derive(Debug, Clone)]
 struct PaneTarget {
@@ -837,19 +840,35 @@ fn resolve_active_codex_session(
     processes: &[PaneProcess],
 ) -> Result<ActiveCodexSession> {
     let codex_pids = codex_process_family(processes);
+    let deadline = Instant::now() + SESSION_THREAD_WAIT_TIMEOUT;
+    loop {
+        if let Some(session) = resolve_active_codex_session_once(pane, &codex_pids)? {
+            return Ok(session);
+        }
+        if Instant::now() >= deadline {
+            return Err(eyre!(
+                "Codex has not reported its current session yet; send a prompt and try again"
+            ));
+        }
+        std::thread::sleep(SESSION_THREAD_POLL_INTERVAL);
+    }
+}
+
+fn resolve_active_codex_session_once(
+    pane: &PaneTarget,
+    codex_pids: &HashSet<u32>,
+) -> Result<Option<ActiveCodexSession>> {
     let markers = active_codex_session_markers()?;
     let marker = markers
         .iter()
-        .position(|marker| {
-            marker
-                .session_pid
-                .is_some_and(|pid| codex_pids.contains(&pid))
-        })
+        .position(|marker| marker.pane_id.as_deref() == Some(pane.id.as_str()))
         .map(|index| markers[index].clone())
         .or_else(|| {
-            markers
-                .into_iter()
-                .find(|marker| marker.pane_id.as_deref() == Some(pane.id.as_str()))
+            markers.into_iter().find(|marker| {
+                marker
+                    .session_pid
+                    .is_some_and(|pid| codex_pids.contains(&pid))
+            })
         })
         .ok_or_else(|| eyre!("Codex session marker not found; restart Codex from cmd codex"))?;
     let socket_path = match marker.control {
@@ -863,16 +882,16 @@ fn resolve_active_codex_session(
             ));
         }
     };
-    let thread = marker.current_thread.ok_or_else(|| {
-        eyre!("Codex has not reported its current session yet; try renaming again shortly")
-    })?;
+    let Some(thread) = marker.current_thread else {
+        return Ok(None);
+    };
 
-    Ok(ActiveCodexSession {
+    Ok(Some(ActiveCodexSession {
         launch_home: marker.launch_home,
         socket_path,
         thread_id: thread.id,
         rollout_path: thread.rollout_path,
-    })
+    }))
 }
 
 fn codex_process_family(processes: &[PaneProcess]) -> HashSet<u32> {
