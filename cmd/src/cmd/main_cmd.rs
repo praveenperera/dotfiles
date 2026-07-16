@@ -36,11 +36,15 @@ pub struct PrContextArgs {
     #[arg(short, long)]
     pub token: Option<String>,
 
-    /// Only include comments with code references
+    /// Only include code review threads
     #[arg(short = 'c', long)]
     pub code_only: bool,
 
-    /// Compact output (only author, body, and code_reference)
+    /// Only include unresolved review threads
+    #[arg(short = 'u', long)]
+    pub unresolved_only: bool,
+
+    /// Omit nonessential IDs, timestamps, and diff hunks
     #[arg(short = 'C', long)]
     pub compact: bool,
 
