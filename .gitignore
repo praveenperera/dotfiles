@@ -55,3 +55,6 @@ claude/security_warnings_state_*.json
 /claude/security
 claude/.last-cleanup
 claude/.last-update-result.json
+/claude/jobs
+/claude/daemon
+/claude/skills/
