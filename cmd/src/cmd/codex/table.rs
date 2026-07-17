@@ -248,9 +248,32 @@ fn format_reset_credit_days_remaining(
         .num_days()
         .max(0);
 
+    if days == 0 {
+        return format_reset_credit_hours_minutes_remaining(expires_at, captured_at);
+    }
+
     match days {
         1 => "1 day".into(),
         _ => format!("{days} days"),
+    }
+}
+
+fn format_reset_credit_hours_minutes_remaining(
+    expires_at: chrono::DateTime<Local>,
+    captured_at: chrono::DateTime<Local>,
+) -> String {
+    let remaining = expires_at
+        .signed_duration_since(captured_at)
+        .max(chrono::Duration::zero());
+    let total_minutes = remaining.num_minutes().max(0);
+    let hours = total_minutes / 60;
+    let minutes = total_minutes % 60;
+
+    match (hours, minutes) {
+        (0, 0) => "0m".into(),
+        (0, m) => format!("{m}m"),
+        (h, 0) => format!("{h}h"),
+        (h, m) => format!("{h}h {m}m"),
     }
 }
 
@@ -1382,6 +1405,49 @@ fn title_case(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reset_credit_remaining_shows_hours_and_minutes_on_expiry_day() {
+        let captured_at = local_datetime(2026, 7, 17, 14, 30, 0);
+        let expires_at = local_datetime(2026, 7, 17, 19, 41, 0);
+
+        assert_eq!(
+            format_reset_credit_days_remaining(expires_at, captured_at),
+            "5h 11m"
+        );
+        assert_eq!(
+            format_reset_credit_expiration(expires_at.with_timezone(&Utc), captured_at),
+            "today 7:41 PM (5h 11m)"
+        );
+    }
+
+    #[test]
+    fn reset_credit_remaining_omits_zero_hours_or_minutes() {
+        let captured_at = local_datetime(2026, 7, 17, 14, 30, 0);
+
+        assert_eq!(
+            format_reset_credit_days_remaining(local_datetime(2026, 7, 17, 14, 45, 0), captured_at,),
+            "15m"
+        );
+        assert_eq!(
+            format_reset_credit_days_remaining(local_datetime(2026, 7, 17, 17, 30, 0), captured_at,),
+            "3h"
+        );
+    }
+
+    #[test]
+    fn reset_credit_remaining_keeps_day_count_for_future_days() {
+        let captured_at = local_datetime(2026, 7, 17, 14, 30, 0);
+
+        assert_eq!(
+            format_reset_credit_days_remaining(local_datetime(2026, 7, 18, 19, 41, 0), captured_at,),
+            "1 day"
+        );
+        assert_eq!(
+            format_reset_credit_days_remaining(local_datetime(2026, 7, 26, 18, 59, 0), captured_at,),
+            "9 days"
+        );
+    }
 
     #[test]
     fn compact_profile_totals_averages_percentages() {
