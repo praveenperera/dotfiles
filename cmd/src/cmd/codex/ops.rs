@@ -1,5 +1,5 @@
 use super::app_server::{
-    control_socket_path, plan_app_server_launch, remote_endpoint, AppServerLaunch,
+    control_socket_path, managed_tui_connection_args, plan_app_server_launch, AppServerLaunch,
     ManagedAppServer, SessionControl,
 };
 use super::*;
@@ -120,6 +120,13 @@ fn launch_with_profile(
         AppServerLaunch::External => (args, SessionControl::External),
         AppServerLaunch::Embedded => (args, SessionControl::Embedded),
     };
+    let managed_connection_args = match &app_server_launch {
+        AppServerLaunch::Managed { .. } => Some(managed_tui_connection_args(
+            &control_socket_path(&launch_home),
+            &std::env::current_dir()?,
+        )),
+        AppServerLaunch::External | AppServerLaunch::Embedded => None,
+    };
     let pane_id = std::env::var("TMUX_PANE").ok();
     let session_marker = write_session_marker(
         &profile_home,
@@ -143,10 +150,8 @@ fn launch_with_profile(
         AppServerLaunch::External | AppServerLaunch::Embedded => None,
     };
     let mut child = codex_command(&launch_home);
-    if matches!(&app_server_launch, AppServerLaunch::Managed { .. }) {
-        child
-            .arg("--remote")
-            .arg(remote_endpoint(&control_socket_path(&launch_home)));
+    if let Some(connection_args) = managed_connection_args {
+        child.args(connection_args);
     }
     child.args(tui_args);
     let mut child = match child.spawn() {

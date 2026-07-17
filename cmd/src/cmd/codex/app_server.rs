@@ -296,10 +296,22 @@ pub(crate) fn control_socket_path(launch_home: &Path) -> PathBuf {
         .join(APP_SERVER_SOCKET_NAME)
 }
 
-pub(crate) fn remote_endpoint(socket_path: &Path) -> std::ffi::OsString {
+fn remote_endpoint(socket_path: &Path) -> std::ffi::OsString {
     let mut endpoint = std::ffi::OsString::from("unix://");
     endpoint.push(socket_path);
     endpoint
+}
+
+pub(crate) fn managed_tui_connection_args(
+    socket_path: &Path,
+    cwd: &Path,
+) -> [std::ffi::OsString; 4] {
+    [
+        "--remote".into(),
+        remote_endpoint(socket_path),
+        "--cd".into(),
+        cwd.into(),
+    ]
 }
 
 pub(crate) struct ManagedAppServer {
@@ -709,7 +721,7 @@ struct RpcError {
 #[cfg(test)]
 mod tests {
     use super::{
-        plan_app_server_launch, remote_endpoint, session_event, set_thread_name_async,
+        managed_tui_connection_args, plan_app_server_launch, session_event, set_thread_name_async,
         validate_socket_path, AppServerLaunch, SessionControl, SessionEvent, SessionMarker,
         SessionMonitor,
     };
@@ -803,10 +815,13 @@ mod tests {
     }
 
     #[test]
-    fn remote_endpoint_targets_the_managed_unix_socket() {
+    fn managed_tui_connection_includes_socket_and_launch_cwd() {
         assert_eq!(
-            remote_endpoint(std::path::Path::new("/tmp/codex.sock")),
-            OsString::from("unix:///tmp/codex.sock")
+            managed_tui_connection_args(
+                std::path::Path::new("/tmp/codex.sock"),
+                std::path::Path::new("/tmp/project"),
+            ),
+            ["--remote", "unix:///tmp/codex.sock", "--cd", "/tmp/project",].map(OsString::from)
         );
     }
 
