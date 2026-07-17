@@ -142,6 +142,36 @@ impl Github {
         })
     }
 
+    pub(crate) async fn fetch_repo_metadata(
+        &self,
+        owner: &str,
+        repo: &str,
+    ) -> Result<RepoMetadata> {
+        let request = self.client.get(self.url(&format!("repos/{owner}/{repo}")));
+        let response = self
+            .send(
+                self.authorize(request),
+                &format!("Failed to fetch repository metadata for {owner}/{repo}"),
+            )
+            .await?;
+        let raw: RepoMetadataResponse = response
+            .json()
+            .await
+            .context("Failed to decode GitHub repository metadata response")?;
+
+        Ok(RepoMetadata {
+            full_name: raw.full_name,
+            owner: raw.owner.login,
+            owner_type: raw.owner.r#type,
+            private: raw.private,
+            archived: raw.archived,
+            fork: raw.fork,
+            default_branch: raw.default_branch,
+            pushed_at: raw.pushed_at,
+            description: raw.description,
+        })
+    }
+
     pub(crate) async fn fetch_pr_review(
         &self,
         owner: &str,
@@ -452,6 +482,38 @@ fn non_empty_token(token: String) -> Option<String> {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct RepoMetadata {
+    pub full_name: String,
+    pub owner: String,
+    pub owner_type: String,
+    pub private: bool,
+    pub archived: bool,
+    pub fork: bool,
+    pub default_branch: String,
+    pub pushed_at: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RepoMetadataResponse {
+    full_name: String,
+    owner: RepoOwnerResponse,
+    private: bool,
+    archived: bool,
+    fork: bool,
+    default_branch: String,
+    pushed_at: Option<String>,
+    description: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RepoOwnerResponse {
+    login: String,
+    #[serde(rename = "type")]
+    r#type: String,
+}
+
 pub(crate) struct PullRequestReviewData {
     pub(crate) repository: String,
     pub(crate) pull_request: PullRequestMetadata,
@@ -719,6 +781,36 @@ mod tests {
         .to_string();
 
         assert!(error.contains("owner/repo#7"));
+    }
+
+    #[tokio::test]
+    async fn fetches_repository_metadata() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo"))
+            .and(header("authorization", "Bearer token"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "full_name": "owner/repo",
+                "owner": {"login": "owner", "type": "Organization"},
+                "private": false,
+                "archived": true,
+                "fork": false,
+                "default_branch": "main",
+                "pushed_at": "2026-07-16T12:00:00Z",
+                "description": "example repo"
+            })))
+            .mount(&server)
+            .await;
+        let github = Github::with_base_url(server.uri(), Some("token".to_string())).unwrap();
+
+        let metadata = github.fetch_repo_metadata("owner", "repo").await.unwrap();
+
+        assert_eq!(metadata.full_name, "owner/repo");
+        assert_eq!(metadata.owner, "owner");
+        assert_eq!(metadata.owner_type, "Organization");
+        assert!(metadata.archived);
+        assert_eq!(metadata.pushed_at.as_deref(), Some("2026-07-16T12:00:00Z"));
+        assert_eq!(metadata.description.as_deref(), Some("example repo"));
     }
 
     #[tokio::test]
