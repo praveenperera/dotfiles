@@ -3,28 +3,6 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Clone, Args)]
-pub struct BetterContextArgs {
-    /// Repository: owner/repo, URL, or local path
-    pub repo: String,
-
-    /// Force fresh clone
-    #[arg(short, long)]
-    pub fresh: bool,
-
-    /// Checkout specific git ref (branch, tag, or SHA)
-    #[arg(short, long)]
-    pub r#ref: Option<String>,
-
-    /// Clone complete history instead of single-branch
-    #[arg(long)]
-    pub full: bool,
-
-    /// Suppress progress logs
-    #[arg(short, long)]
-    pub quiet: bool,
-}
-
-#[derive(Debug, Clone, Args)]
 pub struct PrContextArgs {
     /// GitHub PR URL or repository in format "owner/repo"
     pub repo_or_url: String,
@@ -156,8 +134,12 @@ pub enum MainCmd {
     PrContext(#[command(flatten)] PrContextArgs),
 
     /// Clone/update a repo for agent exploration
-    #[command(visible_aliases = ["agent", "bc"])]
-    BetterContext(#[command(flatten)] BetterContextArgs),
+    #[command(visible_aliases = ["agent", "bc", "btx"])]
+    BetterContext {
+        /// Args forwarded to btx (`owner/repo`, flags, or `info <repo>`)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<std::ffi::OsString>,
+    },
 
     /// Codex CLI profile management
     #[command(arg_required_else_help = true)]

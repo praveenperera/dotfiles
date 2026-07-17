@@ -74,15 +74,10 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             tmux::run_with_flags(sh, tmux_flags)
         }
         MainCmd::PrContext(args) => crate::pr_context::run_with_flags(sh, args),
-        MainCmd::BetterContext(args) => {
-            let flags = better_context::BetterContext {
-                repo: args.repo,
-                fresh: args.fresh,
-                r#ref: args.r#ref,
-                full: args.full,
-                quiet: args.quiet,
-            };
-            better_context::run_with_flags(sh, flags)
+        MainCmd::BetterContext { args } => {
+            let mut btx_args = vec![OsString::from("btx")];
+            btx_args.extend(args);
+            better_context::run(sh, &btx_args)
         }
         MainCmd::Crate { subcommand } => match subcommand {
             main_cmd::CrateCmd::Versions(flags) => crate_versions::run_with_flags(sh, flags),

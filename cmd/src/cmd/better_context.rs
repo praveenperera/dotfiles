@@ -10,6 +10,8 @@ use std::time::Duration;
 use xshell::{cmd, Shell};
 
 use crate::fsutil;
+use crate::github::{self, RepoMetadata};
+use crate::runtime;
 
 #[derive(Debug, Clone, Parser)]
 #[command(name = "btx", about = "Clone/update a repo for agent exploration")]
@@ -32,16 +34,35 @@ pub struct BetterContext {
     /// Suppress progress logs
     #[arg(short, long)]
     pub quiet: bool,
+
+    /// Also fetch GitHub repository metadata (owner, archived, last push, ...)
+    #[arg(short = 'i', long = "info")]
+    pub info: bool,
+}
+
+#[derive(Debug, Clone, Parser)]
+#[command(name = "btx", about = "Fetch GitHub repository metadata")]
+struct InfoCmd {
+    /// Repository: owner/repo or GitHub URL
+    repo: String,
 }
 
 #[derive(Debug, Serialize)]
-pub struct Output {
-    pub path: String,
-    pub url: Option<String>,
-    pub branch: String,
+struct Output {
+    path: String,
+    url: Option<String>,
+    branch: String,
     #[serde(rename = "updated_at")]
-    pub updated_at: DateTime<Utc>,
-    pub stale: bool,
+    updated_at: DateTime<Utc>,
+    stale: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    github: Option<RepoMetadata>,
+}
+
+#[derive(Debug, Serialize)]
+struct InfoOutput {
+    pub url: String,
+    pub github: RepoMetadata,
 }
 
 enum RepoSource {
@@ -68,10 +89,39 @@ impl RepoSource {
             RepoSource::Local { path } => path.display().to_string(),
         }
     }
+
+    fn github_owner_repo(&self) -> Option<(&str, &str)> {
+        match self {
+            RepoSource::GitHub { owner, repo } => Some((owner.as_str(), repo.as_str())),
+            RepoSource::Url {
+                host, owner, repo, ..
+            } if host.eq_ignore_ascii_case("github.com") => Some((owner.as_str(), repo.as_str())),
+            _ => None,
+        }
+    }
 }
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = BetterContext::parse_from(args);
+    let program = args
+        .first()
+        .cloned()
+        .unwrap_or_else(|| OsString::from("btx"));
+    let rest: Vec<OsString> = args.iter().skip(1).cloned().collect();
+
+    if rest
+        .first()
+        .and_then(|arg| arg.to_str())
+        .is_some_and(|arg| arg == "info")
+    {
+        let mut info_args = vec![program];
+        info_args.extend(rest.into_iter().skip(1));
+        let flags = InfoCmd::parse_from(info_args);
+        return run_info(flags);
+    }
+
+    let mut clone_args = vec![program];
+    clone_args.extend(rest);
+    let flags = BetterContext::parse_from(clone_args);
     run_with_flags(sh, flags)
 }
 
@@ -144,16 +194,58 @@ pub fn run_with_flags(sh: &Shell, flags: BetterContext) -> Result<()> {
         }
     };
 
+    let github = if flags.info {
+        match source.github_owner_repo() {
+            Some((owner, repo)) => match fetch_repo_metadata(owner, repo) {
+                Ok(metadata) => Some(metadata),
+                Err(e) => {
+                    warn!("Failed to fetch GitHub repository metadata: {e}");
+                    None
+                }
+            },
+            None => {
+                warn!("--info only supports GitHub repositories; skipping metadata");
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     let output = Output {
         path: path.to_string_lossy().to_string(),
         url,
         branch,
         updated_at: Utc::now(),
         stale,
+        github,
     };
 
     println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
+}
+
+fn run_info(flags: InfoCmd) -> Result<()> {
+    let source = parse_repo_source(&flags.repo)?;
+    let (owner, repo) = source.github_owner_repo().ok_or_else(|| {
+        eyre::eyre!("btx info only supports GitHub repositories (owner/repo or github.com URL)")
+    })?;
+
+    let github = fetch_repo_metadata(owner, repo)?;
+    let output = InfoOutput {
+        url: format!("https://github.com/{owner}/{repo}"),
+        github,
+    };
+
+    println!("{}", serde_json::to_string_pretty(&output)?);
+    Ok(())
+}
+
+fn fetch_repo_metadata(owner: &str, repo: &str) -> Result<RepoMetadata> {
+    runtime::block_on(async {
+        let client = github::Github::new(None)?;
+        client.fetch_repo_metadata(owner, repo).await
+    })?
 }
 
 fn update_repo_with_retry(sh: &Shell, path: &PathBuf, quiet: bool) -> Result<()> {
