@@ -87,7 +87,8 @@ clx() {
     CLAUDE_CODE_SUBAGENT_MODEL="gpt-5.6-sol" \
     CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1 \
     CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY=3 \
-    CLAUDE_CODE_AUTO_COMPACT_WINDOW=340000 \
+    CLAUDE_CODE_MAX_CONTEXT_TOKENS=272000 \
+    CLAUDE_CODE_AUTO_COMPACT_WINDOW=244800 \
     ENABLE_TOOL_SEARCH=false \
     command claude --permission-mode plan --dangerously-skip-permissions --model gpt-5.6-sol "$@"
 }
