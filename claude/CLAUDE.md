@@ -1,65 +1,36 @@
-# Core Rules
+# Workflow
 
-- Stop puttting Created by claude code into my files, if it has an author use me Praveen Perera
-- Don't add comments that need old removed code to make sense in context
-- All comments should make sense without the context if this particular conversation
-- If creating git commits never co author the commit with claude or add any notes about claude just use my name
-- Start inline code comments with a lowercase
-- Capitalize higher level doc comments like functions and modules (ex: in rust comments starting with /// instead of //)
-- Don't end comments with a period (periods within comments are fine)
-- Only add important comments to explain why something is being done
-- Try to minimize nesting in functions
-- Separate distinct logical steps within functions with blank lines, but not between a comment and the code it describes
-- When I report a bug, don't start by trying to fix it. Instead, start by writing a test that reproduces the bug. Then, have subagents try to fix the bug and prove it with a passing test
-- Don't default to leaving deprecated code in place, remove it or ask if this is a full replacement or if old code is still needed
-- Put ad hoc files the user may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory and create it if needed
-- When working with this user's projects: always read existing config/code before answering from general knowledge. Never assume defaults — check the actual files first
-- Scope changes precisely to what the user asks for. Do not modify files or components beyond the explicit request without asking first. If unsure about scope, ask before making changes — not after
+- Ship production-quality changes. Model the domain first, make impossible states impossible with typed domain models, and prefer the proper owner or abstraction over caller-specific conditionals. Repeated fixes in one area signal that the model may be wrong; revisit it and remove shortcuts or resulting tech debt before finishing.
 
-# Refactoring Discipline
+# General
 
-- When refactoring code that calls external crates, read the dependency source to verify behavior — don't trust variable names or comments. Use `/rust-crate-source` or `/btx` skills, or check `~/.cargo/registry/src/` to read crate source
-- When code has documented assumptions, trace the data flow backwards to verify callers satisfy those assumptions
-- Refactoring is an opportunity to catch correctness bugs, not just move code around — question the logic, not just the structure
+- Only add important comments that explain why. Start inline comments lowercase and higher-level doc comments with a capital letter; do not end comments with periods or make them depend on conversation context. Document every public API in libraries.
+- For commits, follow `$HOME/.agents/commit-message-guide.md`; use Praveen Perera when an author is needed, and never add AI co-authors or generated-by notes.
+- Minimize nesting in functions.
+- Do not leave deprecated code in place by default. Remove it, or ask whether the change must preserve the old path.
+- Put ad hoc files the user may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory and create it if needed.
+- In public-facing copy, include only reader-visible content. Omit implementation notes, workflow state, reasoning, conversation context, and edit instructions.
+- Preserve unrelated user changes. Use hunk staging for commits and never undo unrelated edits.
 
-# Rust Project Specific
+# Rust
 
-- `info` and `error` logs are okay to start capitalized
-- log/println! macros, prefer inline variable capture like `warn!("person id={id} ...")` instead of positional placeholders like `warn!("person id={} ...", id)`
-- Generate docs for a crate with `cargo doc -p <crate-name>`, this will then be available at `target/doc/<crate-name>/index.html`, if you are unsure about how to use a crate, please generate the docs and read them
-- If docs have already been generated, check `target/doc/` for existing documentation of the project and its dependencies before regenerating
-- Whenever you get clippy errors first run cargo fix --allow-dirty and then fix whatever remains
-- I always prefer eyre to anyhow, on cli use color_eyre init in the main function
-- Don't use `mod.rs` for regular modules, prefer the Rust 2018+ layout with `module_name.rs` and nested modules in `module_name/nested_module_name.rs`
-- if-let chains are stable in Rust now, always collapse nested if-lets into a single statement using `&&`
-- Avoid redundant closures - use `.map(func)` instead of `.map(|x| func(x))`
-- Prefer tuple structs over named field structs for simple wrappers (e.g., `struct Foo(Arc<Inner>)` not `struct Foo { inner: Arc<Inner> }`)
-- `#[act_zero_ext::into_actor_result]` on `fn foo()` generates: public async `foo() -> ActorResult<T>` wrapper + private `do_foo()` with original logic
-- Always use structs with methods over freestanding functions to encapsulate state and provide a cleaner API
-- Always using serde with derive and serde_json over manual json parsing
-- Always using methods on structs with state when we have dealing with state, instead of passing state around as a function arguments
+- In log and `println!` macros, prefer inline variable capture such as `warn!("person id={id} ...")` over positional placeholders.
+- For unfamiliar crates or external libraries, inspect documentation or source instead of guessing. Check `target/doc/`, run `cargo doc -p <crate-name>`, inspect `~/.cargo/registry/src`, or use `btx` to look at the code directly.
+- Fix clippy lints directly instead of silencing them. Run `cargo fix --allow-dirty` only when the working tree and command scope make it safe from unrelated changes.
+- Prefer `eyre`, or `color-eyre` for CLIs, over `anyhow`.
+- Use the Rust 2018+ module layout instead of `mod.rs` for regular modules.
+- Use if-let chains with `&&` when they preserve semantics and reduce nesting.
+- Avoid redundant closures; use `.map(func)` instead of `.map(|value| func(value))`.
+- Prefer tuple structs for simple wrappers and structs with methods when they encapsulate shared state.
+- Use named imports instead of wildcard imports.
+- Keep test-only functions, types, and modules out of production code paths. Put them under `mod tests` or a dedicated `mod test_support`, and use `#[cfg(test)]` only to gate those modules.
 
-# Python Project Specific
+# Verification
 
-- Always use `uv` NEVER pip
-- Never use `Any` in type stubs (.pyi files) — it defeats the purpose of type checking. `Any` touching `Any` never produces errors. Use `/btx` to read the library source and get the real types. If a type is truly dynamic, use `object` instead of `Any`
-- When creating or fixing stubs, fix ALL types in every stub file — don't just fix the one that's currently broken and leave `Any` everywhere else
+- After implementation changes, run the repository's formatter and linter. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists.
 
-# Build Verification
+# Testing
 
-- For Rust projects: always run `just fmt` and `just clippy` after changes (most projects use a justfile; fall back to `cargo fmt` and `cargo clippy` if no justfile exists). For Android/Kotlin: verify builds compile. For iOS/Swift: verify builds compile. Never submit changes without verifying they compile
-
-# Project Context
-
-- This user's primary stack: Rust (dominant), TypeScript/Svelte, Kotlin (Android), Swift (iOS). Cross-platform mobile wallet app with Rust core. Also: Terraform/infrastructure, web scraping tools in Rust
-
-## Browser Automation
-
-Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
-
-Core workflow:
-
-1. `agent-browser open <url>` - Navigate to page
-2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
-3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
-4. Re-snapshot after page changes
+- Add or update tests when they protect user-visible behavior, reproduce a bug, cover compatibility or migration risk, or lock down a non-obvious invariant.
+- Do not add tests that only restate edited literals or implementation details.
+- For static configuration or list changes, prefer compile or lint verification unless selection, fallback, parsing, migration, or filtering behavior needs coverage.
