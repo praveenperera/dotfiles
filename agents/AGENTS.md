@@ -16,7 +16,7 @@
 
 - `info` and `error` logs may start with uppercase letters.
 - In log and `println!` macros, prefer inline variable capture such as `warn!("person id={id} ...")` over positional placeholders.
-- For unfamiliar crates or external libraries, inspect documentation or source instead of guessing. Check `target/doc/`, run `cargo doc -p <crate-name>`, use `btx`, or inspect `~/.cargo/registry/src` as appropriate.
+- For unfamiliar crates or external libraries, inspect documentation or source instead of guessing. Check `target/doc/`, run `cargo doc -p <crate-name>`, inspect `~/.cargo/registry/src`, or use `btx` to look at the code directly.
 - When clippy reports autofixable issues, run `cargo fix --allow-dirty` only when the working tree and command scope make it safe from unrelated changes; otherwise apply the fixes manually. Fix remaining lints directly instead of silencing them with `allow` or `warn` unless there is a specific reason.
 - Prefer `eyre`, or `color-eyre` for CLIs, over `anyhow`.
 - Use the Rust 2018+ module layout instead of `mod.rs` for regular modules.
@@ -29,8 +29,7 @@
 
 # Build Verification
 
-- After implementation changes, run the repository's formatter and compile or lint checks. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists. For Android/Kotlin and iOS/Swift, run the repository's documented compile check. The only exception is a request to only commit already-verified changes.
-- Report verification commands and their results. If a required check cannot run or fails, report the exact command, failure, and remaining risk; do not claim successful verification.
+- After implementation changes, run the repository's formatter and linter. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists.
 
 # Long-Running Commands
 
