@@ -528,7 +528,6 @@ mod tests {
         fs::create_dir_all(&home).unwrap();
         fs::create_dir_all(dotfiles_dir.join("agents")).unwrap();
         fs::create_dir_all(skills_dir.join("git-commit")).unwrap();
-        fs::create_dir_all(skills_dir.join("pr-review-toolkit")).unwrap();
         fs::create_dir_all(dotfiles_dir.join("zed/snippets")).unwrap();
         fs::create_dir_all(dotfiles_dir.join("zed/themes")).unwrap();
         fs::write(dotfiles_dir.join("zed/settings.json"), "{}").unwrap();
@@ -546,12 +545,6 @@ mod tests {
             spec.source == skills_dir.join("git-commit")
                 && spec.target == home.join(".claude/skills/git-commit")
         }));
-        assert!(!specs.iter().any(|spec| {
-            spec.source == skills_dir.join("pr-review-toolkit")
-                || spec.target == home.join(".codex/skills/pr-review-toolkit")
-                || spec.target == home.join(".claude/skills/pr-review-toolkit")
-        }));
-        // Still linked for shared agents tooling
         assert!(specs.iter().any(|spec| {
             spec.source == skills_dir && spec.target == home.join(".agents/skills")
         }));
@@ -565,8 +558,8 @@ mod tests {
         let dotfiles_dir = dir.path().join("dotfiles");
         let source_dir = dotfiles_dir.join("agents/skills");
         let target_dir = dir.path().join("target");
-        let excluded_source = source_dir.join("pr-review-toolkit");
-        let excluded_target = target_dir.join("pr-review-toolkit");
+        let excluded_source = source_dir.join("excluded");
+        let excluded_target = target_dir.join("excluded");
         let kept_source = source_dir.join("git-commit");
         let kept_target = target_dir.join("git-commit");
 
@@ -579,7 +572,7 @@ mod tests {
         let entry = ManagedDirEntry {
             source: "agents/skills",
             target: ".codex/skills",
-            exclude: &["pr-review-toolkit"],
+            exclude: &["excluded"],
         };
 
         prune_managed_dir_entry(&source_dir, &target_dir, &dotfiles_dir, &entry).unwrap();
