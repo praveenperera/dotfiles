@@ -9,7 +9,6 @@ skills = [
   "social-preview-tags",
   "web-design-guidelines",
   "image-design-director",
-  "impeccable",
   "apple-design",
 ]
 packs = ["cloud", "svelte"]
