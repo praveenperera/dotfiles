@@ -32,6 +32,14 @@
 - After implementation changes, run the repository's formatter and compile or lint checks. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists. For Android/Kotlin and iOS/Swift, run the repository's documented compile check. The only exception is a request to only commit already-verified changes.
 - Report verification commands and their results. If a required check cannot run or fails, report the exact command, failure, and remaining risk; do not claim successful verification.
 
+# Long-Running Commands
+
+- Never keep an agent or subagent active solely to poll a process. Do not repeatedly invoke `exec`, `write_stdin`, or `wait` just to check liveness. For commands expected to exceed two minutes, prefer a detached process or runtime-managed background job that records durable completion state, then end the agent turn until there is new information.
+- Treat completion notifications as wake-up hints, not the source of truth. Give each background job a durable job ID, atomic status or result file, start time, expected duration, and hard deadline. The process or a local supervisor must record a terminal `succeeded`, `failed`, or `timed_out` state even if notification delivery fails.
+- When the thread next wakes, reconcile durable state before acting: read the status file, verify the recorded process identity if the state is nonterminal, and report or recover stale jobs whose deadline passed. Never infer that a missing notification means the process is still running.
+- If the runtime supports event-driven completion, register it together with one bounded deadline fallback. If it does not, tell the user that automatic resumption is unavailable and provide the job ID, status path, and a command or time for one later check. Do not simulate notifications with model-driven polling.
+- If live model-driven monitoring is explicitly required, first warn that every poll can consume quota and obtain user approval for the cadence and maximum monitoring budget.
+
 # Testing
 
 - Add or update tests when they protect user-visible behavior, reproduce a bug, cover compatibility or migration risk, or lock down a non-obvious invariant.
