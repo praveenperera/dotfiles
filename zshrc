@@ -436,3 +436,4 @@ export MANPAGER="col -b | nvim -MR - "
 # if secret zshrc exists, source it
 [ -f ~/.secrets.zsh ] && source ~/.secrets.zsh
 
+

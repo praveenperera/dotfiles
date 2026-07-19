@@ -46,7 +46,6 @@
     "deny": [],
     "ask": []
   },
-  "model": "gpt-5.6-sol",
   "hooks": {
     "Stop": [
       {
