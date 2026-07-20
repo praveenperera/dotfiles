@@ -33,11 +33,15 @@
 
 # Long-Running Commands
 
-- Never keep an agent or subagent active solely to poll a process. Do not repeatedly invoke `exec`, `write_stdin`, or `wait` just to check liveness. For commands expected to exceed two minutes, prefer a detached process or runtime-managed background job that records durable completion state, then end the agent turn until there is new information.
-- Treat completion notifications as wake-up hints, not the source of truth. Give each background job a durable job ID, atomic status or result file, start time, expected duration, and hard deadline. The process or a local supervisor must record a terminal `succeeded`, `failed`, or `timed_out` state even if notification delivery fails.
-- When the thread next wakes, reconcile durable state before acting: read the status file, verify the recorded process identity if the state is nonterminal, and report or recover stale jobs whose deadline passed. Never infer that a missing notification means the process is still running.
-- If the runtime supports event-driven completion, register it together with one bounded deadline fallback. If it does not, tell the user that automatic resumption is unavailable and provide the job ID, status path, and a command or time for one later check. Do not simulate notifications with model-driven polling.
-- If live model-driven monitoring is explicitly required, first warn that every poll can consume quota and obtain user approval for the cadence and maximum monitoring budget.
+- The root agent may run and await commands expected to finish in less than five minutes, such as formatting, clippy, or a small test target.
+- Before launching tests, benchmarks, promotion runs, or similar work expected to take five minutes or longer, commit the relevant code so the run is tied to a durable revision. Preserve unrelated changes and use hunk staging when needed.
+- For a run expected to take five minutes or longer, start it as a detached process or runtime-managed background job and launch a low-cost Luna agent with low reasoning in a new Codex thread as its watcher. The root agent must not poll the run or perform fallback or force checks.
+- Give every watched job a durable job ID, atomic status or result file, start time, expected duration, hard deadline, and recorded process identity. The process or a local supervisor must record a terminal `succeeded`, `failed`, or `timed_out` state even if notification delivery fails.
+- The watcher must prefer event-driven completion and message waiting, remaining idle between events. It may perform one forced reconciliation after each 10-minute wait timeout to catch a missed notification, but must not poll more frequently.
+- Treat completion notifications as wake-up hints, not the source of truth. When awakened or when the 15-minute fallback expires, the watcher must reconcile the durable state, verify the process identity if the state is nonterminal, and report or recover stale jobs whose deadline passed.
+- The watcher must message the root task when the run reaches a terminal state or requires action, including the job ID, status path, result summary, and any requested next step. The root agent should resume from that message and must not schedule its own fallback check.
+- If event-driven completion or a durable watcher cannot be established, tell the user that automatic resumption is unavailable and provide the job ID, status path, and a command or time for a later manual check. Do not simulate notifications with polling from the root task.
+- If more frequent live monitoring is explicitly required, first warn that every check can consume quota and obtain user approval for the cadence and maximum monitoring budget.
 
 # Testing
 
