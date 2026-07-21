@@ -1,0 +1,4 @@
+interface:
+  display_name: "Subagent Workflow"
+  short_description: "Route multi-model subagent work from a Fable root"
+  default_prompt: "Use $subagent-workflow to route this task from the Fable root to the right model or subagent."

@@ -20,7 +20,7 @@ Run from the repository root:
 
 ```sh
 delegate_run_id="$(date +%Y%m%d-%H%M%S)-$$"
-delegate_dir="_scratch/delegate-codex/$delegate_run_id"
+delegate_dir="_scratch/subagent-workflow/$delegate_run_id"
 mkdir -p "$delegate_dir/prompts" "$delegate_dir/raw" "$delegate_dir/repository"
 
 git status --short > "$delegate_dir/repository/baseline-status.txt"
@@ -81,6 +81,7 @@ Mode: <read-only analysis|implementation>
 
 - Read and obey applicable AGENTS.md files before acting.
 - Inspect relevant repository context before concluding or editing.
+- Do all work yourself. Do not spawn subagents, nested agents, or multi-agent orchestration.
 - Preserve pre-existing and concurrent changes; never revert work you do not own.
 - In read-only mode, do not edit any repository file.
 - In implementation mode, edit only the owned scope.
