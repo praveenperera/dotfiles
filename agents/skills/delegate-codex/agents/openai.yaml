@@ -1,4 +1,0 @@
-interface:
-  display_name: "Delegate Codex"
-  short_description: "Help Fable route work to Codex models"
-  default_prompt: "Use $delegate-codex to route this task from the Fable root to the right Codex delegate."

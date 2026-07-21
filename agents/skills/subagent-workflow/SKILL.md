@@ -1,9 +1,10 @@
 ---
-name: delegate-codex
-description: Provide model-routing guidance and Codex CLI practices for a Fable 5 root agent working with Fable 5, Opus 4.8, GPT-5.6 Sol, and GPT-5.6 Luna. Use when choosing a model for coding, investigation, review, or mechanical work; invoking a Codex sub-agent; or defining permissions, ownership, artifacts, and verification for multi-model work.
+name: subagent-workflow
+description: Provide multi-model routing and subagent workflow guidance for a Fable 5 root agent working with Fable 5, Opus 4.8, GPT-5.6 Sol, and GPT-5.6 Luna. Use when choosing a model for coding, investigation, review, or mechanical work; invoking a Codex or Claude subagent; or defining permissions, ownership, artifacts, and verification for multi-model work.
+disable-model-invocation: true
 ---
 
-# Delegate Codex
+# Subagent Workflow
 
 Assume the caller is a Fable 5 root agent. Treat this skill as a small set of routing heuristics and operational guardrails, not a prescribed workflow. Use your own judgment for decomposition, topology, sequencing, delegation, and review. Remain accountable for the user's intent and the integrated result, and never treat a delegate's final message as proof that its work is correct.
 
@@ -60,7 +61,7 @@ Write a self-contained prompt that includes:
 6. stop conditions
 7. final report requirements
 
-Preserve the user's constraints verbatim when possible. Require the delegate to read applicable `AGENTS.md` files, inspect relevant context before acting, avoid commits and external writes, and report changed files, verification, blockers, and residual risks.
+Preserve the user's constraints verbatim when possible. Require the delegate to read applicable `AGENTS.md` files, inspect relevant context before acting, do its own work without spawning subagents or nested agents, avoid commits and external writes, and report changed files, verification, blockers, and residual risks.
 
 Read [references/codex-cli.md](references/codex-cli.md) for preflight checks, prompt template, fresh `codex exec` commands, artifact capture, and postflight checks.
 
@@ -69,7 +70,7 @@ Read [references/codex-cli.md](references/codex-cli.md) for preflight checks, pr
 For every Codex pass:
 
 1. Start a fresh ephemeral `codex exec` invocation with an explicit model, reasoning effort, working directory, sandbox, and output file.
-2. Capture baseline and postflight repository state, exit status, stdout, stderr, and the final message under `_scratch/delegate-codex/<run-id>/`.
+2. Capture baseline and postflight repository state, exit status, stdout, stderr, and the final message under `_scratch/subagent-workflow/<run-id>/`.
 3. Reject edits outside owned scope and any read-only mutation.
 4. Inspect the diff, verify important claims against source files, and run the repository's required checks independently.
 5. Account for the selected model's known failure modes before integrating the result.
