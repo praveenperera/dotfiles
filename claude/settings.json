@@ -14,7 +14,6 @@
       "WebFetch(domain:doc.rust-lang.org)",
       "WebFetch(domain:docs.rs)",
       "WebSearch",
-      "Skill(jj-workflow)",
       "Skill(spec)",
       "Skill(pr-review-toolkit)",
       "Skill(btx:*)",
