@@ -34,7 +34,7 @@ Read [references/model-routing.md](references/model-routing.md) before making a 
 Apply these behavioral corrections:
 
 - For Fable work, preserve the high-level goal, constraints, and authority boundaries. Whether you handle it directly or delegate it, check for early stopping, omitted requirements, and inferred intent overriding an explicit requirement.
-- Give Sol a narrow objective, explicit owned scope, and a minimality constraint. Require it to prefer the smallest coherent change, preserve established abstractions, and stop to re-plan instead of piling on code when the approach is wrong.
+- Watch for Sol overengineering: it can turn a small change into a rewrite with extra abstractions, speculative fallbacks, or excessive tests. Give it a narrow objective, explicit owned scope, and a minimality constraint. Require the smallest coherent change, preserve established abstractions, and stop to re-plan instead of piling on code when the approach is wrong.
 - Use Opus for a taste-sensitive second pass or interactive refinement when Fable's extra intelligence is not required.
 - Give Luna only tasks with an exact procedure and cheap verification. Do not ask it to choose architecture, infer product intent, or judge subtle code quality.
 
