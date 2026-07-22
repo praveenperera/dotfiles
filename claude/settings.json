@@ -45,6 +45,7 @@
     "deny": [],
     "ask": []
   },
+  "model": "opus[1m]",
   "hooks": {
     "Stop": [
       {
@@ -63,11 +64,7 @@
     "command": "/bin/zsh /Users/praveen/.claude/statusline-command.sh"
   },
   "enabledPlugins": {
-    "feature-dev@claude-plugins-official": true,
     "github@claude-plugins-official": false,
-    "pr-review-toolkit@claude-plugins-official": true,
-    "code-review@claude-plugins-official": true,
-    "commit-commands@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
     "safety-net@cc-marketplace": true
