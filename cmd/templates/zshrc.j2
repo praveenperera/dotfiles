@@ -120,6 +120,13 @@ alias llf="cmd codex launch a -c fast"
 alias llr="cmd codex launch a -c review-high"
 alias llrr="cmd codex launch a -c review-xhigh"
 
+# grok
+alias gg="grok"
+alias gga="grok --effort low"
+alias ggs="grok --effort medium"
+alias ggd="grok --effort high"
+alias ggf="grok --effort xhigh"
+
 alias oc="opencode"
 alias ocg="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-gemini.json opencode"
 alias oca="OPENCODE_CONFIG=~/code/dotfiles/opencode/config-openai.json opencode"
