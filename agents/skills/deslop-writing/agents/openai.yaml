@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deslop Writing"
+  short_description: "Draft and edit prose without formulaic AIisms"
+  default_prompt: "Use $deslop-writing to rewrite this draft without formulaic AIisms while preserving its meaning and my voice."
