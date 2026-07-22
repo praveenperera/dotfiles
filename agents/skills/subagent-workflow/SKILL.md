@@ -1,10 +1,14 @@
 ---
 name: subagent-workflow
-description: Provide multi-model routing and subagent workflow guidance for a Fable 5 root agent working with Fable 5, Opus 4.8, GPT-5.6 Sol, and GPT-5.6 Luna. Use when choosing a model for coding, investigation, review, or mechanical work; invoking a Codex or Claude subagent; or defining permissions, ownership, artifacts, and verification for multi-model work.
-disable-model-invocation: true
+description: Provide multi-model routing and subagent workflow guidance for a Fable 5 root agent working with Fable 5, Opus 4.8, GPT-5.6 Sol, and GPT-5.6 Luna. Use only when the user explicitly asks for subagent-workflow by name. Do not infer its use from a general request for review, delegation, model selection, or subagent work.
+disable-model-invocation: false
 ---
 
 # Subagent Workflow
+
+## Invocation gate
+
+Use this skill only when the user explicitly requests `subagent-workflow` by name, including through `/subagent-workflow`. Do not invoke it merely because a task could benefit from delegation, model routing, review, or subagents.
 
 Assume the caller is a Fable 5 root agent. Treat this skill as a small set of routing heuristics and operational guardrails, not a prescribed workflow. Use your own judgment for decomposition, topology, sequencing, delegation, and review. Remain accountable for the user's intent and the integrated result, and never treat a delegate's final message as proof that its work is correct.
 
@@ -18,12 +22,12 @@ Use these working definitions:
 
 Treat the scores as routing heuristics, not benchmarks:
 
-| Model | Intelligence | Taste | Cost efficiency | Default role |
-| --- | ---: | ---: | ---: | --- |
-| Fable 5 | 9 | 9 | 2 | ambiguous architecture, planning, intent-sensitive work, high-taste review, and simplification |
-| GPT-5.6 Sol | 8 | 7 | 8 | persistent implementation, hard debugging, migrations, broad investigation, independent review |
-| Opus 4.8 | 7 | 8 | 5 | high-taste review, deliberate second opinions, and collaborative iteration |
-| GPT-5.6 Luna | 5 | 4 | 10 | repeated or high-volume mechanical transforms, classification, inventory, bulk processing, simple generated text |
+| Model        | Intelligence | Taste | Cost efficiency | Default role                                                                                                     |
+| ------------ | -----------: | ----: | --------------: | ---------------------------------------------------------------------------------------------------------------- |
+| Fable 5      |            9 |     9 |               2 | ambiguous architecture, planning, intent-sensitive work, high-taste review, and simplification                   |
+| GPT-5.6 Sol  |            8 |     7 |               8 | persistent implementation, hard debugging, migrations, broad investigation, independent review                   |
+| Opus 4.8     |            7 |     8 |               5 | high-taste review, deliberate second opinions, and collaborative iteration                                       |
+| GPT-5.6 Luna |            5 |     4 |              10 | repeated or high-volume mechanical transforms, classification, inventory, bulk processing, simple generated text |
 
 Read [references/model-routing.md](references/model-routing.md) before making a consequential or disputed model choice.
 
