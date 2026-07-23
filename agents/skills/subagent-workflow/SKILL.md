@@ -80,3 +80,13 @@ For every Codex pass:
 5. Account for the selected model's known failure modes before integrating the result.
 
 Choose follow-ups, additional reviewers, escalation, and repair paths using your best judgment. The orchestrator remains accountable for the integrated result. Never let a delegate commit, push, open or modify a pull request, deploy, or change external state unless the user separately authorizes that exact action.
+
+## Review beyond the spec
+
+A spec-conformance audit verifies the spec's checklist and therefore inherits the spec's blind spots. After conformance passes on a spec-driven build, run a separate adversarial review pass whose prompt explicitly ignores the spec and hunts failure scenarios:
+
+- Re-derive inventories (consumers, call sites, config readers) by searching the code; never trust the spec's enumerations.
+- Hunt lifecycle staleness: for every value captured at creation and used later, ask what happens when it changes in between. When one instance is found, fix the class, not the instance.
+- Audit every error path for fail-open behavior. In privacy or security code, treat unlikely-but-fail-open as fix-worthy, not a documented residual risk.
+- Require a timeout or cancellation path on every await a UI or state machine depends on.
+- Report which behaviors only runtime or device testing can verify, so untested liveness paths are flagged instead of silently assumed covered.

@@ -58,3 +58,4 @@ claude/.last-update-result.json
 /claude/jobs
 /claude/daemon
 /claude/skills/
+*.log
