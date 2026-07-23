@@ -67,7 +67,8 @@ alias term="nvim -c 'term'"
 
 alias cl="claude"
 alias clr="claude --resume"
-alias cld="claude --permission-mode plan --dangerously-skip-permissions"
+alias cld="claude --permission-mode plan --dangerously-skip-permissions --model fable"
+alias clo="claude --permission-mode plan --dangerously-skip-permissions --model opus"
 
 clx() {
   if [[ -z ${CLIPROXY_API_KEY:-} ]]; then
