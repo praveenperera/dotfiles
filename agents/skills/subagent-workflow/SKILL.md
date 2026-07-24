@@ -1,6 +1,6 @@
 ---
 name: subagent-workflow
-description: Provide multi-model routing and subagent workflow guidance for a Fable 5 root agent working with Fable 5, Opus 4.8, GPT-5.6 Sol, and GPT-5.6 Luna. Use only when the user explicitly asks for subagent-workflow by name. Do not infer its use from a general request for review, delegation, model selection, or subagent work.
+description: Provide multi-model routing and subagent workflow guidance for a Fable 5 root agent working with Fable 5, Opus 5, GPT-5.6 Sol, and GPT-5.6 Luna. Use only when the user explicitly asks for subagent-workflow by name. Do not infer its use from a general request for review, delegation, model selection, or subagent work.
 disable-model-invocation: false
 ---
 
@@ -22,12 +22,12 @@ Use these working definitions:
 
 Treat the scores as routing heuristics, not benchmarks:
 
-| Model        | Intelligence | Taste | Cost efficiency | Default role                                                                                                     |
-| ------------ | -----------: | ----: | --------------: | ---------------------------------------------------------------------------------------------------------------- |
-| Fable 5      |            9 |     9 |               2 | ambiguous architecture, planning, intent-sensitive work, high-taste review, and simplification                   |
-| GPT-5.6 Sol  |            8 |     7 |               8 | persistent implementation, hard debugging, migrations, broad investigation, independent review                   |
-| Opus 4.8     |            7 |     8 |               5 | high-taste review, deliberate second opinions, and collaborative iteration                                       |
-| GPT-5.6 Luna |            5 |     4 |              10 | repeated or high-volume mechanical transforms, classification, inventory, bulk processing, simple generated text |
+| Model        | Intelligence | Taste | Cost efficiency | Default role                                                                                                       |
+| ------------ | -----------: | ----: | --------------: | ------------------------------------------------------------------------------------------------------------------ |
+| Fable 5      |            9 |     9 |               2 | ambiguous architecture, planning, intent-sensitive work, high-taste review, and simplification                     |
+| GPT-5.6 Sol  |            8 |     7 |               8 | persistent implementation, hard debugging, migrations, broad investigation, independent review                     |
+| Opus 5       |            8 |     8 |               6 | high-taste review, deliberate second opinions, and full implementation substitute when the user directs "use opus" |
+| GPT-5.6 Luna |            5 |     4 |              10 | repeated or high-volume mechanical transforms, classification, inventory, bulk processing, simple generated text   |
 
 Read [references/model-routing.md](references/model-routing.md) before making a consequential or disputed model choice.
 
@@ -35,16 +35,20 @@ Apply these behavioral corrections:
 
 - For Fable work, preserve the high-level goal, constraints, and authority boundaries. Whether you handle it directly or delegate it, check for early stopping, omitted requirements, and inferred intent overriding an explicit requirement.
 - Watch for Sol overengineering: it can turn a small change into a rewrite with extra abstractions, speculative fallbacks, or excessive tests. Give it a narrow objective, explicit owned scope, and a minimality constraint. Require the smallest coherent change, preserve established abstractions, and stop to re-plan instead of piling on code when the approach is wrong.
-- Use Opus for a taste-sensitive second pass or interactive refinement when Fable's extra intelligence is not required.
+- Use Opus 5 for long-horizon agentic implementation, second opinions, and high-taste review when Fable's intent inference and restraint are not required. Its taste relative to Fable is unproven at launch, so keep Fable on intent-sensitive surface design. Launch-era reports describe three failure modes: it stops early and reports unfinished work as done, it argues with explicit instructions, and it follows large instruction-dense skill files less reliably than short ones. Give it a focused self-contained prompt instead of a large instruction bundle, and verify completion against the success condition rather than trusting its report.
 - Give Luna only tasks with an exact procedure and cheap verification. Do not ask it to choose architecture, infer product intent, or judge subtle code quality.
 
 Honor an explicit user model choice. If that model is unavailable, report the failure instead of silently substituting another model.
 
 Default every Codex delegation to GPT-5.6 Sol with `high` reasoning. Use Sol with `low` reasoning only for an easy, tightly scoped change whose correct result is cheap to verify. A single easy delegated change still uses Sol. Reserve Luna for repeated, high-volume, or cheap fan-out mechanical workloads, not merely because a Sol task is easy.
 
+Sol is the default delegated implementer. When the user says "use opus", usually because Sol subscription limits are low, route delegated implementation to Opus 5 for the rest of the session as a full substitute: the same prompt contract, owned scope, verification, and no-commit rules, run through the Agent tool with model `opus` and `high` effort instead of the Codex CLI. "use sol" reaffirms the default. Absent a directive, Sol implements and Opus 5 serves review and second-opinion roles.
+
+When Opus 5 implements, treat a report of "done" as unverified. Check the success condition and the diff before accepting a short run, re-prompt it to continue instead of integrating partial work, and state in the prompt that explicit requirements take precedence over its own view of the better approach.
+
 ## Combine models
 
-Use the models in whatever shape best fits the task. Fable's intent inference and restraint complement Sol's persistence; Opus offers a less expensive taste-sensitive pass; Luna reduces the cost of repeated mechanical work. Decide whether to delegate, which model acts first, and how many passes are worthwhile from the actual evidence and risk.
+Use the models in whatever shape best fits the task. Fable's intent inference and restraint complement Sol's persistence; Opus 5 benchmarks near Fable at roughly half Fable's cost per task and can take either implementation or a taste-sensitive pass, though launch-era reports put its instruction following below that benchmark standing; Luna reduces the cost of repeated mechanical work. Decide whether to delegate, which model acts first, and how many passes are worthwhile from the actual evidence and risk.
 
 Do not delegate when handoff and reintegration cost more than the task. Do not give two writers overlapping ownership or let parallel implementations edit the same files. Read-only reviewers may inspect shared repository state.
 

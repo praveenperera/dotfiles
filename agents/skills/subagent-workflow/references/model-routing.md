@@ -16,10 +16,10 @@ Higher is better on every axis.
 | --- | ---: | ---: | ---: | --- |
 | Fable 5 | 9 | 9 | 2 | strongest intent inference and taste; expensive; can be lazy or pursue perceived intent over literal instructions |
 | GPT-5.6 Sol | 8 | 7 | 8 | relentless and efficient; drives hard to completion; can overbuild instead of stepping back |
-| Opus 4.8 | 7 | 8 | 5 | deliberate, polished, and collaborative; less capable than Fable on the hardest work |
+| Opus 5 | 8 | 8 | 6 | near-Fable on benchmarks at Opus price, but launch reports show early stopping and weaker adherence to long instruction sets; taste strong but unproven relative to Fable |
 | GPT-5.6 Luna | 5 | 4 | 10 | cheap, fast, and capable on repeated high-volume procedures; weak default for one-off development or ambiguous work |
 
-The Fable and Opus scores preserve Theo Browne's published routing rubric. The Sol and Luna scores adapt the user's stated preferences, current provider positioning, and subsequent practitioner reports. Taste is especially subjective: use project-specific examples and evals when it matters.
+The Fable score preserves Theo Browne's published routing rubric; the Opus 5 scores are a local recalibration from Anthropic's launch benchmarks and positioning together with early practitioner reports, since Theo's video predates Opus 5. The Sol and Luna scores adapt the user's stated preferences, current provider positioning, and subsequent practitioner reports. Taste is especially subjective: use project-specific examples and evals when it matters.
 
 ## Fable strengths
 
@@ -57,16 +57,30 @@ Theo's GPT-5.6 review describes Sol as unusually determined and reliable while w
 
 Use `high` reasoning by default for Sol work. Drop to `low` only for an easy, tightly scoped change with cheap verification. Do not use `medium` as the routine default.
 
-## Select Opus 4.8
+## Select Opus 5
 
-Use Opus for:
+Use Opus 5 for:
 
+- long-horizon agentic implementation, including multi-step terminal work, broad refactors, and workflow automation
+- complex debugging and root-cause analysis
+- a deliberate second opinion on a Sol or Fable result
 - high-taste review of code, APIs, UI, and copy
 - interactive iteration where collaboration quality matters
-- a deliberate second opinion on a Sol result
 - a separate Claude pass when using another Fable-class worker would not justify the cost
 
-Anthropic positions Opus 4.8 as a premium model for serious coding and agentic work with professional polish. Its July 2026 list price starts at $5 per million input tokens and $25 per million output tokens.
+Anthropic positions Opus 5 as near Fable 5 intelligence at Opus speed and cost, which works out to roughly half Fable's cost per task. Its model id is `claude-opus-5`, and its July 2026 list price is $5 per million input tokens and $25 per million output tokens, unchanged from Opus 4.8. Fast mode runs 2.5x faster at 2x the base price when latency matters more than cost.
+
+Counter its failure modes in the prompt. Launch-era reports describe a model that stops before the work is finished, reports unfinished work as done, argues with explicit instructions, and follows large instruction-dense skill files less reliably than short focused ones:
+
+```text
+Finish the entire objective before reporting. Do not stop at a partial result, and do not report success while any part of the success condition is unmet. Follow the explicit requirements above even where you would choose a different approach; if you believe a requirement is wrong, say so in the final report and still satisfy it. Stop early only for one of the listed stop conditions, and name which one.
+```
+
+Send Opus 5 a focused self-contained prompt rather than pointing it at a large bundle of instruction files, and use `high` effort by default, as with Sol.
+
+Sol remains the default delegated implementer. When the user directs "use opus", usually because Sol usage limits are running low, Opus 5 owns delegated implementation for that session. The launch benchmarks support the substitution: Opus 5 matches or beats Sol on FrontierCode (53.4 vs 47.5), terminal coding (43.3 vs 34.4), and AutomationBench (26.0 vs 18.1), and trails only on DeepSWE (68.8 vs 72.7). Under this substitution, take independent review from an OpenAI model wherever cross-vendor scrutiny matters, so implementation and review do not share a vendor's blind spots, and verify every completion claim against the success condition and the diff before integrating.
+
+The near-Fable framing above comes from Anthropic; the first outside reports temper it, and precedent from the GPT-5.1 and GPT-5.2 launches is that early impressions of an awkward model can improve as prompting adapts. Recalibrate this section from observed runs after a few weeks of use.
 
 ## Select GPT-5.6 Luna
 
@@ -90,7 +104,7 @@ Fable's intent inference and restraint offset Sol's tendency to overbuild, while
 
 ### Sol and Opus
 
-Sol's persistence and Opus's taste are useful when a difficult technical result also needs scrutiny for API shape, readability, and unnecessary code.
+Either model can implement while the other reviews. With Sol implementing, Opus 5 brings near-Fable judgment to scrutiny of API shape, readability, and unnecessary code. With Opus 5 implementing under a "use opus" directive, Sol supplies the cross-vendor review pass, where its persistence is well suited to re-deriving inventories and chasing missed cases. Check an Opus 5 review for coverage as well as verdicts: the same tendency to stop early can truncate a review before it reaches the whole diff.
 
 ### Luna and a frontier model
 
@@ -98,11 +112,12 @@ Use Luna for cheap structured observations across repeatable work, then reserve 
 
 ## Sources
 
-- [Theo Browne, “A proper guide to Fable 5”](https://www.youtube.com/watch?v=8GRmLR__OGQ) defines intelligence and taste and shows the original Fable, Opus, Sonnet, and GPT-5.5 ratings
+- [Theo Browne, “A proper guide to Fable 5”](https://www.youtube.com/watch?v=8GRmLR__OGQ) defines intelligence and taste and shows the original Fable, Opus, Sonnet, and GPT-5.5 ratings; it predates Opus 5
 - [Theo Browne, “GPT-5.6: The Review”](https://www.youtube.com/watch?v=IyoTJHLmClo) discusses Sol's persistence and overbuilding, Luna's orchestration role, and practical model selection
 - [OpenAI Codex model selection](https://learn.chatgpt.com/docs/models#recommended-models) provides the current Sol, Terra, and Luna positioning
 - [OpenAI GPT-5.6 Sol model page](https://developers.openai.com/api/docs/models/gpt-5.6-sol) provides capability, context, and pricing details
 - [OpenAI GPT-5.6 Luna model page](https://developers.openai.com/api/docs/models/gpt-5.6-luna) provides cost-sensitive positioning and pricing details
 - [Anthropic Claude Fable 5](https://www.anthropic.com/claude/fable) provides official use cases, availability, and pricing
-- [Anthropic Claude Opus 4.8](https://www.anthropic.com/claude/opus) provides official use cases, availability, and pricing
+- [Claude Opus 5 announcement](https://www.anthropic.com/news/claude-opus-5) provides official use cases, availability, pricing, and the launch benchmark card that grounds the split criteria above
+- [Dan Shipper's Opus 5 day-zero vibe check](https://x.com/danshipper/status/2080700057892815114) is the source for the early stopping, instruction arguing, and large-skill-file observations; it reports one week of Every's testing on launch day and is explicitly provisional
 - [Claire Vo's Sol and Fable comparison](https://www.lennysnewsletter.com/p/gpt-56-sol-vs-claude-fable-why-openais) is a useful counterpoint: a taste-weighted product benchmark favored Sol while finding Fable more precise and pedantic
