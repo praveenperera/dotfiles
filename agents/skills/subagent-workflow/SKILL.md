@@ -35,7 +35,7 @@ Apply these behavioral corrections:
 
 - For Fable work, preserve the high-level goal, constraints, and authority boundaries. Whether you handle it directly or delegate it, check for early stopping, omitted requirements, and inferred intent overriding an explicit requirement.
 - Watch for Sol overengineering: it can turn a small change into a rewrite with extra abstractions, speculative fallbacks, or excessive tests. Give it a narrow objective, explicit owned scope, and a minimality constraint. Require the smallest coherent change, preserve established abstractions, and stop to re-plan instead of piling on code when the approach is wrong.
-- Use Opus 5 for long-horizon agentic implementation, second opinions, and high-taste review when Fable's intent inference and restraint are not required. Its taste relative to Fable is unproven at launch, so keep Fable on intent-sensitive surface design. Launch-era reports describe three failure modes: it stops early and reports unfinished work as done, it argues with explicit instructions, and it follows large instruction-dense skill files less reliably than short ones. Give it a focused self-contained prompt instead of a large instruction bundle, and verify completion against the success condition rather than trusting its report.
+- Use Opus 5 for long-horizon agentic implementation, second opinions, and high-taste review when Fable's intent inference and restraint are not required. Its taste relative to Fable is unproven at launch, so keep Fable on intent-sensitive surface design. Launch-era reports describe three failure modes: it stops early and reports unfinished work as done, it argues with explicit instructions, and it follows large instruction-dense skill files less reliably than short ones. Give it a focused self-contained prompt instead of a large instruction bundle, and verify completion against the success condition rather than trusting its report. Read [references/opus5-prompting.md](references/opus5-prompting.md) before writing Opus 5 prompts: unhobble style constraints, prefer judgment and rich references over rules and examples, use progressive disclosure, and keep authority, scope, and verification hard.
 - Give Luna only tasks with an exact procedure and cheap verification. Do not ask it to choose architecture, infer product intent, or judge subtle code quality.
 
 Honor an explicit user model choice. If that model is unavailable, report the failure instead of silently substituting another model.
@@ -44,7 +44,7 @@ Default every Codex delegation to GPT-5.6 Sol with `high` reasoning. Use Sol wit
 
 Sol is the default delegated implementer. When the user says "use opus", usually because Sol subscription limits are low, route delegated implementation to Opus 5 for the rest of the session as a full substitute: the same prompt contract, owned scope, verification, and no-commit rules, run through the Agent tool with model `opus` and `high` effort instead of the Codex CLI. "use sol" reaffirms the default. Absent a directive, Sol implements and Opus 5 serves review and second-opinion roles.
 
-When Opus 5 implements, treat a report of "done" as unverified. Check the success condition and the diff before accepting a short run, re-prompt it to continue instead of integrating partial work, and state in the prompt that explicit requirements take precedence over its own view of the better approach.
+When Opus 5 implements, treat a report of "done" as unverified. Check the success condition and the diff before accepting a short run, re-prompt it to continue instead of integrating partial work, and state in the prompt that explicit requirements take precedence over its own view of the better approach. Write the prompt using [references/opus5-prompting.md](references/opus5-prompting.md), not a Sol-style instruction dump.
 
 ## Combine models
 
@@ -71,7 +71,7 @@ Write a self-contained prompt that includes:
 
 Preserve the user's constraints verbatim when possible. Require the delegate to read applicable `AGENTS.md` files, inspect relevant context before acting, do its own work without spawning subagents or nested agents, avoid commits and external writes, and report changed files, verification, blockers, and residual risks.
 
-Read [references/codex-cli.md](references/codex-cli.md) for preflight checks, prompt template, fresh `codex exec` commands, artifact capture, and postflight checks.
+Read [references/codex-cli.md](references/codex-cli.md) for preflight checks, prompt template, fresh `codex exec` commands, artifact capture, and postflight checks. When the delegate is Opus 5, also read [references/opus5-prompting.md](references/opus5-prompting.md) and write the prompt body to that guide.
 
 ## Run and integrate
 
