@@ -1,4 +1,6 @@
-use super::codex::app_server::{set_thread_name, SessionControl, SessionMarker};
+use super::codex::app_server::{
+    current_loaded_thread, set_thread_name, SessionControl, SessionMarker,
+};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use eyre::{eyre, Result, WrapErr};
 use std::cmp::Ordering;
@@ -882,7 +884,11 @@ fn resolve_active_codex_session_once(
             ));
         }
     };
-    let Some(thread) = marker.current_thread else {
+    let thread = match marker.current_thread {
+        Some(thread) => Some(thread),
+        None => current_loaded_thread(&socket_path)?,
+    };
+    let Some(thread) = thread else {
         return Ok(None);
     };
 
