@@ -10,5 +10,9 @@
   {
     "command": "globalDictationToggle",
     "key": "Command+F2"
+  },
+  {
+    "command": "realtimeVoice",
+    "key": "Command+Alt+V"
   }
 ]
