@@ -14,6 +14,11 @@ pub enum AgentTarget {
 }
 
 impl AgentTarget {
+    /// All supported agent install targets, in stable order
+    pub fn all() -> &'static [Self] {
+        &[Self::Codex, Self::Claude]
+    }
+
     pub fn project_skills_dir(self, git_root: &Path) -> PathBuf {
         match self {
             Self::Codex => git_root.join(".agents/skills"),
@@ -33,5 +38,34 @@ impl AgentTarget {
             Self::Codex => "Codex",
             Self::Claude => "Claude",
         }
+    }
+}
+
+/// Resolve CLI agent selection: an explicit target, or every supported agent
+pub fn selected_agents(agent: Option<AgentTarget>) -> Vec<AgentTarget> {
+    match agent {
+        Some(agent) => vec![agent],
+        None => AgentTarget::all().to_vec(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{selected_agents, AgentTarget};
+
+    #[test]
+    fn selected_agents_defaults_to_all() {
+        assert_eq!(
+            selected_agents(None),
+            [AgentTarget::Codex, AgentTarget::Claude]
+        );
+    }
+
+    #[test]
+    fn selected_agents_respects_explicit_target() {
+        assert_eq!(
+            selected_agents(Some(AgentTarget::Claude)),
+            [AgentTarget::Claude]
+        );
     }
 }

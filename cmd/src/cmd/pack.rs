@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use xshell::Shell;
 
-use crate::cmd::agent_target::AgentTarget;
+use crate::cmd::agent_target::{selected_agents, AgentTarget};
 
 #[derive(Debug, Clone, Parser)]
 pub struct Pack {
@@ -25,9 +25,9 @@ pub struct Pack {
 pub enum PackCmd {
     /// Add project-local skills and MCPs from reusable packs
     Add {
-        /// Agent project layout to install into
-        #[arg(long, value_enum, default_value_t)]
-        agent: AgentTarget,
+        /// Agent project layout to install into. When omitted, installs for every supported agent
+        #[arg(long, value_enum)]
+        agent: Option<AgentTarget>,
 
         /// Pack names to add. Opens a searchable multi-select picker when omitted
         packs: Vec<String>,
@@ -101,7 +101,7 @@ pub fn run_with_flags(sh: &Shell, flags: Pack) -> Result<()> {
     }
 }
 
-fn add_packs(sh: &Shell, agent: AgentTarget, requested_packs: &[String]) -> Result<()> {
+fn add_packs(sh: &Shell, agent: Option<AgentTarget>, requested_packs: &[String]) -> Result<()> {
     let pack_dir = crate::dotfiles_dir()?.join("agents/skill-packs");
     let available_packs = list_packs(&pack_dir)?;
     let selected_packs = if requested_packs.is_empty() {
@@ -115,8 +115,10 @@ fn add_packs(sh: &Shell, agent: AgentTarget, requested_packs: &[String]) -> Resu
         return Ok(());
     }
 
-    install_packs(sh, agent, &available_packs, &selected_packs, "Added packs")?;
-    register_current_project(sh, agent, &selected_packs)?;
+    for agent in selected_agents(agent) {
+        install_packs(sh, agent, &available_packs, &selected_packs, "Added packs")?;
+        register_current_project(sh, agent, &selected_packs)?;
+    }
 
     Ok(())
 }

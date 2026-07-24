@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 use eyre::{eyre, Result, WrapErr};
 use xshell::{cmd, Shell};
 
-use crate::cmd::agent_target::AgentTarget;
+use crate::cmd::agent_target::{selected_agents, AgentTarget};
 
 #[derive(Debug, Clone, Parser)]
 pub struct Skill {
@@ -21,9 +21,9 @@ pub struct Skill {
 pub enum SkillCmd {
     /// Link project-local skills into the current Git repo
     Add {
-        /// Agent project layout to install into
-        #[arg(long, value_enum, default_value_t)]
-        agent: AgentTarget,
+        /// Agent project layout to install into. When omitted, installs for every supported agent
+        #[arg(long, value_enum)]
+        agent: Option<AgentTarget>,
 
         /// Skill names to link. Opens a searchable multi-select picker when omitted
         skills: Vec<String>,
@@ -78,7 +78,7 @@ pub fn run_with_flags(sh: &Shell, flags: Skill) -> Result<()> {
     }
 }
 
-fn add_skills(sh: &Shell, agent: AgentTarget, requested_skills: &[String]) -> Result<()> {
+fn add_skills(sh: &Shell, agent: Option<AgentTarget>, requested_skills: &[String]) -> Result<()> {
     let project_skills_dir = crate::dotfiles_dir()?.join("agents/project-skills");
     let available_skills = list_project_skills(&project_skills_dir)?;
     let selected_skills = if requested_skills.is_empty() {
@@ -92,8 +92,23 @@ fn add_skills(sh: &Shell, agent: AgentTarget, requested_skills: &[String]) -> Re
         return Ok(());
     }
 
-    let summary = add_skills_by_name_for_agent(sh, agent, &selected_skills)?;
-    print_skill_summary(&summary);
+    for agent in selected_agents(agent) {
+        let summary = add_skills_by_name_for_agent(sh, agent, &selected_skills)?;
+        if !summary.linked.is_empty() {
+            println!(
+                "Linked skills for {}: {}",
+                agent.label(),
+                summary.linked.join(", ")
+            );
+        }
+        if !summary.skipped.is_empty() {
+            println!(
+                "Skipped existing skills for {}: {}",
+                agent.label(),
+                summary.skipped.join(", ")
+            );
+        }
+    }
 
     Ok(())
 }
@@ -200,15 +215,6 @@ pub fn project_skill_names() -> Result<BTreeSet<String>> {
         .into_iter()
         .map(|skill| skill.name)
         .collect())
-}
-
-fn print_skill_summary(summary: &SkillInstallSummary) {
-    if !summary.linked.is_empty() {
-        println!("Linked skills: {}", summary.linked.join(", "));
-    }
-    if !summary.skipped.is_empty() {
-        println!("Skipped existing skills: {}", summary.skipped.join(", "));
-    }
 }
 
 fn git_root(sh: &Shell) -> Result<PathBuf> {
