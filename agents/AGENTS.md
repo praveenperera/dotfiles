@@ -14,6 +14,7 @@
 
 # Rust Project Specific
 
+- Unless asked, do not set an MSRV for new Rust projects; default to stable.
 - `info` and `error` logs may start with uppercase letters.
 - In log and `println!` macros, prefer inline variable capture such as `warn!("person id={id} ...")` over positional placeholders.
 - For unfamiliar crates or external libraries, inspect documentation or source instead of guessing. Check `target/doc/`, run `cargo doc -p <crate-name>`, inspect `~/.cargo/registry/src`, or use `btx` to look at the code directly.
