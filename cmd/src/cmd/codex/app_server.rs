@@ -539,6 +539,17 @@ struct AppServerThread {
     name: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ThreadLoadedListResponse {
+    data: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ThreadReadResponse {
+    thread: AppServerThread,
+}
+
 impl AppServerThread {
     fn is_top_level(&self) -> bool {
         self.parent_thread_id.is_none() && self.agent_role.is_none()
@@ -640,6 +651,69 @@ pub(crate) fn set_thread_name(socket_path: &Path, thread_id: &str, name: &str) -
     crate::runtime::block_on(set_thread_name_async(socket_path, thread_id, name))?
 }
 
+pub(crate) fn current_loaded_thread(socket_path: &Path) -> Result<Option<SessionThread>> {
+    crate::runtime::block_on(current_loaded_thread_async(socket_path))?
+}
+
+async fn current_loaded_thread_async(socket_path: &Path) -> Result<Option<SessionThread>> {
+    let future = async {
+        let mut socket = connect_initialized(socket_path).await?;
+        send_json(
+            &mut socket,
+            json!({
+                "method": "thread/loaded/list",
+                "id": 2,
+                "params": {}
+            }),
+        )
+        .await?;
+        let response = serde_json::from_value::<ThreadLoadedListResponse>(
+            read_response(&mut socket, 2).await?,
+        )
+        .wrap_err("Codex app server returned an invalid loaded thread list")?;
+
+        let mut top_level_threads = Vec::new();
+        for (index, thread_id) in response.data.into_iter().enumerate() {
+            let request_id = i64::try_from(index)? + 3;
+            send_json(
+                &mut socket,
+                json!({
+                    "method": "thread/read",
+                    "id": request_id,
+                    "params": {
+                        "threadId": thread_id,
+                        "includeTurns": false
+                    }
+                }),
+            )
+            .await?;
+            let response = serde_json::from_value::<ThreadReadResponse>(
+                read_response(&mut socket, request_id).await?,
+            )
+            .wrap_err("Codex app server returned invalid thread metadata")?;
+            if response.thread.is_top_level() {
+                top_level_threads.push(response.thread);
+            }
+        }
+
+        match top_level_threads.as_slice() {
+            [] => Ok(None),
+            [thread] => Ok(Some(SessionThread {
+                id: thread.id.clone(),
+                rollout_path: thread.path.clone(),
+                name: thread.name.clone(),
+            })),
+            threads => Err(eyre!(
+                "Codex app server reported {} top-level threads; cannot identify the active session",
+                threads.len()
+            )),
+        }
+    };
+    tokio::time::timeout(APP_SERVER_REQUEST_TIMEOUT, future)
+        .await
+        .map_err(|_| eyre!("Timed out resolving the active Codex session"))?
+}
+
 async fn set_thread_name_async(socket_path: &Path, thread_id: &str, name: &str) -> Result<()> {
     let future = async {
         let mut socket = connect_initialized(socket_path).await?;
@@ -721,9 +795,9 @@ struct RpcError {
 #[cfg(test)]
 mod tests {
     use super::{
-        managed_tui_connection_args, plan_app_server_launch, session_event, set_thread_name_async,
-        validate_socket_path, AppServerLaunch, SessionControl, SessionEvent, SessionMarker,
-        SessionMonitor,
+        current_loaded_thread_async, managed_tui_connection_args, plan_app_server_launch,
+        session_event, set_thread_name_async, validate_socket_path, AppServerLaunch,
+        SessionControl, SessionEvent, SessionMarker, SessionMonitor,
     };
     use futures_util::{SinkExt, StreamExt};
     use serde_json::{json, Value};
@@ -962,6 +1036,86 @@ mod tests {
             .await
             .unwrap_err();
         assert!(error.to_string().contains("thread not found"));
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn current_loaded_thread_ignores_subagents() {
+        let dir = tempdir().unwrap();
+        let socket_path = dir.path().join("control.sock");
+        let listener = UnixListener::bind(&socket_path).unwrap();
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let mut socket = accept_async(stream).await.unwrap();
+            let _ = next_json(&mut socket).await;
+            socket
+                .send(Message::Text(
+                    json!({"id": 1, "result": {}}).to_string().into(),
+                ))
+                .await
+                .unwrap();
+            let _ = next_json(&mut socket).await;
+
+            let loaded = next_json(&mut socket).await;
+            assert_eq!(loaded["method"], "thread/loaded/list");
+            socket
+                .send(Message::Text(
+                    json!({
+                        "id": 2,
+                        "result": {"data": ["thread-1", "thread-2"]}
+                    })
+                    .to_string()
+                    .into(),
+                ))
+                .await
+                .unwrap();
+
+            for (request_id, thread) in [
+                (
+                    3,
+                    json!({
+                        "id": "thread-1",
+                        "path": "/tmp/root-rollout.jsonl",
+                        "parentThreadId": null,
+                        "agentRole": null,
+                        "name": "Root thread"
+                    }),
+                ),
+                (
+                    4,
+                    json!({
+                        "id": "thread-2",
+                        "path": "/tmp/child-rollout.jsonl",
+                        "parentThreadId": "thread-1",
+                        "agentRole": "worker",
+                        "name": "Child thread"
+                    }),
+                ),
+            ] {
+                let read = next_json(&mut socket).await;
+                assert_eq!(read["method"], "thread/read");
+                socket
+                    .send(Message::Text(
+                        json!({"id": request_id, "result": {"thread": thread}})
+                            .to_string()
+                            .into(),
+                    ))
+                    .await
+                    .unwrap();
+            }
+        });
+
+        let thread = current_loaded_thread_async(&socket_path)
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(thread.id, "thread-1");
+        assert_eq!(
+            thread.rollout_path.as_deref(),
+            Some(std::path::Path::new("/tmp/root-rollout.jsonl"))
+        );
+        assert_eq!(thread.name.as_deref(), Some("Root thread"));
         server.await.unwrap();
     }
 
