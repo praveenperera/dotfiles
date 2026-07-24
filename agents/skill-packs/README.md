@@ -6,8 +6,9 @@ Skill packs group project-local skills, MCP snippets, installed Codex plugin sou
 
 ```bash
 cmd pack add web
+cmd pack add rust
 cmd pack add --agent claude web
-cmd pack add native
+cmd pack add --agent codex native
 cmd pack add cli
 cmd pack add web native
 cmd pack refresh
@@ -17,13 +18,15 @@ cmd pack add
 
 Running without names opens an `fzf` multi-select picker.
 
+By default, packs install for every supported agent (Codex and Claude). Pass `--agent codex` or `--agent claude` to limit installation to one layout.
+
 Packs are installed into the current Git repository:
 
 - Codex `skills` are symlinked into `.agents/skills`
 - Codex `mcps` are merged into `.codex/config.toml`
 - Claude `skills` are symlinked into `.claude/skills`
 - Claude `mcps` are merged into `.mcp.json`
-- `plugin_sources` link skills from installed Codex plugins and merge any plugin MCP servers into the selected agent's MCP config
+- `plugin_sources` link skills from installed Codex plugins and merge any plugin MCP servers into each selected agent's MCP config
 
 `.agents/skills` and `.claude/skills` are globally ignored, so linked project skills stay local unless a project explicitly force-adds them.
 

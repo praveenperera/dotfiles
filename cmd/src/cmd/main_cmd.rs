@@ -238,9 +238,13 @@ mod tests {
             panic!("expected skill command");
         };
 
-        assert!(
-            matches!(subcommand, SkillCmd::Add { agent: AgentTarget::Codex, skills } if skills.is_empty())
-        );
+        assert!(matches!(
+            subcommand,
+            SkillCmd::Add {
+                agent: None,
+                skills
+            } if skills.is_empty()
+        ));
     }
 
     #[test]
@@ -257,9 +261,13 @@ mod tests {
             panic!("expected skill command");
         };
 
-        assert!(
-            matches!(subcommand, SkillCmd::Add { agent: AgentTarget::Codex, skills } if skills == ["alpha", "beta"])
-        );
+        assert!(matches!(
+            subcommand,
+            SkillCmd::Add {
+                agent: None,
+                skills
+            } if skills == ["alpha", "beta"]
+        ));
     }
 
     #[test]
@@ -319,9 +327,13 @@ mod tests {
             panic!("expected skill command");
         };
 
-        assert!(
-            matches!(subcommand, SkillCmd::Add { agent: AgentTarget::Claude, skills } if skills == ["alpha"])
-        );
+        assert!(matches!(
+            subcommand,
+            SkillCmd::Add {
+                agent: Some(AgentTarget::Claude),
+                skills
+            } if skills == ["alpha"]
+        ));
     }
 
     #[test]
@@ -382,9 +394,13 @@ mod tests {
             panic!("expected pack command");
         };
 
-        assert!(
-            matches!(subcommand, PackCmd::Add { agent: AgentTarget::Codex, packs } if packs.is_empty())
-        );
+        assert!(matches!(
+            subcommand,
+            PackCmd::Add {
+                agent: None,
+                packs
+            } if packs.is_empty()
+        ));
     }
 
     #[test]
@@ -401,9 +417,13 @@ mod tests {
             panic!("expected pack command");
         };
 
-        assert!(
-            matches!(subcommand, PackCmd::Add { agent: AgentTarget::Codex, packs } if packs == ["web", "native"])
-        );
+        assert!(matches!(
+            subcommand,
+            PackCmd::Add {
+                agent: None,
+                packs
+            } if packs == ["web", "native"]
+        ));
     }
 
     #[test]
@@ -421,9 +441,13 @@ mod tests {
             panic!("expected pack command");
         };
 
-        assert!(
-            matches!(subcommand, PackCmd::Add { agent: AgentTarget::Claude, packs } if packs == ["web"])
-        );
+        assert!(matches!(
+            subcommand,
+            PackCmd::Add {
+                agent: Some(AgentTarget::Claude),
+                packs
+            } if packs == ["web"]
+        ));
     }
 
     #[test]
