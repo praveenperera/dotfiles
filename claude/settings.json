@@ -45,7 +45,7 @@
     "deny": [],
     "ask": []
   },
-  "model": "claude-fable-5[1m]",
+  "model": "opus[1m]",
   "hooks": {
     "Stop": [
       {
@@ -84,5 +84,6 @@
   "voiceEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
-  }
+  },
+  "agentPushNotifEnabled": true
 }
