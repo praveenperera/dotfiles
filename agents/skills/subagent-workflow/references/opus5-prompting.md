@@ -246,6 +246,18 @@ For read-only analysis, drop the completion rider's implementation tone, keep th
 6. For implementation: is the completion rider present and the success condition checkable without trusting the model?
 7. Would a progressive reference file be better than another paragraph in the prompt?
 
+## Fable subagent prompts (Opus root)
+
+When Opus is root and Fable is the taste/review/simplification delegate, use the same short contract shape as this guide: hard authority, scope, and verification; soft style; progressive references. Fable does not need the Opus completion rider's "do not argue with requirements" tone by default, but it does need an explicit completion bar against laziness and intent drift:
+
+```text
+## Completion
+
+Cover the full owned scope before reporting. Do not stop after a partial pass. Prefer the smallest coherent simplification or review that meets the success condition. Explicit user requirements take precedence over inferred product intent; if they conflict, satisfy the explicit requirement and note the tension in the final report.
+```
+
+Keep Fable subagent prompts short. Point at the diff, owned paths, and success condition. Do not paste this skill or a multi-page rubric into the prompt body.
+
 ## Sources
 
 - [Thariq Shihipar on X](https://x.com/trq212/status/2080710971228918066) — original thread
