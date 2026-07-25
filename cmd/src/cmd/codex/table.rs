@@ -242,19 +242,46 @@ fn format_reset_credit_days_remaining(
     expires_at: chrono::DateTime<Local>,
     captured_at: chrono::DateTime<Local>,
 ) -> String {
+    let remaining = expires_at
+        .signed_duration_since(captured_at)
+        .max(chrono::Duration::zero());
+    let total_hours = remaining.num_hours().max(0);
+
+    // under 24h: keep hour/minute precision
+    if total_hours < 24 {
+        return format_reset_credit_hours_minutes_remaining(expires_at, captured_at);
+    }
+
+    // under 48h: "1 day and N hours" is more useful than calendar "1 day"
+    if total_hours < 48 {
+        let days = total_hours / 24;
+        let hours = total_hours % 24;
+        return format_reset_credit_days_and_hours(days, hours);
+    }
+
     let days = expires_at
         .date_naive()
         .signed_duration_since(captured_at.date_naive())
         .num_days()
         .max(0);
 
-    if days == 0 {
-        return format_reset_credit_hours_minutes_remaining(expires_at, captured_at);
-    }
-
     match days {
+        0 => format_reset_credit_hours_minutes_remaining(expires_at, captured_at),
         1 => "1 day".into(),
         _ => format!("{days} days"),
+    }
+}
+
+fn format_reset_credit_days_and_hours(days: i64, hours: i64) -> String {
+    let day_part = match days {
+        1 => "1 day".into(),
+        n => format!("{n} days"),
+    };
+
+    match hours {
+        0 => day_part,
+        1 => format!("{day_part} and 1 hour"),
+        h => format!("{day_part} and {h} hours"),
     }
 }
 
@@ -1436,13 +1463,35 @@ mod tests {
     }
 
     #[test]
+    fn reset_credit_remaining_shows_day_and_hours_under_48h() {
+        let captured_at = local_datetime(2026, 7, 17, 14, 30, 0);
+
+        // 29h 11m remaining → 1 day and 5 hours
+        assert_eq!(
+            format_reset_credit_days_remaining(local_datetime(2026, 7, 18, 19, 41, 0), captured_at,),
+            "1 day and 5 hours"
+        );
+        // exactly 24h → 1 day
+        assert_eq!(
+            format_reset_credit_days_remaining(local_datetime(2026, 7, 18, 14, 30, 0), captured_at,),
+            "1 day"
+        );
+        // 25h → 1 day and 1 hour
+        assert_eq!(
+            format_reset_credit_days_remaining(local_datetime(2026, 7, 18, 15, 30, 0), captured_at,),
+            "1 day and 1 hour"
+        );
+        // overnight but under 24h wall-clock still uses h/m
+        assert_eq!(
+            format_reset_credit_days_remaining(local_datetime(2026, 7, 18, 1, 0, 0), captured_at,),
+            "10h 30m"
+        );
+    }
+
+    #[test]
     fn reset_credit_remaining_keeps_day_count_for_future_days() {
         let captured_at = local_datetime(2026, 7, 17, 14, 30, 0);
 
-        assert_eq!(
-            format_reset_credit_days_remaining(local_datetime(2026, 7, 18, 19, 41, 0), captured_at,),
-            "1 day"
-        );
         assert_eq!(
             format_reset_credit_days_remaining(local_datetime(2026, 7, 26, 18, 59, 0), captured_at,),
             "9 days"
