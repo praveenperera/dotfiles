@@ -225,7 +225,7 @@ mod tests {
 
     use super::{Cmd, MainCmd};
     use crate::cmd::agent_target::AgentTarget;
-    use crate::cmd::cloudflare::{CloudflareCmd, RedirectCmd};
+    use crate::cmd::cloudflare::{CloudflareCmd, R2Cmd, RedirectCmd};
     use crate::cmd::mcp::McpCmd;
     use crate::cmd::pack::PackCmd;
     use crate::cmd::skill::SkillCmd;
@@ -286,7 +286,9 @@ mod tests {
             panic!("expected cloudflare command");
         };
 
-        let CloudflareCmd::Redirect { subcommand } = subcommand;
+        let CloudflareCmd::Redirect { subcommand } = subcommand else {
+            panic!("expected redirect command");
+        };
 
         assert!(
             matches!(subcommand, RedirectCmd::WwwToApex(args) if args.zone == "example.com" && args.zone_id.as_deref() == Some("zone-id"))
@@ -307,9 +309,37 @@ mod tests {
             panic!("expected cloudflare command");
         };
 
-        let CloudflareCmd::Redirect { subcommand } = subcommand;
+        let CloudflareCmd::Redirect { subcommand } = subcommand else {
+            panic!("expected redirect command");
+        };
 
         assert!(matches!(subcommand, RedirectCmd::List(args) if args.zone == "www.example.com"));
+    }
+
+    #[test]
+    fn parses_cloudflare_r2_billing() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("cf"),
+            OsString::from("r2"),
+            OsString::from("billing"),
+            OsString::from("--account-id"),
+            OsString::from("account-id"),
+            OsString::from("--api-token"),
+            OsString::from("token"),
+        ])
+        .unwrap();
+
+        let MainCmd::Cloudflare { subcommand } = cmd.subcommand else {
+            panic!("expected cloudflare command");
+        };
+
+        let CloudflareCmd::R2 { subcommand } = subcommand else {
+            panic!("expected R2 command");
+        };
+
+        assert!(
+            matches!(subcommand, R2Cmd::Billing(args) if args.account_id.as_deref() == Some("account-id") && args.api_token.as_deref() == Some("token"))
+        );
     }
 
     #[test]

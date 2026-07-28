@@ -9,6 +9,10 @@ use xshell::Shell;
 
 use crate::runtime;
 
+mod r2;
+
+pub use r2::{BillingArgs, R2Cmd};
+
 const API_BASE_URL: &str = "https://api.cloudflare.com/client/v4";
 const API_TOKEN_ENV_VAR: &str = "CMD_CLOUDFLARE_REDIRECT_API_TOKEN";
 const REDIRECT_PHASE: &str = "http_request_dynamic_redirect";
@@ -22,6 +26,13 @@ pub struct Cloudflare {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum CloudflareCmd {
+    /// Inspect R2 usage and billing
+    #[command(arg_required_else_help = true)]
+    R2 {
+        #[command(subcommand)]
+        subcommand: R2Cmd,
+    },
+
     /// Manage Single Redirect rules
     #[command(arg_required_else_help = true)]
     Redirect {
@@ -247,14 +258,14 @@ struct PatchDnsRecordRequest {
     proxied: bool,
 }
 
-struct CloudflareApi {
+pub(super) struct CloudflareApi {
     client: reqwest::Client,
     base_url: String,
     token: String,
 }
 
 impl CloudflareApi {
-    fn new(base_url: String, token: String) -> Result<Self> {
+    pub(super) fn new(base_url: String, token: String) -> Result<Self> {
         let client = reqwest::Client::builder()
             .user_agent("cmd-cloudflare")
             .build()?;
@@ -375,6 +386,14 @@ impl CloudflareApi {
         self.send_json(request, "update DNS record").await
     }
 
+    pub(super) async fn get_json<T>(&self, path: &str, context: &str) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        let request = self.request(Method::GET, path);
+        self.send_json(request, context).await
+    }
+
     fn request(&self, method: Method, path: &str) -> RequestBuilder {
         self.client
             .request(method, self.url(path))
@@ -434,6 +453,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Cloudflare) -> Result<()> {
 
 async fn run_async(flags: Cloudflare) -> Result<()> {
     match flags.subcommand {
+        CloudflareCmd::R2 { subcommand } => r2::run(subcommand).await?,
         CloudflareCmd::Redirect { subcommand } => match subcommand {
             RedirectCmd::List(args) => {
                 let result = list_redirects(args).await?;
