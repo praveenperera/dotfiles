@@ -45,7 +45,7 @@
     "deny": [],
     "ask": []
   },
-  "model": "opus[1m]",
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "Stop": [
       {
@@ -81,9 +81,9 @@
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
+  "agentPushNotifEnabled": true,
   "voiceEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
-  },
-  "agentPushNotifEnabled": true
+  }
 }
