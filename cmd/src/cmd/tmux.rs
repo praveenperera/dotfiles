@@ -665,12 +665,15 @@ fn name_codex_pane_after_progress(sh: &Shell, pane: &PaneTarget) -> Result<()> {
         .or_else(|| fallback_pane_name(pane))
         .ok_or_else(|| eyre!("Generated pane name was empty"))?;
 
-    apply_synced_codex_name(
+    // Pane label is the primary result. Codex session rename is best-effort so a
+    // missing rollout / app-server rejection still exits 0 and keeps the name.
+    // Do not surface session failures: Alt+r is fire-and-forget via run-shell -b,
+    // and a non-zero exit makes tmux flash "'cmd ...' returned 1".
+    let _ = apply_synced_codex_name(
         &name,
-        &pane.current_name,
         |pane_name| set_tmux_pane_name(sh, &pane.id, pane_name),
         || set_codex_thread_name_for_session(&session, &name),
-    )?;
+    );
 
     Ok(())
 }
@@ -694,12 +697,13 @@ fn rename_pane(sh: &Shell, target_pane: Option<&str>, name: &str) -> Result<()> 
     let session = resolve_active_codex_session(&pane, &processes)?;
     if let Err(err) = apply_synced_codex_name(
         name,
-        &pane.current_name,
         |pane_name| set_tmux_pane_name(sh, &pane.id, pane_name),
         || set_codex_thread_name_for_session(&session, name),
     ) {
-        let message = format!("Pane unchanged; Codex session rename failed: {err}");
-        report_name_result(sh, &message);
+        report_name_result(
+            sh,
+            &format!("Pane renamed; Codex session rename failed: {err}"),
+        );
     }
 
     Ok(())
@@ -709,20 +713,17 @@ fn set_codex_thread_name_for_session(session: &ActiveCodexSession, name: &str) -
     set_thread_name(&session.socket_path, &session.thread_id, name)
 }
 
+/// Apply a pane name and optionally keep the Codex session name in sync.
+///
+/// Session rename failures are returned after the pane name is applied so
+/// callers can keep the pane label and report softly instead of rolling back.
 fn apply_synced_codex_name(
     name: &str,
-    previous_name: &str,
     mut set_pane_name: impl FnMut(&str) -> Result<()>,
     set_session_name: impl FnOnce() -> Result<()>,
 ) -> Result<()> {
     set_pane_name(name)?;
-    if let Err(rename_error) = set_session_name() {
-        set_pane_name(previous_name).wrap_err_with(|| {
-            format!("Codex rename failed ({rename_error}); pane name rollback also failed")
-        })?;
-        return Err(rename_error);
-    }
-    Ok(())
+    set_session_name()
 }
 
 fn report_name_result(sh: &Shell, message: &str) {
@@ -884,8 +885,14 @@ fn resolve_active_codex_session_once(
             ));
         }
     };
+    // Prefer marker thread when it already has a rollout. ThreadStarted can land
+    // with a null path; refresh from the app server so name/set and context work.
     let thread = match marker.current_thread {
-        Some(thread) => Some(thread),
+        Some(thread) if thread.rollout_path.is_some() => Some(thread),
+        Some(thread) => match current_loaded_thread(&socket_path)? {
+            Some(loaded) => Some(loaded),
+            None => Some(thread),
+        },
         None => current_loaded_thread(&socket_path)?,
     };
     let Some(thread) = thread else {
@@ -1490,12 +1497,11 @@ mod tests {
     }
 
     #[test]
-    fn synced_codex_name_rolls_back_pane_after_api_failure() {
+    fn synced_codex_name_keeps_pane_after_api_failure() {
         let mut pane_names = Vec::new();
 
         let error = apply_synced_codex_name(
             "new name",
-            "old name",
             |name| {
                 pane_names.push(name.to_owned());
                 Ok(())
@@ -1504,8 +1510,30 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(pane_names, ["new name", "old name"]);
+        assert_eq!(pane_names, ["new name"]);
         assert!(error.to_string().contains("rename rejected"));
+    }
+
+    #[test]
+    fn synced_codex_name_applies_both_when_session_rename_succeeds() {
+        let mut pane_names = Vec::new();
+        let mut session_names = Vec::new();
+
+        apply_synced_codex_name(
+            "new name",
+            |name| {
+                pane_names.push(name.to_owned());
+                Ok(())
+            },
+            || {
+                session_names.push("new name".to_owned());
+                Ok(())
+            },
+        )
+        .unwrap();
+
+        assert_eq!(pane_names, ["new name"]);
+        assert_eq!(session_names, ["new name"]);
     }
 
     #[test]
