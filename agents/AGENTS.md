@@ -27,6 +27,7 @@
 - Prefer structs with methods over freestanding functions when they encapsulate shared state.
 - Use named imports instead of wildcard imports.
 - Keep test-only functions, types, and modules out of production code paths. Put them under `mod tests` or a dedicated `mod test_support`, and use `#[cfg(test)]` only to gate those modules.
+- Prefer turso + toasty orm with compile-time typed checked queries over raw sqlite
 
 # Build Verification
 
