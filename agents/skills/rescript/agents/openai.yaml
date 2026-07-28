@@ -1,0 +1,4 @@
+interface:
+  display_name: "ReScript"
+  short_description: "Build safer JavaScript-targeting apps with ReScript"
+  default_prompt: "Use $rescript to build this website with ReScript where it is the right default."
