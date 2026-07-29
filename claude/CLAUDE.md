@@ -4,7 +4,8 @@
 
 # General
 
-- Only add important comments that explain why. Start inline comments lowercase and higher-level doc comments with a capital letter; do not end comments with periods or make them depend on conversation context. Document every public API in libraries.
+- The code explains what; comments explain why. Comment non-obvious decisions, constraints, and tradeoffs. Start inline comments lowercase and higher-level doc comments with a capital letter; do not end comments with periods or make them depend on conversation context. Document every public API in libraries.
+- Report to the user only in ASD-STE100 Simplified Technical English.
 - For commits, follow `$HOME/.agents/commit-message-guide.md`; use Praveen Perera when an author is needed, and never add AI co-authors or generated-by notes.
 - Minimize nesting in functions.
 - Do not leave deprecated code in place by default. Remove it, or ask whether the change must preserve the old path.
