@@ -113,7 +113,7 @@ Avoid turning every rule into type-level machinery. If the state depends on pers
 Spawn a separate agent focused on style and conventions. Always runs if Pass 1 ran. May also run independently for style-only cleanup even without structural findings.
 
 ### Comments
-- Inline comments (`//`): start lowercase
+- Inline comments (`//`): prefer lowercase for ordinary prose, but preserve prescribed capitalization for brands, proper nouns, acronyms, identifiers, and quoted text
 - Doc comments (`///`, `//!`): start capitalized
 - `SAFETY` blocks: all-caps
 - No trailing period on comments
