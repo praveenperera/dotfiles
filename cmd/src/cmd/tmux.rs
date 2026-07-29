@@ -1144,7 +1144,14 @@ fn run_codex_name_model(cwd: &Path, launch_home: Option<&Path>, prompt: &str) ->
         .unwrap_or(home_dir()?.join(".codex"));
 
     let mut child = Command::new("codex")
-        .args(["exec", "--ephemeral", "--model", NAME_MODEL, "--cd"])
+        .args([
+            "exec",
+            "--ephemeral",
+            "--skip-git-repo-check",
+            "--model",
+            NAME_MODEL,
+            "--cd",
+        ])
         .arg(cwd)
         .args(["--output-last-message"])
         .arg(&output_path)
