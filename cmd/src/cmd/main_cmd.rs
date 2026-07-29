@@ -225,7 +225,7 @@ mod tests {
 
     use super::{Cmd, MainCmd};
     use crate::cmd::agent_target::AgentTarget;
-    use crate::cmd::cloudflare::{CloudflareCmd, R2Cmd, RedirectCmd};
+    use crate::cmd::cloudflare::{BillingOutput, CloudflareCmd, R2Cmd, RedirectCmd};
     use crate::cmd::mcp::McpCmd;
     use crate::cmd::pack::PackCmd;
     use crate::cmd::skill::SkillCmd;
@@ -326,6 +326,8 @@ mod tests {
             OsString::from("account-id"),
             OsString::from("--api-token"),
             OsString::from("token"),
+            OsString::from("--output"),
+            OsString::from("json"),
         ])
         .unwrap();
 
@@ -338,7 +340,7 @@ mod tests {
         };
 
         assert!(
-            matches!(subcommand, R2Cmd::Billing(args) if args.account_id.as_deref() == Some("account-id") && args.api_token.as_deref() == Some("token"))
+            matches!(subcommand, R2Cmd::Billing(args) if args.account_id.as_deref() == Some("account-id") && args.api_token.as_deref() == Some("token") && args.output == BillingOutput::Json)
         );
     }
 

@@ -3,9 +3,9 @@ use std::fmt::Write as _;
 use std::io::{self, Write as _};
 
 use chrono::{DateTime, NaiveDate, Utc};
-use clap::{Args, Subcommand};
+use clap::{Args, Subcommand, ValueEnum};
 use eyre::{eyre, ContextCompat, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::{CloudflareApi, API_BASE_URL};
 
@@ -18,19 +18,34 @@ pub enum R2Cmd {
     Billing(#[command(flatten)] BillingArgs),
 }
 
+/// Arguments for the R2 billing report.
 #[derive(Debug, Clone, Args)]
 pub struct BillingArgs {
     /// Cloudflare account ID
-    #[arg(long, env = ACCOUNT_ID_ENV_VAR)]
+    #[arg(long, env = ACCOUNT_ID_ENV_VAR, hide_env_values = true)]
     pub account_id: Option<String>,
 
     /// Cloudflare API token with Account Billing Read permission
-    #[arg(long, env = BILLING_API_TOKEN_ENV_VAR)]
+    #[arg(long, env = BILLING_API_TOKEN_ENV_VAR, hide_env_values = true)]
     pub api_token: Option<String>,
+
+    /// Output format
+    #[arg(long, value_enum, default_value_t)]
+    pub output: BillingOutput,
 
     /// Override the Cloudflare API base URL
     #[arg(long, hide = true, default_value = API_BASE_URL)]
     pub api_base_url: String,
+}
+
+/// Output format for an R2 billing report.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum BillingOutput {
+    /// Human-readable text.
+    #[default]
+    Human,
+    /// Stable machine-readable JSON.
+    Json,
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,6 +103,41 @@ struct Money {
     currency: String,
 }
 
+#[derive(Debug, Serialize)]
+struct JsonBillingReport {
+    schema: &'static str,
+    version: u32,
+    period: Option<JsonBillingPeriod>,
+    total_cost: Option<JsonMoney>,
+    metrics: Vec<JsonBillingMetric>,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonBillingPeriod {
+    start: NaiveDate,
+    usage_through: NaiveDate,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonBillingMetric {
+    name: String,
+    usage: JsonQuantity,
+    billable_usage: JsonQuantity,
+    billed_cost: JsonMoney,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonQuantity {
+    value: f64,
+    unit: String,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonMoney {
+    value: f64,
+    currency: String,
+}
+
 pub(super) async fn run(command: R2Cmd) -> Result<()> {
     match command {
         R2Cmd::Billing(args) => run_billing(args).await,
@@ -100,7 +150,10 @@ async fn run_billing(args: BillingArgs) -> Result<()> {
     let api = CloudflareApi::new(args.api_base_url, token)?;
     let records = get_usage(&api, &account_id).await?;
     let report = BillingReport::new(account_id, records, Utc::now().date_naive())?;
-    let rendered = render_report(&report)?;
+    let rendered = match args.output {
+        BillingOutput::Human => render_report(&report)?,
+        BillingOutput::Json => render_json_report(&report)?,
+    };
     let mut stdout = io::stdout().lock();
     stdout.write_all(rendered.as_bytes())?;
 
@@ -318,6 +371,61 @@ fn render_report(report: &BillingReport) -> Result<String> {
     Ok(output)
 }
 
+fn render_json_report(report: &BillingReport) -> Result<String> {
+    let report = JsonBillingReport::new(report)?;
+    let mut output = serde_json::to_string_pretty(&report)?;
+    output.push('\n');
+
+    Ok(output)
+}
+
+impl JsonBillingReport {
+    fn new(report: &BillingReport) -> Result<Self> {
+        let period = report.period.map(|period| JsonBillingPeriod {
+            start: period.start,
+            usage_through: period.usage_through,
+        });
+        let total_cost = report
+            .metrics
+            .first()
+            .map(|_| report.total_cost())
+            .transpose()?
+            .map(|money| JsonMoney {
+                value: money.value,
+                currency: money.currency,
+            });
+        let metrics = report.metrics.iter().map(JsonBillingMetric::from).collect();
+
+        Ok(Self {
+            schema: "cmd.cloudflare.r2.billing",
+            version: 1,
+            period,
+            total_cost,
+            metrics,
+        })
+    }
+}
+
+impl From<&BillingMetric> for JsonBillingMetric {
+    fn from(metric: &BillingMetric) -> Self {
+        Self {
+            name: metric.label.clone(),
+            usage: JsonQuantity {
+                value: metric.consumed.value,
+                unit: metric.consumed.unit.clone(),
+            },
+            billable_usage: JsonQuantity {
+                value: metric.billable.value,
+                unit: metric.billable.unit.clone(),
+            },
+            billed_cost: JsonMoney {
+                value: metric.cost.value,
+                currency: metric.cost.currency.clone(),
+            },
+        }
+    }
+}
+
 fn format_quantity(quantity: &Quantity) -> String {
     let value = format_number(quantity.value);
     if quantity.unit.is_empty() {
@@ -348,15 +456,28 @@ fn format_number(value: f64) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex;
+
     use chrono::{TimeZone, Utc};
+    use clap::Args;
     use serde_json::json;
     use wiremock::{
         matchers::{header, method, path},
         Mock, MockServer, ResponseTemplate,
     };
 
-    use super::{get_usage, render_report, BillingReport, PaygoUsageRecord};
+    use super::{
+        get_usage, render_json_report, render_report, BillingArgs, BillingOutput, BillingReport,
+        PaygoUsageRecord, BILLING_API_TOKEN_ENV_VAR,
+    };
     use crate::cmd::cloudflare::CloudflareApi;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn human_output_is_the_default() {
+        assert_eq!(BillingOutput::default(), BillingOutput::Human);
+    }
 
     #[tokio::test]
     async fn fetches_paygo_usage_with_billing_read_permission() {
@@ -491,6 +612,131 @@ mod tests {
 
         assert!(rendered.contains("Usage: 4\n"));
         assert!(rendered.contains("Billable: 0\n"));
+    }
+
+    #[test]
+    fn billing_help_never_displays_the_api_token() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let previous = std::env::var_os(BILLING_API_TOKEN_ENV_VAR);
+        std::env::set_var(BILLING_API_TOKEN_ENV_VAR, "help-secret-token");
+        let mut command = BillingArgs::augment_args(clap::Command::new("billing"));
+
+        let help = command.render_long_help().to_string();
+
+        match previous {
+            Some(value) => std::env::set_var(BILLING_API_TOKEN_ENV_VAR, value),
+            None => std::env::remove_var(BILLING_API_TOKEN_ENV_VAR),
+        }
+        assert!(help.contains(BILLING_API_TOKEN_ENV_VAR));
+        assert!(!help.contains("help-secret-token"));
+    }
+
+    #[test]
+    fn renders_stable_sanitized_json_in_metric_name_order() {
+        let report = BillingReport::new(
+            "sensitive-account-id".to_string(),
+            vec![
+                record(
+                    "R2 Standard Class B Operations",
+                    "R2",
+                    12_000_000.0,
+                    2_000_000.0,
+                    0.72,
+                    date(2026, 7, 16),
+                    date(2026, 7, 28),
+                ),
+                record(
+                    "R2 Standard Class A Operations",
+                    "R2",
+                    3_000_000.0,
+                    2_000_000.0,
+                    0.25,
+                    date(2026, 7, 16),
+                    date(2026, 7, 28),
+                ),
+            ],
+            date(2026, 7, 28),
+        )
+        .unwrap();
+
+        let rendered = render_json_report(&report).unwrap();
+
+        assert_eq!(
+            rendered,
+            concat!(
+                "{\n",
+                "  \"schema\": \"cmd.cloudflare.r2.billing\",\n",
+                "  \"version\": 1,\n",
+                "  \"period\": {\n",
+                "    \"start\": \"2026-07-16\",\n",
+                "    \"usage_through\": \"2026-07-27\"\n",
+                "  },\n",
+                "  \"total_cost\": {\n",
+                "    \"value\": 0.97,\n",
+                "    \"currency\": \"USD\"\n",
+                "  },\n",
+                "  \"metrics\": [\n",
+                "    {\n",
+                "      \"name\": \"R2 Standard Class A Operations\",\n",
+                "      \"usage\": {\n",
+                "        \"value\": 3000000.0,\n",
+                "        \"unit\": \"requests\"\n",
+                "      },\n",
+                "      \"billable_usage\": {\n",
+                "        \"value\": 2000000.0,\n",
+                "        \"unit\": \"requests\"\n",
+                "      },\n",
+                "      \"billed_cost\": {\n",
+                "        \"value\": 0.25,\n",
+                "        \"currency\": \"USD\"\n",
+                "      }\n",
+                "    },\n",
+                "    {\n",
+                "      \"name\": \"R2 Standard Class B Operations\",\n",
+                "      \"usage\": {\n",
+                "        \"value\": 12000000.0,\n",
+                "        \"unit\": \"requests\"\n",
+                "      },\n",
+                "      \"billable_usage\": {\n",
+                "        \"value\": 2000000.0,\n",
+                "        \"unit\": \"requests\"\n",
+                "      },\n",
+                "      \"billed_cost\": {\n",
+                "        \"value\": 0.72,\n",
+                "        \"currency\": \"USD\"\n",
+                "      }\n",
+                "    }\n",
+                "  ]\n",
+                "}\n",
+            )
+        );
+        assert!(!rendered.contains("sensitive-account-id"));
+        assert!(!rendered.contains("api_token"));
+    }
+
+    #[test]
+    fn renders_empty_json_with_stable_nullable_fields() {
+        let report = BillingReport::new(
+            "sensitive-account-id".to_string(),
+            vec![],
+            date(2026, 7, 28),
+        )
+        .unwrap();
+
+        let rendered = render_json_report(&report).unwrap();
+
+        assert_eq!(
+            rendered,
+            concat!(
+                "{\n",
+                "  \"schema\": \"cmd.cloudflare.r2.billing\",\n",
+                "  \"version\": 1,\n",
+                "  \"period\": null,\n",
+                "  \"total_cost\": null,\n",
+                "  \"metrics\": []\n",
+                "}\n",
+            )
+        );
     }
 
     fn date(year: i32, month: u32, day: u32) -> chrono::NaiveDate {
