@@ -4,7 +4,8 @@
 
 # General
 
-- Only add important comments that explain why. Start inline comments lowercase and start higher-level doc comments with a capital letter; do not end comments with periods or make them depend on conversation context. Document every public API in libraries.
+- The code explains what; comments explain why. Comment non-obvious decisions, constraints, and tradeoffs. Start inline comments lowercase and higher-level doc comments with a capital letter; do not end comments with periods or make them depend on conversation context. Document every public API in libraries.
+- Report to the user only in ASD-STE100 Simplified Technical English.
 - For commits, follow `$HOME/.agents/commit-message-guide.md`; use Praveen Perera when an author is needed, and never add Claude/Codex/AI co-authors or generated-by notes.
 - Minimize nesting in functions.
 - Do not leave deprecated code in place by default. Remove it, or ask whether the change must preserve the old path.
@@ -26,28 +27,13 @@
 - Prefer tuple structs over named-field structs for simple wrappers, such as `struct Foo(Arc<Inner>)`.
 - Prefer structs with methods over freestanding functions when they encapsulate shared state.
 - Use named imports instead of wildcard imports.
+- Use blank lines to separate distinct logical phases in a function. Keep a short, single-phase body together. Do not add a blank line only to separate the final expression.
 - Keep test-only functions, types, and modules out of production code paths. Put them under `mod tests` or a dedicated `mod test_support`, and use `#[cfg(test)]` only to gate those modules.
 - Prefer turso + toasty orm with compile-time typed checked queries over raw sqlite
 
 # Build Verification
 
 - After implementation changes, run the repository's formatter and linter. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists.
-
-# Long-Running Commands
-
-- The root agent may run and await commands expected to finish in less than five minutes, such as formatting, clippy, or a small test target.
-- Before launching tests, benchmarks, promotion runs, or similar work expected to take five minutes or longer, commit the relevant code so the run is tied to a durable revision. Preserve unrelated changes and use hunk staging when needed.
-- A repository-provided durable runner takes precedence over the generic watcher lifecycle below. Use its supported typed commands whenever it owns launch, process identity, deadlines, teardown, durable status, resume, or evidence publication; do not recreate any of those responsibilities in an agent or shell controller.
-- When a repository runner owns the lifecycle, the Luna watcher may invoke the supported runner command, use the runner's event-driven wait command for durable terminal state, and reliably deliver that verified result to the root task. It must not create an independent job directory, status model, process watcher, deadline, teardown path, resume path, or evidence publisher.
-- Apply the generic watcher recipe below only when the repository does not provide a durable runner for the requested workflow.
-- For a run expected to take five minutes or longer, launch a low-cost Luna agent with low reasoning in a new Codex thread. The Luna watcher must own the job lifecycle: create its durable state, launch the run as a detached process or runtime-managed background job, monitor it, and report its result. The root agent must not launch or poll the run or perform fallback or force checks. Give the watcher the root task's explicit ID and require it to call `send_message_to_thread` with that ID.
-- Give every watched job its own directory containing a durable job ID, atomic status or result file, start time, expected duration, hard deadline, and recorded process identity. The process or a local supervisor must record a terminal `succeeded`, `failed`, or `timed_out` state even if notification delivery fails.
-- The watcher must prefer direct process or runtime completion events and message waiting, remaining idle between events. When the supervisor communicates through the filesystem, use `fswatch --one-event <job-dir>` to wait for a change to the job directory, then reconcile the status and re-arm the one-shot watch only if the job remains nonterminal. Watch the directory rather than a single status file so atomic replacements and renames are observed.
-- Treat completion and filesystem notifications as wake-up hints, not the source of truth. When awakened, the watcher must reconcile the durable state and verify the recorded process identity if the state is nonterminal.
-- To catch a missed notification, the watcher may perform one forced reconciliation after each 10-minute event-wait timeout, but must not poll more frequently. It must report or recover nonterminal jobs whose hard deadline has passed.
-- When the run reaches a terminal state or requires action, the watcher must call `send_message_to_thread` with the explicit root task ID and include the job ID, status path, result summary, and any requested next step. A final answer, task completion, or update recorded only in the watcher thread does not count as delivery. The watcher must not finish until the send call succeeds; if delivery fails, it must preserve the terminal result, remain active, and retry the call. The root agent should resume from the explicit message and must not schedule its own fallback check.
-- If event-driven completion or a durable watcher cannot be established, tell the user that automatic resumption is unavailable and provide the job ID, status path, and a command or time for a later manual check. Do not simulate notifications with polling from the root task.
-- If more frequent live monitoring is explicitly required, first warn that every check can consume quota and obtain user approval for the cadence and maximum monitoring budget.
 
 # Testing
 
