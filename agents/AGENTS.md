@@ -27,7 +27,7 @@
 - Prefer tuple structs over named-field structs for simple wrappers, such as `struct Foo(Arc<Inner>)`.
 - Prefer structs with methods over freestanding functions when they encapsulate shared state.
 - Use named imports instead of wildcard imports.
-- Use blank lines to separate distinct logical phases in a function. Keep a short, single-phase body together. Do not add a blank line only to separate the final expression.
+- Add a blank line after a multi-line construct before the next statement or block, regardless of its closing syntax. Also use blank lines to separate distinct logical phases in a function. A related single-line statement can stay with the block that follows it when separation would add noise. Keep a short, single-phase body together, and do not add a blank line only before the final expression.
 - Keep test-only functions, types, and modules out of production code paths. Put them under `mod tests` or a dedicated `mod test_support`, and use `#[cfg(test)]` only to gate those modules.
 - Prefer turso + toasty orm with compile-time typed checked queries over raw sqlite
 
