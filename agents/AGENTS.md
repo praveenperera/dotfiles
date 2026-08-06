@@ -41,6 +41,11 @@
 - Do not add tests that only restate edited literals or implementation details. Identify the behavior or invariant the test would protect before adding it.
 - For static configuration or list changes, prefer compile or lint verification unless selection, fallback, parsing, migration, or filtering behavior needs coverage.
 
+# Skills
+
+- Reuse skill instructions that are already present in the active conversation context across user turns. Do not reread or check the same `SKILL.md` or its required references only because a new user turn started.
+- Reload a previously loaded skill only after context compaction.
+
 # Subagents
 
 - Delegate only bounded, independent work when doing so is likely to reduce total context, cost, or elapsed time; prefer phase-sized, non-overlapping slices.
