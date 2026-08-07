@@ -1,123 +1,93 @@
-## Routing Patterns
+# Container Patterns
 
-### Session Affinity (Stateful)
+## Stable Instance per User or Session
+
+Use an authenticated identifier or another stable application key. Do not accept an untrusted key
+that lets one tenant address another tenant's Container.
 
 ```typescript
+import { Container, getContainer } from "@cloudflare/containers";
+
 export class SessionBackend extends Container {
   defaultPort = 3000;
   sleepAfter = "30m";
 }
 
 export default {
-  async fetch(request: Request, env: Env) {
-    const sessionId = request.headers.get("X-Session-ID") || crypto.randomUUID();
-    const container = env.SESSION_BACKEND.getByName(sessionId);
-    await container.startAndWaitForPorts();
-    return container.fetch(request);
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const sessionId = await authenticatedSessionId(request);
+    return getContainer(env.SESSION_BACKEND, sessionId).fetch(request);
   }
 };
 ```
 
-**Use:** User sessions, WebSocket, stateful games, per-user caching.
+Use for user sessions, game rooms, per-tenant tools, and other individually addressable workloads.
 
-### Load Balancing (Stateless)
+## Fixed Stateless Pool
 
 ```typescript
+import { getRandom } from "@cloudflare/containers";
+
+const INSTANCE_COUNT = 5;
+
 export default {
-  async fetch(request: Request, env: Env) {
-    const container = env.STATELESS_API.getRandom();
-    await container.startAndWaitForPorts();
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const container = await getRandom(env.STATELESS_API, INSTANCE_COUNT);
     return container.fetch(request);
   }
 };
 ```
 
-**Use:** Stateless HTTP APIs, CPU-intensive work, read-only queries.
+`getRandom()` selects randomly from a fixed pool. It is not latency-aware and does not change the
+pool size from demand. Use it only when each instance can serve any request.
 
-### Singleton Pattern
+## Shared Singleton Identity
 
 ```typescript
+import { getContainer } from "@cloudflare/containers";
+
 export default {
-  async fetch(request: Request, env: Env) {
-    const container = env.GLOBAL_SERVICE.getByName("singleton");
-    await container.startAndWaitForPorts();
-    return container.fetch(request);
+  async fetch(request: Request, env: Env): Promise<Response> {
+    return getContainer(env.SHARED_SERVICE).fetch(request);
   }
 };
 ```
 
-**Use:** Global cache, centralized coordinator, single source of truth.
+This creates one logical identity, not a permanently running process or a fixed global location.
+Cloudflare can restart the Container in another location.
 
 ## WebSocket Forwarding
 
+Use `fetch()`, not `containerFetch()`, for a WebSocket upgrade:
+
 ```typescript
+import { getContainer } from "@cloudflare/containers";
+
 export default {
-  async fetch(request: Request, env: Env) {
-    if (request.headers.get("Upgrade") === "websocket") {
-      const sessionId = request.headers.get("X-Session-ID") || crypto.randomUUID();
-      const container = env.WS_BACKEND.getByName(sessionId);
-      await container.startAndWaitForPorts();
-      
-      // ⚠️ MUST use fetch(), not containerFetch()
-      return container.fetch(request);
+  async fetch(request: Request, env: Env): Promise<Response> {
+    if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+      return new Response("WebSocket upgrade required", { status: 426 });
     }
-    return new Response("Not a WebSocket request", { status: 400 });
+
+    const sessionId = await authenticatedSessionId(request);
+    return getContainer(env.WS_BACKEND, sessionId).fetch(request);
   }
 };
 ```
 
-**⚠️ Critical:** Always use `fetch()` for WebSocket.
+Use `switchPort(request, port)` before `fetch()` when the WebSocket service is not on `defaultPort`.
 
-## Graceful Shutdown
+## Long-Running Background Work
 
-```typescript
-export class GracefulContainer extends Container {
-  private connections = new Set<WebSocket>();
-
-  onStop() {
-    // SIGTERM received, 15 minutes until SIGKILL
-    for (const ws of this.connections) {
-      ws.close(1001, "Server shutting down");
-    }
-    this.ctx.storage.put("shutdown-time", Date.now());
-  }
-
-  onActivityExpired(): boolean {
-    return this.connections.size > 0;  // Keep alive if connections
-  }
-}
-```
-
-## Concurrent Request Handling
-
-```typescript
-export class SafeContainer extends Container {
-  private initialized = false;
-
-  async fetch(request: Request) {
-    await this.ctx.blockConcurrencyWhile(async () => {
-      if (!this.initialized) {
-        await this.startAndWaitForPorts();
-        this.initialized = true;
-      }
-    });
-    return super.fetch(request);
-  }
-}
-```
-
-**Use:** One-time initialization, preventing concurrent startup.
-
-## Activity Timeout Renewal
+Incoming requests reset `sleepAfter` automatically. Background work does not. Renew the activity
+timeout while work is active:
 
 ```typescript
 export class LongRunningContainer extends Container {
   sleepAfter = "5m";
 
-  async processLongJob(data: unknown) {
-    const interval = setInterval(() => {
-      this.ctx.storage.put("keepalive", Date.now());
-    }, 60000);
+  async processLongJob(data: unknown): Promise<void> {
+    const interval = setInterval(() => this.renewActivityTimeout(), 60_000);
 
     try {
       await this.doLongWork(data);
@@ -128,75 +98,105 @@ export class LongRunningContainer extends Container {
 }
 ```
 
-**Use:** Long operations exceeding `sleepAfter`.
+This keeps the Container active. It does not make the job durable. Use Workflows when work must
+resume after failures.
 
-## Multiple Port Routing
+## Idle Shutdown Policy
+
+The default `onActivityExpired()` calls `stop()`. Override it only when the application has another
+reliable source of activity state:
 
 ```typescript
-export class MultiPortContainer extends Container {
-  requiredPorts = [8080, 8081, 9090];
-
-  async fetch(request: Request) {
-    const path = new URL(request.url).pathname;
-    if (path.startsWith("/grpc")) this.switchPort(8081);
-    else if (path.startsWith("/metrics")) this.switchPort(9090);
-    return super.fetch(request);
+override async onActivityExpired(): Promise<void> {
+  if (await this.hasActiveJobs()) {
+    this.renewActivityTimeout();
+    return;
   }
+
+  await this.stop();
 }
 ```
 
-**Use:** Multi-protocol services (HTTP + gRPC), separate metrics endpoints.
+## Multiple Ports
+
+For HTTP, pass a port to `containerFetch()`. For WebSockets, transform the request with the exported
+`switchPort()` helper and keep using `fetch()`.
+
+```typescript
+import { getContainer, switchPort } from "@cloudflare/containers";
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const container = getContainer(env.MULTI_PORT);
+    const path = new URL(request.url).pathname;
+
+    if (path.startsWith("/metrics")) {
+      return container.fetch(switchPort(request, 9090));
+    }
+
+    return container.fetch(request);
+  }
+};
+```
+
+Inside a Container subclass, use `this.containerFetch(request, 9090)` for HTTP-only traffic.
 
 ## Workflow Integration
 
+Use a stable job ID so retries reach the same logical Container. Keep step results serializable.
+
 ```typescript
+import { getContainer } from "@cloudflare/containers";
 import { WorkflowEntrypoint } from "cloudflare:workers";
 
-export class ProcessingWorkflow extends WorkflowEntrypoint {
-  async run(event, step) {
-    const container = this.env.PROCESSOR.getByName(event.payload.jobId);
-    
-    await step.do("start", async () => {
-      await container.startAndWaitForPorts();
-    });
-    
-    const result = await step.do("process", async () => {
-      return container.fetch("/process", {
+export class ProcessingWorkflow extends WorkflowEntrypoint<Env, JobParams> {
+  override async run(event, step): Promise<unknown> {
+    const container = getContainer(this.env.PROCESSOR, event.payload.jobId);
+
+    return step.do("process", async () => {
+      const response = await container.fetch("https://container/process", {
         method: "POST",
         body: JSON.stringify(event.payload.data)
-      }).then(r => r.json());
+      });
+
+      if (!response.ok) {
+        throw new Error(`Container returned ${response.status}`);
+      }
+
+      return response.json();
     });
-    
-    return result;
   }
 }
 ```
-
-**Use:** Orchestrating multi-step container operations, durable execution.
 
 ## Queue Consumer Integration
 
 ```typescript
+import { getContainer } from "@cloudflare/containers";
+
 export default {
-  async queue(batch, env) {
-    for (const msg of batch.messages) {
+  async queue(batch: MessageBatch<JobMessage>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
       try {
-        const container = env.PROCESSOR.getByName(msg.body.jobId);
-        await container.startAndWaitForPorts();
-        
-        const response = await container.fetch("/process", {
+        const container = getContainer(env.PROCESSOR, message.body.jobId);
+        const response = await container.fetch("https://container/process", {
           method: "POST",
-          body: JSON.stringify(msg.body)
+          body: JSON.stringify(message.body)
         });
-        
-        response.ok ? msg.ack() : msg.retry();
-      } catch (err) {
-        console.error("Queue processing error:", err);
-        msg.retry();
+
+        if (!response.ok) {
+          message.retry();
+          continue;
+        }
+
+        message.ack();
+      } catch (error) {
+        console.error("Queue processing error", error);
+        message.retry();
       }
     }
   }
 };
 ```
 
-**Use:** Asynchronous job processing, batch operations, event-driven execution.
+Make the Container operation idempotent because Queue delivery and Workflow steps can retry.

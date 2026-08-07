@@ -1,17 +1,22 @@
-## Wrangler Configuration
+# Container Configuration
 
-### Basic Container Config
+Check the current
+[Wrangler configuration reference](https://developers.cloudflare.com/workers/wrangler/configuration/#containers)
+and [limits page](https://developers.cloudflare.com/containers/platform-details/limits/) before
+using exact fields or numeric limits.
+
+## Basic Wrangler Configuration
 
 ```jsonc
 {
   "name": "my-worker",
   "main": "src/index.ts",
-  "compatibility_date": "2026-01-10",
+  "compatibility_date": "2026-07-28",
   "containers": [
     {
       "class_name": "MyContainer",
-      "image": "./Dockerfile",  // Path to Dockerfile or directory with Dockerfile
-      "instance_type": "standard-1",  // Predefined or custom (see below)
+      "image": "./Dockerfile",
+      "instance_type": "standard-1",
       "max_instances": 10
     }
   ],
@@ -26,30 +31,39 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["MyContainer"]  // Must use new_sqlite_classes
+      "new_sqlite_classes": ["MyContainer"]
     }
   ]
 }
 ```
 
-Key config requirements:
-- `image` - Path to Dockerfile or directory containing Dockerfile
-- `class_name` - Must match Container class export name
-- `max_instances` - Max concurrent container instances
-- Must configure Durable Objects binding AND migrations
+- `class_name` must match the Container class export and Durable Object binding
+- `image` can be a local Dockerfile path or a supported registry image reference
+- `max_instances` limits concurrently running production instances and defaults to 20
+- Container Durable Objects use a SQLite migration with `new_sqlite_classes`
+- Use a current compatibility date for new deployments
 
-### Instance Types
+Current supported external registries include Docker Hub, Amazon ECR, and Google Artifact Registry.
+Check image-management documentation for authentication and exact reference formats.
 
-#### Predefined Types
+## Instance Types
 
 | Type | vCPU | Memory | Disk |
 |------|------|--------|------|
-| lite | 1/16 | 256 MiB | 2 GB |
-| basic | 1/4 | 1 GiB | 4 GB |
-| standard-1 | 1/2 | 4 GiB | 8 GB |
-| standard-2 | 1 | 6 GiB | 12 GB |
-| standard-3 | 2 | 8 GiB | 16 GB |
-| standard-4 | 4 | 12 GiB | 20 GB |
+| `lite` | 1/16 | 256 MiB | 2 GB |
+| `basic` | 1/4 | 1 GiB | 4 GB |
+| `standard-1` | 1/2 | 4 GiB | 8 GB |
+| `standard-2` | 1 | 6 GiB | 12 GB |
+| `standard-3` | 2 | 8 GiB | 16 GB |
+| `standard-4` | 4 | 12 GiB | 20 GB |
+
+The default is `lite`. The legacy `dev` and `standard` names remain aliases for `lite` and
+`standard-1`, but do not use the legacy names in new configuration.
+
+### Custom Instance Type
+
+Set a custom object in `instance_type`. Do not use the obsolete `instance_type_custom` or
+`disk_mib` fields.
 
 ```jsonc
 {
@@ -57,124 +71,141 @@ Key config requirements:
     {
       "class_name": "MyContainer",
       "image": "./Dockerfile",
-      "instance_type": "standard-2"  // Use predefined type
-    }
-  ]
-}
-```
-
-#### Custom Types (Jan 2026 Feature)
-
-```jsonc
-{
-  "containers": [
-    {
-      "class_name": "MyContainer",
-      "image": "./Dockerfile",
-      "instance_type_custom": {
-        "vcpu": 2,              // 1-4 vCPU
-        "memory_mib": 8192,     // 512-12288 MiB (up to 12 GiB)
-        "disk_mib": 16384       // 2048-20480 MiB (up to 20 GB)
+      "instance_type": {
+        "vcpu": 2,
+        "memory_mib": 8192,
+        "disk_mb": 16000
       }
     }
   ]
 }
 ```
 
-**Custom type constraints:**
-- Minimum 3 GiB memory per vCPU
-- Maximum 2 GB disk per 1 GiB memory
-- Max 4 vCPU, 12 GiB memory, 20 GB disk per container
+Current custom-type constraints:
 
-### Account Limits
+- 1-4 vCPU
+- Up to 12 GiB memory
+- Up to 20 GB disk
+- At least 3 GiB memory per vCPU
+- At most 2 GB disk per 1 GiB memory
 
-| Resource | Limit | Notes |
-|----------|-------|-------|
-| Total memory (all containers) | 400 GiB | Across all running containers |
-| Total vCPU (all containers) | 100 | Across all running containers |
-| Total disk (all containers) | 2 TB | Across all running containers |
-| Image storage per account | 50 GB | Stored container images |
+Use a predefined type for less than one vCPU.
 
-### Container Class Properties
+## Account Limits
+
+The following limits were current on July 3, 2026. Retrieve the current limits before planning
+capacity.
+
+| Resource | Limit |
+|----------|-------|
+| Concurrent memory | 6 TiB |
+| Concurrent vCPU | 1,500 |
+| Concurrent disk | 30 TB |
+| Image size | Same as the selected instance disk space |
+| Total image storage | 50 GB per account |
+
+Deleting an image can break rollback to a Worker version that still refers to that image.
+
+## Container Class Properties
 
 ```typescript
 import { Container } from "@cloudflare/containers";
 
 export class MyContainer extends Container {
-  // Port Configuration
-  defaultPort = 8080;             // Default port for fetch() calls
-  requiredPorts = [8080, 9090];   // Ports to wait for in startAndWaitForPorts()
-
-  // Lifecycle
-  sleepAfter = "30m";             // Inactivity timeout (5m, 30m, 2h, etc.)
-
-  // Network
-  enableInternet = true;          // Allow outbound internet access
-
-  // Health Check
-  pingEndpoint = "/health";       // Health check endpoint path
-
-  // Environment
-  envVars = {                     // Environment variables passed to container
+  defaultPort = 8080;
+  requiredPorts = [8080, 9222];
+  sleepAfter = "30m";
+  enableInternet = false;
+  pingEndpoint = "localhost/ready";
+  envVars = {
     NODE_ENV: "production",
     LOG_LEVEL: "info"
   };
-
-  // Startup
-  entrypoint = ["/bin/start.sh"]; // Override image entrypoint (optional)
+  entrypoint = ["npm", "run", "start"];
 }
 ```
 
-**Property details:**
+- **`defaultPort`**: Target for `fetch()` and `containerFetch()` when no port is specified
+- **`requiredPorts`**: Ports that `startAndWaitForPorts()` waits for when no explicit ports are given
+- **`sleepAfter`**: Idle duration as seconds or a string such as `"30s"`, `"5m"`, or `"1h"`; defaults to `"10m"`
+- **`enableInternet`**: Controls outbound HTTP access; defaults to `true`
+- **`pingEndpoint`**: Host and path used for startup health checks; defaults to `"ping"`
+- **`envVars`**: Environment variables applied on each start
+- **`entrypoint`**: Optional replacement for the image entrypoint
 
-- **`defaultPort`**: Port used when calling `container.fetch()` without explicit port. Falls back to port 33 if not set.
+Use `startAndWaitForPorts({ startOptions: ... })` for per-instance environment, entrypoint, or
+internet-access overrides.
 
-- **`requiredPorts`**: Array of ports that must be listening before `startAndWaitForPorts()` returns. First port becomes default if `defaultPort` not set.
-
-- **`sleepAfter`**: Duration string (e.g., "5m", "30m", "2h"). Container stops after this period of inactivity. Timer resets on each request.
-
-- **`enableInternet`**: Boolean. If `true`, container can make outbound HTTP/TCP requests.
-
-- **`pingEndpoint`**: Path used for health checks. Should respond with 2xx status.
-
-- **`envVars`**: Object of environment variables. Merged with runtime-provided vars (see below).
-
-- **`entrypoint`**: Array of strings. Overrides container image's CMD/ENTRYPOINT.
-
-### Runtime Environment Variables
-
-Cloudflare automatically provides these environment variables to containers:
+## Runtime Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `CLOUDFLARE_APPLICATION_ID` | Worker application ID |
-| `CLOUDFLARE_COUNTRY_A2` | Two-letter country code of request origin |
-| `CLOUDFLARE_LOCATION` | Cloudflare data center location |
-| `CLOUDFLARE_REGION` | Region identifier |
-| `CLOUDFLARE_DURABLE_OBJECT_ID` | Container's Durable Object ID |
+| `CLOUDFLARE_APPLICATION_ID` | Container application ID |
+| `CLOUDFLARE_COUNTRY_A2` | Two-letter country code for the Container location |
+| `CLOUDFLARE_LOCATION` | Cloudflare location name |
+| `CLOUDFLARE_REGION` | Cloudflare region |
+| `CLOUDFLARE_DURABLE_OBJECT_ID` | Associated Durable Object instance ID |
 
-Custom `envVars` from Container class are merged with these. Custom vars override runtime vars if names conflict.
+Do not overwrite runtime-provided names with user-defined `envVars`.
 
-### Image Management
+## Placement Constraints
 
-**Distribution model:** Images pre-fetched to all global locations before deployment. Ensures fast cold starts (2-3s typical).
+Use `constraints.regions` for geographic placement or `constraints.jurisdiction` for a compliance
+boundary. Retrieve the current valid values before configuration.
 
-**Rolling deploys:** Unlike Workers (instant), container deployments roll out gradually. Old versions continue running during rollout.
+```jsonc
+{
+  "containers": [
+    {
+      "class_name": "MyContainer",
+      "image": "./Dockerfile",
+      "constraints": {
+        "regions": ["ENAM", "WNAM"],
+        "jurisdiction": "fedramp"
+      }
+    }
+  ]
+}
+```
 
-**Ephemeral disk:** Container disk is ephemeral and resets on each stop. Use Durable Object storage (`this.ctx.storage`) for persistence.
+## Rolling Deployments
 
-## wrangler.toml Format
+Container instances update with a rolling deployment while Worker code updates immediately. Keep
+Worker and Container changes compatible until the rollout completes.
+
+```jsonc
+{
+  "containers": [
+    {
+      "class_name": "MyContainer",
+      "image": "./Dockerfile",
+      "rollout_active_grace_period": 300,
+      "rollout_step_percentage": [10, 100]
+    }
+  ]
+}
+```
+
+- `rollout_active_grace_period` delays updates to active instances and defaults to `0`
+- `rollout_step_percentage` defaults to `[10, 100]`
+- `wrangler deploy --containers-rollout=immediate` uses one 100% rollout step but does not bypass the active grace period
+
+## TOML Form
 
 ```toml
 name = "my-worker"
 main = "src/index.ts"
-compatibility_date = "2026-01-10"
+compatibility_date = "2026-07-28"
 
 [[containers]]
 class_name = "MyContainer"
 image = "./Dockerfile"
-instance_type = "standard-2"
 max_instances = 10
+
+[containers.instance_type]
+vcpu = 2
+memory_mib = 8_192
+disk_mb = 16_000
 
 [[durable_objects.bindings]]
 name = "MY_CONTAINER"
@@ -185,4 +216,10 @@ tag = "v1"
 new_sqlite_classes = ["MyContainer"]
 ```
 
-Both `wrangler.jsonc` and `wrangler.toml` are supported. Use `wrangler.jsonc` for comments and better IDE support.
+## Current Official References
+
+- [Wrangler Container configuration](https://developers.cloudflare.com/workers/wrangler/configuration/#containers)
+- [Limits and instance types](https://developers.cloudflare.com/containers/platform-details/limits/)
+- [Placement](https://developers.cloudflare.com/containers/platform-details/placement/)
+- [Rollouts](https://developers.cloudflare.com/containers/platform-details/rollouts/)
+- [Environment variables](https://developers.cloudflare.com/containers/platform-details/environment-variables/)
