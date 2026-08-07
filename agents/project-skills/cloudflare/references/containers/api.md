@@ -1,187 +1,257 @@
-## Container Class API
+# Container Class API
+
+Check the current
+[Container Interface](https://developers.cloudflare.com/containers/container-class/) before using
+an exact signature. Install a current `@cloudflare/containers` release and generate current Worker
+types for the project.
+
+## Container Definition
 
 ```typescript
-import { Container } from "@cloudflare/containers";
+import { Container, type StopParams } from "@cloudflare/containers";
 
 export class MyContainer extends Container {
   defaultPort = 8080;
-  requiredPorts = [8080];
+  requiredPorts = [8080, 9222];
   sleepAfter = "30m";
-  enableInternet = true;
-  pingEndpoint = "/health";
-  envVars = {};
-  entrypoint = [];
+  enableInternet = false;
+  pingEndpoint = "localhost/ready";
+  envVars = { NODE_ENV: "production" };
+  entrypoint = ["npm", "run", "start"];
 
-  onStart() { /* container started */ }
-  onStop() { /* container stopping */ }
-  onError(error: Error) { /* container error */ }
-  onActivityExpired(): boolean { /* timeout, return true to stay alive */ }
-  async alarm() { /* scheduled task */ }
+  override onStart(): void | Promise<void> {}
+
+  override onStop({ exitCode, reason }: StopParams): void | Promise<void> {
+    console.log("Container stopped", { exitCode, reason });
+  }
+
+  override onError(error: unknown): unknown {
+    throw error;
+  }
+
+  override async onActivityExpired(): Promise<void> {
+    await this.stop();
+  }
 }
 ```
 
-## Routing
+`onStop()` runs after the process exits. A Container process receives `SIGTERM` before Cloudflare
+sends `SIGKILL` 15 minutes later, so process-level graceful shutdown must handle `SIGTERM` inside
+the image.
 
-**getByName(id)** - Named instance for session affinity, per-user state
-**getRandom()** - Random instance for load balancing stateless services
+If `onActivityExpired()` is overridden, call `stop()` or `destroy()` when the Container must sleep.
+If neither method is called, the activity timer renews and the hook runs again at the next expiry.
+
+## Routing Helpers
+
+Use the helpers exported by `@cloudflare/containers`:
 
 ```typescript
-const container = env.MY_CONTAINER.getByName("user-123");
-const container = env.MY_CONTAINER.getRandom();
+import { getContainer, getRandom } from "@cloudflare/containers";
+
+const session = getContainer(env.MY_CONTAINER, "user-123");
+const singleton = getContainer(env.MY_CONTAINER);
+const random = await getRandom(env.MY_CONTAINER, 5);
 ```
 
-## Startup Methods
+- `getContainer(binding, name?)` returns a stable named instance
+- `getRandom(binding, instances?)` selects one instance from a fixed pool and defaults to three
+- `getRandom()` is random routing, not latency-aware load balancing or autoscaling
 
-### start() - Basic start (8s timeout)
+## Request Methods
+
+### `fetch()`
+
+`fetch(request)` starts the Container when needed and forwards HTTP or WebSocket requests to
+`defaultPort`. Prefer it when forwarding an incoming request.
 
 ```typescript
-await container.start();
-await container.start({ envVars: { KEY: "value" } });
+return getContainer(env.MY_CONTAINER, sessionId).fetch(request);
 ```
 
-Returns when **process starts**, NOT when ports ready. Use for fire-and-forget.
-
-### startAndWaitForPorts() - Recommended (20s timeout)
+When overriding `fetch()` in a Container subclass, call `this.containerFetch()` to avoid recursive
+calls:
 
 ```typescript
-await container.startAndWaitForPorts();  // Uses requiredPorts
-await container.startAndWaitForPorts({ ports: [8080, 9090] });
-await container.startAndWaitForPorts({ 
-  ports: [8080],
-  startOptions: { envVars: { KEY: "value" } }
+override async fetch(request: Request): Promise<Response> {
+  if (new URL(request.url).pathname === "/health") {
+    return new Response("ok");
+  }
+
+  return this.containerFetch(request);
+}
+```
+
+### `containerFetch()`
+
+`containerFetch()` sends HTTP directly to the Container process and starts it when needed. It does
+not support WebSockets. It accepts an optional target port:
+
+```typescript
+return this.containerFetch(
+  "http://localhost/internal/metrics",
+  { headers: request.headers },
+  9090
+);
+```
+
+### `switchPort()`
+
+Use the exported `switchPort(request, port)` helper when `fetch()` must target a different port,
+including for WebSockets:
+
+```typescript
+import { getContainer, switchPort } from "@cloudflare/containers";
+
+return getContainer(env.MY_CONTAINER).fetch(switchPort(request, 9090));
+```
+
+## Explicit Startup
+
+Most request handlers do not need explicit startup because `fetch()` and `containerFetch()` start
+the Container. Use these methods for pre-warming, scheduled work, batch jobs, or custom readiness.
+
+### `startAndWaitForPorts()`
+
+```typescript
+const container = getContainer(env.MY_CONTAINER, "tenant-42");
+
+await container.startAndWaitForPorts({
+  ports: [8080, 9222],
+  startOptions: {
+    envVars: { TENANT_ID: "tenant-42" }
+  },
+  cancellationOptions: {
+    portReadyTimeoutMS: 30_000
+  }
 });
 ```
 
-Returns when **ports listening**. Use before HTTP/TCP requests.
+Port resolution is explicit `ports`, then `requiredPorts`, then `defaultPort`. The default instance
+acquisition timeout is 8 seconds and the default port-ready timeout is 20 seconds.
 
-**Port resolution:** explicit ports → requiredPorts → defaultPort → port 33
+### `start()` and `waitForPort()`
 
-### waitForPort() - Wait for specific port
-
-```typescript
-await container.waitForPort(8080);
-await container.waitForPort(8080, { timeout: 30000 });
-```
-
-## Communication
-
-### fetch() - HTTP with WebSocket support
+Use `start()` for a Container that does not expose a port or when readiness is managed separately:
 
 ```typescript
-// ✅ Supports WebSocket upgrades
-const response = await container.fetch(request);
-const response = await container.fetch("http://container/api", {
-  method: "POST",
-  body: JSON.stringify({ data: "value" })
+await container.start({
+  entrypoint: ["node", "scripts/nightly-report.js"],
+  envVars: { REPORT_DATE: new Date().toISOString() },
+  enableInternet: false
+});
+
+await container.waitForPort({
+  portToCheck: 9222,
+  retries: 20,
+  waitInterval: 500
 });
 ```
 
-**Use for:** All HTTP, especially WebSocket.
+## Process Execution
 
-### containerFetch() - HTTP only (no WebSocket)
-
-```typescript
-// ❌ No WebSocket support
-const response = await container.containerFetch(request);
-```
-
-**⚠️ Critical:** Use `fetch()` for WebSocket, not `containerFetch()`.
-
-### TCP Connections
+`exec()` starts another process inside a running Container. It does not start a stopped Container.
+Pass the executable and arguments as separate array items; shell expansion is not implicit.
 
 ```typescript
-const port = this.ctx.container.getTcpPort(8080);
-const conn = port.connect();
-await conn.opened;
+async readVersion() {
+  if (!this.ctx.container.running) {
+    await this.start();
+  }
 
-if (request.body) await request.body.pipeTo(conn.writable);
-return new Response(conn.readable);
-```
+  const process = await this.ctx.container.exec(["node", "--version"]);
+  const output = await process.output();
 
-### switchPort() - Change default port
-
-```typescript
-this.switchPort(8081);  // Subsequent fetch() uses this port
-```
-
-## Lifecycle Hooks
-
-### onStart()
-
-Called when container process starts (ports may not be ready). Runs in `blockConcurrencyWhile` - no concurrent requests.
-
-```typescript
-onStart() {
-  console.log("Container starting");
+  return {
+    exitCode: output.exitCode,
+    stdout: new TextDecoder().decode(output.stdout)
+  };
 }
 ```
 
-### onStop()
+Use a shell explicitly only when pipes, redirects, globbing, or variable expansion are required.
+Do not interpolate untrusted values into a shell command.
 
-Called when SIGTERM received. 15 minutes until SIGKILL. Use for graceful shutdown.
+## Outbound Traffic Controls
+
+Use `enableInternet`, `allowedHosts`, and `deniedHosts` for static policy. Use `outboundByHost` or
+`outbound` when trusted Worker code must inspect, block, or translate HTTP requests from the
+Container. Export `ContainerProxy` when interception is configured.
 
 ```typescript
-onStop() {
-  // Save state, close connections, flush logs
+import {
+  Container,
+  ContainerProxy,
+  getContainer
+} from "@cloudflare/containers";
+
+export class RestrictedContainer extends Container {
+  defaultPort = 8080;
+  enableInternet = false;
+  allowedHosts = ["api.example.com"];
+
+  static override outboundByHost = {
+    "bindings.internal": async (_request, env: Env) => {
+      const value = await env.CONFIG.get("current");
+      return new Response(value ?? "", { status: value ? 200 : 404 });
+    }
+  };
+}
+
+export { ContainerProxy };
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    return getContainer(env.RESTRICTED_CONTAINER).fetch(request);
+  }
+};
+```
+
+Use `enableInternet = false` as the default for untrusted workloads. Check the current outbound
+traffic documentation for HTTPS interception, dynamic policy methods, and binding access.
+
+## State and Activity
+
+```typescript
+const state = await this.getState();
+// status: "running" | "healthy" | "stopping" | "stopped" | "stopped_with_code"
+
+if (state.status === "stopped_with_code") {
+  console.error("Container exited", state.exitCode);
 }
 ```
 
-### onError()
+`running` means startup is in progress. `healthy` means the Container passed its health check and
+accepts requests. Use `this.ctx.container.running` only for an internal synchronous running check.
 
-Called when container crashes or fails to start.
-
-```typescript
-onError(error: Error) {
-  console.error("Container error:", error);
-}
-```
-
-### onActivityExpired()
-
-Called when `sleepAfter` timeout reached. Return `true` to stay alive, `false` to stop.
+Call `this.renewActivityTimeout()` from background work that must reset `sleepAfter`:
 
 ```typescript
-onActivityExpired(): boolean {
-  if (this.hasActiveConnections()) return true;  // Keep alive
-  return false;  // OK to stop
+for (const jobId of jobIds) {
+  this.renewActivityTimeout();
+  await this.containerFetch(`http://localhost/jobs/${jobId}`, { method: "POST" });
 }
 ```
 
 ## Scheduling
 
-```typescript
-export class ScheduledContainer extends Container {
-  async fetch(request: Request) {
-    await this.schedule(Date.now() + 60000);  // 1 minute
-    await this.schedule("2026-01-28T00:00:00Z");  // ISO string
-    return new Response("Scheduled");
-  }
+Use `schedule(when, callback, payload?)`. A numeric `when` is a delay in seconds; a `Date` is an
+absolute time. Do not override `alarm()` because the Container class owns the Durable Object alarm.
 
-  async alarm() {
-    // Called when schedule fires (SQLite-backed, survives restarts)
-  }
+```typescript
+override async onStart(): Promise<void> {
+  await this.schedule(60, "healthReport");
+}
+
+async healthReport(): Promise<void> {
+  console.log("Container status", await this.getState());
+  await this.schedule(60, "healthReport");
 }
 ```
 
-**⚠️ Don't override `alarm()` directly when using `schedule()` helper.**
+## Current Official References
 
-## State Inspection
-
-### External state check
-
-```typescript
-const state = await container.getState();
-// state.status: "starting" | "running" | "stopping" | "stopped"
-```
-
-### Internal state check
-
-```typescript
-export class MyContainer extends Container {
-  async fetch(request: Request) {
-    if (this.ctx.container.running) { ... }
-  }
-}
-```
-
-**⚠️ Use `getState()` for external checks, `ctx.container.running` for internal.**
+- [Container Interface](https://developers.cloudflare.com/containers/container-class/)
+- [Execute commands](https://developers.cloudflare.com/containers/execute-commands/)
+- [Outbound traffic](https://developers.cloudflare.com/containers/platform-details/outbound-traffic/)
+- [Scaling and routing](https://developers.cloudflare.com/containers/platform-details/scaling-and-routing/)

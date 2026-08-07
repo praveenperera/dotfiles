@@ -1,6 +1,6 @@
 ---
 name: cloudflare
-description: Comprehensive Cloudflare platform skill covering development, deployment, hosting, publishing, setup, and troubleshooting for Workers, Pages, storage (KV, D1, R2), AI (Workers AI, Vectorize, Agents SDK), feature flags (Flagship), networking (Tunnel, Spectrum, canonical redirects), security (WAF, DDoS), and infrastructure-as-code (Terraform, Pulumi). Use for any Cloudflare development or deployment task. Biases towards retrieval from Cloudflare docs over pre-trained knowledge.
+description: Comprehensive Cloudflare platform skill covering development, deployment, hosting, publishing, setup, and troubleshooting for compute (Workers, Containers, Sandbox SDK, Pages), storage (KV, D1, R2), AI (Workers AI, Vectorize, Agents SDK), feature flags (Flagship), networking (Tunnel, Spectrum, canonical redirects), security (WAF, DDoS), and infrastructure-as-code (Terraform, Pulumi). Use for any Cloudflare development or deployment task. Biases towards retrieval from Cloudflare docs over pre-trained knowledge.
 ---
 
 # Cloudflare Platform Skill
@@ -115,7 +115,8 @@ Need to run code?
 ├─ Full-stack web app with Git deploys → pages/ (legacy, consider Workers)
 ├─ Stateful coordination/real-time → durable-objects/
 ├─ Long-running multi-step jobs → workflows/
-├─ Run containers → containers/
+├─ Run an existing image or code that needs full Linux → containers/
+├─ Run untrusted code or agent-created code in isolation → sandbox/
 ├─ Multi-tenant (customers deploy code) → workers-for-platforms/
 ├─ Scheduled tasks (cron) → cron-triggers/
 ├─ Lightweight edge logic (modify HTTP) → snippets/

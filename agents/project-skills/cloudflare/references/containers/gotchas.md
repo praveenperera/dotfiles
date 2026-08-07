@@ -1,178 +1,165 @@
-## Critical Gotchas
+# Container Gotchas
 
-### ⚠️ WebSocket: fetch() vs containerFetch()
+## WebSockets Require `fetch()`
 
-**Problem:** WebSocket connections fail silently
+**Problem:** A WebSocket upgrade fails.
 
-**Cause:** `containerFetch()` doesn't support WebSocket upgrades
+**Cause:** `containerFetch()` does not support WebSockets.
 
-**Fix:** Always use `fetch()` for WebSocket
+**Fix:** Forward the request with `fetch()`. For another port, use `switchPort()`.
 
 ```typescript
-// ❌ WRONG
-return container.containerFetch(request);
+import { getContainer, switchPort } from "@cloudflare/containers";
 
-// ✅ CORRECT
-return container.fetch(request);
+const container = getContainer(env.WS_CONTAINER, sessionId);
+return container.fetch(switchPort(request, 8081));
 ```
 
-### ⚠️ startAndWaitForPorts() vs start()
+## Request Methods Start Containers Automatically
 
-**Problem:** "connection refused" after `start()`
+`fetch()` and `containerFetch()` start a stopped Container. Do not add an explicit start before
+normal request forwarding.
 
-**Cause:** `start()` returns when process starts, NOT when ports ready
+Use `startAndWaitForPorts()` when pre-warming, running scheduled work, applying per-instance startup
+options, or checking custom readiness. Use `start()` for work that does not expose ports or when
+readiness is managed separately.
 
-**Fix:** Use `startAndWaitForPorts()` before requests
-
-```typescript
-// ❌ WRONG
-await container.start();
-return container.fetch(request);
-
-// ✅ CORRECT
-await container.startAndWaitForPorts();
-return container.fetch(request);
-```
-
-### ⚠️ Activity Timeout on Long Operations
-
-**Problem:** Container stops during long work
-
-**Cause:** `sleepAfter` based on request activity, not internal work
-
-**Fix:** Renew timeout by touching storage
+## `waitForPort()` Takes an Options Object
 
 ```typescript
-const interval = setInterval(() => {
-  this.ctx.storage.put("keepalive", Date.now());
-}, 60000);
-
-try {
-  await this.doLongWork(data);
-} finally {
-  clearInterval(interval);
-}
-```
-
-### ⚠️ blockConcurrencyWhile for Startup
-
-**Problem:** Race conditions during initialization
-
-**Fix:** Use `blockConcurrencyWhile` for atomic initialization
-
-```typescript
-await this.ctx.blockConcurrencyWhile(async () => {
-  if (!this.initialized) {
-    await this.startAndWaitForPorts();
-    this.initialized = true;
-  }
+await container.waitForPort({
+  portToCheck: 9222,
+  retries: 20,
+  waitInterval: 500
 });
 ```
 
-### ⚠️ Lifecycle Hooks Block Requests
+Do not use the obsolete positional `waitForPort(port, { timeout })` form.
 
-**Problem:** Container unresponsive during `onStart()`
+## `exec()` Does Not Start the Container
 
-**Cause:** Hooks run in `blockConcurrencyWhile` - no concurrent requests
+**Problem:** A command fails because no Container process is active.
 
-**Fix:** Keep hooks fast, avoid long operations
+**Fix:** Check `this.ctx.container.running` inside the Container class and call `start()` when needed.
 
-### ⚠️ Don't Override alarm() When Using schedule()
+```typescript
+if (!this.ctx.container.running) {
+  await this.start();
+}
 
-**Problem:** Scheduled tasks don't execute
+const process = await this.ctx.container.exec(["node", "--version"]);
+```
 
-**Cause:** `schedule()` uses `alarm()` internally
+`exec()` does not invoke a shell. Pass arguments as array items, or explicitly run a shell when its
+features are required. Do not interpolate untrusted data into shell commands.
 
-**Fix:** Implement `alarm()` to handle scheduled tasks
+## Long Background Work Must Renew Activity
 
-## Common Errors
+Incoming requests reset `sleepAfter`; background work does not. Call
+`this.renewActivityTimeout()` while the work is active. Writing an arbitrary Durable Object storage
+key is not the activity-renewal API.
 
-### "Container start timeout"
+## `onActivityExpired()` Must Stop or Renew
 
-**Cause:** Container took >8s (`start()`) or >20s (`startAndWaitForPorts()`)
+The default implementation calls `stop()`. If an override does not call `stop()` or `destroy()`, the
+timer renews and the hook runs again later.
 
-**Solutions:**
-- Optimize image (smaller base, fewer layers)
-- Check `entrypoint` correct
-- Verify app listens on correct ports
-- Increase timeout if needed
+```typescript
+override async onActivityExpired(): Promise<void> {
+  if (await this.hasActiveJobs()) {
+    this.renewActivityTimeout();
+    return;
+  }
 
-### "Port not available"
-
-**Cause:** Calling `fetch()` before port ready
-
-**Solution:** Use `startAndWaitForPorts()`
-
-### "Container memory exceeded"
-
-**Cause:** Using more memory than instance type allows
-
-**Solutions:**
-- Use larger instance type (standard-2, standard-3, standard-4)
-- Optimize app memory usage
-- Use custom instance type
-
-```jsonc
-"instance_type_custom": {
-  "vcpu": 2,
-  "memory_mib": 8192
+  await this.stop();
 }
 ```
 
-### "Max instances reached"
+## Do Not Override `alarm()`
 
-**Cause:** All `max_instances` slots in use
+The Container class uses the Durable Object alarm for its own scheduling. Use
+`schedule(when, callback, payload?)` and a named callback method.
 
-**Solutions:**
-- Increase `max_instances`
-- Implement proper `sleepAfter`
-- Use `getRandom()` for distribution
+```typescript
+await this.schedule(60, "checkHealth");
+```
+
+## `onStop()` Runs After Process Exit
+
+Put process-level graceful shutdown in the image's `SIGTERM` handler. Cloudflare sends `SIGTERM`
+and then sends `SIGKILL` after 15 minutes. Use `onStop({ exitCode, reason })` for Worker-side logging,
+alerts, and recovery decisions after the process exits.
+
+## Container State Uses `healthy`
+
+`getState().status` can be `running`, `healthy`, `stopping`, `stopped`, or `stopped_with_code`.
+`running` means startup is in progress; `healthy` means the Container accepts requests.
+
+## Custom Instance Type Shape Changed
+
+Use an object in `instance_type`, with `disk_mb`:
+
+```jsonc
+"instance_type": {
+  "vcpu": 2,
+  "memory_mib": 8192,
+  "disk_mb": 16000
+}
+```
+
+Do not use `instance_type_custom` or `disk_mib`.
+
+## Capacity Errors
+
+### Maximum Instances Reached
+
+`max_instances` limits concurrently running production instances. Stopped instances do not count.
+
+- Increase `max_instances` when account capacity permits
+- Set an appropriate `sleepAfter`
+- Stop job-specific Containers when work is complete
 - Check for instance leaks
 
-### "No container instance available"
+### No Container Instance Available
 
-**Cause:** Account capacity limits reached
+Account capacity or placement constraints can prevent a start.
 
-**Solutions:**
-- Check account limits
-- Review instance types across containers
-- Contact Cloudflare support
+- Check current account limits and live usage
+- Check the instance type and placement constraints
+- Reduce resource size or concurrent work
+- Contact Cloudflare support when account capacity must increase
 
-## Limits
+## Image and Deployment Constraints
 
-| Resource | Limit | Notes |
-|----------|-------|-------|
-| Cold start | 2-3s | Image pre-fetched globally |
-| Graceful shutdown | 15 min | SIGTERM → SIGKILL |
-| `start()` timeout | 8s | Process start |
-| `startAndWaitForPorts()` timeout | 20s | Port ready |
-| Max vCPU per container | 4 | standard-4 or custom |
-| Max memory per container | 12 GiB | standard-4 or custom |
-| Max disk per container | 20 GB | Ephemeral, resets |
-| Account total memory | 400 GiB | All containers |
-| Account total vCPU | 100 | All containers |
-| Account total disk | 2 TB | All containers |
-| Image storage | 50 GB | Per account |
-| Disk persistence | None | Use DO storage |
+- Build images for `linux/amd64`
+- The image-size limit equals the selected instance disk size
+- A first deployment can need several minutes before Container requests succeed
+- Container instances update through rolling deployments while Worker code updates immediately
+- Keep Worker and Container protocol changes compatible until the rollout completes
+- Deleting an image can break rollback to an older Worker version
 
-## Best Practices
+## Ephemeral Disk and Restarts
 
-1. **Use `startAndWaitForPorts()` by default** - Prevents port errors
-2. **Set appropriate `sleepAfter`** - Balance resources vs cold starts
-3. **Use `fetch()` for WebSocket** - Not `containerFetch()`
-4. **Design for restarts** - Ephemeral disk, implement graceful shutdown
-5. **Monitor resources** - Stay within account limits
-6. **Keep hooks fast** - Run in `blockConcurrencyWhile`
-7. **Renew activity for long ops** - Touch storage to prevent timeout
+Container disk resets after the Container stops. Persist required state in Durable Object storage,
+R2, or another durable store. A Container can restart in a different location. Treat the process as
+replaceable and make work recoverable or idempotent.
 
-## Beta Caveats
+## Operational Constraints
 
-⚠️ Containers in **beta**:
+Containers are generally available, but these constraints still affect architecture:
 
-- **API may change** without notice
-- **No SLA** guarantees
-- **Limited regions** initially
-- **No autoscaling** - manual via `getRandom()`
-- **Rolling deploys** only (not instant like Workers)
+- **No built-in autoscaling:** Select a fixed pool for `getRandom()` or address explicit instances
+- **Random pool routing:** `getRandom()` is not latency-aware
+- **Rolling deployments:** Container rollout timing differs from Worker deployment timing
+- **Cold starts:** Startup is often 1-3 seconds but depends on image size and initialization
+- **HTTP entry path:** End users cannot connect directly to a Container with arbitrary TCP or UDP
 
-Plan for API changes, test thoroughly before production.
+Test restart recovery, capacity behavior, and rolling deployment compatibility before production.
+
+## Current Official References
+
+- [Container Interface](https://developers.cloudflare.com/containers/container-class/)
+- [Lifecycle](https://developers.cloudflare.com/containers/platform-details/architecture/)
+- [Limits](https://developers.cloudflare.com/containers/platform-details/limits/)
+- [Scaling and routing](https://developers.cloudflare.com/containers/platform-details/scaling-and-routing/)
+- [Rollouts](https://developers.cloudflare.com/containers/platform-details/rollouts/)
