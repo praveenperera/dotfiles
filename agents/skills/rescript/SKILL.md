@@ -28,7 +28,7 @@ boundary, and the compiler cannot enforce domain facts the model omits.
 | Svelte, Vue, Solid, or `.astro` component/template files | use the framework's native TypeScript; apply the ReScript React rule separately to Astro islands |
 | Astro content site with substantial interactive React islands | Astro/TypeScript shell plus ReScript React islands |
 | Node service using a narrow, stable API surface | ReScript if bindings stay small; otherwise use a JavaScript/TypeScript adapter |
-| Cloudflare Worker with Durable Objects or SQL | ReScript validation, policy, and plans plus a TypeScript runtime class and transaction adapter |
+| JavaScript-targeting Cloudflare Worker with Durable Objects or SQL | ReScript domain logic with a narrow TypeScript adapter when actual bindings justify it; for explicit Rust or an existing Rust Worker, use workers-rs and do not introduce TypeScript only for Durable Objects |
 | binary encoder, rasterizer, or typed-array algorithm | ReScript when platform bindings stay narrow; require parity or semantic format checks |
 | React consumer of stable package primitives | bind the primitive once and keep ordinary consumer JSX in ReScript |
 | dependency-heavy feature with missing, stale, or highly generic bindings | keep that boundary in TypeScript and expose a small API to ReScript |

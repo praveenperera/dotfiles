@@ -55,6 +55,11 @@ Need to test Workers?
 
 ## Setup
 
+Rust Workers usually use a JavaScript or TypeScript Miniflare harness for runtime integration
+tests. Build the Wasm Worker first and point Miniflare at its generated JavaScript module. Keep
+domain and unit tests in Rust where practical. The Node-based harness does not make TypeScript the
+Worker application runtime. See [workers-rs testing](../workers-rs/README.md#testing).
+
 ```bash
 npm i -D miniflare
 ```

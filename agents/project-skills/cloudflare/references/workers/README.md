@@ -12,6 +12,17 @@ Cloudflare Workers run on V8 isolates (NOT containers/VMs):
 
 **Key principle**: Workers use web platform APIs wherever possible for portability.
 
+## Choose a Language
+
+- Use official `cloudflare/workers-rs` for an existing or explicitly requested Rust Worker
+- Use TypeScript when JavaScript ecosystem dependencies or the Cloudflare Agents SDK require it
+- For greenfield work, inspect the current dependency and binding support before choosing
+- Do not treat Wasm FFI or generated JavaScript bootstrap code as a requirement for application
+  TypeScript
+
+For Rust setup, bindings, Durable Objects, SQLite, alarms, scheduled handlers, outbound fetch, and
+testing, read [workers-rs](../workers-rs/README.md).
+
 ## Module Worker Pattern (Recommended)
 
 ```typescript
@@ -97,6 +108,7 @@ async tail(events: TraceItem[], env: Env, ctx: ExecutionContext): Promise<void>
 | Debug issues | Gotchas | API (specific binding docs) |
 | Production optimization | Patterns | API (caching, streaming) |
 | Type safety | Configuration (TypeScript) | Frameworks (Hono typing) |
+| Rust Worker | workers-rs | Relevant product reference |
 
 ## See Also
 

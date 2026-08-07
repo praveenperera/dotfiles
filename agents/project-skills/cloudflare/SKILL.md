@@ -17,6 +17,8 @@ Fetch the latest information before citing specific numbers, API signatures, or 
 |--------|----------------|---------|
 | Cloudflare docs | `cloudflare-docs` search tool or `https://developers.cloudflare.com/` | Limits, pricing, API reference, compatibility dates/flags |
 | Workers types | `npm pack @cloudflare/workers-types` or check `node_modules` | Type signatures, binding shapes, handler types |
+| workers-rs API docs | `https://docs.rs/worker/latest/worker/` | Current Rust crate features, public APIs, and signatures |
+| workers-rs source | `btx cloudflare/workers-rs`, then inspect `README.md`, `templates/`, `worker/src/`, and `test/` | Rust implementations, examples, generated entrypoints, and runtime test setup |
 | Wrangler config schema | `node_modules/wrangler/config-schema.json` | Config fields, binding shapes, allowed values |
 | Product changelogs | `https://developers.cloudflare.com/changelog/` | Recent changes to limits, features, deprecations |
 
@@ -37,6 +39,28 @@ npx wrangler whoami
 - If deployment network calls fail due to sandboxing, rerun with `sandbox_permissions=require_escalated`
 
 ## How to Use This Skill
+
+### Choose the Worker Runtime
+
+Inspect the existing language, explicit user request, required dependencies, and current binding
+support before selecting a runtime.
+
+| Project requirement | Runtime choice |
+|---------------------|----------------|
+| Existing Rust Worker or explicitly requested Rust | Use the official `cloudflare/workers-rs` SDK and keep the Worker runtime in Rust |
+| Cloudflare Agents SDK or JavaScript ecosystem dependencies dominate | Use TypeScript |
+| Required API has a current workers-rs binding | Prefer Rust when Rust is already selected; do not add TypeScript only because the binding crosses Wasm FFI |
+| Required API is absent or materially incomplete in workers-rs | Choose TypeScript or isolate the unsupported boundary in a narrow JavaScript/TypeScript adapter |
+| No language constraint | Compare the actual dependency and binding requirements in current source and docs, then choose the smallest supported architecture |
+
+Read [workers-rs](./references/workers-rs/README.md) for Rust setup and examples. A Rust Worker
+uses generated JavaScript bootstrap code and `wasm-bindgen`/`worker-sys` FFI to call runtime APIs.
+That implementation detail does not require application TypeScript. Treat a JavaScript or
+TypeScript adapter as an application boundary only when a required API or dependency justifies it.
+
+Keep domain and unit tests in Rust where practical. Runtime integration tests for Rust Workers
+usually build the Wasm Worker and use a JavaScript or TypeScript Miniflare harness; the harness
+language does not change the application runtime choice.
 
 ### Reference File Structure
 
@@ -193,6 +217,7 @@ Need IaC?
 | Product | Entry File |
 |---------|------------|
 | Workers | `./references/workers/README.md` |
+| Workers Rust SDK | `./references/workers-rs/README.md` |
 | Pages | `./references/pages/README.md` |
 | Pages Functions | `./references/pages-functions/README.md` |
 | Durable Objects | `./references/durable-objects/README.md` |

@@ -4,7 +4,10 @@ Expert guidance on Cloudflare Workers Bindings - the runtime APIs that connect W
 
 ## What Are Bindings?
 
-Bindings are how Workers access Cloudflare resources (storage, compute, services) via the `env` object. They're configured in `wrangler.jsonc`, type-safe via TypeScript, and zero-overhead at runtime.
+Bindings are how Workers access Cloudflare resources such as storage, compute, and services through
+the runtime environment. Configure them in Wrangler. TypeScript uses generated environment types;
+Rust uses typed `worker::Env` accessors and `EnvBinding` wrappers where workers-rs supports the
+binding.
 
 ## Reading Order
 
@@ -13,6 +16,8 @@ Bindings are how Workers access Cloudflare resources (storage, compute, services
 3. **[configuration.md](configuration.md)** - Complete wrangler.jsonc examples
 4. **[patterns.md](patterns.md)** - Best practices and common patterns
 5. **[gotchas.md](gotchas.md)** - Critical pitfalls and troubleshooting
+
+For Rust binding access, read [workers-rs](../workers-rs/README.md#bindings).
 
 ## Binding Catalog
 
@@ -85,7 +90,7 @@ Bindings are how Workers access Cloudflare resources (storage, compute, services
 }
 ```
 
-2. **Generate types:**
+2. **Generate TypeScript types:**
 ```bash
 npx wrangler types
 ```
@@ -102,7 +107,8 @@ export default {
 
 ## Type Safety
 
-Bindings are fully typed via `wrangler types`. See [api.md](api.md) for details.
+TypeScript bindings use `wrangler types`. Rust bindings use current workers-rs types and `Env`
+accessors. Inspect workers-rs source when a binding is unfamiliar or missing from docs.
 
 ## Limits
 
@@ -112,7 +118,7 @@ Bindings are fully typed via `wrangler types`. See [api.md](api.md) for details.
 ## Key Concepts
 
 **Zero-overhead access:** Bindings compiled into Worker, no network calls to access
-**Type-safe:** Full TypeScript support via `wrangler types`
+**Type-safe:** TypeScript through `wrangler types`; Rust through workers-rs binding wrappers
 **Per-environment:** Different IDs for dev/staging/production
 **Secrets vs Vars:** Secrets encrypted at rest, never in config files
 
