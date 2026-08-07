@@ -48,8 +48,9 @@
 
 # Subagents
 
-- Delegate only bounded, independent work when doing so is likely to reduce total context, cost, or elapsed time; prefer phase-sized, non-overlapping slices.
-- Give each worker a self-contained objective, evidence surface, relevant files or commands, constraints, ownership boundary, expected concise result, and an effort and runtime budget. Use `agents.spawn_agent` with `fork_turns="none"` by default, and fork only the smallest context that cannot be supplied explicitly.
-- Where supported, use `low` effort for mechanical work, `medium` by default, `high` for complex work and reviews, and `xhigh` only for exceptional architectural, safety-critical, or unusually ambiguous work. Bound reviews by scope, evidence, runtime, and rounds; prefer one broad review and at most one targeted follow-up.
-- Keep architecture, integration, known-finding repair, and final verification with the primary agent. Avoid duplicating active work, inspect delegated results, and require reports of changed files, verification, risks, and integration notes. After the review cap, fix actionable findings directly and record genuine blockers or residual risks.
-- In codex never use `service_tier: priority` unless the user explicitly requests it, always default to omiting it.
+- Delegate only bounded, independent, non-overlapping work when this reduces context, cost, or elapsed time.
+- Give each worker a clear objective, evidence surface, owned files or commands, constraints, expected result, and runtime budget.
+- For normal Codex V2 spawns, use `fork_turns="none"` and omit `model` and `reasoning_effort` to use the configured `gpt-5.6-luna` with `max` reasoning. Override only for a user request or a task that needs another capability; never lower Luna effort.
+- Keep architecture, integration, repairs, and final verification with the primary agent. Inspect delegated work and require reports of changed files, checks, risks, and integration notes.
+- Use one broad review and at most one targeted follow-up. Then fix findings directly or report genuine blockers and residual risks.
+- Omit `service_tier`; never use `priority` unless the user explicitly requests it.
