@@ -90,6 +90,11 @@ See [DO Storage](../do-storage/README.md) for deep dive.
 
 ## Quick Start
 
+This TypeScript example is for the TypeScript runtime path. Durable Objects, SQLite storage, and
+alarms are also available to Rust Workers through official `cloudflare/workers-rs`; they do not by
+themselves require an application TypeScript adapter. See the
+[workers-rs Durable Object example](../workers-rs/README.md#durable-object-sqlite-and-alarms).
+
 ```typescript
 import { DurableObject } from "cloudflare:workers";
 

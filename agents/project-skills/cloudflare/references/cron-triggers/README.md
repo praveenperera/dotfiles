@@ -39,6 +39,9 @@ Schedule Workers execution using cron expressions. Runs on Cloudflare's global n
 
 ## Quick Start
 
+For the Rust `#[event(scheduled)]` handler, see
+[workers-rs](../workers-rs/README.md#scheduled-cron-handler).
+
 **wrangler.jsonc:**
 ```jsonc
 {

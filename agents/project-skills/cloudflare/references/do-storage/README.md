@@ -17,6 +17,10 @@ DO Storage provides:
 
 ## Quick Start
 
+This TypeScript example is not a runtime requirement. For a Rust Durable Object with typed SQLite
+bindings and an alarm handler, see
+[workers-rs](../workers-rs/README.md#durable-object-sqlite-and-alarms).
+
 ```typescript
 export class Counter extends DurableObject {
   sql: SqlStorage;
