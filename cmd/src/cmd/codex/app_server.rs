@@ -4,6 +4,8 @@ use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs::{File, OpenOptions};
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{
@@ -19,8 +21,11 @@ const APP_SERVER_START_TIMEOUT: Duration = Duration::from_secs(10);
 const APP_SERVER_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const APP_SERVER_CONNECT_ATTEMPT_TIMEOUT: Duration = Duration::from_millis(500);
 const APP_SERVER_RETRY_INTERVAL: Duration = Duration::from_millis(50);
+const APP_SERVER_STOP_TIMEOUT: Duration = Duration::from_secs(2);
 const APP_SERVER_SOCKET_DIR: &str = "app-server-control";
 const APP_SERVER_SOCKET_NAME: &str = "app-server-control.sock";
+const WRITER_CONFLICT_PREFIX: &str = "thread-store conflict: thread ";
+const WRITER_CONFLICT_SUFFIX: &str = " already has an active writer";
 #[cfg(unix)]
 const MAX_UNIX_SOCKET_PATH_BYTES: usize = 103;
 
@@ -216,6 +221,56 @@ pub(crate) fn plan_app_server_launch(args: &[std::ffi::OsString]) -> AppServerLa
     }
 }
 
+pub(crate) fn writer_conflict_retry_args(
+    args: &[std::ffi::OsString],
+    conflict: &ThreadWriterConflict,
+) -> Vec<std::ffi::OsString> {
+    let had_last = args.iter().any(|arg| arg.to_str() == Some("--last"));
+    let mut retry_args = args
+        .iter()
+        .filter(|arg| arg.to_str() != Some("--last"))
+        .cloned()
+        .collect::<Vec<_>>();
+    let Some(resume_index) = retry_args
+        .iter()
+        .position(|arg| arg.to_str() == Some("resume"))
+    else {
+        return retry_args;
+    };
+    let target_index = (!had_last)
+        .then(|| session_target_index(&retry_args, resume_index + 1))
+        .flatten();
+    let thread_id = std::ffi::OsString::from(conflict.thread_id());
+    match target_index {
+        Some(target_index) => retry_args[target_index] = thread_id,
+        None => retry_args.insert(resume_index + 1, thread_id),
+    }
+
+    retry_args
+}
+
+fn session_target_index(args: &[std::ffi::OsString], start: usize) -> Option<usize> {
+    let mut index = start;
+    while index < args.len() {
+        let value = args[index].to_string_lossy();
+        if value == "--" {
+            return (index + 1 < args.len()).then_some(index + 1);
+        }
+        if option_takes_one_value(&value) {
+            index += 2;
+            continue;
+        }
+        if value.starts_with('-') {
+            index += 1;
+            continue;
+        }
+
+        return Some(index);
+    }
+
+    None
+}
+
 fn has_option(args: &[std::ffi::OsString], predicate: impl Fn(&str) -> bool) -> bool {
     args.iter()
         .map(|arg| arg.to_string_lossy())
@@ -318,8 +373,9 @@ pub(crate) fn managed_tui_connection_args(
 }
 
 pub(crate) struct ManagedAppServer {
-    child: Child,
+    process: ManagedProcess,
     monitor: SessionMonitor,
+    log_path: PathBuf,
 }
 
 impl ManagedAppServer {
@@ -347,37 +403,179 @@ impl ManagedAppServer {
             command.arg("--strict-config");
         }
 
-        let mut child = command
-            .spawn()
-            .wrap_err("Failed to start Codex app server")?;
-        if let Err(err) = marker.set_app_server_pid(child.id()) {
-            child.kill().ok();
-            child.wait().ok();
+        let mut process =
+            ManagedProcess::spawn(&mut command).wrap_err("Failed to start Codex app server")?;
+        if let Err(err) = marker.set_app_server_pid(process.id()) {
+            process.stop();
             return Err(err).wrap_err("Failed to record Codex app server process");
         }
 
         let monitor = match SessionMonitor::start(socket_path, marker, pane_id) {
             Ok(monitor) => monitor,
             Err(err) => {
-                child.kill().ok();
-                let status = child.wait().ok();
+                process.stop();
                 return Err(err).wrap_err_with(|| {
                     format!(
-                        "Codex app server failed to become ready (status {status:?}); log: {}",
+                        "Codex app server failed to become ready; log: {}",
                         log_path.display()
                     )
                 });
             }
         };
 
-        Ok(Self { child, monitor })
+        Ok(Self {
+            process,
+            monitor,
+            log_path,
+        })
+    }
+
+    pub(crate) fn log_checkpoint(&self) -> Result<u64> {
+        Ok(std::fs::metadata(&self.log_path)?.len())
+    }
+
+    pub(crate) fn latest_writer_conflict_since(
+        &self,
+        checkpoint: u64,
+    ) -> Result<Option<ThreadWriterConflict>> {
+        let log = std::fs::read_to_string(&self.log_path).wrap_err_with(|| {
+            format!(
+                "Failed to inspect Codex app-server log at {}",
+                self.log_path.display()
+            )
+        })?;
+        let checkpoint = usize::try_from(checkpoint)?;
+        let attempt_log = log.get(checkpoint..).ok_or_else(|| {
+            eyre!(
+                "Codex app-server log became shorter while inspecting {}",
+                self.log_path.display()
+            )
+        })?;
+
+        Ok(parse_latest_writer_conflict(attempt_log))
     }
 
     pub(crate) fn stop(mut self) {
         self.monitor.stop();
+        self.process.stop();
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ThreadWriterConflict(String);
+
+impl ThreadWriterConflict {
+    pub(crate) fn thread_id(&self) -> &str {
+        &self.0
+    }
+}
+
+fn parse_latest_writer_conflict(log: &str) -> Option<ThreadWriterConflict> {
+    log.lines().rev().find_map(|line| {
+        let (_, message) = line.rsplit_once(WRITER_CONFLICT_PREFIX)?;
+        let thread_id = message.strip_suffix(WRITER_CONFLICT_SUFFIX)?;
+        is_uuid(thread_id).then(|| ThreadWriterConflict(thread_id.to_owned()))
+    })
+}
+
+fn is_uuid(value: &str) -> bool {
+    value.len() == 36
+        && value.bytes().enumerate().all(|(index, byte)| {
+            if matches!(index, 8 | 13 | 18 | 23) {
+                byte == b'-'
+            } else {
+                byte.is_ascii_hexdigit()
+            }
+        })
+}
+
+struct ManagedProcess {
+    child: Child,
+    #[cfg(unix)]
+    process_group_id: u32,
+}
+
+impl ManagedProcess {
+    fn spawn(command: &mut Command) -> std::io::Result<Self> {
+        #[cfg(unix)]
+        command.process_group(0);
+
+        let child = command.spawn()?;
+        #[cfg(unix)]
+        let process_group_id = child.id();
+
+        Ok(Self {
+            child,
+            #[cfg(unix)]
+            process_group_id,
+        })
+    }
+
+    fn id(&self) -> u32 {
+        self.child.id()
+    }
+
+    #[cfg(unix)]
+    fn stop(&mut self) {
+        signal_process_group(self.process_group_id, "TERM").ok();
+        if self.wait_for_group_exit(APP_SERVER_STOP_TIMEOUT) {
+            return;
+        }
+
+        signal_process_group(self.process_group_id, "KILL").ok();
+        if self.wait_for_group_exit(APP_SERVER_STOP_TIMEOUT) {
+            return;
+        }
+
         self.child.kill().ok();
         self.child.wait().ok();
     }
+
+    #[cfg(not(unix))]
+    fn stop(&mut self) {
+        self.child.kill().ok();
+        self.child.wait().ok();
+    }
+
+    #[cfg(unix)]
+    fn wait_for_group_exit(&mut self, timeout: Duration) -> bool {
+        let deadline = std::time::Instant::now() + timeout;
+        while std::time::Instant::now() < deadline {
+            match self.child.try_wait() {
+                Ok(_) if !process_group_is_running(self.process_group_id) => return true,
+                Ok(_) => std::thread::sleep(APP_SERVER_RETRY_INTERVAL),
+                Err(_) => return false,
+            }
+        }
+
+        !process_group_is_running(self.process_group_id)
+    }
+}
+
+#[cfg(unix)]
+fn signal_process_group(process_group_id: u32, signal: &str) -> std::io::Result<()> {
+    let status = Command::new("kill")
+        .args([format!("-{signal}"), format!("-{process_group_id}")])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()?;
+    if status.success() {
+        return Ok(());
+    }
+
+    Err(std::io::Error::other(format!(
+        "failed to send {signal} to process group {process_group_id}"
+    )))
+}
+
+#[cfg(unix)]
+fn process_group_is_running(process_group_id: u32) -> bool {
+    Command::new("kill")
+        .args(["-0", &format!("-{process_group_id}")])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
 }
 
 #[cfg(unix)]
@@ -804,10 +1002,13 @@ struct RpcError {
 #[cfg(test)]
 mod tests {
     use super::{
-        current_loaded_thread_async, managed_tui_connection_args, plan_app_server_launch,
-        session_event, set_thread_name_async, validate_socket_path, AppServerLaunch,
-        SessionControl, SessionEvent, SessionMarker, SessionMonitor,
+        current_loaded_thread_async, managed_tui_connection_args, parse_latest_writer_conflict,
+        plan_app_server_launch, session_event, set_thread_name_async, validate_socket_path,
+        writer_conflict_retry_args, AppServerLaunch, SessionControl, SessionEvent, SessionMarker,
+        SessionMonitor, ThreadWriterConflict,
     };
+    #[cfg(unix)]
+    use super::{process_group_is_running, ManagedProcess};
     use futures_util::{SinkExt, StreamExt};
     use serde_json::{json, Value};
     use std::ffi::OsString;
@@ -816,6 +1017,85 @@ mod tests {
     use tempfile::tempdir;
     use tokio::net::UnixListener;
     use tokio_tungstenite::{accept_async, tungstenite::Message};
+
+    #[test]
+    fn latest_writer_conflict_uses_the_last_valid_thread_id() {
+        let first = "019fddc8-e0e4-7992-a85d-84d5b50d0068";
+        let last = "019fe286-71f0-7513-ba31-fa0433073e6b";
+        let log = format!(
+            "thread-store conflict: thread {first} already has an active writer\n\
+             thread-store conflict: thread not-a-thread already has an active writer\n\
+             thread-store conflict: thread {last} already has an active writer\n"
+        );
+
+        let conflict = parse_latest_writer_conflict(&log).unwrap();
+
+        assert_eq!(conflict.thread_id(), last);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_process_stops_its_child_process_group() {
+        let mut command = std::process::Command::new("sh");
+        command.args(["-c", "sleep 30 & wait"]);
+        let mut process = ManagedProcess::spawn(&mut command).unwrap();
+        let process_group_id = process.process_group_id;
+
+        assert!(process_group_is_running(process_group_id));
+
+        process.stop();
+
+        assert!(!process_group_is_running(process_group_id));
+    }
+
+    #[test]
+    fn writer_conflict_retry_targets_picker_selection_directly() {
+        let args = ["resume", "--all"].map(OsString::from);
+        let conflict = ThreadWriterConflict("019fe286-71f0-7513-ba31-fa0433073e6b".into());
+
+        let retry = writer_conflict_retry_args(&args, &conflict);
+
+        assert_eq!(
+            retry,
+            ["resume", "019fe286-71f0-7513-ba31-fa0433073e6b", "--all"].map(OsString::from)
+        );
+    }
+
+    #[test]
+    fn writer_conflict_retry_replaces_last_and_preserves_prompt() {
+        let args = ["resume", "--last", "continue here"].map(OsString::from);
+        let conflict = ThreadWriterConflict("019fe286-71f0-7513-ba31-fa0433073e6b".into());
+
+        let retry = writer_conflict_retry_args(&args, &conflict);
+
+        assert_eq!(
+            retry,
+            [
+                "resume",
+                "019fe286-71f0-7513-ba31-fa0433073e6b",
+                "continue here"
+            ]
+            .map(OsString::from)
+        );
+    }
+
+    #[test]
+    fn writer_conflict_retry_replaces_named_session() {
+        let args = ["resume", "session name", "continue here"].map(OsString::from);
+        let conflict = ThreadWriterConflict("019fe286-71f0-7513-ba31-fa0433073e6b".into());
+
+        let retry = writer_conflict_retry_args(&args, &conflict);
+
+        assert_eq!(
+            retry,
+            [
+                "resume",
+                "019fe286-71f0-7513-ba31-fa0433073e6b",
+                "continue here"
+            ]
+            .map(OsString::from)
+        );
+    }
 
     #[test]
     fn launch_plan_extracts_replayable_config() {

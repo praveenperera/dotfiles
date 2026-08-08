@@ -1,6 +1,6 @@
 use super::app_server::{
-    control_socket_path, managed_tui_connection_args, plan_app_server_launch, AppServerLaunch,
-    ManagedAppServer, SessionControl,
+    control_socket_path, managed_tui_connection_args, plan_app_server_launch,
+    writer_conflict_retry_args, AppServerLaunch, ManagedAppServer, SessionControl,
 };
 use super::*;
 use crate::{fsutil, runtime};
@@ -127,6 +127,7 @@ fn launch_with_profile(
         )),
         AppServerLaunch::External | AppServerLaunch::Embedded => None,
     };
+    let profiles_root = profiles_dir()?;
     let pane_id = std::env::var("TMUX_PANE").ok();
     let session_marker = write_session_marker(
         &profile_home,
@@ -149,36 +150,91 @@ fn launch_with_profile(
         ),
         AppServerLaunch::External | AppServerLaunch::Embedded => None,
     };
-    let mut child = codex_command(&launch_home);
-    if let Some(connection_args) = managed_connection_args {
-        child.args(connection_args);
-    }
-    child.args(tui_args);
-    let mut child = match child.spawn() {
-        Ok(child) => child,
-        Err(err) => {
-            if let Some(app_server) = app_server {
-                app_server.stop();
+    let run_result = (|| -> Result<_> {
+        let mut retried_writer_conflict = false;
+        let mut retry_args = None;
+        loop {
+            let app_server_log_checkpoint = app_server
+                .as_ref()
+                .map(ManagedAppServer::log_checkpoint)
+                .transpose()?;
+            let mut child = codex_command(&launch_home);
+            if let Some(connection_args) = &managed_connection_args {
+                child.args(connection_args);
             }
-            fsutil::remove_existing_path(session_marker.path()).ok();
-            return Err(err.into());
+            child.args(retry_args.as_deref().unwrap_or(tui_args));
+            let mut child = child.spawn()?;
+            if let Err(err) = session_marker.set_session_pid(child.id()) {
+                child.kill().ok();
+                child.wait().ok();
+                return Err(err);
+            }
+
+            let status = child.wait()?;
+            if status.success() || retried_writer_conflict {
+                return Ok((status, None));
+            }
+            let Some(managed_app_server) = app_server.as_ref() else {
+                return Ok((status, None));
+            };
+            let Some(checkpoint) = app_server_log_checkpoint else {
+                return Ok((status, None));
+            };
+            let Some(conflict) = managed_app_server.latest_writer_conflict_since(checkpoint)?
+            else {
+                return Ok((status, None));
+            };
+
+            match recover_thread_writer(&launch_home, &profiles_root, &conflict)? {
+                ThreadWriterRecovery::Ready { stopped_pids } => {
+                    retried_writer_conflict = true;
+                    retry_args = Some(writer_conflict_retry_args(tui_args, &conflict));
+                    if stopped_pids.is_empty() {
+                        println!(
+                            "Codex session {} is available now; retrying resume",
+                            conflict.thread_id()
+                        );
+                    } else {
+                        let pids = display_pids(&stopped_pids);
+                        println!(
+                            "Stopped orphaned Codex app server {pids} for session {}; retrying resume",
+                            conflict.thread_id()
+                        );
+                    }
+                }
+                ThreadWriterRecovery::Active {
+                    pid,
+                    pane_id,
+                    thread_name,
+                } => {
+                    let error = active_writer_error(
+                        conflict.thread_id(),
+                        pid,
+                        pane_id.as_deref(),
+                        thread_name.as_deref(),
+                    );
+                    return Ok((status, Some(error)));
+                }
+                ThreadWriterRecovery::Unmanaged { pids } => {
+                    let pids = display_pids(&pids);
+                    let error = eyre!(
+                        "Codex session {} has an active writer ({pids}). cmd cannot confirm that it started this process, so it did not stop it",
+                        conflict.thread_id()
+                    );
+                    return Ok((status, Some(error)));
+                }
+            }
         }
-    };
-    if let Err(err) = session_marker.set_session_pid(child.id()) {
-        child.kill().ok();
-        child.wait().ok();
-        if let Some(app_server) = app_server {
-            app_server.stop();
-        }
-        fsutil::remove_existing_path(session_marker.path()).ok();
-        return Err(err);
-    }
-    let status = child.wait();
+    })();
+
     if let Some(app_server) = app_server {
         app_server.stop();
     }
     fsutil::remove_existing_path(session_marker.path())?;
-    let status = status?;
+    let (status, writer_error) = run_result?;
+    if let Some(err) = writer_error {
+        return Err(err);
+    }
     if let LaunchAuthMode::ProfileCopy {
         profile_auth,
         launch_auth,
@@ -191,6 +247,32 @@ fn launch_with_profile(
         )?;
     }
     std::process::exit(status.code().unwrap_or(1));
+}
+
+fn display_pids(pids: &[u32]) -> String {
+    pids.iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn active_writer_error(
+    thread_id: &str,
+    pid: u32,
+    pane_id: Option<&str>,
+    thread_name: Option<&str>,
+) -> eyre::Report {
+    let location = pane_id
+        .map(|pane_id| format!(" in tmux pane {pane_id}"))
+        .unwrap_or_default();
+    let name = thread_name
+        .filter(|name| !name.trim().is_empty())
+        .map(|name| format!(" ('{name}')"))
+        .unwrap_or_default();
+
+    eyre!(
+        "Codex session {thread_id}{name} is still open{location} (app server pid {pid}). Close that session before you resume it here"
+    )
 }
 
 pub(super) fn resolve_launch_auth_mode(

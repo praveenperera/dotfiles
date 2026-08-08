@@ -1,5 +1,6 @@
 use super::app_server::{
     control_socket_path, ConfigOverride, SessionControl, SessionMarker, SessionThread,
+    ThreadWriterConflict,
 };
 use super::*;
 use crate::fsutil;
@@ -11,6 +12,26 @@ use std::time::Duration as StdDuration;
 const SHARED_GROUP_NAME: &str = "shared";
 const STALE_PROCESS_STOP_TIMEOUT: StdDuration = StdDuration::from_secs(2);
 const STALE_PROCESS_POLL_INTERVAL: StdDuration = StdDuration::from_millis(50);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum ThreadWriterRecovery {
+    Ready {
+        stopped_pids: Vec<u32>,
+    },
+    Active {
+        pid: u32,
+        pane_id: Option<String>,
+        thread_name: Option<String>,
+    },
+    Unmanaged {
+        pids: Vec<u32>,
+    },
+}
+
+struct SessionMarkerRecord {
+    path: PathBuf,
+    marker: SessionMarker,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GroupKind {
@@ -294,39 +315,183 @@ fn stop_stale_app_server(marker: &SessionMarker) -> Result<()> {
     let SessionControl::Local { socket_path } = &marker.control else {
         return Ok(());
     };
-    let Some(pid) = marker.app_server_pid else {
-        return Ok(());
-    };
-    if !process_is_running(pid)? {
-        return Ok(());
-    }
 
     let expected_socket_path = control_socket_path(&marker.launch_home);
     if socket_path != &expected_socket_path {
         return Err(eyre!(
-            "Refusing to stop stale Codex app server {pid}: unexpected control socket {}",
-            socket_path.display()
-        ));
-    }
-    if !process_owns_socket(pid, socket_path)? {
-        return Err(eyre!(
-            "Refusing to stop stale Codex app server {pid}: it does not own {}",
+            "Refusing to stop stale Codex app server: unexpected control socket {}",
             socket_path.display()
         ));
     }
 
+    let socket_owners = pids_holding_path(socket_path)?;
+    for pid in socket_owners {
+        stop_process(pid)?;
+        println!("Stopped stale Codex app server (pid {pid})");
+    }
+
+    Ok(())
+}
+
+pub(super) fn recover_thread_writer(
+    launch_home: &Path,
+    profiles_root: &Path,
+    conflict: &ThreadWriterConflict,
+) -> Result<ThreadWriterRecovery> {
+    let lock_path = launch_home
+        .join("thread-writer-locks")
+        .join(format!("{}.lock", conflict.thread_id()));
+    let holder_pids = pids_holding_path(&lock_path)?;
+    if holder_pids.is_empty() {
+        return Ok(ThreadWriterRecovery::Ready {
+            stopped_pids: Vec::new(),
+        });
+    }
+
+    let mut stale_writers = Vec::new();
+    let mut unmanaged_pids = Vec::new();
+    for pid in holder_pids {
+        let Some(record) = find_writer_session_marker(profiles_root, conflict.thread_id(), pid)?
+        else {
+            unmanaged_pids.push(pid);
+            continue;
+        };
+        if managed_tui_is_running(&record.marker)? {
+            return Ok(ThreadWriterRecovery::Active {
+                pid,
+                pane_id: record.marker.pane_id,
+                thread_name: record.marker.current_thread.and_then(|thread| thread.name),
+            });
+        }
+
+        stale_writers.push((pid, record.path));
+    }
+
+    if !unmanaged_pids.is_empty() {
+        return Ok(ThreadWriterRecovery::Unmanaged {
+            pids: unmanaged_pids,
+        });
+    }
+
+    let mut stopped_pids = Vec::with_capacity(stale_writers.len());
+    for (pid, marker_path) in stale_writers {
+        stop_process(pid)?;
+        fsutil::remove_existing_path(&marker_path)?;
+        stopped_pids.push(pid);
+    }
+
+    Ok(ThreadWriterRecovery::Ready { stopped_pids })
+}
+
+fn find_writer_session_marker(
+    profiles_root: &Path,
+    thread_id: &str,
+    writer_pid: u32,
+) -> Result<Option<SessionMarkerRecord>> {
+    if !profiles_root.exists() {
+        return Ok(None);
+    }
+
+    for profile_entry in stdfs::read_dir(profiles_root)? {
+        let profile_entry = profile_entry?;
+        let markers_dir = profile_session_markers_dir(&profile_entry.path());
+        if !markers_dir.exists() {
+            continue;
+        }
+
+        for marker_entry in stdfs::read_dir(markers_dir)? {
+            let marker_entry = marker_entry?;
+            let path = marker_entry.path();
+            let Ok(marker) = read_session_marker(&path) else {
+                continue;
+            };
+            if marker
+                .current_thread
+                .as_ref()
+                .map(|thread| thread.id.as_str())
+                != Some(thread_id)
+            {
+                continue;
+            }
+            let SessionControl::Local { socket_path } = &marker.control else {
+                continue;
+            };
+            if socket_path != &control_socket_path(&marker.launch_home) {
+                continue;
+            }
+            if process_owns_socket(writer_pid, socket_path)? {
+                return Ok(Some(SessionMarkerRecord { path, marker }));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+fn managed_tui_is_running(marker: &SessionMarker) -> Result<bool> {
+    let SessionControl::Local { socket_path } = &marker.control else {
+        return Ok(false);
+    };
+    let Some(session_pid) = marker.session_pid else {
+        return Ok(false);
+    };
+    let Some(command) = process_command(session_pid)? else {
+        return Ok(false);
+    };
+
+    Ok(command.contains("--remote")
+        && command.contains(&socket_path.to_string_lossy().into_owned()))
+}
+
+fn process_command(pid: u32) -> Result<Option<String>> {
+    let output = std::process::Command::new("ps")
+        .args(["-p", &pid.to_string(), "-o", "command="])
+        .output()?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+
+    Ok(Some(
+        String::from_utf8_lossy(&output.stdout).trim().to_owned(),
+    ))
+}
+
+fn pids_holding_path(path: &Path) -> Result<Vec<u32>> {
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let output = std::process::Command::new("lsof")
+        .args(["-nP", "-t"])
+        .arg(path)
+        .output()
+        .wrap_err_with(|| format!("Failed to inspect {}", path.display()))?;
+    let mut pids = BTreeSet::new();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        let pid = line.trim().parse::<u32>().wrap_err_with(|| {
+            format!("lsof returned an invalid process id for {}", path.display())
+        })?;
+        pids.insert(pid);
+    }
+
+    Ok(pids.into_iter().collect())
+}
+
+fn stop_process(pid: u32) -> Result<()> {
+    if !process_is_running(pid)? {
+        return Ok(());
+    }
+
     signal_process(pid, "TERM")?;
     if wait_for_process_exit(pid, STALE_PROCESS_STOP_TIMEOUT)? {
-        println!("Stopped stale Codex app server (pid {pid})");
         return Ok(());
     }
 
     signal_process(pid, "KILL")?;
     if !wait_for_process_exit(pid, STALE_PROCESS_STOP_TIMEOUT)? {
-        return Err(eyre!("Failed to stop stale Codex app server {pid}"));
+        return Err(eyre!("Failed to stop Codex app server {pid}"));
     }
 
-    println!("Stopped stale Codex app server (pid {pid})");
     Ok(())
 }
 
@@ -337,7 +502,7 @@ fn process_owns_socket(pid: u32, socket_path: &Path) -> Result<bool> {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
-        .wrap_err("Failed to inspect stale Codex app server")?;
+        .wrap_err("Failed to inspect Codex app server")?;
     Ok(status.success())
 }
 
@@ -345,14 +510,12 @@ fn signal_process(pid: u32, signal: &str) -> Result<()> {
     let status = std::process::Command::new("kill")
         .args([format!("-{signal}"), pid.to_string()])
         .status()
-        .wrap_err_with(|| format!("Failed to send {signal} to stale Codex app server {pid}"))?;
+        .wrap_err_with(|| format!("Failed to send {signal} to Codex app server {pid}"))?;
     if status.success() || !process_is_running(pid)? {
         return Ok(());
     }
 
-    Err(eyre!(
-        "Failed to send {signal} to stale Codex app server {pid}"
-    ))
+    Err(eyre!("Failed to send {signal} to Codex app server {pid}"))
 }
 
 fn wait_for_process_exit(pid: u32, timeout: StdDuration) -> Result<bool> {
