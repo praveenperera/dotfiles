@@ -1,10 +1,16 @@
-use super::app_server::{ConfigOverride, SessionControl, SessionMarker, SessionThread};
+use super::app_server::{
+    control_socket_path, ConfigOverride, SessionControl, SessionMarker, SessionThread,
+};
 use super::*;
 use crate::fsutil;
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration as StdDuration;
 
 const SHARED_GROUP_NAME: &str = "shared";
+const STALE_PROCESS_STOP_TIMEOUT: StdDuration = StdDuration::from_secs(2);
+const STALE_PROCESS_POLL_INTERVAL: StdDuration = StdDuration::from_millis(50);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GroupKind {
@@ -135,6 +141,10 @@ impl SessionMarkerHandle {
         self.update(|marker| marker.session_pid = Some(session_pid))
     }
 
+    pub(crate) fn set_app_server_pid(&self, app_server_pid: u32) -> Result<bool> {
+        self.update(|marker| marker.app_server_pid = Some(app_server_pid))
+    }
+
     pub(crate) fn set_current_thread(&self, thread: Option<SessionThread>) -> Result<bool> {
         self.update(|marker| marker.current_thread = thread)
     }
@@ -247,6 +257,7 @@ pub(super) fn active_session_markers(profile_home: &Path) -> Result<Vec<SessionM
         if session_marker_is_active(&marker)? {
             active.push(marker);
         } else {
+            stop_stale_app_server(&marker)?;
             fsutil::remove_existing_path(&path)?;
         }
     }
@@ -259,12 +270,102 @@ fn read_session_marker(path: &Path) -> Result<SessionMarker> {
 }
 
 fn session_marker_is_active(marker: &SessionMarker) -> Result<bool> {
+    if process_is_running(marker.owner_pid)? {
+        return Ok(true);
+    }
+
+    marker
+        .session_pid
+        .map(process_is_running)
+        .transpose()
+        .map(Option::unwrap_or_default)
+}
+
+fn process_is_running(pid: u32) -> Result<bool> {
     Ok(std::process::Command::new("ps")
-        .args(["-p", &marker.owner_pid.to_string()])
+        .args(["-p", &pid.to_string()])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()?
         .success())
+}
+
+fn stop_stale_app_server(marker: &SessionMarker) -> Result<()> {
+    let SessionControl::Local { socket_path } = &marker.control else {
+        return Ok(());
+    };
+    let Some(pid) = marker.app_server_pid else {
+        return Ok(());
+    };
+    if !process_is_running(pid)? {
+        return Ok(());
+    }
+
+    let expected_socket_path = control_socket_path(&marker.launch_home);
+    if socket_path != &expected_socket_path {
+        return Err(eyre!(
+            "Refusing to stop stale Codex app server {pid}: unexpected control socket {}",
+            socket_path.display()
+        ));
+    }
+    if !process_owns_socket(pid, socket_path)? {
+        return Err(eyre!(
+            "Refusing to stop stale Codex app server {pid}: it does not own {}",
+            socket_path.display()
+        ));
+    }
+
+    signal_process(pid, "TERM")?;
+    if wait_for_process_exit(pid, STALE_PROCESS_STOP_TIMEOUT)? {
+        println!("Stopped stale Codex app server (pid {pid})");
+        return Ok(());
+    }
+
+    signal_process(pid, "KILL")?;
+    if !wait_for_process_exit(pid, STALE_PROCESS_STOP_TIMEOUT)? {
+        return Err(eyre!("Failed to stop stale Codex app server {pid}"));
+    }
+
+    println!("Stopped stale Codex app server (pid {pid})");
+    Ok(())
+}
+
+fn process_owns_socket(pid: u32, socket_path: &Path) -> Result<bool> {
+    let status = std::process::Command::new("lsof")
+        .args(["-nP", "-a", "-p", &pid.to_string(), "-U"])
+        .arg(socket_path)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .wrap_err("Failed to inspect stale Codex app server")?;
+    Ok(status.success())
+}
+
+fn signal_process(pid: u32, signal: &str) -> Result<()> {
+    let status = std::process::Command::new("kill")
+        .args([format!("-{signal}"), pid.to_string()])
+        .status()
+        .wrap_err_with(|| format!("Failed to send {signal} to stale Codex app server {pid}"))?;
+    if status.success() || !process_is_running(pid)? {
+        return Ok(());
+    }
+
+    Err(eyre!(
+        "Failed to send {signal} to stale Codex app server {pid}"
+    ))
+}
+
+fn wait_for_process_exit(pid: u32, timeout: StdDuration) -> Result<bool> {
+    let deadline = std::time::Instant::now() + timeout;
+    while std::time::Instant::now() < deadline {
+        if !process_is_running(pid)? {
+            return Ok(true);
+        }
+
+        thread::sleep(STALE_PROCESS_POLL_INTERVAL);
+    }
+
+    Ok(!process_is_running(pid)?)
 }
 
 pub(super) fn codex_command(codex_home: &Path) -> std::process::Command {
