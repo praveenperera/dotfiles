@@ -26,6 +26,12 @@
 - Use named imports instead of wildcard imports.
 - Keep test-only functions, types, and modules out of production code paths. Put them under `mod tests` or a dedicated `mod test_support`, and use `#[cfg(test)]` only to gate those modules.
 
+# Docker image builds
+
+- Default to the global `rb` skill for container image builds. Prefer `rb build --project <name> -- [buildx args…]` over local `docker build` and `docker buildx build`.
+- Use local Docker only when the user asks for a local build, or when `rb` is unavailable and the user accepts that fallback.
+- Load `$rb` / the `rb` skill before inventing a build command. Do not print control-plane tokens or project SSH private keys.
+
 # Verification
 
 - After implementation changes, run the repository's formatter and linter. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists.
