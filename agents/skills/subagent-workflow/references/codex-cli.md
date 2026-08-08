@@ -99,7 +99,7 @@ Mode: <read-only analysis|implementation>
 
 ## Run a fresh read-only delegate
 
-Default to Sol with high reasoning. Use Luna only for a repeated or high-volume exact mechanical read:
+Default to Sol with high reasoning. Use Luna at `max` reasoning for an easy tightly scoped read, and at `low` for a repeated or high-volume exact mechanical read:
 
 ```sh
 codex --ask-for-approval never exec \
@@ -117,7 +117,7 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-For a single easy, tightly scoped task, keep Sol and change the reasoning effort to `low`. For repeated or high-volume mechanical work, change the model to `gpt-5.6-luna` and use `low` reasoning unless the exact procedure requires several tool-driven steps.
+For a single easy, tightly scoped task, change the model to `gpt-5.6-luna` and the reasoning effort to `max`; do not run Sol below `high`. For repeated or high-volume mechanical work, use `gpt-5.6-luna` with `low` reasoning, or `medium` when the exact procedure requires several tool-driven steps; `max` wastes tokens and latency at volume.
 
 ## Run a fresh implementation delegate
 
