@@ -32,9 +32,11 @@ Otherwise: **translate any local build into `rb build`.**
 
 | Do not run | Run instead |
 | --- | --- |
-| `docker build -t app:dev .` | `rb build --project <name> -- -t app:dev --load .` |
-| `docker buildx build --push -t … .` | `rb build --project <name> -- -t … --push .` |
-| `docker buildx build --platform …` | same flags after `rb build --project <name> --` |
+| `docker build -t app:dev .` | `rb build -- -t app:dev --load .` |
+| `docker buildx build --push -t … .` | `rb build -- -t … --push .` |
+| `docker buildx build --platform …` | same flags after `rb build --` |
+
+`--project <name>` is optional and only overrides rb's project resolution.
 
 ## Prerequisites
 
@@ -61,21 +63,33 @@ Config lives under Application Support `com.praveen.rb`
 | --- | --- |
 | readiness | `rb doctor` |
 | create/update project policy + SSH key | `rb project init --name <name> [opts]` |
-| **image build (default)** | `rb build --project <name> -- [buildx args…]` |
-| state / deadlines | `rb status --project <name>` |
-| stop compute, keep cache Volume | `rb stop --project <name>` |
-| delete compute **and** cache Volume | `rb cache delete --project <name>` |
+| **image build (default)** | `rb build -- [buildx args…]` |
+| state / deadlines | `rb status` |
+| stop compute, keep cache Volume | `rb stop` |
+| delete compute **and** cache Volume | `rb cache delete` |
 
 Project name: 1–32 chars, lowercase letters, digits, hyphens.
 
 ### Project selection
 
-1. Prefer a name the user gives, or a project already used for this repo.
-2. Derive a short slug from the repo directory when none is set
-   (lowercase, digits, hyphens; max 32).
-3. If `rb build` fails because the project is missing, run
-   `rb project init --name <name>` with sensible defaults, then rebuild.
-   Ask only when region, size, or volume matter and no prior project exists.
+`rb` resolves the project name in this order:
+
+1. The `--project` flag.
+2. The `RB_PROJECT` environment variable.
+3. The nearest user-authored `.rb.toml` file with a `project = "name"` key,
+   searched from the working directory up to the git toplevel; nearest file
+   wins. `rb` only reads this file and never writes it.
+4. A slug from the git-toplevel directory name, or the working directory name
+   outside a git repository; lowercase, non-alphanumeric runs become one
+   hyphen, max 32 characters.
+
+`rb build` auto-creates a missing project with the default policy and prints a
+one-line notice to stderr. `rb status`, `rb stop`, and `rb cache delete` never
+create a project; a missing project fails with a hint to run `rb build` or
+`rb project init --name <name>`.
+
+Pass `--project` only when the user names a project. Use `rb project init` only
+when the user wants custom region, size, volume, TTLs, or max builders.
 
 ### `rb project init`
 
@@ -105,9 +119,9 @@ Limits:
 Everything after `--` is passed unchanged to `docker buildx build`:
 
 ```bash
-rb build --project my-app -- -t example/app:dev --load .
-rb build --project my-app -- -t example/app:latest --push .
-rb build --project my-app \
+rb build -- -t example/app:dev --load .
+rb build -- -t example/app:latest --push .
+rb build \
   --cache-from type=registry,ref=… \
   --cache-to type=registry,ref=… \
   -- -t example/app:latest --push .
@@ -126,15 +140,16 @@ First build after idle can take longer (Droplet provision/warm).
 - `rb cache delete`: destroy compute and Volume (cold next build).
 
 ```bash
-rb status --project my-app
-rb stop --project my-app
-rb cache delete --project my-app   # destructive; confirm intent first
+rb status
+rb stop
+rb cache delete   # destructive; confirm intent first
 ```
 
 ## Agent workflow
 
 1. On any image-build request, plan `rb build` first — not local Docker.
-2. Resolve `--project` (user / prior / repo slug); init if missing.
+2. Pass `--project` only when the user names one; otherwise rely on rb's
+   resolution.
 3. Map the user's intended Buildx flags after `--` (`-t`, `--load`, `--push`,
    `-f`, `--platform`, `--target`, build-args, context path).
 4. If `rb` fails for tooling/auth, run `rb doctor`, report the error, and only
@@ -149,7 +164,8 @@ rb cache delete --project my-app   # destructive; confirm intent first
 | --- | --- |
 | no control-plane URL/token | `rb login` with `RB_TOKEN` |
 | docker / buildx / ssh fail in doctor | fix local install, re-run `rb doctor` |
-| project missing | `rb project init --name …` or wrong `--project` |
+| project missing | `rb build` auto-creates with default policy; lifecycle commands print a hint |
+| name conflict | name taken by another SSH key/policy; pick new name via `--project`/`RB_PROJECT` |
 | SSH / host key issues | `rb project init --name … --rotate-key` if key is bad |
 | builder provisioning timeout | re-run build; check `rb status` |
 | want cheaper idle | `rb stop` (keeps cache) |
