@@ -1043,6 +1043,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(marker.owner_pid, 1);
+        assert_eq!(marker.app_server_pid, None);
         assert_eq!(marker.control, SessionControl::Legacy);
         assert_eq!(marker.current_thread, None);
     }
@@ -1079,6 +1080,53 @@ mod tests {
             marker.current_thread.unwrap().rollout_path,
             Some(rollout_path)
         );
+    }
+
+    #[test]
+    fn session_marker_handle_records_managed_processes() {
+        let dir = tempdir().unwrap();
+        let profile_home = dir.path().join("profiles").join("a");
+        let marker_handle = write_session_marker(
+            &profile_home,
+            42,
+            dir.path(),
+            None,
+            SessionControl::Local {
+                socket_path: dir
+                    .path()
+                    .join("app-server-control/app-server-control.sock"),
+            },
+        )
+        .unwrap();
+
+        marker_handle.set_app_server_pid(43).unwrap();
+        marker_handle.set_session_pid(44).unwrap();
+        let marker =
+            serde_json::from_slice::<SessionMarker>(&fs::read(marker_handle.path()).unwrap())
+                .unwrap();
+
+        assert_eq!(marker.app_server_pid, Some(43));
+        assert_eq!(marker.session_pid, Some(44));
+    }
+
+    #[test]
+    fn active_session_markers_keeps_live_tui_after_owner_exits() {
+        let dir = tempdir().unwrap();
+        let profile_home = dir.path().join("profiles").join("a");
+        let marker = write_session_marker(
+            &profile_home,
+            u32::MAX,
+            dir.path(),
+            None,
+            SessionControl::Embedded,
+        )
+        .unwrap();
+        marker.set_session_pid(std::process::id()).unwrap();
+
+        let active = active_session_markers(&profile_home).unwrap();
+
+        assert_eq!(active.len(), 1);
+        assert!(marker.path().exists());
     }
 
     #[test]

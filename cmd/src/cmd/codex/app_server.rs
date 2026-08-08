@@ -51,6 +51,8 @@ pub(crate) struct SessionMarker {
     pub(crate) owner_pid: u32,
     #[serde(default)]
     pub(crate) session_pid: Option<u32>,
+    #[serde(default)]
+    pub(crate) app_server_pid: Option<u32>,
     pub(crate) started_at: chrono::DateTime<chrono::Utc>,
     pub(crate) launch_home: PathBuf,
     #[serde(default)]
@@ -62,7 +64,7 @@ pub(crate) struct SessionMarker {
 }
 
 impl SessionMarker {
-    pub(crate) const VERSION: u8 = 2;
+    pub(crate) const VERSION: u8 = 3;
 
     pub(crate) fn new(
         owner_pid: u32,
@@ -74,6 +76,7 @@ impl SessionMarker {
             version: Self::VERSION,
             owner_pid,
             session_pid: None,
+            app_server_pid: None,
             started_at: chrono::Utc::now(),
             launch_home,
             pane_id,
@@ -347,6 +350,12 @@ impl ManagedAppServer {
         let mut child = command
             .spawn()
             .wrap_err("Failed to start Codex app server")?;
+        if let Err(err) = marker.set_app_server_pid(child.id()) {
+            child.kill().ok();
+            child.wait().ok();
+            return Err(err).wrap_err("Failed to record Codex app server process");
+        }
+
         let monitor = match SessionMonitor::start(socket_path, marker, pane_id) {
             Ok(monitor) => monitor,
             Err(err) => {
