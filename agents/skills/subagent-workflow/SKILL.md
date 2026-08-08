@@ -14,7 +14,7 @@ Detect the root model from the current session. Supported roots are **Fable 5** 
 
 ## Root modes
 
-Routing depends on who is root. Shared defaults: Sol is the default delegated implementer; Luna stays mechanical; honor explicit user model choices.
+Routing depends on who is root. Shared defaults: Sol at `high` reasoning is the default delegated implementer for substantial work; Luna at `max` reasoning takes easy tightly scoped delegations; Luna at `low` keeps bulk mechanical work; honor explicit user model choices.
 
 ### Fable 5 root
 
@@ -28,7 +28,8 @@ Fable keeps work that needs its intent inference and restraint. Do it in the roo
 | Independent adversarial or inventory-style review | Sol via Codex, or Opus when a deliberate second opinion helps |
 | High-taste second opinion when the root already shaped the design | Opus 5 via Agent tool (`model: opus`, `high` effort) |
 | Full implementation substitute when the user says "use opus" | Opus 5 via Agent tool (session-long until "use sol") |
-| Repeated high-volume mechanical work | Luna via Codex |
+| Easy, tightly scoped change with cheap verification | Luna via Codex (`max` reasoning) |
+| Repeated high-volume mechanical work | Luna via Codex (`low`–`medium` reasoning) |
 
 ### Opus 5 root
 
@@ -42,7 +43,8 @@ Opus orchestrates and can implement. **Do not use the Opus root as the final aut
 | High-taste review, UI/UX/API/copy judgment, intent-sensitive surface design | Fable 5 via Agent tool (`model: fable`, `high` effort) |
 | Final simplification of a Sol (or Opus) implementation | Fable 5 via Agent tool |
 | Independent cross-vendor or inventory-style review | Sol via Codex |
-| Repeated high-volume mechanical work | Luna via Codex |
+| Easy, tightly scoped change with cheap verification | Luna via Codex (`max` reasoning) |
+| Repeated high-volume mechanical work | Luna via Codex (`low`–`medium` reasoning) |
 
 When the Opus root would ordinarily do a taste pass itself under the Fable-root table, spawn Fable instead. Keep the Fable prompt short and self-contained; point at the diff, owned paths, and a success condition rather than dumping this skill file.
 
@@ -61,7 +63,9 @@ Treat the scores as routing heuristics, not benchmarks:
 | Fable 5      |            9 |     9 |               2 | intent-sensitive work, high-taste review, and simplification (root when Fable is root; Agent `fable` when Opus is) |
 | GPT-5.6 Sol  |            8 |     7 |               8 | persistent implementation, hard debugging, migrations, broad investigation, independent review                     |
 | Opus 5       |            8 |     8 |               6 | root orchestration and long-horizon work when Opus is root; second opinions or "use opus" implementation when Fable is root |
-| GPT-5.6 Luna |            5 |     4 |              10 | repeated or high-volume mechanical transforms, classification, inventory, bulk processing, simple generated text   |
+| GPT-5.6 Luna | 5 (7 at `max`) |     4 |              10 | easy tightly scoped delegated changes at `max` reasoning; repeated or high-volume mechanical transforms, classification, inventory, bulk processing, simple generated text at `low` |
+
+Luna's intelligence is effort-dependent: after the July 30, 2026 80% price cut, Luna at `max` reasoning reaches roughly Sol-`medium` capability at a small fraction of Sol's cost, so work that fits below Sol `high` routes to Luna `max` instead of Sol `low` or `medium`.
 
 Read [references/model-routing.md](references/model-routing.md) before making a consequential or disputed model choice.
 
@@ -70,11 +74,11 @@ Apply these behavioral corrections:
 - For Fable work, preserve the high-level goal, constraints, and authority boundaries. Whether the root is Fable or a Fable subagent, check for early stopping, omitted requirements, and inferred intent overriding an explicit requirement.
 - Watch for Sol overengineering: it can turn a small change into a rewrite with extra abstractions, speculative fallbacks, or excessive tests. Give it a narrow objective, explicit owned scope, and a minimality constraint. Require the smallest coherent change, preserve established abstractions, and stop to re-plan instead of piling on code when the approach is wrong.
 - Use Opus 5 for long-horizon agentic implementation and complex debugging. When Fable is root, also use Opus for deliberate second opinions and as the full implementation substitute when the user directs "use opus". When Opus is root, do not assign Opus the high-taste review or simplification of its own output; send that to Fable. Launch-era reports describe three Opus failure modes: it stops early and reports unfinished work as done, it argues with explicit instructions, and it follows large instruction-dense skill files less reliably than short ones. Give Opus a focused self-contained prompt instead of a large instruction bundle, and verify completion against the success condition rather than trusting its report. Read [references/opus5-prompting.md](references/opus5-prompting.md) before writing Opus 5 prompts: unhobble style constraints, prefer judgment and rich references over rules and examples, use progressive disclosure, and keep authority, scope, and verification hard.
-- Give Luna only tasks with an exact procedure and cheap verification. Do not ask it to choose architecture, infer product intent, or judge subtle code quality.
+- Give Luna tasks with cheap verification: exact-procedure mechanical work at `low` reasoning, or an easy tightly scoped change at `max` reasoning. Do not ask it to choose architecture, infer product intent, or judge subtle code quality.
 
 Honor an explicit user model choice. If that model is unavailable, report the failure instead of silently substituting another model.
 
-Default every Codex delegation to GPT-5.6 Sol with `high` reasoning. Use Sol with `low` reasoning only for an easy, tightly scoped change whose correct result is cheap to verify. A single easy delegated change still uses Sol. Reserve Luna for repeated, high-volume, or cheap fan-out mechanical workloads, not merely because a Sol task is easy.
+Default every substantial Codex delegation to GPT-5.6 Sol with `high` reasoning; do not run Sol below `high`. Route an easy, tightly scoped change whose correct result is cheap to verify to Luna with `max` reasoning: since the July 2026 price cut, Luna `max` reasons near Sol `medium` at a small fraction of the cost. Use Luna with `low` reasoning for repeated, high-volume, or cheap fan-out mechanical workloads, where `max` wastes tokens and latency.
 
 Sol is the default delegated implementer under both roots. Session directives:
 
@@ -90,7 +94,7 @@ When Fable reviews or simplifies as a subagent, give it the same shared prompt c
 
 ## Combine models
 
-Use the models in whatever shape best fits the task and the active root. Fable's intent inference and restraint complement Sol's persistence. Opus 5 is a strong orchestrator and implementer at lower cost than Fable, but launch-era instruction following is weaker than its benchmark standing; under an Opus root, pair it with Fable for taste rather than trusting Opus to be its own taste authority. Luna reduces the cost of repeated mechanical work. Decide whether to delegate, which model acts first, and how many passes are worthwhile from the actual evidence and risk.
+Use the models in whatever shape best fits the task and the active root. Fable's intent inference and restraint complement Sol's persistence. Opus 5 is a strong orchestrator and implementer at lower cost than Fable, but launch-era instruction following is weaker than its benchmark standing; under an Opus root, pair it with Fable for taste rather than trusting Opus to be its own taste authority. Luna reduces the cost of repeated mechanical work and, at `max` reasoning, of easy bounded delegations. Decide whether to delegate, which model acts first, and how many passes are worthwhile from the actual evidence and risk.
 
 Do not delegate when handoff and reintegration cost more than the task. Do not give two writers overlapping ownership or let parallel implementations edit the same files. Read-only reviewers may inspect shared repository state.
 

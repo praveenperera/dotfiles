@@ -17,7 +17,7 @@ Higher is better on every axis.
 | Fable 5 | 9 | 9 | 2 | strongest intent inference and taste; expensive; can be lazy or pursue perceived intent over literal instructions |
 | GPT-5.6 Sol | 8 | 7 | 8 | relentless and efficient; drives hard to completion; can overbuild instead of stepping back |
 | Opus 5 | 8 | 8 | 6 | near-Fable on benchmarks at Opus price, but launch reports show early stopping and weaker adherence to long instruction sets; taste strong but unproven relative to Fable |
-| GPT-5.6 Luna | 5 | 4 | 10 | cheap, fast, and capable on repeated high-volume procedures; weak default for one-off development or ambiguous work |
+| GPT-5.6 Luna | 5 (7 at `max`) | 4 | 10 | very cheap after the July 30, 2026 80% price cut; `max` reasoning reaches near Sol-`medium` capability, so it owns easy bounded delegations; still weak for ambiguous or taste-sensitive work |
 
 The Fable score preserves Theo Browne's published routing rubric; the Opus 5 scores are a local recalibration from Anthropic's launch benchmarks and positioning together with early practitioner reports, since Theo's video predates Opus 5. The Sol and Luna scores adapt the user's stated preferences, current provider positioning, and subsequent practitioner reports. Taste is especially subjective: use project-specific examples and evals when it matters.
 
@@ -80,7 +80,7 @@ Make the smallest coherent change that satisfies the objective. Preserve existin
 
 Theo's GPT-5.6 review describes Sol as unusually determined and reliable while warning that it can turn a small change into a rewrite with excessive tests. The official Codex guide recommends Sol for complex, open-ended work and as the starting point when unsure. Its July 2026 API list price is $5 per million input tokens and $30 per million output tokens.
 
-Use `high` reasoning by default for Sol work. Drop to `low` only for an easy, tightly scoped change with cheap verification. Do not use `medium` as the routine default.
+Use `high` reasoning for all Sol work. Do not run Sol at `low` or `medium`: since the July 2026 Luna price cut, an easy, tightly scoped change with cheap verification routes to Luna with `max` reasoning instead, which reaches near the same capability at a small fraction of the cost.
 
 ## Select Opus 5
 
@@ -115,17 +115,18 @@ The near-Fable framing above comes from Anthropic; the first outside reports tem
 
 ## Select GPT-5.6 Luna
 
-Use Luna only when the prompt behaves like a function, success is cheap to check, and the work repeats at high volume or across cheap fan-out:
+Use Luna when success is cheap to check and either the prompt behaves like a function repeated at high volume, or the task is an easy one-off delegation that would once have gone to Sol at `low`:
 
+- make an easy, tightly scoped one-off change with cheap verification (`max` reasoning)
 - classify or extract fields from many independent inputs
 - inventory files, symbols, errors, or repeated patterns
 - apply the same exact mechanical transform across many non-overlapping scopes
 - generate branch names, titles, summaries, or other simple text
 - run a cheap first-pass search that a smarter model will interpret
 
-Do not use Luna for a one-off easy edit; if that work must be delegated, use Sol with `low` reasoning. Do not use Luna as the final authority for architecture, subtle debugging, security, taste, or broad implementation. Theo's GPT-5.6 review specifically frames Luna as a model that a smarter agent should orchestrate for bulk processing and simple outputs. OpenAI describes it as the cost-sensitive, high-volume tier. Its July 2026 API list price is $1 per million input tokens and $6 per million output tokens.
+Do not use Luna as the final authority for architecture, subtle debugging, security, taste, or broad implementation. Theo's GPT-5.6 review specifically frames Luna as a model that a smarter agent should orchestrate for bulk processing and simple outputs; the July 30, 2026 price cut extends that to easy bounded implementation at `max` reasoning. OpenAI cut Luna's API list price by 80% on that date, to $0.20 per million input tokens and $1.20 per million output tokens, while Sol stayed at $5 and $30.
 
-Use `low` reasoning for simple extraction and `medium` when tool use or several exact steps are required.
+Choose reasoning effort by workload shape, not difficulty alone. Use `low` for simple extraction and `medium` when tool use or several exact steps are required; at bulk volume, `max` wastes tokens and latency. Use `max` for a one-off easy delegated change: Artificial Analysis measures Luna at `max` near Sol-`medium` capability, but its output tokens rise roughly 9x over no-reasoning, so reserve `max` for one-off or low-count work.
 
 ## Use complementary strengths
 
@@ -151,7 +152,7 @@ Either model can implement while the other reviews for correctness and missed ca
 
 ### Luna and a frontier model
 
-Use Luna for cheap structured observations across repeatable work, then reserve consequential judgment for a stronger model.
+Use Luna for cheap structured observations across repeatable work, then reserve consequential judgment for a stronger model. Since the price cut, Luna at `max` also serves as the implementer for easy bounded changes under frontier-model orchestration, with the orchestrator verifying the diff.
 
 ## Sources
 
@@ -160,6 +161,8 @@ Use Luna for cheap structured observations across repeatable work, then reserve 
 - [OpenAI Codex model selection](https://learn.chatgpt.com/docs/models#recommended-models) provides the current Sol, Terra, and Luna positioning
 - [OpenAI GPT-5.6 Sol model page](https://developers.openai.com/api/docs/models/gpt-5.6-sol) provides capability, context, and pricing details
 - [OpenAI GPT-5.6 Luna model page](https://developers.openai.com/api/docs/models/gpt-5.6-luna) provides cost-sensitive positioning and pricing details
+- [CNBC on the July 30, 2026 GPT-5.6 price cuts](https://www.cnbc.com/2026/07/30/open-ai-price-cut-gpt.html) reports the 80% Luna cut to $0.20/$1.20 per million tokens, the 20% Terra cut, and unchanged Sol pricing
+- [Augmented Mind on Luna's effort-dependent capability](https://augmentedmind.substack.com/p/gpt-56-luna-is-80-cheaper) grounds the `max`-reasoning numbers: Artificial Analysis index 26.6 without reasoning to 51.2 at `max`, with roughly 9x output tokens and 13.5x evaluation cost
 - [Anthropic Claude Fable 5](https://www.anthropic.com/claude/fable) provides official use cases, availability, and pricing
 - [Claude Opus 5 announcement](https://www.anthropic.com/news/claude-opus-5) provides official use cases, availability, pricing, and the launch benchmark card that grounds the split criteria above
 - [Dan Shipper's Opus 5 day-zero vibe check](https://x.com/danshipper/status/2080700057892815114) is the source for the early stopping, instruction arguing, and large-skill-file observations; it reports one week of Every's testing on launch day and is explicitly provisional
