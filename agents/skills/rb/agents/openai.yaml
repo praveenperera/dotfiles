@@ -1,0 +1,4 @@
+interface:
+  display_name: "rb"
+  short_description: "Default remote Docker/Buildx image builds via rb"
+  default_prompt: "Build container images with $rb (not local docker build)."
