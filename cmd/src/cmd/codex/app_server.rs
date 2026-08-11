@@ -249,6 +249,64 @@ pub(crate) fn writer_conflict_retry_args(
     retry_args
 }
 
+pub(crate) fn take_resume_force_flag(args: &mut Vec<std::ffi::OsString>) -> bool {
+    let Some(command_index) = codex_command_index(args) else {
+        return false;
+    };
+    if args[command_index] != "resume" {
+        return false;
+    }
+
+    let option_boundary = args
+        .iter()
+        .position(|arg| arg == "--")
+        .unwrap_or(args.len());
+    let Some(force_index) = args[..option_boundary]
+        .iter()
+        .position(|arg| matches!(arg.to_str(), Some("-f" | "--force")))
+    else {
+        return false;
+    };
+
+    args.remove(force_index);
+    true
+}
+
+fn codex_command_index(args: &[std::ffi::OsString]) -> Option<usize> {
+    let mut index = 0;
+    while index < args.len() {
+        let value = args[index].to_string_lossy();
+        if value == "--" {
+            return (index + 1 < args.len()).then_some(index + 1);
+        }
+
+        if option_takes_one_value(&value)
+            || matches!(
+                value.as_ref(),
+                "-c" | "--config"
+                    | "--enable"
+                    | "--disable"
+                    | "--remote"
+                    | "--remote-auth-token-env"
+                    | "--profile"
+                    | "-p"
+            )
+        {
+            index += 2;
+            continue;
+        }
+
+        if value.starts_with('-') {
+            index += 1;
+            continue;
+        }
+
+        return Some(index);
+    }
+
+    None
+}
+
 fn session_target_index(args: &[std::ffi::OsString], start: usize) -> Option<usize> {
     let mut index = start;
     while index < args.len() {

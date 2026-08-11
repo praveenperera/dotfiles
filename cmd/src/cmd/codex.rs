@@ -67,6 +67,10 @@ pub enum CodexCmd {
         #[arg(long)]
         other: bool,
 
+        /// Stop a conflicting session writer when resume cannot proceed
+        #[arg(short, long)]
+        force: bool,
+
         /// Arguments to pass to codex
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<OsString>,
@@ -496,6 +500,13 @@ enum LaunchTarget {
     },
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+enum ThreadWriterPolicy {
+    #[default]
+    PreserveActive,
+    StopConflicting,
+}
+
 const CHATGPT_USAGE_URL: &str = "https://chatgpt.com/backend-api/wham/usage";
 const CHATGPT_RATE_LIMIT_RESET_CREDITS_URL: &str =
     "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits";
@@ -520,12 +531,14 @@ pub fn run_with_flags(_sh: &Shell, flags: Codex) -> Result<()> {
             resume_group,
             config_group,
             other,
-            args,
+            force,
+            mut args,
         } => launch(
             profile_or_arg.as_ref(),
             resume_group.as_deref(),
             config_group.as_deref(),
             other,
+            resolve_thread_writer_policy(force, &mut args),
             &args,
         ),
         CodexCmd::Login {
@@ -588,6 +601,7 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
         resume_group,
         config_group,
         other,
+        force,
         ..
     } = flags.subcommand
     else {
@@ -603,9 +617,20 @@ fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<C
             resume_group,
             config_group,
             other,
+            force,
             args: args[separator_idx + 1..].to_vec(),
         },
     }))
+}
+
+fn resolve_thread_writer_policy(force: bool, args: &mut Vec<OsString>) -> ThreadWriterPolicy {
+    let resume_force = app_server::take_resume_force_flag(args);
+
+    if force || resume_force {
+        ThreadWriterPolicy::StopConflicting
+    } else {
+        ThreadWriterPolicy::PreserveActive
+    }
 }
 
 #[cfg(test)]
@@ -619,14 +644,14 @@ mod tests {
         parse_jwt_expiration, parse_raw_args, prepare_config_group_home, prepare_resume_group_home,
         print_current_usage_table, promote_launch_auth_if_unchanged, read_auth_snapshot,
         read_stored_auth, replace_global_auth_with_profile, resolve_launch_auth_mode,
-        resolve_launch_groups, resolve_launch_target, save_profile_auth,
-        select_auto_launch_profile, select_auto_launch_profile_except, sync_launch_codex_home,
-        sync_login_codex_home, validate_group_name, write_auth_raw_if_unchanged,
-        write_session_marker, AuthIdentity, CodexCmd, LaunchAuthMode, LaunchGroups, LaunchTarget,
-        LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind, ProfileUsageLoader,
-        ProfileUsageSnapshot, ProfileUsageState, RateLimitResetCredit, RateLimitResetCreditLoader,
-        RateLimitResetCreditSummary, SavedProfile, StoredAuth, UsageFetchResult, UsageRunRates,
-        UsageWindowSnapshot,
+        resolve_launch_groups, resolve_launch_target, resolve_thread_writer_policy,
+        save_profile_auth, select_auto_launch_profile, select_auto_launch_profile_except,
+        sync_launch_codex_home, sync_login_codex_home, validate_group_name,
+        write_auth_raw_if_unchanged, write_session_marker, AuthIdentity, CodexCmd, LaunchAuthMode,
+        LaunchGroups, LaunchTarget, LimitStyleKind, ProfileAuthRefresher, ProfileStyleKind,
+        ProfileUsageLoader, ProfileUsageSnapshot, ProfileUsageState, RateLimitResetCredit,
+        RateLimitResetCreditLoader, RateLimitResetCreditSummary, SavedProfile, StoredAuth,
+        ThreadWriterPolicy, UsageFetchResult, UsageRunRates, UsageWindowSnapshot,
     };
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Local, TimeZone, Utc};
@@ -2051,6 +2076,7 @@ mod tests {
             resume_group,
             config_group,
             other,
+            force,
             args,
         } = subcommand
         else {
@@ -2061,6 +2087,7 @@ mod tests {
         assert_eq!(resume_group, None);
         assert_eq!(config_group, None);
         assert!(!other);
+        assert!(!force);
         assert_eq!(
             args,
             vec![OsString::from("--model"), OsString::from("gpt-5.4")]
@@ -2086,6 +2113,7 @@ mod tests {
             resume_group,
             config_group,
             other,
+            force,
             args,
         } = subcommand
         else {
@@ -2096,6 +2124,7 @@ mod tests {
         assert_eq!(resume_group.as_deref(), Some("shared-work"));
         assert_eq!(config_group.as_deref(), Some("cfg-a"));
         assert!(!other);
+        assert!(!force);
         assert_eq!(args, vec![OsString::from("a")]);
     }
 
@@ -2118,6 +2147,7 @@ mod tests {
             resume_group,
             config_group,
             other,
+            force,
             args,
         } = subcommand
         else {
@@ -2128,7 +2158,69 @@ mod tests {
         assert_eq!(resume_group.as_deref(), Some("shared-work"));
         assert_eq!(config_group.as_deref(), Some("cfg-a"));
         assert!(other);
+        assert!(!force);
         assert!(args.is_empty());
+    }
+
+    #[test]
+    fn resume_force_flag_selects_stop_policy_and_is_not_forwarded() {
+        let cmd = parse_raw_args(
+            &[
+                "launch",
+                "a",
+                "-c",
+                "shared",
+                "resume",
+                "--force",
+                "session name",
+            ]
+            .map(OsString::from),
+        )
+        .unwrap();
+        let CodexCmd::Launch {
+            force, mut args, ..
+        } = cmd.subcommand
+        else {
+            panic!("expected launch subcommand");
+        };
+
+        let policy = resolve_thread_writer_policy(force, &mut args);
+
+        assert_eq!(policy, ThreadWriterPolicy::StopConflicting);
+        assert_eq!(
+            args,
+            ["resume", "session name"].map(OsString::from).to_vec()
+        );
+    }
+
+    #[test]
+    fn force_after_argument_delimiter_is_forwarded() {
+        let mut args = ["resume", "--", "--force"].map(OsString::from).to_vec();
+
+        let policy = resolve_thread_writer_policy(false, &mut args);
+
+        assert_eq!(policy, ThreadWriterPolicy::PreserveActive);
+        assert_eq!(
+            args,
+            ["resume", "--", "--force"].map(OsString::from).to_vec()
+        );
+    }
+
+    #[test]
+    fn force_is_not_taken_when_resume_is_an_option_value() {
+        let mut args = ["--model", "resume", "--force"]
+            .map(OsString::from)
+            .to_vec();
+
+        let policy = resolve_thread_writer_policy(false, &mut args);
+
+        assert_eq!(policy, ThreadWriterPolicy::PreserveActive);
+        assert_eq!(
+            args,
+            ["--model", "resume", "--force"]
+                .map(OsString::from)
+                .to_vec()
+        );
     }
 
     #[test]
