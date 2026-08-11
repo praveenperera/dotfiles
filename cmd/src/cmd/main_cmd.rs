@@ -223,9 +223,11 @@ impl Cmd {
 mod tests {
     use std::ffi::OsString;
 
+    use clap::Parser;
+
     use super::{Cmd, MainCmd};
     use crate::cmd::agent_target::AgentTarget;
-    use crate::cmd::cloudflare::{BillingOutput, CloudflareCmd, R2Cmd, RedirectCmd};
+    use crate::cmd::cloudflare::{BillingOutput, BillingProduct, CloudflareCmd, RedirectCmd};
     use crate::cmd::mcp::McpCmd;
     use crate::cmd::pack::PackCmd;
     use crate::cmd::skill::SkillCmd;
@@ -317,10 +319,9 @@ mod tests {
     }
 
     #[test]
-    fn parses_cloudflare_r2_billing() {
+    fn parses_cloudflare_billing_with_product_filters() {
         let cmd = Cmd::from_args(&[
             OsString::from("cf"),
-            OsString::from("r2"),
             OsString::from("billing"),
             OsString::from("--account-id"),
             OsString::from("account-id"),
@@ -328,6 +329,11 @@ mod tests {
             OsString::from("token"),
             OsString::from("--output"),
             OsString::from("json"),
+            OsString::from("--product"),
+            OsString::from("r2"),
+            OsString::from("--products"),
+            OsString::from("workers,do,r2"),
+            OsString::from("--non-zero"),
         ])
         .unwrap();
 
@@ -335,13 +341,36 @@ mod tests {
             panic!("expected cloudflare command");
         };
 
-        let CloudflareCmd::R2 { subcommand } = subcommand else {
-            panic!("expected R2 command");
+        let CloudflareCmd::Billing(args) = subcommand else {
+            panic!("expected billing command");
         };
 
         assert!(
-            matches!(subcommand, R2Cmd::Billing(args) if args.account_id.as_deref() == Some("account-id") && args.api_token.as_deref() == Some("token") && args.output == BillingOutput::Json)
+            args.account_id.as_deref() == Some("account-id")
+                && args.api_token.as_deref() == Some("token")
+                && args.output == BillingOutput::Json
+                && args.non_zero
+                && args.products
+                    == [
+                        BillingProduct::R2,
+                        BillingProduct::Workers,
+                        BillingProduct::DurableObjects,
+                        BillingProduct::R2,
+                    ]
         );
+    }
+
+    #[test]
+    fn rejects_unknown_cloudflare_billing_product() {
+        let result = Cmd::try_parse_from([
+            OsString::from("cmd"),
+            OsString::from("cf"),
+            OsString::from("billing"),
+            OsString::from("--product"),
+            OsString::from("unknown"),
+        ]);
+
+        assert!(result.is_err());
     }
 
     #[test]

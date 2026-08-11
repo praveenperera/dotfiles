@@ -24,7 +24,7 @@ Check current Cloudflare documentation or the installed Wrangler help before rel
 
 Use Wrangler for Worker builds, deployments, versions, and Custom Domains.
 
-Use `cmd cf` only for operations shown by `cmd cf --help`. The known command surface supports R2 billing and canonical redirect rules. Its DNS mutation is limited to the `www` record used by the redirect workflow. It is not a general DNS or arbitrary-subdomain command.
+Use `cmd cf` only for operations shown by `cmd cf --help`. The known command surface supports account billing reports and canonical redirect rules. Its DNS mutation is limited to the `www` record used by the redirect workflow. It is not a general DNS or arbitrary-subdomain command.
 
 For a Worker Custom Domain, do not create an A or CNAME record first. Wrangler registers the Custom Domain, and Cloudflare creates the required DNS record and certificate.
 

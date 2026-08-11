@@ -9,9 +9,9 @@ use xshell::Shell;
 
 use crate::runtime;
 
-mod r2;
+mod billing;
 
-pub use r2::{BillingArgs, BillingOutput, R2Cmd};
+pub use billing::{BillingArgs, BillingOutput, BillingProduct};
 
 const API_BASE_URL: &str = "https://api.cloudflare.com/client/v4";
 const API_TOKEN_ENV_VAR: &str = "CMD_CLOUDFLARE_REDIRECT_API_TOKEN";
@@ -26,12 +26,8 @@ pub struct Cloudflare {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum CloudflareCmd {
-    /// Inspect R2 usage and billing
-    #[command(arg_required_else_help = true)]
-    R2 {
-        #[command(subcommand)]
-        subcommand: R2Cmd,
-    },
+    /// Show usage and charges for the current billing period
+    Billing(#[command(flatten)] BillingArgs),
 
     /// Manage Single Redirect rules
     #[command(arg_required_else_help = true)]
@@ -453,7 +449,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Cloudflare) -> Result<()> {
 
 async fn run_async(flags: Cloudflare) -> Result<()> {
     match flags.subcommand {
-        CloudflareCmd::R2 { subcommand } => r2::run(subcommand).await?,
+        CloudflareCmd::Billing(args) => billing::run(args).await?,
         CloudflareCmd::Redirect { subcommand } => match subcommand {
             RedirectCmd::List(args) => {
                 let result = list_redirects(args).await?;
