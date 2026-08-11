@@ -1,6 +1,5 @@
 use super::app_server::{
     control_socket_path, ConfigOverride, SessionControl, SessionMarker, SessionThread,
-    ThreadWriterConflict,
 };
 use super::*;
 use crate::fsutil;
@@ -336,11 +335,12 @@ fn stop_stale_app_server(marker: &SessionMarker) -> Result<()> {
 pub(super) fn recover_thread_writer(
     launch_home: &Path,
     profiles_root: &Path,
-    conflict: &ThreadWriterConflict,
+    thread_id: &str,
+    policy: ThreadWriterPolicy,
 ) -> Result<ThreadWriterRecovery> {
     let lock_path = launch_home
         .join("thread-writer-locks")
-        .join(format!("{}.lock", conflict.thread_id()));
+        .join(format!("{thread_id}.lock"));
     let holder_pids = pids_holding_path(&lock_path)?;
     if holder_pids.is_empty() {
         return Ok(ThreadWriterRecovery::Ready {
@@ -348,11 +348,27 @@ pub(super) fn recover_thread_writer(
         });
     }
 
+    if policy == ThreadWriterPolicy::StopConflicting {
+        let mut stopped_pids = Vec::with_capacity(holder_pids.len());
+        for pid in holder_pids {
+            let marker_path = find_writer_session_marker(profiles_root, thread_id, pid)?
+                .map(|record| record.path);
+
+            stop_process(pid)?;
+            if let Some(marker_path) = marker_path {
+                fsutil::remove_existing_path(&marker_path)?;
+            }
+
+            stopped_pids.push(pid);
+        }
+
+        return Ok(ThreadWriterRecovery::Ready { stopped_pids });
+    }
+
     let mut stale_writers = Vec::new();
     let mut unmanaged_pids = Vec::new();
     for pid in holder_pids {
-        let Some(record) = find_writer_session_marker(profiles_root, conflict.thread_id(), pid)?
-        else {
+        let Some(record) = find_writer_session_marker(profiles_root, thread_id, pid)? else {
             unmanaged_pids.push(pid);
             continue;
         };
@@ -866,4 +882,79 @@ pub(super) fn delete_profile_home(profile_home: &Path) -> Result<()> {
     }
 
     fsutil::remove_existing_path(profile_home)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        pids_holding_path, process_is_running, recover_thread_writer, ThreadWriterPolicy,
+        ThreadWriterRecovery,
+    };
+    use std::fs;
+    use std::process::Command;
+    use std::thread;
+    use std::time::Duration;
+    use tempfile::tempdir;
+
+    #[test]
+    fn force_stops_only_the_process_holding_the_thread_lock() {
+        let dir = tempdir().unwrap();
+        let launch_home = dir.path().join("launch");
+        let locks_dir = launch_home.join("thread-writer-locks");
+        fs::create_dir_all(&locks_dir).unwrap();
+        let thread_id = "019fe286-71f0-7513-ba31-fa0433073e6b";
+        let lock_path = locks_dir.join(format!("{thread_id}.lock"));
+        let script = "sleep 30 > \"$1\" 2>&1 & echo $!";
+        let output = Command::new("sh")
+            .args(["-c", script, "sh"])
+            .arg(&lock_path)
+            .output()
+            .unwrap();
+
+        let holder_pid = String::from_utf8(output.stdout)
+            .unwrap()
+            .trim()
+            .parse::<u32>()
+            .unwrap();
+
+        for _ in 0..20 {
+            if pids_holding_path(&lock_path).unwrap() == [holder_pid] {
+                break;
+            }
+
+            thread::sleep(Duration::from_millis(50));
+        }
+
+        let preserved = recover_thread_writer(
+            &launch_home,
+            &dir.path().join("profiles"),
+            thread_id,
+            ThreadWriterPolicy::PreserveActive,
+        )
+        .unwrap();
+
+        assert_eq!(
+            preserved,
+            ThreadWriterRecovery::Unmanaged {
+                pids: vec![holder_pid]
+            }
+        );
+        assert!(process_is_running(holder_pid).unwrap());
+
+        let forced = recover_thread_writer(
+            &launch_home,
+            &dir.path().join("profiles"),
+            thread_id,
+            ThreadWriterPolicy::StopConflicting,
+        )
+        .unwrap();
+
+        assert_eq!(
+            forced,
+            ThreadWriterRecovery::Ready {
+                stopped_pids: vec![holder_pid]
+            }
+        );
+        assert!(!process_is_running(holder_pid).unwrap());
+    }
 }

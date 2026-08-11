@@ -10,6 +10,7 @@ pub(super) fn launch(
     resume_group: Option<&str>,
     config_group: Option<&str>,
     other: bool,
+    writer_policy: ThreadWriterPolicy,
     args: &[OsString],
 ) -> Result<()> {
     let mut profiles = load_saved_profiles(&profiles_dir()?)?;
@@ -43,6 +44,7 @@ pub(super) fn launch(
                 resume_group.as_deref(),
                 config_group.as_deref(),
                 &details,
+                writer_policy,
                 &args,
             )
         }
@@ -64,6 +66,7 @@ pub(super) fn launch(
                 resume_group.as_deref(),
                 config_group.as_deref(),
                 &details,
+                writer_policy,
                 &args,
             )
         }
@@ -75,6 +78,7 @@ fn launch_with_profile(
     resume_group: Option<&str>,
     config_group: Option<&str>,
     details: &LaunchBannerDetails,
+    writer_policy: ThreadWriterPolicy,
     args: &[OsString],
 ) -> Result<()> {
     let shared_codex_home = codex_dir()?;
@@ -185,7 +189,12 @@ fn launch_with_profile(
                 return Ok((status, None));
             };
 
-            match recover_thread_writer(&launch_home, &profiles_root, &conflict)? {
+            match recover_thread_writer(
+                &launch_home,
+                &profiles_root,
+                conflict.thread_id(),
+                writer_policy,
+            )? {
                 ThreadWriterRecovery::Ready { stopped_pids } => {
                     retried_writer_conflict = true;
                     retry_args = Some(writer_conflict_retry_args(tui_args, &conflict));
@@ -196,10 +205,17 @@ fn launch_with_profile(
                         );
                     } else {
                         let pids = display_pids(&stopped_pids);
-                        println!(
-                            "Stopped orphaned Codex app server {pids} for session {}; retrying resume",
-                            conflict.thread_id()
-                        );
+                        if writer_policy == ThreadWriterPolicy::StopConflicting {
+                            println!(
+                                "Stopped conflicting Codex session writer {pids} for session {}; retrying resume",
+                                conflict.thread_id()
+                            );
+                        } else {
+                            println!(
+                                "Stopped orphaned Codex app server {pids} for session {}; retrying resume",
+                                conflict.thread_id()
+                            );
+                        }
                     }
                 }
                 ThreadWriterRecovery::Active {
@@ -218,7 +234,7 @@ fn launch_with_profile(
                 ThreadWriterRecovery::Unmanaged { pids } => {
                     let pids = display_pids(&pids);
                     let error = eyre!(
-                        "Codex session {} has an active writer ({pids}). cmd cannot confirm that it started this process, so it did not stop it",
+                        "Codex session {} has an active writer ({pids}) that is not managed by cmd. Run resume again with --force to stop it",
                         conflict.thread_id()
                     );
                     return Ok((status, Some(error)));
@@ -271,7 +287,7 @@ fn active_writer_error(
         .unwrap_or_default();
 
     eyre!(
-        "Codex session {thread_id}{name} is still open{location} (app server pid {pid}). Close that session before you resume it here"
+        "Codex session {thread_id}{name} is still open{location} (app server pid {pid}). Close that session, or run resume again with --force to stop its writer"
     )
 }
 
