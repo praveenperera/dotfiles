@@ -83,6 +83,24 @@ pub enum MainCmd {
         subcommand: crate::cmd::cloudflare::CloudflareCmd,
     },
 
+    /// AWS API operations
+    #[command(arg_required_else_help = true)]
+    Aws {
+        #[command(subcommand)]
+        subcommand: crate::cmd::aws::AwsCmd,
+    },
+
+    /// DigitalOcean API operations
+    #[command(
+        name = "digitalocean",
+        visible_aliases = ["do", "digital-ocean"],
+        arg_required_else_help = true
+    )]
+    DigitalOcean {
+        #[command(subcommand)]
+        subcommand: crate::cmd::digitalocean::DigitalOceanCmd,
+    },
+
     /// Google Cloud operations
     #[command(arg_required_else_help = true)]
     Gcloud {
@@ -227,7 +245,10 @@ mod tests {
 
     use super::{Cmd, MainCmd};
     use crate::cmd::agent_target::AgentTarget;
-    use crate::cmd::cloudflare::{BillingOutput, BillingProduct, CloudflareCmd, RedirectCmd};
+    use crate::cmd::aws::AwsCmd;
+    use crate::cmd::billing::BillingOutput;
+    use crate::cmd::cloudflare::{BillingProduct, CloudflareCmd, RedirectCmd};
+    use crate::cmd::digitalocean::DigitalOceanCmd;
     use crate::cmd::mcp::McpCmd;
     use crate::cmd::pack::PackCmd;
     use crate::cmd::skill::SkillCmd;
@@ -333,7 +354,7 @@ mod tests {
             OsString::from("r2"),
             OsString::from("--products"),
             OsString::from("workers,do,r2"),
-            OsString::from("--non-zero"),
+            OsString::from("--verbose"),
         ])
         .unwrap();
 
@@ -349,7 +370,7 @@ mod tests {
             args.account_id.as_deref() == Some("account-id")
                 && args.api_token.as_deref() == Some("token")
                 && args.output == BillingOutput::Json
-                && args.non_zero
+                && args.verbose
                 && args.products
                     == [
                         BillingProduct::R2,
@@ -371,6 +392,64 @@ mod tests {
         ]);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn parses_aws_billing_filters() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("aws"),
+            OsString::from("billing"),
+            OsString::from("--profile"),
+            OsString::from("billing"),
+            OsString::from("--service"),
+            OsString::from("Amazon Simple Storage Service"),
+            OsString::from("--services"),
+            OsString::from("EC2 - Other,AWS Key Management Service"),
+            OsString::from("--verbose"),
+            OsString::from("--output"),
+            OsString::from("json"),
+        ])
+        .unwrap();
+
+        let MainCmd::Aws { subcommand } = cmd.subcommand else {
+            panic!("expected AWS command");
+        };
+        let AwsCmd::Billing(args) = subcommand;
+
+        assert_eq!(args.profile.as_deref(), Some("billing"));
+        assert_eq!(
+            args.services,
+            [
+                "Amazon Simple Storage Service",
+                "EC2 - Other",
+                "AWS Key Management Service"
+            ]
+        );
+        assert!(args.verbose);
+        assert_eq!(args.output, BillingOutput::Json);
+    }
+
+    #[test]
+    fn parses_digitalocean_billing_alias_and_filters() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("do"),
+            OsString::from("billing"),
+            OsString::from("--api-token"),
+            OsString::from("token"),
+            OsString::from("--products"),
+            OsString::from("Droplets,Spaces Subscription"),
+        ])
+        .unwrap();
+
+        let MainCmd::DigitalOcean { subcommand } = cmd.subcommand else {
+            panic!("expected DigitalOcean command");
+        };
+        let DigitalOceanCmd::Billing(args) = subcommand;
+
+        assert_eq!(args.api_token.as_deref(), Some("token"));
+        assert_eq!(args.products, ["Droplets", "Spaces Subscription"]);
+        assert!(!args.verbose);
+        assert_eq!(args.output, BillingOutput::Human);
     }
 
     #[test]

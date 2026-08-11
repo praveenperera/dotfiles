@@ -1,10 +1,13 @@
 pub mod agent_target;
+pub mod aws;
 pub mod better_context;
+pub mod billing;
 pub mod bootstrap;
 pub mod cache;
 pub mod cloudflare;
 pub mod codex;
 pub mod crate_versions;
+pub mod digitalocean;
 pub mod file;
 pub mod gcloud;
 pub mod generate;
@@ -47,6 +50,10 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::Cloudflare { subcommand } => {
             let cloudflare_flags = cloudflare::Cloudflare { subcommand };
             cloudflare::run_with_flags(sh, cloudflare_flags)
+        }
+        MainCmd::Aws { subcommand } => aws::run_with_flags(aws::Aws { subcommand }),
+        MainCmd::DigitalOcean { subcommand } => {
+            digitalocean::run_with_flags(digitalocean::DigitalOcean { subcommand })
         }
         MainCmd::Gcloud { subcommand } => {
             let gcloud_flags = gcloud::Gcloud { subcommand };

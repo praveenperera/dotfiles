@@ -11,7 +11,8 @@ use crate::runtime;
 
 mod billing;
 
-pub use billing::{BillingArgs, BillingOutput, BillingProduct};
+pub use crate::cmd::billing::BillingOutput;
+pub use billing::{BillingArgs, BillingProduct};
 
 const API_BASE_URL: &str = "https://api.cloudflare.com/client/v4";
 const API_TOKEN_ENV_VAR: &str = "CMD_CLOUDFLARE_REDIRECT_API_TOKEN";
