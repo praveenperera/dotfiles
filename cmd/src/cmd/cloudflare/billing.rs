@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::io::{self, Write as _};
 
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Args, ValueEnum};
 use eyre::{eyre, ContextCompat, Result};
 use serde::{Deserialize, Serialize};
+
+use crate::cmd::billing::{write_stdout, BillingOutput};
 
 use super::{CloudflareApi, API_BASE_URL};
 
@@ -36,23 +37,13 @@ pub struct BillingArgs {
     )]
     pub products: Vec<BillingProduct>,
 
-    /// Show only metrics with a non-zero billed cost
+    /// Include metrics with a zero billed cost
     #[arg(long)]
-    pub non_zero: bool,
+    pub verbose: bool,
 
     /// Override the Cloudflare API base URL
     #[arg(long, hide = true, default_value = API_BASE_URL)]
     pub api_base_url: String,
-}
-
-/// Output format for a Cloudflare billing report
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
-pub enum BillingOutput {
-    /// Human-readable text
-    #[default]
-    Human,
-    /// Stable machine-readable JSON
-    Json,
 }
 
 /// Cloudflare product that can be selected for a billing report
@@ -185,17 +176,14 @@ pub(super) async fn run(args: BillingArgs) -> Result<()> {
         account_id,
         records,
         &args.products,
-        args.non_zero,
+        args.verbose,
         Utc::now().date_naive(),
     )?;
     let rendered = match args.output {
         BillingOutput::Human => render_report(&report)?,
         BillingOutput::Json => render_json_report(&report)?,
     };
-    let mut stdout = io::stdout().lock();
-    stdout.write_all(rendered.as_bytes())?;
-
-    Ok(())
+    write_stdout(&rendered)
 }
 
 async fn get_usage(api: &CloudflareApi, account_id: &str) -> Result<Vec<PaygoUsageRecord>> {
@@ -254,7 +242,7 @@ impl BillingReport {
         account_id: String,
         records: Vec<PaygoUsageRecord>,
         selected_products: &[BillingProduct],
-        non_zero: bool,
+        verbose: bool,
         today: NaiveDate,
     ) -> Result<Self> {
         let period = BillingPeriod::current(&records, today)?;
@@ -298,7 +286,7 @@ impl BillingReport {
             .filter_map(|(label, metrics)| {
                 let metrics = metrics
                     .into_values()
-                    .filter(|metric| !non_zero || metric.has_non_zero_cost())
+                    .filter(|metric| verbose || metric.has_non_zero_cost())
                     .collect::<Vec<_>>();
 
                 if metrics.is_empty() {
@@ -709,7 +697,7 @@ mod tests {
             "account-id".to_string(),
             records,
             &[],
-            false,
+            true,
             date(2026, 7, 28),
         )
         .unwrap();
@@ -766,7 +754,7 @@ mod tests {
                 BillingProduct::R2,
                 BillingProduct::Workers,
             ],
-            false,
+            true,
             date(2026, 7, 28),
         )
         .unwrap();
@@ -826,7 +814,7 @@ mod tests {
             "account-id".to_string(),
             records,
             &[],
-            true,
+            false,
             date(2026, 7, 28),
         )
         .unwrap();
@@ -907,7 +895,7 @@ mod tests {
             )
             .with_unit("")],
             &[],
-            false,
+            true,
             date(2026, 7, 28),
         )
         .unwrap();
