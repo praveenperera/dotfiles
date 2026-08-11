@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ask Fable"
+  short_description: "Ask Fable through the Claude CLI"
+  default_prompt: "Use $ask-fable to ask Fable this question."
