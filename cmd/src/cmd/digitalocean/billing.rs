@@ -36,7 +36,7 @@ pub struct BillingArgs {
     #[arg(long = "products", visible_alias = "product", value_delimiter = ',')]
     pub products: Vec<String>,
 
-    /// Include invoice items with a zero billed cost
+    /// Show all invoice item details, including items with a zero billed cost
     #[arg(long)]
     pub verbose: bool,
 
@@ -188,7 +188,7 @@ pub(super) async fn run(args: BillingArgs) -> Result<()> {
     let (preview, items) = client.get_current_invoice().await?;
     let report = BillingReport::new(preview, items, &filters, args.verbose)?;
     let rendered = match args.output {
-        BillingOutput::Human => render_report(&report)?,
+        BillingOutput::Human => render_report(&report, args.verbose)?,
         BillingOutput::Json => render_json_report(&report)?,
     };
 
@@ -501,7 +501,7 @@ fn optional_text(value: Option<String>) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-fn render_report(report: &BillingReport) -> Result<String> {
+fn render_report(report: &BillingReport, verbose: bool) -> Result<String> {
     let mut output = String::new();
     writeln!(output, "DigitalOcean billing usage")?;
     writeln!(
@@ -516,6 +516,22 @@ fn render_report(report: &BillingReport) -> Result<String> {
         return Ok(output);
     };
     writeln!(output, "Total billed cost: {total}")?;
+
+    if !verbose {
+        writeln!(output, "\nProducts")?;
+        for product in &report.products {
+            let item_count = product.items.len();
+            let item_label = if item_count == 1 { "item" } else { "items" };
+            writeln!(
+                output,
+                "  {}: {} ({item_count} {item_label})",
+                product.name,
+                product.total_cost()?
+            )?;
+        }
+
+        return Ok(output);
+    }
 
     for product in &report.products {
         writeln!(output, "\n{}", product.name)?;
@@ -720,7 +736,7 @@ mod tests {
         let items = vec![serde_json::from_value(item("Droplets", "builder", "0")).unwrap()];
         let report = BillingReport::new(preview, items, &LabelFilter::default(), true).unwrap();
 
-        assert!(render_report(&report)
+        assert!(render_report(&report, true)
             .unwrap()
             .contains("Billed cost: $0.00 USD"));
         let json: serde_json::Value =
@@ -729,6 +745,26 @@ mod tests {
         assert_eq!(json["total_cost"]["value"], 0);
         assert_eq!(json["products"][0]["items"][0]["description"], "builder");
         assert!(json.get("api_token").is_none());
+    }
+
+    #[test]
+    fn default_report_shows_only_product_totals() {
+        let preview = serde_json::from_value(json!({
+            "invoice_period": "2026-08",
+            "updated_at": "2026-08-10T12:00:00Z"
+        }))
+        .unwrap();
+        let items = vec![
+            serde_json::from_value(item("Droplets", "builder", "1.25")).unwrap(),
+            serde_json::from_value(item("Droplets", "runner", "0.75")).unwrap(),
+        ];
+        let report = BillingReport::new(preview, items, &LabelFilter::default(), false).unwrap();
+
+        let output = render_report(&report, false).unwrap();
+
+        assert!(output.contains("Products\n  Droplets: $2.00 USD (2 items)"));
+        assert!(!output.contains("builder"));
+        assert!(!output.contains("Resource ID"));
     }
 
     #[test]
