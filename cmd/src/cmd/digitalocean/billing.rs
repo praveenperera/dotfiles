@@ -269,33 +269,28 @@ impl BillingClient {
     }
 
     async fn get_current_invoice(&self) -> Result<(InvoicePreview, Vec<WireInvoiceItem>)> {
-        let preview: InvoiceListResponse = self
-            .get_json(
-                "v2/customers/my/invoices?per_page=1&page=1",
-                "get invoice preview",
-            )
-            .await?;
-        let preview = preview
+        let preview_request = self.get_json::<InvoiceListResponse>(
+            "v2/customers/my/invoices?per_page=1&page=1",
+            "get invoice preview",
+        );
+        let first_items_request = self.get_invoice_items_page(1);
+        let (preview, first_items) = tokio::join!(preview_request, first_items_request);
+        let preview = preview?
             .invoice_preview
             .context("DigitalOcean returned no current invoice preview")?;
+
         let mut items = Vec::new();
         let mut page = 1_usize;
-        let mut expected_total = None;
+        let mut response = first_items?;
+        let expected_total = response.meta.total;
 
         loop {
-            let response: InvoiceItemsResponse = self
-                .get_json(
-                    &format!("v2/customers/my/invoices/preview?per_page={PAGE_SIZE}&page={page}"),
-                    "get invoice preview items",
-                )
-                .await?;
-            if expected_total.is_some_and(|total| response.meta.total != total) {
+            if response.meta.total != expected_total {
                 return Err(eyre!(
                     "DigitalOcean changed the invoice item count during pagination"
                 ));
             }
 
-            expected_total = Some(response.meta.total);
             let has_next_page = response.links.pages.and_then(|pages| pages.next).is_some();
             if response.invoice_items.is_empty() && items.len() < response.meta.total {
                 return Err(eyre!(
@@ -323,9 +318,18 @@ impl BillingClient {
             page = page
                 .checked_add(1)
                 .ok_or_else(|| eyre!("DigitalOcean invoice page number is too large"))?;
+            response = self.get_invoice_items_page(page).await?;
         }
 
         Ok((preview, items))
+    }
+
+    async fn get_invoice_items_page(&self, page: usize) -> Result<InvoiceItemsResponse> {
+        self.get_json(
+            &format!("v2/customers/my/invoices/preview?per_page={PAGE_SIZE}&page={page}"),
+            "get invoice preview items",
+        )
+        .await
     }
 
     async fn get_json<T: DeserializeOwned>(&self, path: &str, context: &str) -> Result<T> {
