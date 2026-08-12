@@ -5,6 +5,27 @@ description: Generate SVG diagrams, OG images, and dynamic graphics using Satori
 
 # SVG Diagram Generation with Satori
 
+For this blog, do not invent a `~/code/svg-diagrams` repo and do not hand-write post SVGs. Use the existing maker:
+
+```text
+~/code/static_sites/diagrams
+```
+
+Repo note with build commands, output paths, and the post embed snippet: `docs/diagrams.md`.
+
+## Overflow (read this first)
+
+The usual failure is text that runs out of a card. Satori wraps only when the box has a width.
+
+In `~/code/static_sites/diagrams`:
+
+- Use `Text` or `Kicker` for copy. Do not drop a long string into a flex row `<span>`.
+- Use `Box` for cards. It sets `overflow: hidden` and `minWidth: 0`.
+- Use `Row` when several cards sit side by side. It gives each child `flex: 1` and `minWidth: 0`.
+- Keep a kicker to a few words. Put the long sentence on the next line.
+- Do not set `whiteSpace: "nowrap"` unless the string is known-short.
+- After `bun run build`, a canvas overflow error means shorten the copy or shrink the type. Do not turn the check off.
+
 Satori converts JSX/React components to SVG. It powers Vercel's OG Image Generation and is ideal for creating dynamic images programmatically.
 
 ## Quick Start
