@@ -450,7 +450,7 @@ pub fn run_with_flags(_sh: &Shell, flags: Cloudflare) -> Result<()> {
 
 async fn run_async(flags: Cloudflare) -> Result<()> {
     match flags.subcommand {
-        CloudflareCmd::Billing(args) => billing::run(args).await?,
+        CloudflareCmd::Billing(args) => run_billing(args).await?,
         CloudflareCmd::Redirect { subcommand } => match subcommand {
             RedirectCmd::List(args) => {
                 let result = list_redirects(args).await?;
@@ -468,6 +468,14 @@ async fn run_async(flags: Cloudflare) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub(crate) async fn run_billing(args: BillingArgs) -> Result<()> {
+    billing::run(args).await
+}
+
+pub(crate) async fn billing_summary() -> Result<crate::cmd::billing::ProviderBillingSummary> {
+    billing::summary().await
 }
 
 #[derive(Debug)]

@@ -29,6 +29,14 @@ pub fn run_with_flags(flags: DigitalOcean) -> Result<()> {
 
 async fn run_async(flags: DigitalOcean) -> Result<()> {
     match flags.subcommand {
-        DigitalOceanCmd::Billing(args) => billing::run(args).await,
+        DigitalOceanCmd::Billing(args) => run_billing(args).await,
     }
+}
+
+pub(crate) async fn run_billing(args: BillingArgs) -> Result<()> {
+    billing::run(args).await
+}
+
+pub(crate) async fn billing_summary() -> Result<crate::cmd::billing::ProviderBillingSummary> {
+    billing::summary().await
 }

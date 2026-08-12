@@ -1,12 +1,16 @@
 use std::collections::BTreeMap;
+use std::env;
 use std::fmt::Write as _;
 
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Args, ValueEnum};
 use eyre::{eyre, ContextCompat, Result};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::cmd::billing::{write_stdout, BillingOutput};
+use crate::cmd::billing::{
+    write_stdout, BillingOutput, BillingPeriod, JsonMoney, Money, ProviderBillingSummary,
+};
 
 use super::{CloudflareApi, API_BASE_URL};
 
@@ -81,15 +85,9 @@ pub(super) struct PaygoUsageRecord {
     #[serde(rename = "PricingQuantity")]
     pricing_quantity: f64,
     #[serde(rename = "ContractedCost")]
-    contracted_cost: f64,
+    contracted_cost: Decimal,
     #[serde(rename = "BillingCurrency")]
     billing_currency: String,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct BillingPeriod {
-    start: NaiveDate,
-    usage_through: NaiveDate,
 }
 
 #[derive(Debug)]
@@ -117,12 +115,6 @@ struct BillingMetric {
 struct Quantity {
     value: f64,
     unit: String,
-}
-
-#[derive(Debug, Clone)]
-struct Money {
-    value: f64,
-    currency: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -161,29 +153,48 @@ struct JsonQuantity {
     unit: String,
 }
 
-#[derive(Debug, Serialize)]
-struct JsonMoney {
-    value: f64,
-    currency: String,
+pub(super) async fn run(args: BillingArgs) -> Result<()> {
+    let output = args.output;
+    let report = load_report(args).await?;
+    let rendered = match output {
+        BillingOutput::Human => render_report(&report)?,
+        BillingOutput::Json => render_json_report(&report)?,
+    };
+
+    write_stdout(&rendered)
 }
 
-pub(super) async fn run(args: BillingArgs) -> Result<()> {
+pub(super) async fn summary() -> Result<ProviderBillingSummary> {
+    let report = load_report(BillingArgs {
+        account_id: env::var(ACCOUNT_ID_ENV_VAR).ok(),
+        api_token: env::var(BILLING_API_TOKEN_ENV_VAR).ok(),
+        output: BillingOutput::Human,
+        products: Vec::new(),
+        verbose: false,
+        api_base_url: API_BASE_URL.to_string(),
+    })
+    .await?;
+    let total_cost = report
+        .products
+        .first()
+        .map(|_| report.total_cost())
+        .transpose()?;
+
+    Ok(ProviderBillingSummary::new(report.period, total_cost))
+}
+
+async fn load_report(args: BillingArgs) -> Result<BillingReport> {
     let account_id = required_arg(args.account_id, ACCOUNT_ID_ENV_VAR, "--account-id")?;
     let token = required_arg(args.api_token, BILLING_API_TOKEN_ENV_VAR, "--api-token")?;
     let api = CloudflareApi::new(args.api_base_url, token)?;
     let records = get_usage(&api, &account_id).await?;
-    let report = BillingReport::new(
+    BillingReport::new(
         account_id,
         records,
         &args.products,
         args.verbose,
         Utc::now().date_naive(),
-    )?;
-    let rendered = match args.output {
-        BillingOutput::Human => render_report(&report)?,
-        BillingOutput::Json => render_json_report(&report)?,
-    };
-    write_stdout(&rendered)
+    )
 }
 
 async fn get_usage(api: &CloudflareApi, account_id: &str) -> Result<Vec<PaygoUsageRecord>> {
@@ -274,11 +285,12 @@ impl BillingReport {
                 &record.consumed_unit,
                 &metric.label,
             )?;
-            metric.cost.add(
+            let cost = Money::from_decimal(
                 record.contracted_cost,
                 &record.billing_currency,
                 &metric.label,
             )?;
+            metric.cost.add(&cost, &metric.label)?;
         }
 
         let products = products
@@ -309,10 +321,10 @@ impl BillingReport {
             .products
             .first()
             .context("cannot total an empty Cloudflare billing report")?;
-        let mut total = Money::zero(first.total_cost()?.currency);
+        let mut total = Money::zero(first.total_cost()?.currency());
 
         for product in &self.products {
-            total.merge(product.total_cost()?, "Cloudflare total")?;
+            total.add(&product.total_cost()?, "Cloudflare total")?;
         }
 
         Ok(total)
@@ -321,7 +333,7 @@ impl BillingReport {
 
 impl BillingMetric {
     fn has_non_zero_cost(&self) -> bool {
-        self.cost.value != 0.0
+        !self.cost.is_zero()
     }
 }
 
@@ -331,10 +343,10 @@ impl ProductBilling {
             .metrics
             .first()
             .context("cannot total a product without billing metrics")?;
-        let mut total = Money::zero(first.cost.currency.clone());
+        let mut total = Money::zero(first.cost.currency());
 
         for metric in &self.metrics {
-            total.merge(metric.cost.clone(), &self.label)?;
+            total.add(&metric.cost, &self.label)?;
         }
 
         Ok(total)
@@ -397,32 +409,6 @@ impl Quantity {
 
         self.value += value;
         Ok(())
-    }
-}
-
-impl Money {
-    fn zero(currency: String) -> Self {
-        Self {
-            value: 0.0,
-            currency,
-        }
-    }
-
-    fn add(&mut self, value: f64, currency: &str, metric: &str) -> Result<()> {
-        ensure_finite(value, metric)?;
-        if self.currency != currency {
-            return Err(eyre!(
-                "Cloudflare returned mixed billing currencies for {metric}: {} and {currency}",
-                self.currency
-            ));
-        }
-
-        self.value += value;
-        Ok(())
-    }
-
-    fn merge(&mut self, other: Self, metric: &str) -> Result<()> {
-        self.add(other.value, &other.currency, metric)
     }
 }
 
@@ -501,10 +487,7 @@ impl JsonBillingReport {
             .first()
             .map(|_| report.total_cost())
             .transpose()?
-            .map(|money| JsonMoney {
-                value: money.value,
-                currency: money.currency,
-            });
+            .map(|money| money.json());
         let products = report
             .products
             .iter()
@@ -529,10 +512,7 @@ impl TryFrom<&ProductBilling> for JsonProductBilling {
 
         Ok(Self {
             name: product.label.clone(),
-            total_cost: JsonMoney {
-                value: total_cost.value,
-                currency: total_cost.currency,
-            },
+            total_cost: total_cost.json(),
             metrics: product
                 .metrics
                 .iter()
@@ -554,10 +534,7 @@ impl From<&BillingMetric> for JsonBillingMetric {
                 value: metric.billable.value,
                 unit: metric.billable.unit.clone(),
             },
-            billed_cost: JsonMoney {
-                value: metric.cost.value,
-                currency: metric.cost.currency.clone(),
-            },
+            billed_cost: metric.cost.json(),
         }
     }
 }
@@ -572,11 +549,7 @@ fn format_quantity(quantity: &Quantity) -> String {
 }
 
 fn format_money(money: &Money) -> String {
-    if money.currency == "USD" {
-        return format!("${:.2} USD", money.value);
-    }
-
-    format!("{:.2} {}", money.value, money.currency)
+    money.to_string()
 }
 
 fn format_number(value: f64) -> String {
@@ -649,7 +622,7 @@ mod tests {
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].service_name, "R2 Standard Class B Operations");
-        assert_eq!(records[0].contracted_cost, 0.72);
+        assert_eq!(records[0].contracted_cost.to_string(), "0.72");
     }
 
     #[test]
@@ -1098,7 +1071,7 @@ mod tests {
             consumed_quantity,
             consumed_unit: "requests".to_string(),
             pricing_quantity,
-            contracted_cost,
+            contracted_cost: contracted_cost.to_string().parse().unwrap(),
             billing_currency: "USD".to_string(),
         }
     }

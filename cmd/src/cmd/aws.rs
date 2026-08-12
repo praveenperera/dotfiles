@@ -29,6 +29,14 @@ pub fn run_with_flags(flags: Aws) -> Result<()> {
 
 async fn run_async(flags: Aws) -> Result<()> {
     match flags.subcommand {
-        AwsCmd::Billing(args) => billing::run(args).await,
+        AwsCmd::Billing(args) => run_billing(args).await,
     }
+}
+
+pub(crate) async fn run_billing(args: BillingArgs) -> Result<()> {
+    billing::run(args).await
+}
+
+pub(crate) async fn billing_summary() -> Result<crate::cmd::billing::ProviderBillingSummary> {
+    billing::summary().await
 }

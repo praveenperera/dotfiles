@@ -11,6 +11,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::cmd::billing::{
     write_stdout, BillingOutput, BillingPeriod, JsonMoney, LabelFilter, Money,
+    ProviderBillingSummary,
 };
 
 const API_BASE_URL: &str = "https://api.digitalocean.com";
@@ -182,17 +183,38 @@ struct JsonInvoiceItem {
 }
 
 pub(super) async fn run(args: BillingArgs) -> Result<()> {
-    let token = resolve_token(args.api_token)?;
-    let filters = LabelFilter::new(args.products)?;
-    let client = BillingClient::new(&args.api_base_url, token)?;
-    let (preview, items) = client.get_current_invoice().await?;
-    let report = BillingReport::new(preview, items, &filters, args.verbose)?;
-    let rendered = match args.output {
-        BillingOutput::Human => render_report(&report, args.verbose)?,
+    let output = args.output;
+    let verbose = args.verbose;
+    let report = load_report(args).await?;
+    let rendered = match output {
+        BillingOutput::Human => render_report(&report, verbose)?,
         BillingOutput::Json => render_json_report(&report)?,
     };
 
     write_stdout(&rendered)
+}
+
+pub(super) async fn summary() -> Result<ProviderBillingSummary> {
+    let report = load_report(BillingArgs {
+        api_token: env::var(BILLING_TOKEN_ENV_VAR).ok(),
+        products: Vec::new(),
+        verbose: false,
+        output: BillingOutput::Human,
+        api_base_url: API_BASE_URL.to_string(),
+    })
+    .await?;
+    let total_cost = report.total_cost()?;
+
+    Ok(ProviderBillingSummary::new(Some(report.period), total_cost))
+}
+
+async fn load_report(args: BillingArgs) -> Result<BillingReport> {
+    let token = resolve_token(args.api_token)?;
+    let filters = LabelFilter::new(args.products)?;
+    let client = BillingClient::new(&args.api_base_url, token)?;
+    let (preview, items) = client.get_current_invoice().await?;
+
+    BillingReport::new(preview, items, &filters, args.verbose)
 }
 
 fn resolve_token(value: Option<String>) -> Result<ApiToken> {
