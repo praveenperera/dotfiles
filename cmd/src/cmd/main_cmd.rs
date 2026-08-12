@@ -101,6 +101,9 @@ pub enum MainCmd {
         subcommand: crate::cmd::digitalocean::DigitalOceanCmd,
     },
 
+    /// Show billing across cloud providers
+    Billing(#[command(flatten)] crate::cmd::billing::Billing),
+
     /// Google Cloud operations
     #[command(arg_required_else_help = true)]
     Gcloud {
@@ -246,7 +249,7 @@ mod tests {
     use super::{Cmd, MainCmd};
     use crate::cmd::agent_target::AgentTarget;
     use crate::cmd::aws::AwsCmd;
-    use crate::cmd::billing::BillingOutput;
+    use crate::cmd::billing::{BillingCmd, BillingOutput};
     use crate::cmd::cloudflare::{BillingProduct, CloudflareCmd, RedirectCmd};
     use crate::cmd::digitalocean::DigitalOceanCmd;
     use crate::cmd::mcp::McpCmd;
@@ -450,6 +453,98 @@ mod tests {
         assert_eq!(args.products, ["Droplets", "Spaces Subscription"]);
         assert!(!args.verbose);
         assert_eq!(args.output, BillingOutput::Human);
+    }
+
+    #[test]
+    fn parses_combined_billing_overview() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("billing"),
+            OsString::from("--output"),
+            OsString::from("json"),
+        ])
+        .unwrap();
+
+        let MainCmd::Billing(args) = cmd.subcommand else {
+            panic!("expected combined billing command");
+        };
+
+        assert!(args.subcommand.is_none());
+        assert_eq!(args.output, BillingOutput::Json);
+    }
+
+    #[test]
+    fn parses_combined_billing_cloudflare_alias() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("billing"),
+            OsString::from("cf"),
+            OsString::from("--account-id"),
+            OsString::from("account-id"),
+            OsString::from("--api-token"),
+            OsString::from("token"),
+            OsString::from("--product"),
+            OsString::from("r2"),
+            OsString::from("--output"),
+            OsString::from("json"),
+        ])
+        .unwrap();
+
+        let MainCmd::Billing(args) = cmd.subcommand else {
+            panic!("expected combined billing command");
+        };
+        let Some(BillingCmd::Cloudflare(args)) = args.subcommand else {
+            panic!("expected Cloudflare billing command");
+        };
+
+        assert_eq!(args.account_id.as_deref(), Some("account-id"));
+        assert_eq!(args.api_token.as_deref(), Some("token"));
+        assert_eq!(args.products, [BillingProduct::R2]);
+        assert_eq!(args.output, BillingOutput::Json);
+    }
+
+    #[test]
+    fn parses_combined_billing_digitalocean_alias() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("billing"),
+            OsString::from("do"),
+            OsString::from("--api-token"),
+            OsString::from("token"),
+            OsString::from("--product"),
+            OsString::from("Droplets"),
+        ])
+        .unwrap();
+
+        let MainCmd::Billing(args) = cmd.subcommand else {
+            panic!("expected combined billing command");
+        };
+        let Some(BillingCmd::DigitalOcean(args)) = args.subcommand else {
+            panic!("expected DigitalOcean billing command");
+        };
+
+        assert_eq!(args.api_token.as_deref(), Some("token"));
+        assert_eq!(args.products, ["Droplets"]);
+    }
+
+    #[test]
+    fn parses_combined_billing_aws() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("billing"),
+            OsString::from("aws"),
+            OsString::from("--profile"),
+            OsString::from("billing"),
+            OsString::from("--service"),
+            OsString::from("Amazon Simple Storage Service"),
+        ])
+        .unwrap();
+
+        let MainCmd::Billing(args) = cmd.subcommand else {
+            panic!("expected combined billing command");
+        };
+        let Some(BillingCmd::Aws(args)) = args.subcommand else {
+            panic!("expected AWS billing command");
+        };
+
+        assert_eq!(args.profile.as_deref(), Some("billing"));
+        assert_eq!(args.services, ["Amazon Simple Storage Service"]);
     }
 
     #[test]

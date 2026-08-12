@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::env;
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -10,6 +11,7 @@ use tokio::process::Command;
 
 use crate::cmd::billing::{
     write_stdout, BillingOutput, BillingPeriod, JsonMoney, LabelFilter, Money,
+    ProviderBillingSummary,
 };
 
 const COST_METRIC: &str = "UnblendedCost";
@@ -113,18 +115,37 @@ struct JsonServiceBilling {
 }
 
 pub(super) async fn run(args: BillingArgs) -> Result<()> {
-    let filters = LabelFilter::new(args.services)?;
-    let period = BillingPeriod::current_month(Utc::now().date_naive())?;
-    let pages = AwsBillingClient::new()
-        .get_cost_and_usage(period, args.profile.as_deref())
-        .await?;
-    let report = BillingReport::new(pages, period, &filters, args.verbose)?;
-    let rendered = match args.output {
+    let output = args.output;
+    let report = load_report(args).await?;
+    let rendered = match output {
         BillingOutput::Human => render_report(&report)?,
         BillingOutput::Json => render_json_report(&report)?,
     };
 
     write_stdout(&rendered)
+}
+
+pub(super) async fn summary() -> Result<ProviderBillingSummary> {
+    let report = load_report(BillingArgs {
+        profile: env::var("AWS_PROFILE").ok(),
+        services: Vec::new(),
+        verbose: false,
+        output: BillingOutput::Human,
+    })
+    .await?;
+    let total_cost = report.total_cost()?;
+
+    Ok(ProviderBillingSummary::new(Some(report.period), total_cost))
+}
+
+async fn load_report(args: BillingArgs) -> Result<BillingReport> {
+    let filters = LabelFilter::new(args.services)?;
+    let period = BillingPeriod::current_month(Utc::now().date_naive())?;
+    let pages = AwsBillingClient::new()
+        .get_cost_and_usage(period, args.profile.as_deref())
+        .await?;
+
+    BillingReport::new(pages, period, &filters, args.verbose)
 }
 
 impl AwsBillingClient {

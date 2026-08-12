@@ -55,6 +55,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::DigitalOcean { subcommand } => {
             digitalocean::run_with_flags(digitalocean::DigitalOcean { subcommand })
         }
+        MainCmd::Billing(flags) => billing::run_with_flags(flags),
         MainCmd::Gcloud { subcommand } => {
             let gcloud_flags = gcloud::Gcloud { subcommand };
             gcloud::run_with_flags(sh, gcloud_flags)
