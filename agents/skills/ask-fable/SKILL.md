@@ -17,7 +17,9 @@ FABLE_PROMPT
 ```
 
 - Never start `claude -p` before the prompt is available; print mode exits when it starts without a prompt argument or standard input
-- Preserve the user's request and add only context that Fable needs
+- Preserve the user's request and add only context that Fable needs to answer
+- Do not steer Fable: no preferred answer, no framing that implies a conclusion, no leading questions, no "consider that X is better" style hints
+- Pass facts, constraints, and paths; leave judgment and recommendation to Fable
 - Use the quoted here-document delimiter so prompt text is not evaluated as shell syntax
 - For repository work, add each required context directory with `--add-dir <path>`
 - Add only the required directories; never grant broad filesystem access
