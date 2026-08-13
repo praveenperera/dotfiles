@@ -124,10 +124,7 @@ mod tests {
         assert!(hex_to_rgb("#not-hex").is_err());
     }
 
-    fn assert_random_output<F>(generate: fn(usize) -> String, valid: F)
-    where
-        F: Fn(char) -> bool,
-    {
+    fn assert_random_output(generate: impl Fn(usize) -> String, valid: impl Fn(char) -> bool) {
         for length in [32, 0] {
             let output = generate(length);
 
@@ -137,25 +134,47 @@ mod tests {
     }
 
     #[test]
-    fn random_generators_return_expected_lengths_and_characters() {
+    fn random_alpha_returns_expected_lengths_and_characters() {
         assert_random_output(random_alpha, |character| character.is_ascii_alphabetic());
+    }
+
+    #[test]
+    fn random_alpha_lower_returns_expected_lengths_and_characters() {
         assert_random_output(random_alpha_lower, |character| {
             character.is_ascii_lowercase()
         });
+    }
+
+    #[test]
+    fn random_alpha_numeric_returns_expected_lengths_and_characters() {
         assert_random_output(random_alpha_numeric, |character| {
             character.is_ascii_alphanumeric()
         });
+    }
+
+    #[test]
+    fn random_alpha_numeric_lower_returns_expected_lengths_and_characters() {
         assert_random_output(random_alpha_numeric_lower, |character| {
             character.is_ascii_lowercase() || character.is_ascii_digit()
         });
-        assert_random_output(random_pin, |character| character.is_ascii_digit());
+    }
 
+    #[test]
+    fn random_pin_returns_expected_lengths_and_characters() {
+        assert_random_output(random_pin, |character| character.is_ascii_digit());
+    }
+
+    #[test]
+    fn random_base32_returns_expected_lengths_and_characters() {
         // the charset omits 0, 1, i, and l, because they are easy to confuse
         let base32_charset = "23456789abcdefghjkmnopqrstuvwxyz";
         assert_random_output(random_base32, |character| {
             base32_charset.contains(character)
         });
+    }
 
+    #[test]
+    fn random_ascii_returns_expected_lengths_and_characters() {
         let ascii_charset =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#%^&|-_=+*";
         assert_random_output(random_ascii, |character| ascii_charset.contains(character));
