@@ -109,6 +109,7 @@ pub enum MainCmd {
     },
 
     /// Show billing across cloud providers
+    #[command(visible_alias = "b")]
     Billing(#[command(flatten)] crate::cmd::billing::Billing),
 
     /// Google Cloud operations
@@ -478,6 +479,18 @@ mod tests {
 
         assert!(args.subcommand.is_none());
         assert_eq!(args.output, BillingOutput::Json);
+    }
+
+    #[test]
+    fn parses_billing_overview_through_the_short_alias() {
+        let cmd = Cmd::from_args(&[OsString::from("b")]).unwrap();
+
+        let MainCmd::Billing(args) = cmd.subcommand else {
+            panic!("expected combined billing command");
+        };
+
+        assert!(args.subcommand.is_none());
+        assert_eq!(args.output, BillingOutput::Human);
     }
 
     #[test]
