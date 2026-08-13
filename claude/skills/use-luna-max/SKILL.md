@@ -33,6 +33,11 @@ Keep in the root thread, whether or not "use Luna" is active:
 
 Give Luna a decided design and a stated scope. The root agent checks the work.
 
+Luna is accurate and literal, so the quality of the result tracks the quality of the
+diagnosis, which stays with the root agent. Luna does what the prompt says and no
+more; it will not correct a flawed instruction. State the required end state
+precisely.
+
 ## Preflight
 
 Confirm the CLI, the login, and the model instead of relying on memory:
