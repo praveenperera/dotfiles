@@ -178,6 +178,31 @@ Then:
 1. Read the diff yourself. Reject every change outside the owned scope.
 2. Run the repository verification yourself. Do not accept Luna's report as proof.
 3. For tests, confirm the tests fail without the change under test and pass with it. Reject tests that only restate literals or assert implementation details.
-4. Simplify the result in the root thread when Luna produced repetition or an unnecessary abstraction.
+4. Record every defect you find: repetition, an unnecessary abstraction, dead or redundant logic, a missed case, or a change outside the scope.
 
 The root agent owns the result. Luna's final message is an artifact, not a verdict.
+
+## Repair pass
+
+Send the defects back to Luna. Do not repair Luna's output in the root thread while
+the directive is active; the root agent finds the defect, and Luna fixes it.
+
+Start a new ephemeral pass with the same prompt contract. In the prompt:
+
+- name each defect and its exact location, such as file and line or function
+- state why it is wrong, in one sentence
+- state the required end state, not the keystrokes
+- keep the owned scope to the files that hold the defects
+- repeat the verification, and add a check that the earlier work still passes
+
+Do not send a diff to apply. Luna must make the change and verify it.
+
+Inspect and verify the repair the same way as the first pass. Repeat while each pass
+removes real defects. Take the work back into the root thread when two passes in a
+row fail to fix the defect, or when the fix needs a design decision. Say so when you
+do.
+
+Exceptions, where the root agent acts directly:
+
+- a change outside the owned scope: revert it at once, then tell Luna in the next pass
+- an urgent break, such as a broken build blocking other work

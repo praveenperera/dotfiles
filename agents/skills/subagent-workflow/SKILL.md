@@ -138,6 +138,30 @@ For every Claude Agent-tool pass (Opus or Fable subagent):
 
 Choose follow-ups, additional reviewers, escalation, and repair paths using your best judgment. The orchestrator remains accountable for the integrated result. Never let a delegate commit, push, open or modify a pull request, deploy, or change external state unless the user separately authorizes that exact action.
 
+## Repair defects through the delegate
+
+When review finds a defect in delegated work, send it back to the delegate that wrote the code. The root finds the defect; the delegate fixes it. This keeps the root's context on judgment rather than on typing, and it keeps the cost of the repair at the delegate's price.
+
+Start a new ephemeral pass with the same prompt contract. In the prompt:
+
+- name each defect and its exact location, such as file and line or function
+- state why it is wrong, in one sentence
+- state the required end state, not the keystrokes
+- keep the owned scope to the files that hold the defects
+- repeat the original verification, and require that the earlier work still passes
+
+Do not send a diff to apply. The delegate must make the change and verify it. Verify the repair yourself, the same way as the first pass.
+
+Repeat while each pass removes real defects. Take the work into the root thread when two passes in a row fail to fix the same defect, when the fix needs a design decision the delegate cannot make, or when the handoff now costs more than the repair. Say so when you do.
+
+The root acts directly in these cases:
+
+- a change outside the owned scope: revert it at once, then state the boundary in the next pass
+- an urgent break, such as a broken build blocking other work
+- final taste, surface design, and simplification, which stay with the model that owns them under the active root
+
+A delegate that repeats the same defect after a clear repair prompt is a routing signal. Move the work to a stronger model instead of sending a third pass.
+
 ## Review beyond the spec
 
 A spec-conformance audit verifies the spec's checklist and therefore inherits the spec's blind spots. After conformance passes on a spec-driven build, run a separate adversarial review pass whose prompt explicitly ignores the spec and hunts failure scenarios:
