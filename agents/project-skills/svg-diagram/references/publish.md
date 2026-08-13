@@ -20,7 +20,7 @@ Inter (400, italic, 500, 600, 700) and JetBrains Mono (500) are vendored in `eng
 
 ## Embed in a post
 
-From a year folder such as `2026/`:
+From a year folder such as `2026/`. Full figure plus this snippet: [examples.md](examples.md).
 
 ```html
 <picture>

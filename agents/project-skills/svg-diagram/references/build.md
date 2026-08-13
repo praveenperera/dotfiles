@@ -32,4 +32,4 @@ An unknown figure name or theme stops the build.
 just check   # fmt-check, clippy, test
 ```
 
-`engine/tests/metrics_parity.rs` holds text metrics against a frozen corpus from the old pipeline. That corpus cannot be regenerated. A failure there means shipped figures would wrap differently than they do today.
+`engine/tests/metrics_parity.rs` holds a frozen text-metrics corpus. That corpus cannot be regenerated. A failure there means shipped figures would wrap differently than they do today.

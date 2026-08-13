@@ -9,7 +9,7 @@ A figure is a `FigureDef` plus a `build` function that returns a `Fig`. `name` i
 3. Build one figure to `_scratch` until it is clean. Then `just build`.
 4. Embed the pair in the post. Do not edit the generated SVG by hand.
 
-Copy the `FigureDef` skeleton from `~/code/diagrams/README.md`, or start from a neighbor:
+Copy a worked figure from [examples.md](examples.md), or start from a neighbor:
 
 | Family | Wave | Neighbor |
 |---|---|---|

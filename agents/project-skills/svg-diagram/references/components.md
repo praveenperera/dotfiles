@@ -46,4 +46,4 @@ let body = row([
 Fig::tree(shell(p, TITLE, SUB, col([body])))
 ```
 
-A small shipped example is `engine/src/figures/satori_wave/confirmed_inferred_open.rs`.
+Worked figures: [examples.md](examples.md).
