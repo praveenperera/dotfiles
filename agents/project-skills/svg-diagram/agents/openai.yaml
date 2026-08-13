@@ -1,4 +1,4 @@
 interface:
   display_name: "SVG Diagram"
-  short_description: "Generate SVG diagrams and OG graphics with Satori"
+  short_description: "Generate themed SVG diagrams and OG graphics"
   default_prompt: "Use $svg-diagram to generate this SVG diagram or social image."
