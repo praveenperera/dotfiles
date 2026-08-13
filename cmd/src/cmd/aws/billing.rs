@@ -16,6 +16,16 @@ use crate::cmd::billing::{
 
 const COST_METRIC: &str = "UnblendedCost";
 
+/// Static credentials that belong to the overridden endpoint, not to AWS
+const ENDPOINT_CREDENTIAL_VARS: [&str; 3] = [
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_SESSION_TOKEN",
+];
+
+/// Prefix of every AWS CLI endpoint override, global and per service
+const ENDPOINT_VAR_PREFIX: &str = "AWS_ENDPOINT_URL";
+
 /// Arguments for the AWS billing report
 #[derive(Debug, Clone, Args)]
 pub struct BillingArgs {
@@ -159,6 +169,7 @@ impl AwsBillingClient {
         profile: Option<&str>,
     ) -> Result<Vec<CostResponse>> {
         let time_period = format!("Start={},End={}", period.start, period.end_exclusive()?);
+        let scrubbed = endpoint_override_vars(env::vars().map(|(name, _)| name));
         let mut pages = Vec::new();
         let mut next_page_token = None;
         let mut seen_tokens = BTreeSet::new();
@@ -182,6 +193,10 @@ impl AwsBillingClient {
                 "json",
                 "--no-cli-pager",
             ]);
+            for name in &scrubbed {
+                command.env_remove(name);
+            }
+
             if let Some(profile) = profile {
                 command.args(["--profile", profile]);
             }
@@ -230,6 +245,35 @@ impl AwsBillingClient {
 
         Ok(pages)
     }
+}
+
+/// Names of the environment variables to drop before the AWS CLI runs
+///
+/// A project that talks to an S3-compatible service such as Cloudflare R2 or
+/// MinIO exports `AWS_ENDPOINT_URL` and the keys for that service. Cost
+/// Explorer has no such endpoint, so the request goes to the wrong host and
+/// fails. Drop the endpoint overrides, and the static keys with them, because
+/// those keys authenticate against the other service and not against AWS. Keep
+/// the keys when no override is set, because then they are true AWS
+/// credentials.
+fn endpoint_override_vars(names: impl IntoIterator<Item = String>) -> BTreeSet<String> {
+    let mut endpoints = BTreeSet::new();
+    let mut credentials = BTreeSet::new();
+
+    for name in names {
+        if name.starts_with(ENDPOINT_VAR_PREFIX) {
+            endpoints.insert(name);
+        } else if ENDPOINT_CREDENTIAL_VARS.contains(&name.as_str()) {
+            credentials.insert(name);
+        }
+    }
+
+    if endpoints.is_empty() {
+        return BTreeSet::new();
+    }
+
+    endpoints.append(&mut credentials);
+    endpoints
 }
 
 impl BillingReport {
@@ -398,8 +442,46 @@ mod tests {
     use chrono::NaiveDate;
     use serde_json::json;
 
-    use super::{render_json_report, render_report, BillingReport, CostResponse};
+    use super::{
+        endpoint_override_vars, render_json_report, render_report, BillingReport, CostResponse,
+    };
     use crate::cmd::billing::{BillingPeriod, LabelFilter};
+
+    #[test]
+    fn drops_endpoint_overrides_and_their_keys() {
+        let scrubbed = endpoint_override_vars(
+            [
+                "AWS_ENDPOINT_URL",
+                "AWS_ENDPOINT_URL_S3",
+                "AWS_ACCESS_KEY_ID",
+                "AWS_SECRET_ACCESS_KEY",
+                "AWS_SESSION_TOKEN",
+                "AWS_PROFILE",
+                "PATH",
+            ]
+            .map(str::to_string),
+        );
+
+        assert_eq!(
+            scrubbed.into_iter().collect::<Vec<_>>(),
+            [
+                "AWS_ACCESS_KEY_ID",
+                "AWS_ENDPOINT_URL",
+                "AWS_ENDPOINT_URL_S3",
+                "AWS_SECRET_ACCESS_KEY",
+                "AWS_SESSION_TOKEN",
+            ]
+        );
+    }
+
+    #[test]
+    fn keeps_credentials_when_no_endpoint_override_is_set() {
+        let scrubbed = endpoint_override_vars(
+            ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"].map(str::to_string),
+        );
+
+        assert!(scrubbed.is_empty());
+    }
 
     #[test]
     fn groups_pages_filters_exact_names_and_hides_zero_costs() {
