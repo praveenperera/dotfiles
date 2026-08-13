@@ -11,6 +11,9 @@ CLI, DSL, and checks: `~/code/diagrams/README.md`.
 
 The usual failure is copy that leaves a card or the canvas. Read [overflow.md](references/overflow.md) first.
 
+After final verification, remove the generated Rust build cache as described in
+[build.md](references/build.md).
+
 ## Reference files
 
 Read these based on the task:
