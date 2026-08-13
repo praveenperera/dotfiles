@@ -42,6 +42,9 @@ pub enum BillingCmd {
         visible_aliases = ["do", "digital-ocean"]
     )]
     DigitalOcean(#[command(flatten)] crate::cmd::digitalocean::BillingArgs),
+
+    /// Show the Modal billing report
+    Modal(#[command(flatten)] crate::cmd::modal::BillingArgs),
 }
 
 /// Output format for a cloud billing report
@@ -138,6 +141,11 @@ impl Money {
         &self.currency
     }
 
+    /// Amount without its currency, for ordering within one currency
+    pub(crate) fn amount(&self) -> Decimal {
+        self.value
+    }
+
     pub(crate) fn json(&self) -> JsonMoney {
         JsonMoney {
             value: self.value,
@@ -169,6 +177,7 @@ enum BillingProvider {
     Aws,
     Cloudflare,
     DigitalOcean,
+    Modal,
 }
 
 impl BillingProvider {
@@ -177,6 +186,7 @@ impl BillingProvider {
             Self::Aws => "AWS",
             Self::Cloudflare => "Cloudflare",
             Self::DigitalOcean => "DigitalOcean",
+            Self::Modal => "Modal",
         }
     }
 }
@@ -184,12 +194,41 @@ impl BillingProvider {
 #[derive(Debug)]
 pub(crate) struct ProviderBillingSummary {
     period: Option<BillingPeriod>,
+    /// Metered cost, before any credits the provider applies
     total_cost: Option<Money>,
+    /// Cost after the provider applies its own credits and discounts
+    net_cost: Option<Money>,
 }
 
 impl ProviderBillingSummary {
     pub(crate) fn new(period: Option<BillingPeriod>, total_cost: Option<Money>) -> Self {
-        Self { period, total_cost }
+        Self {
+            period,
+            total_cost,
+            net_cost: None,
+        }
+    }
+
+    /// Records what the provider actually bills once its credits apply
+    ///
+    /// Modal grants a monthly credit allowance, so its metered cost can be far
+    /// above the invoiced amount. The overview shows both, and totals the
+    /// invoiced amount, so the grand total stays the money actually owed.
+    pub(crate) fn with_net_cost(mut self, net_cost: Money) -> Self {
+        self.net_cost = Some(net_cost);
+        self
+    }
+
+    /// What the provider charges, which is what the grand total sums
+    fn billable_cost(&self) -> Option<&Money> {
+        self.net_cost.as_ref().or(self.total_cost.as_ref())
+    }
+
+    /// The net cost, only when it tells the reader something the total does not
+    fn distinct_net_cost(&self) -> Option<&Money> {
+        self.net_cost
+            .as_ref()
+            .filter(|net| Some(*net) != self.total_cost.as_ref())
     }
 }
 
@@ -216,44 +255,35 @@ enum GrandTotal {
     Incomplete,
 }
 
+/// Provider reports in the fixed order the overview displays them
 #[derive(Debug)]
 struct BillingOverview {
-    aws: ProviderOutcome,
-    cloudflare: ProviderOutcome,
-    digitalocean: ProviderOutcome,
+    providers: Vec<(BillingProvider, ProviderOutcome)>,
     grand_total: GrandTotal,
 }
 
 impl BillingOverview {
-    fn new(
-        aws: Result<ProviderBillingSummary>,
-        cloudflare: Result<ProviderBillingSummary>,
-        digitalocean: Result<ProviderBillingSummary>,
-    ) -> Result<Self> {
-        let aws = ProviderOutcome::from_result(aws);
-        let cloudflare = ProviderOutcome::from_result(cloudflare);
-        let digitalocean = ProviderOutcome::from_result(digitalocean);
-        let grand_total = calculate_grand_total([&aws, &cloudflare, &digitalocean])?;
+    fn new(results: Vec<(BillingProvider, Result<ProviderBillingSummary>)>) -> Result<Self> {
+        let providers = results
+            .into_iter()
+            .map(|(provider, result)| (provider, ProviderOutcome::from_result(result)))
+            .collect::<Vec<_>>();
+        let grand_total = calculate_grand_total(&providers)?;
 
         Ok(Self {
-            aws,
-            cloudflare,
-            digitalocean,
+            providers,
             grand_total,
         })
     }
 
-    fn providers(&self) -> [(BillingProvider, &ProviderOutcome); 3] {
-        [
-            (BillingProvider::Aws, &self.aws),
-            (BillingProvider::Cloudflare, &self.cloudflare),
-            (BillingProvider::DigitalOcean, &self.digitalocean),
-        ]
+    fn providers(&self) -> impl Iterator<Item = (BillingProvider, &ProviderOutcome)> {
+        self.providers
+            .iter()
+            .map(|(provider, outcome)| (*provider, outcome))
     }
 
     fn failure_count(&self) -> usize {
         self.providers()
-            .into_iter()
             .filter(|(_, outcome)| matches!(outcome, ProviderOutcome::Error(_)))
             .count()
     }
@@ -261,18 +291,26 @@ impl BillingOverview {
     fn is_complete(&self) -> bool {
         self.failure_count() == 0
     }
+
+    /// Whether credits make the grand total smaller than the listed costs
+    fn has_credits(&self) -> bool {
+        self.providers().any(|(_, outcome)| match outcome {
+            ProviderOutcome::Ok(summary) => summary.distinct_net_cost().is_some(),
+            ProviderOutcome::Error(_) => false,
+        })
+    }
 }
 
-fn calculate_grand_total(outcomes: [&ProviderOutcome; 3]) -> Result<GrandTotal> {
-    if outcomes
+fn calculate_grand_total(providers: &[(BillingProvider, ProviderOutcome)]) -> Result<GrandTotal> {
+    if providers
         .iter()
-        .any(|outcome| matches!(outcome, ProviderOutcome::Error(_)))
+        .any(|(_, outcome)| matches!(outcome, ProviderOutcome::Error(_)))
     {
         return Ok(GrandTotal::Incomplete);
     }
 
-    let mut totals = outcomes.iter().filter_map(|outcome| match outcome {
-        ProviderOutcome::Ok(summary) => summary.total_cost.as_ref(),
+    let mut totals = providers.iter().filter_map(|(_, outcome)| match outcome {
+        ProviderOutcome::Ok(summary) => summary.billable_cost(),
         ProviderOutcome::Error(_) => None,
     });
     let Some(first) = totals.next() else {
@@ -310,6 +348,9 @@ enum JsonProviderOutcome {
         provider: BillingProvider,
         period: Option<BillingPeriod>,
         total_cost: Option<JsonMoney>,
+        /// Present only when the provider bills something other than its metered cost
+        #[serde(skip_serializing_if = "Option::is_none")]
+        net_cost: Option<JsonMoney>,
     },
     Error {
         provider: BillingProvider,
@@ -321,12 +362,12 @@ impl From<&BillingOverview> for JsonBillingOverview {
     fn from(overview: &BillingOverview) -> Self {
         let providers = overview
             .providers()
-            .into_iter()
             .map(|(provider, outcome)| match outcome {
                 ProviderOutcome::Ok(summary) => JsonProviderOutcome::Ok {
                     provider,
                     period: summary.period,
                     total_cost: summary.total_cost.as_ref().map(Money::json),
+                    net_cost: summary.distinct_net_cost().map(Money::json),
                 },
                 ProviderOutcome::Error(error) => JsonProviderOutcome::Error {
                     provider,
@@ -389,17 +430,24 @@ async fn run_async(flags: Billing) -> Result<()> {
         Some(BillingCmd::Aws(args)) => crate::cmd::aws::run_billing(args).await,
         Some(BillingCmd::Cloudflare(args)) => crate::cmd::cloudflare::run_billing(args).await,
         Some(BillingCmd::DigitalOcean(args)) => crate::cmd::digitalocean::run_billing(args).await,
+        Some(BillingCmd::Modal(args)) => crate::cmd::modal::run_billing(args).await,
         None => run_overview(flags.output).await,
     }
 }
 
 async fn run_overview(output: BillingOutput) -> Result<()> {
-    let (aws, cloudflare, digitalocean) = tokio::join!(
+    let (aws, cloudflare, digitalocean, modal) = tokio::join!(
         crate::cmd::aws::billing_summary(),
         crate::cmd::cloudflare::billing_summary(),
         crate::cmd::digitalocean::billing_summary(),
+        crate::cmd::modal::billing_summary(),
     );
-    let overview = BillingOverview::new(aws, cloudflare, digitalocean)?;
+    let overview = BillingOverview::new(vec![
+        (BillingProvider::Aws, aws),
+        (BillingProvider::Cloudflare, cloudflare),
+        (BillingProvider::DigitalOcean, digitalocean),
+        (BillingProvider::Modal, modal),
+    ])?;
     let rendered = match output {
         BillingOutput::Human => render_overview(&overview)?,
         BillingOutput::Json => render_json_overview(&overview)?,
@@ -436,10 +484,15 @@ fn render_overview(overview: &BillingOverview) -> Result<String> {
                     writeln!(output, "  Period: unavailable")?;
                 }
 
+                // not "billed cost": Modal reports usage before its credits apply
                 if let Some(total) = &summary.total_cost {
-                    writeln!(output, "  Total billed cost: {total}")?;
+                    writeln!(output, "  Total cost: {total}")?;
                 } else {
-                    writeln!(output, "  Total billed cost: no billable usage")?;
+                    writeln!(output, "  Total cost: no billable usage")?;
+                }
+
+                if let Some(net) = summary.distinct_net_cost() {
+                    writeln!(output, "  Billed after credits: {net}")?;
                 }
             }
             ProviderOutcome::Error(error) => {
@@ -452,6 +505,10 @@ fn render_overview(overview: &BillingOverview) -> Result<String> {
     }
 
     match &overview.grand_total {
+        // name the credits, or the total reads as an arithmetic error against the rows
+        GrandTotal::Available(total) if overview.has_credits() => {
+            writeln!(output, "\nGrand total: {total} (after credits)")?
+        }
         GrandTotal::Available(total) => writeln!(output, "\nGrand total: {total}")?,
         GrandTotal::NoUsage => writeln!(output, "\nGrand total: no billable usage")?,
         GrandTotal::MixedCurrencies => writeln!(
@@ -488,8 +545,8 @@ mod tests {
     use eyre::eyre;
 
     use super::{
-        render_json_overview, render_overview, BillingOverview, BillingPeriod, GrandTotal,
-        LabelFilter, Money, ProviderBillingSummary,
+        render_json_overview, render_overview, BillingOverview, BillingPeriod, BillingProvider,
+        GrandTotal, LabelFilter, Money, ProviderBillingSummary,
     };
 
     #[test]
@@ -533,48 +590,50 @@ mod tests {
             start: NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
             usage_through: NaiveDate::from_ymd_opt(2026, 8, 12).unwrap(),
         };
-        let overview = BillingOverview::new(
+        let overview = overview([
             Ok(summary(Some(period), Some(money("1.10", "USD")))),
             Ok(summary(Some(period), Some(money("2.20", "USD")))),
             Ok(summary(Some(period), None)),
-        )
-        .unwrap();
+            Ok(summary(Some(period), Some(money("0.40", "USD")))),
+        ]);
 
         assert!(matches!(
             &overview.grand_total,
-            GrandTotal::Available(total) if total.to_string() == "$3.30 USD"
+            GrandTotal::Available(total) if total.to_string() == "$3.70 USD"
         ));
         assert!(render_overview(&overview)
             .unwrap()
-            .contains("Grand total: $3.30 USD"));
+            .contains("Grand total: $3.70 USD"));
 
         let json: serde_json::Value =
             serde_json::from_str(&render_json_overview(&overview).unwrap()).unwrap();
         assert_eq!(json["schema"], "cmd.billing");
         assert_eq!(json["version"], 1);
         assert_eq!(json["complete"], true);
-        assert_eq!(json["grand_total"]["value"], serde_json::json!(3.3));
+        assert_eq!(json["grand_total"]["value"], serde_json::json!(3.7));
         assert_eq!(json["providers"][0]["provider"], "aws");
         assert_eq!(json["providers"][1]["provider"], "cloudflare");
         assert_eq!(json["providers"][2]["provider"], "digitalocean");
+        assert_eq!(json["providers"][3]["provider"], "modal");
     }
 
     #[test]
     fn overview_reports_all_errors_and_has_no_partial_grand_total() {
-        let overview = BillingOverview::new(
+        let overview = overview([
             Ok(summary(None, Some(money("1.10", "USD")))),
             Err(eyre!("set the Cloudflare billing token")),
             Err(eyre!("DigitalOcean request failed")),
-        )
-        .unwrap();
+            Err(eyre!("install the Modal CLI")),
+        ]);
 
-        assert_eq!(overview.failure_count(), 2);
+        assert_eq!(overview.failure_count(), 3);
         assert!(matches!(overview.grand_total, GrandTotal::Incomplete));
 
         let rendered = render_overview(&overview).unwrap();
-        assert!(rendered.contains("AWS\n  Period: unavailable\n  Total billed cost: $1.10 USD"));
+        assert!(rendered.contains("AWS\n  Period: unavailable\n  Total cost: $1.10 USD"));
         assert!(rendered.contains("Cloudflare\n  Error: set the Cloudflare billing token"));
         assert!(rendered.contains("DigitalOcean\n  Error: DigitalOcean request failed"));
+        assert!(rendered.contains("Modal\n  Error: install the Modal CLI"));
         assert!(rendered.contains("Grand total: unavailable because the report is incomplete"));
 
         let json: serde_json::Value =
@@ -583,16 +642,17 @@ mod tests {
         assert!(json["grand_total"].is_null());
         assert_eq!(json["providers"][1]["status"], "error");
         assert_eq!(json["providers"][2]["status"], "error");
+        assert_eq!(json["providers"][3]["status"], "error");
     }
 
     #[test]
     fn overview_does_not_combine_mixed_currencies() {
-        let overview = BillingOverview::new(
+        let overview = overview([
             Ok(summary(None, Some(money("1", "USD")))),
             Ok(summary(None, Some(money("2", "EUR")))),
             Ok(summary(None, None)),
-        )
-        .unwrap();
+            Ok(summary(None, None)),
+        ]);
 
         assert!(overview.is_complete());
         assert!(matches!(overview.grand_total, GrandTotal::MixedCurrencies));
@@ -603,17 +663,59 @@ mod tests {
 
     #[test]
     fn overview_reports_no_usage_when_all_totals_are_empty() {
-        let overview = BillingOverview::new(
+        let overview = overview([
             Ok(summary(None, None)),
             Ok(summary(None, None)),
             Ok(summary(None, None)),
-        )
-        .unwrap();
+            Ok(summary(None, None)),
+        ]);
 
         assert!(matches!(overview.grand_total, GrandTotal::NoUsage));
         assert!(render_overview(&overview)
             .unwrap()
             .contains("Grand total: no billable usage"));
+    }
+
+    #[test]
+    fn overview_shows_a_net_cost_only_when_credits_change_it() {
+        let credited = summary(None, Some(money("10.80", "USD"))).with_net_cost(money("0", "USD"));
+        let uncredited =
+            summary(None, Some(money("1.10", "USD"))).with_net_cost(money("1.10", "USD"));
+        let overview = overview([
+            Ok(uncredited),
+            Ok(summary(None, None)),
+            Ok(summary(None, None)),
+            Ok(credited),
+        ]);
+
+        let rendered = render_overview(&overview).unwrap();
+        assert!(rendered.contains("  Total cost: $10.80 USD\n  Billed after credits: $0.00 USD"));
+        // the AWS row carries an equal net cost, which says nothing worth a line
+        assert!(rendered.contains("AWS\n  Period: unavailable\n  Total cost: $1.10 USD\n\n"));
+        assert_eq!(rendered.matches("Billed after credits").count(), 1);
+
+        // credits cover the $10.80, so only the uncredited $1.10 is owed
+        assert!(matches!(
+            &overview.grand_total,
+            GrandTotal::Available(total) if total.to_string() == "$1.10 USD"
+        ));
+        assert!(rendered.contains("Grand total: $1.10 USD (after credits)"));
+
+        let json: serde_json::Value =
+            serde_json::from_str(&render_json_overview(&overview).unwrap()).unwrap();
+        assert_eq!(json["providers"][3]["net_cost"]["value"], 0);
+        assert!(json["providers"][0].get("net_cost").is_none());
+    }
+
+    fn overview(results: [Result<ProviderBillingSummary, eyre::Report>; 4]) -> BillingOverview {
+        let providers = [
+            BillingProvider::Aws,
+            BillingProvider::Cloudflare,
+            BillingProvider::DigitalOcean,
+            BillingProvider::Modal,
+        ];
+
+        BillingOverview::new(providers.into_iter().zip(results).collect()).unwrap()
     }
 
     fn summary(period: Option<BillingPeriod>, total_cost: Option<Money>) -> ProviderBillingSummary {

@@ -14,6 +14,7 @@ pub mod generate;
 pub mod install;
 pub mod main_cmd;
 pub mod mcp;
+pub mod modal;
 pub mod pack;
 pub mod secrets;
 pub mod skill;
@@ -55,6 +56,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::DigitalOcean { subcommand } => {
             digitalocean::run_with_flags(digitalocean::DigitalOcean { subcommand })
         }
+        MainCmd::Modal { subcommand } => modal::run_with_flags(modal::Modal { subcommand }),
         MainCmd::Billing(flags) => billing::run_with_flags(flags),
         MainCmd::Gcloud { subcommand } => {
             let gcloud_flags = gcloud::Gcloud { subcommand };

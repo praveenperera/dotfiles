@@ -41,6 +41,8 @@ export AWS_LOCAL_AUTOMATION_SECRET_ACCESS_KEY="..."
 
 `cmd billing` uses the Cloudflare billing token, DigitalOcean token, and AWS credentials. `cmd cloudflare redirect` uses `CMD_CLOUDFLARE_REDIRECT_API_TOKEN`.
 
+Modal billing has no entry in this file. It runs the `modal` CLI, which reads its own credentials from `~/.modal.toml`. Set that file up with `modal token new`. `MODAL_PROFILE` selects the workspace when the file holds more than one.
+
 The AWS `default` and `local-automation` profiles use the two `AWS_LOCAL_AUTOMATION_*` values through `~/.local/bin/aws-secrets-credentials`. The `infraops-admin` profile uses an AWS CLI login session.
 
 `GITHUB_TOKEN` and `GH_TOKEN` are optional. Most GitHub operations use `gh auth token` when these variables are not set. `cmd install` only reads `GITHUB_TOKEN`, but public GitHub releases do not normally need it.
@@ -54,6 +56,7 @@ Do not put tokens on the command line because shell history can retain them. Do 
 - **AWS local automation:** Create or recover the access key for the same IAM identity. Save the key ID and secret access key in the two `AWS_LOCAL_AUTOMATION_*` variables. Restore the helper and `~/.aws/config` from a trusted backup.
 - **AWS `infraops-admin`:** Recreate the AWS CLI login session in `~/.aws/config`, then run `aws login --profile infraops-admin`. This profile does not use `~/.aws/credentials` in the current setup.
 - **Cloudflare redirects:** Create a token with the access that the redirect commands need. Save it as `CMD_CLOUDFLARE_REDIRECT_API_TOKEN`.
+- **Modal:** Install the Modal CLI, then run `modal token new` to write a new `~/.modal.toml`. Billing reports need a Team or Enterprise workspace plan.
 
 Revoke old provider tokens if the old computer was lost or was not erased securely.
 

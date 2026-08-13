@@ -101,6 +101,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::digitalocean::DigitalOceanCmd,
     },
 
+    /// Modal API operations
+    #[command(arg_required_else_help = true)]
+    Modal {
+        #[command(subcommand)]
+        subcommand: crate::cmd::modal::ModalCmd,
+    },
+
     /// Show billing across cloud providers
     Billing(#[command(flatten)] crate::cmd::billing::Billing),
 
@@ -253,6 +260,7 @@ mod tests {
     use crate::cmd::cloudflare::{BillingProduct, CloudflareCmd, RedirectCmd};
     use crate::cmd::digitalocean::DigitalOceanCmd;
     use crate::cmd::mcp::McpCmd;
+    use crate::cmd::modal::ModalCmd;
     use crate::cmd::pack::PackCmd;
     use crate::cmd::skill::SkillCmd;
 
@@ -545,6 +553,53 @@ mod tests {
 
         assert_eq!(args.profile.as_deref(), Some("billing"));
         assert_eq!(args.services, ["Amazon Simple Storage Service"]);
+    }
+
+    #[test]
+    fn parses_modal_billing_with_bucket_filters() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("modal"),
+            OsString::from("billing"),
+            OsString::from("--profile"),
+            OsString::from("work"),
+            OsString::from("--buckets"),
+            OsString::from("deployed_apps,volumes"),
+            OsString::from("--verbose"),
+        ])
+        .unwrap();
+
+        let MainCmd::Modal { subcommand } = cmd.subcommand else {
+            panic!("expected Modal command");
+        };
+        let ModalCmd::Billing(args) = subcommand;
+
+        assert_eq!(args.profile.as_deref(), Some("work"));
+        assert_eq!(args.buckets, ["deployed_apps", "volumes"]);
+        assert!(args.verbose);
+        assert_eq!(args.output, BillingOutput::Human);
+    }
+
+    #[test]
+    fn parses_combined_billing_modal() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("billing"),
+            OsString::from("modal"),
+            OsString::from("--bucket"),
+            OsString::from("volumes"),
+            OsString::from("--output"),
+            OsString::from("json"),
+        ])
+        .unwrap();
+
+        let MainCmd::Billing(args) = cmd.subcommand else {
+            panic!("expected combined billing command");
+        };
+        let Some(BillingCmd::Modal(args)) = args.subcommand else {
+            panic!("expected Modal billing command");
+        };
+
+        assert_eq!(args.buckets, ["volumes"]);
+        assert_eq!(args.output, BillingOutput::Json);
     }
 
     #[test]
