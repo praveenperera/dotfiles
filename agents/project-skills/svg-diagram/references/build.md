@@ -33,3 +33,14 @@ just check   # fmt-check, clippy, test
 ```
 
 `engine/tests/metrics_parity.rs` holds a frozen text-metrics corpus. That corpus cannot be regenerated. A failure there means shipped figures would wrap differently than they do today.
+
+## Cleanup
+
+After final verification, remove the generated Rust build and test artifacts:
+
+```sh
+cargo clean --manifest-path engine/Cargo.toml
+```
+
+This can recover several gigabytes from `engine/target/`. The next build will compile the engine
+again.
