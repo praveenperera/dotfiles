@@ -17,30 +17,18 @@ Higher is better on every axis.
 | Fable 5 | 9 | 9 | 2 | strongest intent inference and taste; expensive; can be lazy or pursue perceived intent over literal instructions |
 | GPT-5.6 Sol | 8 | 7 | 8 | relentless and efficient; drives hard to completion; can overbuild instead of stepping back |
 | Opus 5 | 8 | 8 | 6 | near-Fable on benchmarks at Opus price, but launch reports show early stopping and weaker adherence to long instruction sets; taste strong but unproven relative to Fable |
-| GPT-5.6 Luna | 5 (7 at `max`) | 4 | 10 | very cheap after the July 30, 2026 80% price cut; `max` reasoning reaches near Sol-`medium` capability, so it owns easy bounded delegations; still weak for ambiguous or taste-sensitive work |
+| GPT-5.6 Luna `max` | 7 | 4 | 9 | reaches near Sol-`medium` capability, so it owns easy bounded delegations; output tokens rise roughly 9x over no-reasoning, so keep it to one-off or low-count work; still weak for ambiguous or taste-sensitive work |
+| GPT-5.6 Luna `low` | 5 | 4 | 10 | very cheap after the July 30, 2026 80% price cut; for exact mechanical work at volume, where `max` wastes tokens and latency; not for anything that needs a decision |
 
 The Fable score preserves Theo Browne's published routing rubric; the Opus 5 scores are a local recalibration from Anthropic's launch benchmarks and positioning together with early practitioner reports, since Theo's video predates Opus 5. The Sol and Luna scores adapt the user's stated preferences, current provider positioning, and subsequent practitioner reports. Taste is especially subjective: use project-specific examples and evals when it matters.
 
 ## Root modes
 
-This workflow supports two Claude roots. Capability scores stay the same; default ownership moves with the root.
+Capability scores stay the same under every root; default ownership moves with the root. The per-root routing tables, ownership defaults, and transports are in [root-fable.md](root-fable.md), [root-opus.md](root-opus.md), and [root-sol.md](root-sol.md).
 
-### Fable 5 root
+Detect the root from the session model or an explicit user directive. A Claude Code session has a Fable or Opus root; a Codex CLI session has a Sol root. Do not silently switch roots mid-session unless the user asks.
 
-- Fable owns orchestration, ambiguous architecture, intent-sensitive design, high-taste surface work, and final simplification in the root thread.
-- Sol is the default delegated implementer.
-- Opus 5 is the default high-taste second opinion and the "use opus" implementation substitute.
-- Prefer not to spawn Fable as a subagent of itself for work the root can finish.
-
-### Opus 5 root
-
-- Opus owns orchestration, long-horizon agentic implementation, and complex debugging in the root thread.
-- Sol remains the default delegated implementer.
-- **Fable is the default model for high-taste review, UI/UX/API/copy judgment, intent-sensitive surface design, and final simplification.** Invoke Fable through the Agent tool with model `fable` and `high` effort.
-- Do not treat the Opus root as the final taste authority on its own implementation. A cheap self-check is fine; consequential taste and simplification go to Fable.
-- When "use opus" is active, Opus implements (root or isolated Agent scope). Take independent review from Fable for taste and from Sol when cross-vendor inventory scrutiny matters.
-
-Detect the root from the session model or an explicit user directive. Do not silently switch roots mid-session unless the user asks.
+No root is the final authority on the taste, surface design, or simplification of its own output. That pass goes to Fable.
 
 ## Fable strengths
 
@@ -126,7 +114,7 @@ Use Luna when success is cheap to check and either the prompt behaves like a fun
 
 Do not use Luna as the final authority for architecture, subtle debugging, security, taste, or broad implementation. Theo's GPT-5.6 review specifically frames Luna as a model that a smarter agent should orchestrate for bulk processing and simple outputs; the July 30, 2026 price cut extends that to easy bounded implementation at `max` reasoning. OpenAI cut Luna's API list price by 80% on that date, to $0.20 per million input tokens and $1.20 per million output tokens, while Sol stayed at $5 and $30.
 
-Choose reasoning effort by workload shape, not difficulty alone. Use `low` for simple extraction and `medium` when tool use or several exact steps are required; at bulk volume, `max` wastes tokens and latency. Use `max` for a one-off easy delegated change: Artificial Analysis measures Luna at `max` near Sol-`medium` capability, but its output tokens rise roughly 9x over no-reasoning, so reserve `max` for one-off or low-count work.
+Choose reasoning effort by workload shape, not difficulty alone. Use `max` for a one-off delegated change or a test pass: Artificial Analysis measures Luna at `max` near Sol-`medium` capability, but its output tokens rise roughly 9x over no-reasoning, so reserve `max` for one-off or low-count work. Use `low` for exact mechanical work at volume, where `max` wastes tokens and latency.
 
 ## Use complementary strengths
 

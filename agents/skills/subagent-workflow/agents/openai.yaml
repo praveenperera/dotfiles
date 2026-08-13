@@ -1,4 +1,4 @@
 interface:
   display_name: "Subagent Workflow"
-  short_description: "Route multi-model subagent work from a Fable or Opus root"
-  default_prompt: "Use $subagent-workflow to route this task from the current root (Fable or Opus) to the right model or subagent."
+  short_description: "Route multi-model subagent work from a Fable, Opus, or Sol root"
+  default_prompt: "Use $subagent-workflow to route this task from the current root (Fable, Opus, or Sol) to the right model or subagent."

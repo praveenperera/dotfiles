@@ -1,6 +1,6 @@
 ---
 name: subagent-workflow
-description: Provide multi-model routing and subagent workflow guidance for a Fable 5 or Opus 5 root agent working with Fable 5, Opus 5, GPT-5.6 Sol, and GPT-5.6 Luna. Use only when the user explicitly asks for subagent-workflow by name. Do not infer its use from a general request for review, delegation, model selection, or subagent work.
+description: Provide multi-model routing and subagent workflow guidance for a Fable 5, Opus 5, or GPT-5.6 Sol root agent working with Fable 5, Opus 5, GPT-5.6 Sol, and GPT-5.6 Luna. Use only when the user explicitly asks for subagent-workflow by name. Do not infer its use from a general request for review, delegation, model selection, or subagent work.
 disable-model-invocation: false
 ---
 
@@ -10,43 +10,21 @@ disable-model-invocation: false
 
 Use this skill only when the user explicitly requests `subagent-workflow` by name, including through `/subagent-workflow`. Do not invoke it merely because a task could benefit from delegation, model routing, review, or subagents.
 
-Detect the root model from the current session. Supported roots are **Fable 5** and **Opus 5**. If the user names a root ("use opus as root", "opus root", "fable root"), honor that. If ambiguous, treat the model currently running this skill as root. Treat this skill as a small set of routing heuristics and operational guardrails, not a prescribed workflow. Use your own judgment for decomposition, topology, sequencing, delegation, and review. Remain accountable for the user's intent and the integrated result, and never treat a delegate's final message as proof that its work is correct.
+Detect the root model from the current session. Supported roots are **Fable 5**, **Opus 5**, and **GPT-5.6 Sol**. A session started from Claude Code has a Claude root; a session started from the Codex CLI has a Sol root. If the user names a root ("use opus as root", "opus root", "fable root"), honor that. If ambiguous, treat the model currently running this skill as root. Treat this skill as a small set of routing heuristics and operational guardrails, not a prescribed workflow. Use your own judgment for decomposition, topology, sequencing, delegation, and review. Remain accountable for the user's intent and the integrated result, and never treat a delegate's final message as proof that its work is correct.
 
 ## Root modes
 
-Routing depends on who is root. Shared defaults: Sol at `high` reasoning is the default delegated implementer for substantial work; Luna at `max` reasoning takes easy tightly scoped delegations; Luna at `low` keeps bulk mechanical work; honor explicit user model choices.
+Routing depends on who is root. Read the file for the active root, and do not read the other two:
 
-### Fable 5 root
+| Root | Session | File |
+| --- | --- | --- |
+| Fable 5 | Claude Code running Fable 5 | [references/root-fable.md](references/root-fable.md) |
+| Opus 5 | Claude Code running Opus 5 | [references/root-opus.md](references/root-opus.md) |
+| GPT-5.6 Sol | Codex CLI | [references/root-sol.md](references/root-sol.md) |
 
-Fable keeps work that needs its intent inference and restraint. Do it in the root thread when practical; do not spend Fable as a subagent on work the root can finish cheaply.
+Each file holds that root's routing table, ownership defaults, transport, and cautions. Everything else in this skill and in [references/model-routing.md](references/model-routing.md) applies to every root.
 
-| Work | Route |
-| --- | --- |
-| Ambiguous architecture, planning, intent-sensitive product decisions | Fable root |
-| Public APIs, SDK shape, UI/UX, copy, final simplification | Fable root |
-| Substantial bounded implementation, hard debugging, migrations | Sol via Codex (`high` by default) |
-| Independent adversarial or inventory-style review | Sol via Codex, or Opus when a deliberate second opinion helps |
-| High-taste second opinion when the root already shaped the design | Opus 5 via Agent tool (`model: opus`, `high` effort) |
-| Full implementation substitute when the user says "use opus" | Opus 5 via Agent tool (session-long until "use sol") |
-| Easy, tightly scoped change with cheap verification | Luna via Codex (`max` reasoning) |
-| Repeated high-volume mechanical work | Luna via Codex (`low`–`medium` reasoning) |
-
-### Opus 5 root
-
-Opus orchestrates and can implement. **Do not use the Opus root as the final authority on taste, surface design, or simplification of its own work.** Route those to Fable.
-
-| Work | Route |
-| --- | --- |
-| Orchestration, long-horizon agentic work, complex debugging, root-cause analysis | Opus root |
-| Substantial bounded implementation, hard debugging, migrations | Sol via Codex (`high` by default) |
-| Implementation when the user says "use opus", or when Opus already owns the thread and Sol is a poor fit | Opus root directly, or Opus via Agent tool for an isolated owned scope |
-| High-taste review, UI/UX/API/copy judgment, intent-sensitive surface design | Fable 5 via Agent tool (`model: fable`, `high` effort) |
-| Final simplification of a Sol (or Opus) implementation | Fable 5 via Agent tool |
-| Independent cross-vendor or inventory-style review | Sol via Codex |
-| Easy, tightly scoped change with cheap verification | Luna via Codex (`max` reasoning) |
-| Repeated high-volume mechanical work | Luna via Codex (`low`–`medium` reasoning) |
-
-When the Opus root would ordinarily do a taste pass itself under the Fable-root table, spawn Fable instead. Keep the Fable prompt short and self-contained; point at the diff, owned paths, and a success condition rather than dumping this skill file.
+Shared defaults, whoever is root: Sol at `high` reasoning is the default implementer for substantial work; Luna at `max` reasoning takes easy tightly scoped delegations and tests; Luna at `low` keeps bulk mechanical work; no root is the final authority on the taste and simplification of its own output; honor explicit user model choices.
 
 ## Route by intelligence, taste, and cost
 
@@ -60,10 +38,11 @@ Treat the scores as routing heuristics, not benchmarks:
 
 | Model        | Intelligence | Taste | Cost efficiency | Default role                                                                                                       |
 | ------------ | -----------: | ----: | --------------: | ------------------------------------------------------------------------------------------------------------------ |
-| Fable 5      |            9 |     9 |               2 | intent-sensitive work, high-taste review, and simplification (root when Fable is root; Agent `fable` when Opus is) |
+| Fable 5      |            9 |     9 |               2 | intent-sensitive work, high-taste review, and simplification; the default taste authority under every root |
 | GPT-5.6 Sol  |            8 |     7 |               8 | persistent implementation, hard debugging, migrations, broad investigation, independent review                     |
-| Opus 5       |            8 |     8 |               6 | root orchestration and long-horizon work when Opus is root; second opinions or "use opus" implementation when Fable is root |
-| GPT-5.6 Luna | 5 (7 at `max`) |     4 |              10 | easy tightly scoped delegated changes at `max` reasoning; repeated or high-volume mechanical transforms, classification, inventory, bulk processing, simple generated text at `low` |
+| Opus 5       |            8 |     8 |               6 | orchestration and long-horizon agentic work; deliberate second opinions; delegated implementation when the user directs "use opus" |
+| GPT-5.6 Luna `max` |      7 |     4 |               9 | easy tightly scoped delegated changes, tests, and one-off mechanical work. Accurate and literal: the result tracks the quality of the diagnosis, which stays with the root |
+| GPT-5.6 Luna `low` |      5 |     4 |              10 | repeated or high-volume mechanical transforms, classification, inventory, bulk processing, simple generated text |
 
 Luna's intelligence is effort-dependent: after the July 30, 2026 80% price cut, Luna at `max` reasoning reaches roughly Sol-`medium` capability at a small fraction of Sol's cost, so work that fits below Sol `high` routes to Luna `max` instead of Sol `low` or `medium`.
 
@@ -73,20 +52,21 @@ Apply these behavioral corrections:
 
 - For Fable work, preserve the high-level goal, constraints, and authority boundaries. Whether the root is Fable or a Fable subagent, check for early stopping, omitted requirements, and inferred intent overriding an explicit requirement.
 - Watch for Sol overengineering: it can turn a small change into a rewrite with extra abstractions, speculative fallbacks, or excessive tests. Give it a narrow objective, explicit owned scope, and a minimality constraint. Require the smallest coherent change, preserve established abstractions, and stop to re-plan instead of piling on code when the approach is wrong.
-- Use Opus 5 for long-horizon agentic implementation and complex debugging. When Fable is root, also use Opus for deliberate second opinions and as the full implementation substitute when the user directs "use opus". When Opus is root, do not assign Opus the high-taste review or simplification of its own output; send that to Fable. Launch-era reports describe three Opus failure modes: it stops early and reports unfinished work as done, it argues with explicit instructions, and it follows large instruction-dense skill files less reliably than short ones. Give Opus a focused self-contained prompt instead of a large instruction bundle, and verify completion against the success condition rather than trusting its report. Read [references/opus5-prompting.md](references/opus5-prompting.md) before writing Opus 5 prompts: unhobble style constraints, prefer judgment and rich references over rules and examples, use progressive disclosure, and keep authority, scope, and verification hard.
-- Give Luna tasks with cheap verification: exact-procedure mechanical work at `low` reasoning, or an easy tightly scoped change at `max` reasoning. Do not ask it to choose architecture, infer product intent, or judge subtle code quality.
+- Use Opus 5 for long-horizon agentic implementation, complex debugging, and deliberate second opinions. Never assign Opus the high-taste review or simplification of its own output; send that to Fable. Launch-era reports describe three Opus failure modes: it stops early and reports unfinished work as done, it argues with explicit instructions, and it follows large instruction-dense skill files less reliably than short ones. Give Opus a focused self-contained prompt instead of a large instruction bundle, and verify completion against the success condition rather than trusting its report. Read [references/opus5-prompting.md](references/opus5-prompting.md) before writing Opus 5 prompts: unhobble style constraints, prefer judgment and rich references over rules and examples, use progressive disclosure, and keep authority, scope, and verification hard.
+- Give Luna tasks with cheap verification: exact-procedure mechanical work at `low` reasoning, or an easy tightly scoped change at `max` reasoning. Do not ask it to choose architecture, infer product intent, or judge subtle code quality. Luna is accurate and literal, so the quality of the result tracks the quality of the diagnosis, which stays with the root agent. It does what the prompt says and no more: it will write an assertion that another assertion already implies, because you asked for it. State the required end state precisely, and expect no correction of a flawed instruction.
 
 Honor an explicit user model choice. If that model is unavailable, report the failure instead of silently substituting another model.
 
-Default every substantial Codex delegation to GPT-5.6 Sol with `high` reasoning; do not run Sol below `high`. Route an easy, tightly scoped change whose correct result is cheap to verify to Luna with `max` reasoning: since the July 2026 price cut, Luna `max` reasons near Sol `medium` at a small fraction of the cost. Use Luna with `low` reasoning for repeated, high-volume, or cheap fan-out mechanical workloads, where `max` wastes tokens and latency.
+Default every substantial Codex delegation to GPT-5.6 Sol with `high` reasoning; do not run Sol below `high`. Route an easy, tightly scoped change whose correct result is cheap to verify to Luna with `max` reasoning: since the July 2026 price cut, Luna `max` reasons near Sol `medium` at a small fraction of the cost. Use Luna with `low` reasoning only for repeated, high-volume, or cheap fan-out mechanical workloads, where `max` wastes tokens and latency. Luna has no other operating point in this workflow: `max` for one-off delegations, `low` at volume.
 
-Sol is the default delegated implementer under both roots. Session directives:
+Sol is the default delegated implementer under a Claude root, and the root itself under a Sol root. Session directives:
 
 - **"use sol"** reaffirms Sol as the delegated implementer.
 - **"use opus"** routes delegated implementation to Opus 5 for the rest of the session: same prompt contract, owned scope, verification, and no-commit rules. From a Fable root, run that through the Agent tool with model `opus` and `high` effort. From an Opus root, prefer implementing in the root thread when continuity helps; use an Opus Agent subagent only for an isolated owned scope that should not share the root context.
-- **"use fable"** (Opus root) does not make Fable the implementer by default; it reaffirms Fable for review, taste, surface design, and simplification. If the user clearly wants Fable to implement, honor that as an explicit model choice for that task.
+- **"use fable"** (Opus or Sol root) does not make Fable the implementer by default; it reaffirms Fable for review, taste, surface design, and simplification. If the user clearly wants Fable to implement, honor that as an explicit model choice for that task.
+- **"use luna"** (any root) routes implementation to Luna at `max` reasoning for the rest of the session. The root states the design, and reviews and verifies every pass. See the `use-luna-max` skill for that contract.
 
-Absent a directive, Sol implements. Under a Fable root, Opus serves review and second-opinion roles unless "use opus" is active. Under an Opus root, Fable serves review, taste, and simplification roles.
+Absent a directive, Sol implements. The review, taste, and second-opinion assignments that go with each directive are in the active root's file.
 
 When Opus 5 implements (root or subagent), treat a report of "done" as unverified. Check the success condition and the diff before accepting a short run, re-prompt it to continue instead of integrating partial work, and state in the prompt that explicit requirements take precedence over its own view of the better approach. Write Opus prompts using [references/opus5-prompting.md](references/opus5-prompting.md), not a Sol-style instruction dump.
 
@@ -94,7 +74,7 @@ When Fable reviews or simplifies as a subagent, give it the same shared prompt c
 
 ## Combine models
 
-Use the models in whatever shape best fits the task and the active root. Fable's intent inference and restraint complement Sol's persistence. Opus 5 is a strong orchestrator and implementer at lower cost than Fable, but launch-era instruction following is weaker than its benchmark standing; under an Opus root, pair it with Fable for taste rather than trusting Opus to be its own taste authority. Luna reduces the cost of repeated mechanical work and, at `max` reasoning, of easy bounded delegations. Decide whether to delegate, which model acts first, and how many passes are worthwhile from the actual evidence and risk.
+Use the models in whatever shape best fits the task and the active root. Fable's intent inference and restraint complement Sol's persistence. Opus 5 is a strong orchestrator and implementer at lower cost than Fable, but launch-era instruction following is weaker than its benchmark standing. No root reviews its own taste: Opus needs Fable because its restraint is unproven, and Sol needs Fable because it overbuilds and the model that wrote the extra abstraction is the least likely to see it. Luna reduces the cost of repeated mechanical work and, at `max` reasoning, of easy bounded delegations. Decide whether to delegate, which model acts first, and how many passes are worthwhile from the actual evidence and risk.
 
 Do not delegate when handoff and reintegration cost more than the task. Do not give two writers overlapping ownership or let parallel implementations edit the same files. Read-only reviewers may inspect shared repository state.
 
@@ -117,7 +97,7 @@ Write a self-contained prompt that includes:
 
 Preserve the user's constraints verbatim when possible. Require the delegate to read applicable `AGENTS.md` files, inspect relevant context before acting, do its own work without spawning subagents or nested agents, avoid commits and external writes, and report changed files, verification, blockers, and residual risks.
 
-Read [references/codex-cli.md](references/codex-cli.md) for preflight checks, prompt template, fresh `codex exec` commands, artifact capture, and postflight checks. When the delegate is Opus 5, also read [references/opus5-prompting.md](references/opus5-prompting.md) and write the prompt body to that guide. When the delegate is Fable 5 via the Agent tool, use the same short contract shape as Opus: hard authority and verification, soft style, progressive references.
+Read [references/codex-cli.md](references/codex-cli.md) for preflight checks, prompt template, fresh `codex exec` commands, artifact capture, and postflight checks. When the delegate is Opus 5, also read [references/opus5-prompting.md](references/opus5-prompting.md) and write the prompt body to that guide. When the delegate is Fable 5 via the Agent tool, use the same short contract shape as Opus: hard authority and verification, soft style, progressive references. A Claude delegate reached from a Sol root through the `claude` CLI takes the same contract; only the transport differs.
 
 ## Run and integrate
 
@@ -172,4 +152,4 @@ A spec-conformance audit verifies the spec's checklist and therefore inherits th
 - Require a timeout or cancellation path on every await a UI or state machine depends on.
 - Report which behaviors only runtime or device testing can verify, so untested liveness paths are flagged instead of silently assumed covered.
 
-Under an Opus root, prefer Fable for taste-sensitive adversarial review of design and surface quality, and Sol when the pass is mainly inventory re-derivation and missed-case hunting. Under a Fable root, Opus or Sol can take the independent pass; keep Fable on the final simplification when the implementation was not already simplified in-root.
+Prefer Fable for the taste-sensitive leg of that review, on design and surface quality, and Sol for the inventory leg, on re-derivation and missed-case hunting. Never let the root take the adversarial pass on its own implementation.
