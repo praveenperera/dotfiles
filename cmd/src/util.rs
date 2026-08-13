@@ -89,3 +89,75 @@ pub fn hex_to_rgb(hex: &str) -> Result<(f32, f32, f32), std::num::ParseIntError>
 pub fn has_tool(sh: &Shell, tool: &str) -> bool {
     cmd!(sh, "command -v {tool}").quiet().output().is_ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        hex_to_rgb, random_alpha, random_alpha_lower, random_alpha_numeric,
+        random_alpha_numeric_lower, random_ascii, random_base32, random_pin,
+    };
+
+    const FLOAT_EPSILON: f32 = 1e-6;
+
+    fn assert_rgb_close(actual: (f32, f32, f32), expected: (f32, f32, f32)) {
+        assert!((actual.0 - expected.0).abs() < FLOAT_EPSILON);
+        assert!((actual.1 - expected.1).abs() < FLOAT_EPSILON);
+        assert!((actual.2 - expected.2).abs() < FLOAT_EPSILON);
+    }
+
+    #[test]
+    fn hex_to_rgb_parses_hex_with_or_without_hash() {
+        let expected = (
+            0x33 as f32 / 255.0,
+            0x66 as f32 / 255.0,
+            0x99 as f32 / 255.0,
+        );
+
+        assert_rgb_close(hex_to_rgb("#336699").unwrap(), expected);
+        assert_rgb_close(hex_to_rgb("336699").unwrap(), expected);
+    }
+
+    #[test]
+    fn hex_to_rgb_parses_known_values_and_rejects_invalid_hex() {
+        assert_rgb_close(hex_to_rgb("#000000").unwrap(), (0.0, 0.0, 0.0));
+        assert_rgb_close(hex_to_rgb("#ffffff").unwrap(), (1.0, 1.0, 1.0));
+        assert!(hex_to_rgb("#not-hex").is_err());
+    }
+
+    fn assert_random_output<F>(generate: fn(usize) -> String, valid: F)
+    where
+        F: Fn(char) -> bool,
+    {
+        for length in [32, 0] {
+            let output = generate(length);
+
+            assert_eq!(output.len(), length);
+            assert!(output.chars().all(&valid));
+        }
+    }
+
+    #[test]
+    fn random_generators_return_expected_lengths_and_characters() {
+        assert_random_output(random_alpha, |character| character.is_ascii_alphabetic());
+        assert_random_output(random_alpha_lower, |character| {
+            character.is_ascii_lowercase()
+        });
+        assert_random_output(random_alpha_numeric, |character| {
+            character.is_ascii_alphanumeric()
+        });
+        assert_random_output(random_alpha_numeric_lower, |character| {
+            character.is_ascii_lowercase() || character.is_ascii_digit()
+        });
+        assert_random_output(random_pin, |character| character.is_ascii_digit());
+
+        // the charset omits 0, 1, i, and l, because they are easy to confuse
+        let base32_charset = "23456789abcdefghjkmnopqrstuvwxyz";
+        assert_random_output(random_base32, |character| {
+            base32_charset.contains(character)
+        });
+
+        let ascii_charset =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#%^&|-_=+*";
+        assert_random_output(random_ascii, |character| ascii_charset.contains(character));
+    }
+}
