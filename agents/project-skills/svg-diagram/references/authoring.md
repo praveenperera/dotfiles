@@ -72,4 +72,4 @@ A container with neither fill nor border paints nothing.
 | `.child(el)` / `.children(iter)` | append |
 | `.child_if(cond, \|\| el)` | append only when `cond` |
 
-House chrome lives in [components.md](components.md). Marks that the box vocabulary cannot make live in [decor.md](decor.md).
+House chrome lives in [components.md](components.md). Marks that the box vocabulary cannot make live in [decor.md](decor.md). Copyable figures: [examples.md](examples.md).

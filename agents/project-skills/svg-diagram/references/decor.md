@@ -14,6 +14,8 @@ A missing id fails the render with the list of published ids. A duplicate id fai
 
 Card-stack figures are usually a pure `Fig::tree`. Geometric figures often build an unpainted skeleton of sized `.id()` nodes and paint in `.decor()`.
 
+Copyable connector figure: [examples.md](examples.md).
+
 ## Connectors
 
 `engine/src/connect.rs`. Constructors: `Connector::arrow`, `::elbow`, `::curve`.
