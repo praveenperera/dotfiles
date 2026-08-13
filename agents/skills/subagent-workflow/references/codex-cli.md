@@ -117,7 +117,7 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-For a single easy, tightly scoped task, change the model to `gpt-5.6-luna` and the reasoning effort to `max`; do not run Sol below `high`. For repeated or high-volume mechanical work, use `gpt-5.6-luna` with `low` reasoning, or `medium` when the exact procedure requires several tool-driven steps; `max` wastes tokens and latency at volume.
+For a single easy, tightly scoped task, change the model to `gpt-5.6-luna` and the reasoning effort to `max`; do not run Sol below `high`. For repeated or high-volume mechanical work, use `gpt-5.6-luna` with `low` reasoning; `max` wastes tokens and latency at volume.
 
 ## Run a fresh implementation delegate
 
