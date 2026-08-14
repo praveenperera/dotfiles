@@ -1,0 +1,4 @@
+interface:
+  display_name: "Use Luna Max"
+  short_description: "Route bounded implementation work to Luna Max"
+  default_prompt: "Use $use-luna-max to delegate this implementation to Luna Max."
