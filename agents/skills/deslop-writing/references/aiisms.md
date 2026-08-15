@@ -169,6 +169,12 @@ Current GPT-family tendencies reported from mid-2025 onward include `emphasizing
 
 Keep a word when it is the precise term. Replace decorative vocabulary with the specific action, property, or consequence.
 
+Do not use `corpus` for an ordinary collection. Name the thing: `the transcripts`, `the 4,000 support emails`, `these documents`, `the training data`. Keep `corpus` only in linguistics, machine learning, or medical writing, where it is the technical term for a specific dataset or body structure.
+
+> Before: We analyzed a large corpus of customer reviews.
+>
+> After: We analyzed 12,000 customer reviews.
+
 ### Avoidance of `is`, `are`, and `has`
 
 Prefer the basic copula or possession verb when it is accurate. Inspect `serves as`, `stands as`, `functions as`, `marks`, `represents`, `boasts`, `features`, `maintains`, and `offers`.
