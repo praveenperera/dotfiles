@@ -1,0 +1,4 @@
+interface:
+  display_name: "Install Anti-Slop"
+  short_description: "Install opinionated Oxlint rules for TypeScript and JavaScript"
+  default_prompt: "Use $install-anti-slop to install and configure anti-slop Oxlint rules in this repository."
