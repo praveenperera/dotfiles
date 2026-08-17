@@ -132,6 +132,24 @@ the project Volume cache.
 
 First build after idle can take longer (Droplet provision/warm).
 
+Each build carries labels that `rb status` shows under
+`lifecycle.lanes[].lease`: `owner` (`RB_BUILD_OWNER` or `user@host`),
+`command` (build-arg values redacted), `startedAt`, `lastHeartbeatAt`,
+`heartbeatDueAt`, `expiresAt`. Set `RB_BUILD_OWNER` in CI or agent runs so
+the lane holder is identifiable.
+
+If every lane is held by another build, `rb build` fails with
+`409 project_capacity_exhausted` and prints each occupied lane (owner, command,
+running time, last heartbeat). Queue instead of failing:
+
+```bash
+rb build --wait -- -t example/app:latest --push .
+rb build --wait --wait-timeout 1h -- -t example/app:latest --push .
+```
+
+Default `--wait-timeout` is `30m`. Do not kill a queued `rb build --wait` to
+"free" a lane; the lane belongs to the build shown in the report.
+
 ### Lifecycle
 
 - **Warm compute**: up for `compute-idle-ttl` after last use, then stops.
@@ -168,6 +186,8 @@ rb cache delete   # destructive; confirm intent first
 | name conflict | name taken by another SSH key/policy; pick new name via `--project`/`RB_PROJECT` |
 | SSH / host key issues | `rb project init --name … --rotate-key` if key is bad |
 | builder provisioning timeout | re-run build; check `rb status` |
+| `409 project_capacity_exhausted` | another build holds every lane; read the printed owner/command, then re-run with `--wait` or ask the owner |
+| lane `active` but no local `rb build` running | check `rb status` `lease.heartbeatDueAt`; if it is in the past the control plane expires the lease and `rb terminate` / `rb build --wait` proceed; if it is in the future the build is live elsewhere |
 | want cheaper idle | `rb stop` (keeps cache) |
 
 ## Do not
