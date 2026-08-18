@@ -135,8 +135,12 @@ Do not exempt code merely because it uses JSX, DOM APIs, regular expressions, ty
 binary data. Inspect current ReScript APIs first. Retain an adapter when package-specific generic,
 configuration, callback, or render-prop machinery dominates the application logic.
 
-Use GenType when a broad, intentionally shared TypeScript boundary is more maintainable than
-handwritten externals. Do not edit generated JavaScript.
+Prefer genType when TypeScript consumes an API owned by ReScript. ReScript 12 includes genType,
+so annotate the public ReScript types and values and generate `.gen.ts` or `.gen.tsx` boundaries
+instead of duplicating them in handwritten declarations. After consumers import the generated
+boundary, remove the corresponding manual `.d.ts` or ambient declaration entries. Use handwritten
+externals for narrow JavaScript or TypeScript APIs that ReScript consumes, or when genType cannot
+represent the boundary. Do not edit generated JavaScript or TypeScript.
 
 Avoid `Obj.magic`, unchecked casts, dishonest non-null types, and direct use of unvalidated
 `JSON.parse` results. These erase the advantage that justified choosing ReScript.

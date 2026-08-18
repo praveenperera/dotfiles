@@ -225,9 +225,16 @@ compiler cannot prove that a capture index maps to the intended field.
 
 ## TypeScript boundaries
 
-Use handwritten externals for a small stable surface. Use GenType when TypeScript must consume a
-broader intentional ReScript API or when ReScript must import TypeScript values and generated
-types improve maintenance.
+Choose the boundary by ownership and direction:
+
+- when TypeScript consumes a ReScript-owned module, prefer genType-generated `.gen.ts` or
+  `.gen.tsx` boundaries over handwritten `.d.ts` or ambient declarations
+- when ReScript consumes a narrow JavaScript or TypeScript API, use handwritten externals
+- when genType cannot represent a required boundary, keep the smallest manual adapter or
+  declaration that preserves the public contract
+
+ReScript 12 includes genType. Do not add a separate genType package or maintain a manual
+declaration for an API that the compiler can generate from its ReScript owner.
 
 Keep framework adapters mechanical:
 
@@ -240,12 +247,14 @@ Bind a stable reusable component or package primitive once before declaring all 
 TypeScript boundaries. Keep adapters for object-heavy, highly generic, callback-overloaded, or
 render-prop APIs when binding them would expose more package machinery than application logic.
 
-Generated `.gen.tsx` and `.res.js` files are outputs, not sources to edit.
+Generated `.gen.ts`, `.gen.tsx`, and `.res.js` files are outputs, not sources to edit.
 
-When using GenType:
+When using genType:
 
 - put the public type, value declaration, and `@genType` annotation in `.resi` when the module has
   an interface; keep the implementation annotation only when there is no `.resi`
+- during a migration, switch TypeScript imports to the generated boundary, then remove the
+  corresponding entries from manual declaration files
 - align `gentypeconfig.moduleResolution` with TypeScript and set the intended
   `generatedFileExtension`
 - ignore the configured `.gen.ts` or `.gen.tsx` artifacts unless the package deliberately
