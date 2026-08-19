@@ -63,24 +63,28 @@ grok --version
 grok models | rg -i 'grok-4\.6'
 ```
 
-Create a self-contained prompt packet with repository and branch identifiers, base or merge-base, PR URL when known, applicable repository instructions, status, diff statistics, and the relevant diff. Begin it with the same explicit review-only directive used for GLM.
+Grok's local tool session, including read-only and plan sandbox modes, can return cancelled. Do not depend on it for this review. Create a self-contained prompt packet that already contains every artifact Grok needs: repository and branch identifiers, base or merge-base, PR URL when known, applicable repository instructions (`AGENTS.md` and related rules), status, diff statistics, and the full relevant diff. Begin the packet with the same explicit review-only directive used for GLM.
 
-Run Grok in plan permission mode:
+Invoke Grok in headless self-contained mode. Disable edit, terminal, web, and subagent tools so the review stays read-only and does not wait on the local tool loop:
 
 ```bash
 prompt_file="$scratch/prompts/grok-review-$iteration.md"
 grok \
   --prompt-file "$prompt_file" \
   --cwd "$repo" \
-  --permission-mode plan \
-  --no-subagents \
-  --disable-web-search \
-  --output-format json \
   --model grok-4.6 \
+  --reasoning-effort high \
+  --always-approve \
+  --disallowed-tools "search_replace,write,run_terminal_cmd,run_terminal_command" \
+  --disable-web-search \
+  --no-subagents \
+  --no-plan \
+  --verbatim \
+  --output-format json \
   > "$scratch/raw/grok-review-$iteration.json"
 ```
 
-Require review-only behavior and actionable, evidence-backed findings. Parse the JSON `text` field when present. Treat an error object, `stopReason: MaxTurns`, cancellation, or missing final review as a failed run rather than a clean result. Do not relax plan permission mode to obtain a result.
+Do not use `--permission-mode plan` or re-enable local repo tools to recover from cancellation. If the packet is incomplete, enlarge the prompt with the missing rules or diff and rerun. Require review-only behavior and actionable, evidence-backed findings. Parse the JSON `text` field when present. Treat an error object, `stopReason: MaxTurns`, cancellation, or missing final review as a failed run rather than a clean result.
 
 ## Claude Opus Review
 
