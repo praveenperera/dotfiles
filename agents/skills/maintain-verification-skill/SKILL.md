@@ -9,7 +9,7 @@ Keep the project's `.agents/skills/verify-*` instructions and feature map accura
 
 ## Choose the target
 
-Find the project-local skill that contains launch, doctor, drive, evidence, cleanup, and a feature map. If several match and the user did not name one, ask which application is in scope. If none match, use `create-verification-skill`.
+Find the project-local skill that contains launch, doctor, drive, evidence, cleanup, and a feature map. If several match and the user did not name one, ask which application is in scope. If none match, report that there is no verification skill to maintain. Use `create-verification-skill` only when its separate activation criteria are met.
 
 Only edit the selected verification skill. Report product failures separately.
 

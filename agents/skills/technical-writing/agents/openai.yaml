@@ -1,4 +1,4 @@
 interface:
   display_name: "Technical Writing"
-  short_description: "Write clear technical docs for a defined reader"
+  short_description: "Structure substantial technical documents"
   default_prompt: "Use $technical-writing to draft or revise this technical document for its intended reader."

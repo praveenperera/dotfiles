@@ -1,4 +1,4 @@
 interface:
   display_name: "Create Verification Skill"
-  short_description: "Create a real-app verification skill and feature map"
+  short_description: "Create a reusable real-app verification skill"
   default_prompt: "Use $create-verification-skill to build a project-local verification skill for this app."

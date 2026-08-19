@@ -1,4 +1,4 @@
 interface:
   display_name: "Architect"
-  short_description: "Settle domain types, ownership, and interfaces first"
+  short_description: "Design durable boundaries for complex changes"
   default_prompt: "Use $architect to settle the domain model, ownership, and interfaces before implementation."

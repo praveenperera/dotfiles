@@ -1,11 +1,15 @@
 ---
 name: how
-description: Trace and explain how a code subsystem, feature, state transition, or data flow works. Use for code walkthroughs, ownership and placement questions, runtime-flow explanations, and onboarding to an unfamiliar area. Use `why` when the question is about design motivation or historical rationale.
+description: Trace and explain a non-obvious multi-step subsystem or cross-boundary data flow when the user asks how it works. Use for system walkthroughs, ownership, placement, and onboarding. Do not use for implementation, local bugs, or answers found in one symbol, rule, or component. Use `why` for rationale.
 ---
 
 # How
 
 Explain the real execution path from an entry point to an observable result.
+
+## Confirm the need
+
+Use a focused source search and answer directly when one symbol, configuration value, style rule, or component explains the behavior. Load this workflow only when the answer requires a path across several meaningful steps or owners.
 
 ## Trace the system
 
