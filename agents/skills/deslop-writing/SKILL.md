@@ -1,22 +1,24 @@
 ---
 name: deslop-writing
-description: Draft, rewrite, and audit English prose to remove formulaic AI-writing patterns while preserving meaning, facts, authorial voice, dialect, and channel conventions. Use when Codex is asked to deslop or humanize writing, make prose sound less AI-generated, avoid AIisms, preserve a writer's voice during editing, diagnose formulaic prose, or produce direct and specific copy without common LLM tics.
+description: Draft, rewrite, and audit English prose to remove formulaic AI-writing patterns and give finished copy a distinct, natural voice by default while preserving facts, identity, dialect, and channel conventions. Use when Codex is asked to deslop writing, avoid AIisms, add soul without inventing experience, preserve a writer's voice during editing, diagnose formulaic prose, or produce direct and specific copy without common LLM tics.
 ---
 
 # Deslop Writing
 
 Produce specific, direct prose without replacing the writer's voice with another generic style.
 
-## Load the catalog
+## Load the guides
 
 Read [references/aiisms.md](references/aiisms.md) before drafting, rewriting, or auditing prose. Apply its tiered rules and final checks. Treat the catalog as editorial guidance, never as proof of authorship.
+
+For drafts and rewrites, also read [references/add-soul.md](references/add-soul.md) and apply it by default. Skip its voice changes only when the user explicitly asks for a faithful cleanup, the same level of formality, a neutral or impersonal style, or no added soul, personality, warmth, opinion, or informality. A supplied voice sample controls how to add soul; the guide does not permit invented beliefs, identity, emotions, or experience.
 
 ## Choose the mode
 
 Infer the mode from the request. Ask only when the requested output would materially differ.
 
 - **Draft**: create prose from facts, notes, or an outline
-- **Rewrite**: revise supplied prose while preserving its claims and voice
+- **Rewrite**: revise supplied prose while preserving its claims and recognizable voice
 - **Audit**: identify formulaic patterns without rewriting the whole piece
 
 ## Establish the brief
@@ -35,7 +37,7 @@ Before rewriting, record the details that must survive:
 - stance, humor, dialect, contractions, cultural markers, and intentional repetition
 - required headings, calls to action, citations, and channel constraints
 
-Do not normalize regional English toward American English. Do not add slang, typos, fragments, anecdotes, emotion, or personal experience merely to simulate humanity. Do not replace empty rhetoric with a new fact, instruction, motive, or consequence; delete it when the source provides no concrete meaning to preserve. Never promise human authorship or detector evasion.
+Do not normalize regional English toward American English. Do not add slang, typos, fragments, anecdotes, emotion, or personal experience merely to simulate humanity. A deliberate fragment can stay or be added when the add-soul guide supports it and the speaker and channel permit it. Do not replace empty rhetoric with a new fact, instruction, motive, or consequence; delete it when the source provides no concrete meaning to preserve. Never promise human authorship or detector evasion.
 
 ## Edit from meaning
 

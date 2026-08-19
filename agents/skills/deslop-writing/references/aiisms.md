@@ -189,6 +189,16 @@ Keep the richer verb when it adds meaning: a hotel can offer breakfast, and a co
 
 Inspect `with this in mind`, `building on this`, `that said`, `having said that`, `in light of this`, `at its core`, and `it is important to note`. Delete them when paragraph order already carries the relationship. Replace them with an exact logical connector such as `because`, `although`, or `therefore` only when that relationship is true.
 
+### False ranges and empty comparison frames
+
+Inspect `from X to Y` when X and Y are examples with no meaningful scale, sequence, interval, or span. Name the items or state the actual scope. Keep a range when its endpoints define real coverage.
+
+Also inspect comparison frames that introduce an audience or prior practice but do not affect the claim. Keep the comparison when it explains a real difference or helps the intended reader transfer knowledge.
+
+### Colons as connectors
+
+Colons are useful before lists, examples, explanations, ratios, labels, and technical syntax. Change a colon when it repeatedly joins statements with no clear logical relationship or props up an empty comparison frame. Use the exact conjunction or separate sentences. Preserve a colon that makes the relationship clear.
+
 ### Em dashes and dramatic punctuation
 
 An em dash is legitimate punctuation. Change it when it repeatedly connects loosely related clauses, manufactures drama, substitutes for a logical relationship, or appears in a repeated contrast formula. Keep it when an interruption or emphatic parenthesis is intentional and fits the writer's style.
@@ -211,6 +221,10 @@ Keep lists for real sets, steps, comparisons, or scan-heavy operational material
 
 Inspect uniform medium-length sentences, repeated paragraph sizes, serial one-sentence paragraphs, repeated fragments, and identical clause shapes. Vary rhythm by rebuilding the argument, not by randomly joining or splitting sentences.
 
+### Sentence density
+
+Split a sentence when nested clauses, distant references, or several independent facts make the reader backtrack. Do not enforce one idea per sentence. Keep related clauses together when one sentence makes their causal, temporal, or logical relationship clearer.
+
 ### Elegant variation
 
 Do not cycle through synonyms merely to avoid repetition. Reuse the exact name or term when it is clearest. This matters especially for technical concepts, legal actors, characters, and causal variables.
@@ -222,6 +236,20 @@ Inspect noun piles and nominalizations that hide the actor or action: `the imple
 > Before: The implementation of automation enabled the reduction of processing time.
 >
 > After: The billing team automated invoice matching and cut processing time by two days.
+
+### Actor visibility and passive voice
+
+Prefer active voice when the actor matters to the claim or the reader's next action. Keep passive voice when the actor is unknown, irrelevant, intentionally backgrounded, or less important than the result. Never invent an actor to make a sentence active.
+
+### Technical metaphor clusters
+
+Inspect figurative uses of `substrate`, `wedge`, `vector`, `locus`, `vantage`, `nexus`, `primitive`, `harness`, `surface`, `bedrock`, `scaffolding`, `modality`, `paradigm`, `gold-plating`, `ratchet`, `evacuate`, `endgame`, `north star`, and `flywheel`. Name the actual component, operation, constraint, or phase when the metaphor adds no precision.
+
+Keep genuine terms of art. `Vector`, `primitive`, `substrate`, `modality`, and `API surface` have exact meanings in some technical fields.
+
+### Adverbs and weak verbs
+
+Inspect adverbs that prop up a vague verb or hide an unsupported degree, such as `significantly improves` or `runs quickly`. Use a measured change or a more exact verb when the source supports one. Keep an adverb when its degree, time, frequency, or manner changes the claim. Do not invent a measurement to remove an adverb.
 
 ### Promotional warmth, hedging, and emotional projection
 
@@ -253,6 +281,8 @@ After a rewrite, compare the source and result for changes to names, numbers, da
 ## Research basis
 
 Concrete tics change as models and prompting systems change. The catalog therefore combines current observation with research on broader, more durable properties:
+
+The checks for false ranges, colon misuse, sentence density, actor visibility, and technical metaphor clusters adapt parts of the [pstack Unslop checklist](https://github.com/cursor/plugins/blob/99559f2f52047978602ef365589275831e76af07/pstack/skills/unslop/SKILL.md), accessed 2026-08-19 and published under the MIT License.
 
 - [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia%3ASigns_of_AI_writing), live field guide last reviewed here on 2026-07-22; useful for current patterns and its warning that no single sign proves authorship
 - [It's not just one thing — it's another thing](https://techcrunch.com/2026/04/20/ai-writing-its-not-just-this-its-that-barrons/), TechCrunch, 2026-04-20; contemporary reporting on contrastive negation
