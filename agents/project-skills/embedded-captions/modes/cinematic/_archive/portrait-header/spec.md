@@ -18,7 +18,7 @@ the bottom for shots that include the subject's waist or below.
 - 9:16 portrait video (1080×1920 typical)
 - Single subject filling the center of the frame
 - Clean band visible above the head
-- Speech is relatively dense (many short phrases) — crown only for the
+- Speech is relatively dense (many short phrases) - crown only for the
   one true climax
 
 ❌ **Wrong fit:**

@@ -1,17 +1,17 @@
-// tts.mjs — multi-provider TTS for the media audio engine. The provider chain,
+// tts.mjs - multi-provider TTS for the media audio engine. The provider chain,
 // auto-detected from env, is the one documented in ../SKILL.md:
 //
-//   1. HeyGen (Starfish)  — $HEYGEN_API_KEY / $HYPERFRAMES_API_KEY / ~/.heygen.
+//   1. HeyGen (Starfish) - $HEYGEN_API_KEY / $HYPERFRAMES_API_KEY / ~/.heygen.
 //        Direct v3 REST (NOT `hyperframes tts`, which in the published build is
 //        Kokoro-only and silently ignores a HeyGen key). Returns word_timestamps
 //        in the same call, so no separate transcribe pass.
-//   2. ElevenLabs         — $ELEVENLABS_API_KEY + `pip install elevenlabs`. No
+//   2. ElevenLabs - $ELEVENLABS_API_KEY + `pip install elevenlabs`. No
 //        word timings → caller chains transcribeWav().
-//   3. Kokoro-82M (local) — always available, via the published `hyperframes tts`
+//   3. Kokoro-82M (local) - always available, via the published `hyperframes tts`
 //        CLI. No word timings → caller chains transcribeWav().
 //
 // "HeyGen available" is decided by CREDENTIAL presence (heygenCredential), never
-// by the CLI — see the note above.
+// by the CLI - see the note above.
 
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -60,17 +60,17 @@ export async function resolveVoiceId({ provider, userVoice, lang = "en" }) {
     if (lang === "en") return "am_michael";
     throw new Error("Kokoro non-English needs an explicit --voice (see references/tts.md)");
   }
-  // heygen — pin a fixed English default so the choice is deterministic. The old
+  // heygen - pin a fixed English default so the choice is deterministic. The old
   // "first English voice the API returns" drifts whenever HeyGen re-sorts the
   // public catalog. Marcia (mature, low female). Override with --voice / request.voice.
   if (lang === "en") return "05f19352e8f74b0392a8f411eba40de1"; // Marcia · English · female
-  // Non-English: no fixed default — fall back to the first matching catalog voice.
+  // Non-English: no fixed default - fall back to the first matching catalog voice.
   const payload = await heygenJSON(`/voices?engine=starfish&type=public&limit=50`, {
     headers: heygenAuthHeaders(),
   });
   const voices = payload.data ?? payload.voices ?? [];
   const pick = voices.find((v) => v.language === "English") ?? voices[0];
-  if (!pick) throw new Error("no public starfish voice to default to — pass --voice");
+  if (!pick) throw new Error("no public starfish voice to default to - pass --voice");
   return pick.voice_id;
 }
 
@@ -176,7 +176,7 @@ export function spawnP(
     // resolveSpawnCommand only returns null for the npx-on-win32 case where
     // npm_execpath isn't set (e.g. audio.mjs invoked directly with `node`, not
     // through npm/npx). Without this, every call silently returns status:-1 and
-    // stdio:"ignore" hides why — callers just report "TTS failed - omitted" for
+    // stdio:"ignore" hides why - callers just report "TTS failed - omitted" for
     // every line. Surface the real reason once so it's diagnosable.
     if (!_warnedNpxResolution) {
       _warnedNpxResolution = true;
@@ -225,7 +225,7 @@ save(audio, sys.argv[3])
 `;
 
 // ── synthesize one line ───────────────────────────────────────────────────────
-// Writes wav at wavAbs. Returns { ok, words } — words is the raw
+// Writes wav at wavAbs. Returns { ok, words } - words is the raw
 // [{text,start,end}] array for HeyGen (native), or null for ElevenLabs/Kokoro
 // (caller must transcribeWav). Never throws; failures return { ok:false }.
 export async function synthesizeOne({
@@ -261,7 +261,7 @@ export async function synthesizeOne({
     const r = await spawnP(cmd, args, {});
     return { ok: r.status === 0 && existsSync(wavAbs), words: null };
   }
-  // kokoro — via the published CLI; --output is relative to the project dir.
+  // kokoro - via the published CLI; --output is relative to the project dir.
   const wavRel = relTo(hyperframesDir, wavAbs);
   const args = ["hyperframes", "tts", writeTmpText(text), "--voice", voiceId, "--output", wavRel];
   if (lang !== "en") args.push("--lang", lang);
@@ -303,7 +303,7 @@ async function synthesizeHeygen({ text, voiceId, lang, speed, wavAbs }) {
   }
 }
 
-// ElevenLabs/Kokoro have no word timings — run Whisper over the wav. Returns the
+// ElevenLabs/Kokoro have no word timings - run Whisper over the wav. Returns the
 // flat [{id,text,start,end}] word array, or null. Each call uses a throwaway
 // --dir so parallel scenes don't collide on transcript.json.
 export async function transcribeWav({ wavRel, lang = "en", hyperframesDir }) {

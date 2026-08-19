@@ -1,6 +1,6 @@
 ---
 name: hyperframes-animation
-description: "All animation knowledge for HyperFrames — atomic motion rules, multi-phase scene blueprints, scene transitions, broader motion-design techniques, AND the seven runtime adapters (GSAP default, plus Lottie, Three.js, Anime.js, CSS keyframes, Web Animations API, TypeGPU). Use for any motion or animation task: pick 2-4 rules and compose, or load a blueprint, or look up runtime-specific API (e.g. GSAP eases / Lottie player / Three.js mixer). Also covers auditing an existing composition's choreography (animation map) and 24 named text-animation effects. HyperFrames-native: single paused timeline, seek-safe, deterministic."
+description: "All animation knowledge for HyperFrames - atomic motion rules, multi-phase scene blueprints, scene transitions, broader motion-design techniques, AND the seven runtime adapters (GSAP default, plus Lottie, Three.js, Anime.js, CSS keyframes, Web Animations API, TypeGPU). Use for any motion or animation task: pick 2-4 rules and compose, or load a blueprint, or look up runtime-specific API (e.g. GSAP eases / Lottie player / Three.js mixer). Also covers auditing an existing composition's choreography (animation map) and 24 named text-animation effects. HyperFrames-native: single paused timeline, seek-safe, deterministic."
 ---
 
 # HyperFrames Animation
@@ -47,11 +47,11 @@ Blueprints live in the [blueprints index](blueprints-index.md). Each entry point
 
 ## Picking a runtime
 
-- **GSAP** is the default for 95% of motion work — covers timeline orchestration, transforms, easing, stagger. All atomic rules in this skill are GSAP-based.
+- **GSAP** is the default for 95% of motion work - covers timeline orchestration, transforms, easing, stagger. All atomic rules in this skill are GSAP-based.
 - **Lottie** when an asset has its own pre-baked timeline (typically After Effects exports).
 - **Three.js** for 3D scenes, camera motion, shader-driven visuals.
 - **Anime.js** for lightweight tweening when GSAP is overkill.
-- **CSS** for simple repeated motifs, decoration, shimmer — no JavaScript animation cost.
+- **CSS** for simple repeated motifs, decoration, shimmer - no JavaScript animation cost.
 - **WAAPI** for native browser keyframes without a GSAP dependency.
 - **TypeGPU / WebGPU** for GPU-rendered canvases (particles, liquid glass, custom shaders).
 
@@ -63,8 +63,8 @@ Multiple runtimes can coexist in one composition. Each registers its instances o
 
 Animation-craft additions on top of core's contract:
 
-- **Pre-calculated layout constants** — never derive positions from `getBoundingClientRect()` at tween time. Tween-time DOM measurements desync because the renderer samples in parallel; compute coordinates once at composition setup and reuse.
-- **Spatial motion uses GSAP transform aliases only** (`x`, `y`, `scale`, `rotation`). Core's allowlist also permits `opacity` / `color` / `backgroundColor` / `borderRadius` for non-spatial property tweens — but never `width` / `height` / `top` / `left` for layout changes.
+- **Pre-calculated layout constants** - never derive positions from `getBoundingClientRect()` at tween time. Tween-time DOM measurements desync because the renderer samples in parallel; compute coordinates once at composition setup and reuse.
+- **Spatial motion uses GSAP transform aliases only** (`x`, `y`, `scale`, `rotation`). Core's allowlist also permits `opacity` / `color` / `backgroundColor` / `borderRadius` for non-spatial property tweens - but never `width` / `height` / `top` / `left` for layout changes.
 
 ## Scripts
 
@@ -79,6 +79,6 @@ Reads every GSAP timeline registered on `window.__timelines`, enumerates tweens,
 
 ## See Also
 
-- `hyperframes-core` — composition structure, data attributes, sub-compositions, deterministic render contract
-- `hyperframes-creative` — palettes, typography, narration, beat planning (non-animation creative direction)
-- `hyperframes-cli` — `npx hyperframes lint / validate / inspect / preview / render`
+- `hyperframes-core` - composition structure, data attributes, sub-compositions, deterministic render contract
+- `hyperframes-creative` - palettes, typography, narration, beat planning (non-animation creative direction)
+- `hyperframes-cli` - `npx hyperframes lint / validate / inspect / preview / render`

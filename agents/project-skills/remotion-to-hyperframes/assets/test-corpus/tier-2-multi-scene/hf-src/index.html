@@ -77,15 +77,15 @@
       <script>
         // Translation of Remotion's 3-Sequence MultiScene at fps=30, total 6s.
         //
-        // Scene 1 (0-2s): TitleScene — spring scale on "Welcome".
+        // Scene 1 (0-2s): TitleScene - spring scale on "Welcome".
         //   Remotion: spring({frame, fps, config: {damping:12, stiffness:100, mass:1}})
         //   GSAP equivalent: back.out(1.4) over ~0.7s. Spring → ease translation
         //   is approximate; expect minor differences in the tail of the curve.
         //
-        // Scene 2 (2-4s): ImageScene — opacity 0→1 over 0-0.5s + scale 0.8→1.0 over 0-2.0s.
+        // Scene 2 (2-4s): ImageScene - opacity 0→1 over 0-0.5s + scale 0.8→1.0 over 0-2.0s.
         //   Both Remotion interpolates use linear (default), match with ease:"none".
         //
-        // Scene 3 (4-6s): OutroScene — opacity 0→1 over 4-5s, linear.
+        // Scene 3 (4-6s): OutroScene - opacity 0→1 over 4-5s, linear.
 
         const tl = gsap.timeline({ paused: true });
 

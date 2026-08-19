@@ -55,7 +55,7 @@ export function scanExistingAssets(projectDir) {
     const fullPath = join(assetsDir, rel);
     const stat = statSync(fullPath);
     if (stat.size === 0) {
-      // A 0-byte asset would register clean but fail at render — skip it loudly
+      // A 0-byte asset would register clean but fail at render - skip it loudly
       // rather than adopt a broken file.
       console.error(`media-use: skipping 0-byte asset assets/${rel}`);
       continue;
@@ -104,7 +104,7 @@ export function adoptExistingAssets(projectDir) {
 }
 
 // Adopt a pre-existing assets/ file only when it shares a meaningful word with
-// the intent. The old test — `name.includes(intent) || intent.includes(name)` —
+// the intent. The old test - `name.includes(intent) || intent.includes(name)` -
 // silently returned the WRONG file: "whoosh" grabbed a stray who.mp3, and a
 // one-letter filename matched every intent. A false negative just falls through
 // to a catalog search (safe); a false positive ships the wrong asset. So bias to

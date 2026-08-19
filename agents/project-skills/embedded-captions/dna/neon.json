@@ -1,6 +1,6 @@
 {
   "name": "neon",
-  "title": "Neon — the sign in the scene",
+  "title": "Neon - the sign in the scene",
   "register": "loud-cyber",
   "when": "cyberpunk / nightlife / tech-noir / music content on dark scenes. The captions ARE neon signage hanging in the room: electric cyan tubes, ignition flicker, a hum of glow. The hero powers ON like a sign being lit.",
   "font": {
@@ -53,6 +53,6 @@
   "deliveries": {
     "home": "column",
     "rail": "unvalidated",
-    "note": "signature = flicker-on + glow layer (engine hero fx) — rail keeps only the cyan skin"
+    "note": "signature = flicker-on + glow layer (engine hero fx) - rail keeps only the cyan skin"
   }
 }

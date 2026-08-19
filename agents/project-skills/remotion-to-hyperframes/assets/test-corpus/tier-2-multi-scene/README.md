@@ -1,14 +1,14 @@
-# Tier 2 — title-image-outro
+# Tier 2 - title-image-outro
 
 ## What it tests
 
 Three-scene composition. Each scene exercises a different Remotion idiom:
 
-1. **Scene 1 (0–2 s)** — TitleScene with `spring({damping:12, stiffness:100, mass:1})`
+1. **Scene 1 (0–2 s)** - TitleScene with `spring({damping:12, stiffness:100, mass:1})`
    driving a `transform: scale()` on text. Tests the lossy `spring → GSAP ease` translation.
-2. **Scene 2 (2–4 s)** — ImageScene that fades in a `staticFile`-loaded image and
+2. **Scene 2 (2–4 s)** - ImageScene that fades in a `staticFile`-loaded image and
    linearly scales it from 0.8 → 1.0. Tests asset paths + linear `interpolate`.
-3. **Scene 3 (4–6 s)** — OutroScene with a 1-s linear fade-in. Sanity check after
+3. **Scene 3 (4–6 s)** - OutroScene with a 1-s linear fade-in. Sanity check after
    the harder scenes.
 
 A silent 6-second WAV plays throughout at `volume={0.5}`. Tests `<Audio>` translation.
@@ -49,6 +49,6 @@ cd ../hf-src && npx hyperframes render --output ../hf.mp4
 ## Why threshold 0.95?
 
 Same threshold as T1 (`expected.json` codifies it for the orchestrator). Spring → `back.out(1.4)`
-came in cleaner than predicted during calibration — the validated mean is 0.985 against the
+came in cleaner than predicted during calibration - the validated mean is 0.985 against the
 0.95 gate. If the translation breaks anything else (spring overshoot wrong, stagger off,
-asset path drift), mean SSIM will fall well below 0.95 — that's the failure signal.
+asset path drift), mean SSIM will fall well below 0.95 - that's the failure signal.

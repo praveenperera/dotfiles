@@ -285,7 +285,7 @@ Concrete tics change as models and prompting systems change. The catalog therefo
 The checks for false ranges, colon misuse, sentence density, actor visibility, and technical metaphor clusters adapt parts of the [pstack Unslop checklist](https://github.com/cursor/plugins/blob/99559f2f52047978602ef365589275831e76af07/pstack/skills/unslop/SKILL.md), accessed 2026-08-19 and published under the MIT License.
 
 - [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia%3ASigns_of_AI_writing), live field guide last reviewed here on 2026-07-22; useful for current patterns and its warning that no single sign proves authorship
-- [It's not just one thing — it's another thing](https://techcrunch.com/2026/04/20/ai-writing-its-not-just-this-its-that-barrons/), TechCrunch, 2026-04-20; contemporary reporting on contrastive negation
+- [It's not just one thing - it's another thing](https://techcrunch.com/2026/04/20/ai-writing-its-not-just-this-its-that-barrons/), TechCrunch, 2026-04-20; contemporary reporting on contrastive negation
 - [The Formulaic Machine: Generative AI, Academic Writing, and the Recovery of Voice](https://albert.ias.edu/server/api/core/bitstreams/c45a10ab-d45b-48ea-a888-1107838af617/content), 2026-04-26; examples of formulaic academic constructions and recovery strategies
 - [How LLMs Distort Our Written Language](https://arxiv.org/abs/2603.18161), 2026-03-18; evidence that rewriting can change semantics even under narrow editing instructions
 - [More Aligned, Less Diverse?](https://arxiv.org/abs/2605.06030), 2026-05-07; evidence of reduced syntactic, lexical, and punctuation diversity in newer instruction-tuned models

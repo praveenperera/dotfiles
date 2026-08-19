@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run.sh — corpus orchestrator. Runs every tier and prints a pass/fail summary.
+# run.sh - corpus orchestrator. Runs every tier and prints a pass/fail summary.
 #
 # Tiers 1-3: render Remotion baseline + HF translation, run SSIM diff,
 #            assert mean >= ssim_threshold from each fixture's expected.json.
@@ -40,7 +40,7 @@ REPORT="$THIS_DIR/run-report.json"
 RESULTS_DIR="$(mktemp -d)"
 trap 'rm -rf "$RESULTS_DIR"' EXIT
 
-# T4 is lint-only — no ffmpeg or HF CLI needed. Defer the render-tier
+# T4 is lint-only - no ffmpeg or HF CLI needed. Defer the render-tier
 # toolchain checks until run_render_tier() actually runs, so
 # `./run.sh tier-4-escape-hatch` works on a clean checkout.
 require_render_tier_tools() {
@@ -201,7 +201,7 @@ fi
 
 # Aggregate the per-fixture JSON files into one report.
 #
-# Skipped fixtures are *not* a pass — they mean a tier didn't run because
+# Skipped fixtures are *not* a pass - they mean a tier didn't run because
 # tooling or fixtures were unavailable. The orchestrator exits non-zero on
 # any skip so a clean checkout that lacks the HF CLI doesn't accidentally
 # report "passed 1/4" (T4 alone) and look like the corpus is healthy.

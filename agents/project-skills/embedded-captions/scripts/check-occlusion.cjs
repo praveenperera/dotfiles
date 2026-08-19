@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* check-occlusion.cjs — pixel-perfect occlusion gate (Node port of check-occlusion-v2.py).
+/* check-occlusion.cjs - pixel-perfect occlusion gate (Node port of check-occlusion-v2.py).
  * Runs measure-layout.cjs (real Chromium DOM rects), reads the subject-matte alpha via sharp,
  * computes per-word / per-cap occlusion. No Python.
  *   node check-occlusion.cjs <project-dir> [--strict] [--word-fail F] [--word-warn F] [--cap-fail F] [--remeasure]
@@ -29,7 +29,7 @@ function hfResolve(pkg) {
       } catch {}
     }
   }
-  console.error(`[v2] cannot find ${pkg} — set HYPERFRAMES_ROOT`);
+  console.error(`[v2] cannot find ${pkg} - set HYPERFRAMES_ROOT`);
   process.exit(3);
 }
 const sharp = hfResolve("sharp");
@@ -97,7 +97,7 @@ async function main() {
   const planPath = path.join(project, "plan.json");
   const plan = fs.existsSync(planPath) ? JSON.parse(fs.readFileSync(planPath, "utf8")) : {};
   const planLayer = plan.caption_layer || "bg";
-  // Hero groups (the ONE big promoted word) are SUPPOSED to sit ON the subject — for them
+  // Hero groups (the ONE big promoted word) are SUPPOSED to sit ON the subject - for them
   // occlusion is a TARGET (~30–55%), not "minimize". Collect their ids for the advisory below.
   const heroIds = new Set();
   const heroIn = {};
@@ -110,7 +110,7 @@ async function main() {
     heroIds.add(plan.crown_group.id);
     heroIn[plan.crown_group.id] = plan.crown_group.in;
   }
-  const M = 2; // frame-edge tolerance (px) — matches check-overflow.cjs
+  const M = 2; // frame-edge tolerance (px) - matches check-overflow.cjs
   const frameW = layout.width,
     frameH = layout.height;
 
@@ -125,9 +125,9 @@ async function main() {
       for (const w of cap.words || []) {
         if ((w.opacity ?? 1) < 0.3) continue;
         wordsData.push({ text: w.text, occlusion: occlusionForRect(mask, w.x, w.y, w.w, w.h) });
-        // Frame-edge overflow — clipped SETTLED text is always wrong; a hero's first
+        // Frame-edge overflow - clipped SETTLED text is always wrong; a hero's first
         // 0.5s is its entrance TRANSIENT (slam over-scale, streak fly-in pass through
-        // off-frame states by design) — judge overflow on the hold, not mid-flight.
+        // off-frame states by design) - judge overflow on the hold, not mid-flight.
         if (heroIds.has(cap.id) && heroIn[cap.id] != null && sample.t < heroIn[cap.id] + 0.5)
           continue;
         const off = {
@@ -174,12 +174,12 @@ async function main() {
       const hard = maxOff >= 8;
       console.log(
         `  ${gid}  [overflow${hard ? "" : "-warn"}] "${o.text}" off-frame: ${sides} (@${o.t}s)` +
-          (hard ? " — cropped text is always wrong" : " (graze — within climax tolerance)"),
+          (hard ? " - cropped text is always wrong" : " (graze - within climax tolerance)"),
       );
       if (hard && !failures.includes(gid)) failures.push(gid);
     }
     if (entry.layer === "fg") {
-      console.log(`  ${gid}  fg    (occlusion skipped — fg renders above matte)`);
+      console.log(`  ${gid}  fg    (occlusion skipped - fg renders above matte)`);
       continue;
     }
     const capOccls = entry.samples.map((s) => s.cap_occl);
@@ -221,16 +221,16 @@ async function main() {
     if (heroIds.has(gid) && peakCap < 0.15) {
       // METRIC HONESTY: this advisory uses CAP-AREA occlusion, which saturates ~15%
       // for a width-filled hero over a narrow subject (the 30–55% figure elsewhere is
-      // the safe-zones BAND metric — different denominator). If the hero already owns
-      // the width, "center it + make it BIG" is unactionable — stay quiet.
+      // the safe-zones BAND metric - different denominator). If the hero already owns
+      // the width, "center it + make it BIG" is unactionable - stay quiet.
       const widest = Math.max(...entry.samples.map((sm) => (sm.cap_bbox && sm.cap_bbox.w) || 0), 0);
       if (widest >= frameW * 0.8) {
         console.log(
-          `  ${gid}  [hero-ok] peak ${(peakCap * 100).toFixed(0)}% cap-area — width-saturated hero over a narrow subject; cap-area can't reach the band target (this is the geometry, not a layout fault).`,
+          `  ${gid}  [hero-ok] peak ${(peakCap * 100).toFixed(0)}% cap-area - width-saturated hero over a narrow subject; cap-area can't reach the band target (this is the geometry, not a layout fault).`,
         );
       } else {
         console.log(
-          `  ${gid}  [hero-weak] peak ${(peakCap * 100).toFixed(0)}% — hero barely crosses the subject; it should sit ON the subject (~30–55% by the safe-zones BAND metric = the embed effect). Center it (safe-zones heroAnchor) + make it BIG; don't park it in a clean margin.`,
+          `  ${gid}  [hero-weak] peak ${(peakCap * 100).toFixed(0)}% - hero barely crosses the subject; it should sit ON the subject (~30–55% by the safe-zones BAND metric = the embed effect). Center it (safe-zones heroAnchor) + make it BIG; don't park it in a clean margin.`,
         );
       }
     }

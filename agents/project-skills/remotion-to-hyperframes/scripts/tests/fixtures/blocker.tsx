@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect } from "react";
 import { useCurrentFrame, AbsoluteFill, delayRender, continueRender } from "remotion";
 import { Button } from "@mui/material";
 
-// Custom hook in `export const useFoo = ...` form — earlier custom-hook
+// Custom hook in `export const useFoo = ...` form - earlier custom-hook
 // regex anchored to `^\s*(?:function|const|let)` and missed the `export`
 // prefix. This covers the regression.
 export const useFadeMixed = (n: number) => {
@@ -15,7 +15,7 @@ export const BadComposition: React.FC = () => {
   const [data, setData] = useState<string | null>(null);
   const [handle] = useState(() => delayRender());
 
-  // Multi-line useEffect body with commas inside (fillRect args) — regression
+  // Multi-line useEffect body with commas inside (fillRect args) - regression
   // coverage for r2hf/use-effect-deps. An earlier regex `[^,]+` would stop at
   // the first comma inside the body and miss the deps array entirely.
   useEffect(() => {
@@ -29,7 +29,7 @@ export const BadComposition: React.FC = () => {
       });
   }, [handle]);
 
-  // Expression-bodied useEffect — the form `useEffect(() => fetch(...), [deps])`
+  // Expression-bodied useEffect - the form `useEffect(() => fetch(...), [deps])`
   // has no closing `}`, which an earlier regex anchored on. This and the
   // useLayoutEffect below cover the false-negative cases Miguel surfaced.
   useEffect(() => fetch("/api/heartbeat"), [frame]);

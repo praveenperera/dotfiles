@@ -1,5 +1,5 @@
 {
-  "_": "Default intro-kinetic-cascade program (reversed from act0-intro-bell). `theme` = palette; `icon` = the ringing climax glyph (MATCH TO SCENE — bell|cursor|sparkle|bolt|play|heart|check|star, an emoji, a raw <svg>, or 'none'); `phrases` = the word-by-word cascade (each `times` = VO word onsets / audio onsets, omit to auto-spread); `climax` = the slide-in finale ({icon} marks the glyph). Pass these as the matching composition-variables; empty vars fall back to these values.",
+  "_": "Default intro-kinetic-cascade program (reversed from act0-intro-bell). `theme` = palette; `icon` = the ringing climax glyph (MATCH TO SCENE - bell|cursor|sparkle|bolt|play|heart|check|star, an emoji, a raw <svg>, or 'none'); `phrases` = the word-by-word cascade (each `times` = VO word onsets / audio onsets, omit to auto-spread); `climax` = the slide-in finale ({icon} marks the glyph). Pass these as the matching composition-variables; empty vars fall back to these values.",
   "theme": "light",
   "icon": "bell",
   "phrases": [

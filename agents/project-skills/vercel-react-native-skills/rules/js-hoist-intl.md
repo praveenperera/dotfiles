@@ -58,4 +58,4 @@ const relativeFormatter = new Intl.RelativeTimeFormat('en-US', {
 ```
 
 Creating `Intl` objects is significantly more expensive than `RegExp` or plain
-objects—each instantiation parses locale data and builds internal lookup tables.
+objects - each instantiation parses locale data and builds internal lookup tables.

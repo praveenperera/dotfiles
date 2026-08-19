@@ -1,8 +1,8 @@
-// assets.mjs — stage frame-named capture assets into assets/.
+// assets.mjs - stage frame-named capture assets into assets/.
 // Shared by stage-assets.mjs (Step 4 close, BEFORE the frame workers run) and
 // assemble-index.mjs (Step 5, idempotent backstop). Only assets a frame names
 // in `asset_candidates` are staged; unnamed assets never reach the project.
-// asset_candidates value form: "assets/<basename> — desc; assets/… — …".
+// asset_candidates value form: "assets/<basename> - desc; assets/… - …".
 
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -11,7 +11,7 @@ export function basenamesFromCandidates(value) {
   if (typeof value !== "string") return [];
   return value
     .split(";")
-    .map((seg) => seg.split(/\s+[—–-]\s+/)[0].trim()) // strip the " — description"
+    .map((seg) => seg.split(/\s+[ - –-]\s+/)[0].trim()) // strip the " - description"
     .filter(Boolean)
     .map((p) => basename(p.replace(/^assets\//, "")));
 }
@@ -46,7 +46,7 @@ export function stageAssets({ hyperframesDir, frames }) {
         staged++;
       } else {
         anomalies.push(
-          `asset "${b}" named by a frame but not found under capture/ — frame will 404 it`,
+          `asset "${b}" named by a frame but not found under capture/ - frame will 404 it`,
         );
       }
     }

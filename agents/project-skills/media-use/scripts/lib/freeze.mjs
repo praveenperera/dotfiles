@@ -39,7 +39,7 @@ export function freezeLocalFile(srcPath, destPath) {
   copyFileSync(srcPath, destPath);
 }
 
-// Ingest accepts a DIRECT public media URL only — not a platform page. yt-dlp is
+// Ingest accepts a DIRECT public media URL only - not a platform page. yt-dlp is
 // deliberately out (cloud IPs get blocked, and it's brittle); the supported case
 // is "user points at their own file or a direct asset link". A direct URL is a
 // non-platform host whose path ends in a known media extension.
@@ -51,7 +51,7 @@ const MEDIA_EXT = /\.(mp3|wav|m4a|aac|ogg|flac|mp4|mov|webm|mkv|png|jpe?g|webp|g
 // or a private network. Blocks loopback/localhost, RFC1918, link-local, and the
 // IPv6 equivalents on the literal hostname.
 // ponytail: literal-host check only; a DNS name that *resolves* to a private IP
-// (rebinding) still passes — add resolve-then-check if --from ever fetches from
+// (rebinding) still passes - add resolve-then-check if --from ever fetches from
 // untrusted hostnames at scale.
 const PRIVATE_HOST =
   /^(localhost|.*\.local|.*\.internal|127\.|10\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[?(::1|::ffff:127\.|f[cd][0-9a-f]{2}:|fe80:))/i;

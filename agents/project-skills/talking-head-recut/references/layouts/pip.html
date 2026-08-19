@@ -1,5 +1,5 @@
 <!--
-  Layout: pip — card fills canvas, video rounded PiP in corner
+  Layout: pip - card fills canvas, video rounded PiP in corner
   ─────────────────────────────────────────────────────────────────────
   Implementation: card.zone = "fullscreen" + shrink #video-wrap to a
   corner pill via GSAP, and add a .pip-pill CSS class for the chrome.
@@ -14,7 +14,7 @@
       "contentHints": { "kicker": "...", "title": "...", "detail": "..." }
     }
 
-  GSAP target for #video-wrap (corner pill — pick one per source aspect):
+  GSAP target for #video-wrap (corner pill - pick one per source aspect):
 
     landscape (1920×1080), 16:9 source video:
       tl.set('#video-wrap', { className: 'video-wrapper pip-pill' }, START_SEC);
@@ -34,7 +34,7 @@
       tl.to('#video-wrap',
         { left: 738, top: 28, width: 312, height: 555, ... }, START_SEC);
 
-    4:5 (1080×1350) — y values × 0.703, w/h × 0.703:
+    4:5 (1080×1350) - y values × 0.703, w/h × 0.703:
       landscape-source: { left: 690, top: 28, width: 360, height: 203 } → keep, fits
       portrait-source : { left: 738, top: 28, width: 312, height: 390 }
 

@@ -8,7 +8,7 @@ tags: lists, performance, flatlist, virtualization
 ## Optimize List Performance with Stable Object References
 
 Don't map or filter data before passing to virtualized lists. Virtualization
-relies on object reference stability to know what changed—new references cause
+relies on object reference stability to know what changed - new references cause
 full re-renders of all visible items. Attempt to prevent frequent renders at the
 list-parent level.
 
@@ -102,7 +102,7 @@ function DomainSearch() {
 }
 
 function DomainItem({ tld }: { tld: Tld }) {
-  // Select only what you need—component only re-renders when keyword changes
+  // Select only what you need - component only re-renders when keyword changes
   const keyword = useSearchStore((s) => s.keyword)
   const domain = `${keyword}.${tld.name}`
   return <Text>{domain}</Text>

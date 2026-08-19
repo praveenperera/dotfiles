@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /*
- * fit-fonts.cjs — shrink any plan.json caption group whose single line would overflow
+ * fit-fonts.cjs - shrink any plan.json caption group whose single line would overflow
  * its box, BEFORE render (Cinematic mode). Kills the "font too big → off-frame → shrink
  * → re-render" overflow round. Estimates rendered width from character count × a
  * per-family advance × the group's font-size, compares to the group's box width (its
- * plane width, else the frame), and only ever SHRINKS to fit. Approximate by design —
+ * plane width, else the frame), and only ever SHRINKS to fit. Approximate by design -
  * it prevents gross overflow; check-overflow.cjs remains the exact terminal check.
  *
  *   node fit-fonts.cjs <project-dir>
@@ -13,7 +13,7 @@ const path = require("path");
 const fs = require("fs");
 
 // rough per-family advance (em per char, caps-ish). Condensed faces are narrow; pixel
-// faces wide. Default is conservative. (Estimate only — gate confirms.)
+// faces wide. Default is conservative. (Estimate only - gate confirms.)
 const ADV = {
   anton: 0.44,
   oswald: 0.45,
@@ -94,14 +94,14 @@ function main() {
   try {
     plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
   } catch {
-    console.error("[fit-fonts] no plan.json (Cinematic only) — skipping");
+    console.error("[fit-fonts] no plan.json (Cinematic only) - skipping");
     process.exit(0);
   }
   const W = plan.width || 1920,
     H = plan.height || 1080;
   const groups = (plan.groups || []).concat(plan.crown_group ? [plan.crown_group] : []);
   const MARGIN = 0.92; // leave 8% breathing room inside the box
-  const HERO_MIN_FRAC = 0.18; // a hero below ~0.18·h isn't "big" — keep it punchy, widen its box instead
+  const HERO_MIN_FRAC = 0.18; // a hero below ~0.18·h isn't "big" - keep it punchy, widen its box instead
 
   let changed = 0;
   for (const g of groups) {
@@ -118,7 +118,7 @@ function main() {
     const usable = boxW * MARGIN;
     // A WRAPPING group only overflows if a SINGLE word is wider than the box (the rest
     // wraps). A NOWRAP group must fit its whole line. So don't shrink wrapping narration
-    // down to one line — only force the whole line for nowrap; else just the longest word.
+    // down to one line - only force the whole line for nowrap; else just the longest word.
     const nowrap = /white-space\s*:\s*nowrap/i.test(g.css || "");
     const longestWord = (g.words || []).reduce(
       (m, w) => Math.max(m, String(w.text || "").replace(/\s/g, "").length),
@@ -133,7 +133,7 @@ function main() {
       const isHero = g.hero === true || /^(hero|crown)$/i.test(g.plane || "");
       if (isHero && frac < HERO_MIN_FRAC) {
         // The hero must stay BIG. If it won't fit its box while staying punchy, the BOX is
-        // too narrow (the hero should span the subject) — keep it at the floor + flag it,
+        // too narrow (the hero should span the subject) - keep it at the floor + flag it,
         // rather than silently shrinking the peak into a small word.
         frac = HERO_MIN_FRAC;
         g.css = setFontSize(g.css, frac);
@@ -153,6 +153,6 @@ function main() {
   if (changed) {
     fs.writeFileSync(planPath, JSON.stringify(plan, null, 2));
     console.log(`[fit-fonts] shrank ${changed} group(s) to fit; wrote plan.json`);
-  } else console.log("[fit-fonts] all groups fit their box — no change");
+  } else console.log("[fit-fonts] all groups fit their box - no change");
 }
 main();

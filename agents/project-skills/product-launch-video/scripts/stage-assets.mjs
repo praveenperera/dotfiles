@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// stage-assets.mjs — copy each frame's named asset_candidates from capture/ into
+// stage-assets.mjs - copy each frame's named asset_candidates from capture/ into
 // assets/ so Step 5 frame workers reference real files and the live preview
 // (Step 3 / Step 6) shows them. Runs at Step 4 close, once visual design is
 // locked. assemble-index.mjs re-runs the same staging idempotently as a backstop.
 //
 // Reads:  --storyboard STORYBOARD.md, --hyperframes <project root>.
 // Writes: assets/<basename> for each named, found asset.
-// Exit 0 always once the storyboard parses — a missing asset is a non-fatal
+// Exit 0 always once the storyboard parses - a missing asset is a non-fatal
 // anomaly (the frame would 404 it), not a contract break.
 
 import { existsSync, readFileSync } from "node:fs";

@@ -1,5 +1,5 @@
 <!--
-  Coral — caption skin (preset-local source).
+  Coral - caption skin (preset-local source).
 
   This is the preset's own lower-third karaoke caption look. product-launch-video's
   Step 2 copies it into the project as caption-skin.html; captions.mjs then fills the
@@ -9,7 +9,7 @@
     · the 0 duration + 0 width/height   → real total + canvas size
     · the empty data-brand-tokens style → :root tokens derived from the project's frame.md
 
-  Token contract — reference ONLY this fixed vocab (captions.mjs injects it from
+  Token contract - reference ONLY this fixed vocab (captions.mjs injects it from
   frame.md, so the Step-2 brand overlay flows through; each var has a coral literal
   fallback for standalone preview):
     --cap-ink · --cap-canvas · --cap-accent · --cap-accent-2 · --font-display ·
@@ -19,11 +19,11 @@
   State changes use gsap.set({className}) (applied on the engine's frame-by-frame seek);
   never tl.call() callbacks (seek does not fire them → wrong state on render).
 
-  Visual: a flat warm-cream block on a single ink hairline border — coral's hard-edge
+  Visual: a flat warm-cream block on a single ink hairline border - coral's hard-edge
   geometry, square corners, ZERO radius, ZERO shadow (coral's depth is hard color edges,
   never cast). Bebas Neue, uppercase + tracked, ink glyphs. Upcoming words sit in faint
   ink; the current word gets a solid coral-fire flat block (the brand's signature
-  hard-edge fill — a square block, no blur, no radius) with ink reading on top; spoken
+  hard-edge fill - a square block, no blur, no radius) with ink reading on top; spoken
   words settle to solid ink, fill cleared. Brand/key terms carry a coral hairline
   underline (the counter inflection).
 -->
@@ -44,7 +44,7 @@
     z-index: 20;
     pointer-events: none;
   }
-  /* the keep-out band, from captionBand(H) — frame content stays above it */
+  /* the keep-out band, from captionBand(H) - frame content stays above it */
   .caption-stage {
     position: absolute;
     left: 0;
@@ -56,7 +56,7 @@
     justify-content: center;
   }
   .caption-group {
-    /* every group is absolutely stacked over the SAME band — exactly one shown at a
+    /* every group is absolutely stacked over the SAME band - exactly one shown at a
        time via opacity. Must be absolute: in-flow groups would lay out side-by-side. */
     position: absolute;
     inset: 0;
@@ -66,7 +66,7 @@
     opacity: 0;
   }
 
-  /* THE flat cream block — single ink hairline border, square corners (coral's hard-edge
+  /* THE flat cream block - single ink hairline border, square corners (coral's hard-edge
      geometry), ZERO radius, ZERO shadow */
   .caption-pill {
     max-width: 78%;
@@ -88,20 +88,20 @@
     letter-spacing: 0.06em;
   }
 
-  /* upcoming — faint ink, no fill */
+  /* upcoming - faint ink, no fill */
   .caption-word {
     display: inline-block;
     padding: 0 0.12em;
     color: color-mix(in srgb, var(--cap-ink, #1a1a1a) 40%, var(--cap-canvas, #f5f0e8));
   }
-  /* current word — THE coral-fire flat block (box-shadow spread = a hard square block
+  /* current word - THE coral-fire flat block (box-shadow spread = a hard square block
      w/o layout shift; no blur, no radius), ink reading on top */
   .caption-word.is-active {
     color: var(--cap-ink, #1a1a1a);
     background: var(--cap-accent, #e85d5d);
     box-shadow: 0 0 0 0.1em var(--cap-accent, #e85d5d);
   }
-  /* already spoken — solid ink, fill cleared */
+  /* already spoken - solid ink, fill cleared */
   .caption-word.is-spoken {
     color: var(--cap-ink, #1a1a1a);
     background: transparent;
@@ -109,19 +109,19 @@
   }
 
   /* optional per-word accents (dormant until a word-classer tags them) */
-  /* brand / key term — a coral hairline underline (coral's only display inflection) */
+  /* brand / key term - a coral hairline underline (coral's only display inflection) */
   .caption-word.cap-brand {
     text-decoration: underline;
     text-decoration-thickness: 0.06em;
     text-decoration-color: var(--cap-accent, #e85d5d);
     text-underline-offset: 0.12em;
   }
-  /* numerals / data — Inter body voice, slightly recessed */
+  /* numerals / data - Inter body voice, slightly recessed */
   .caption-word.cap-num {
     font-family: var(--font-body, "Inter"), ui-sans-serif, sans-serif;
     color: color-mix(in srgb, var(--cap-ink, #1a1a1a) 72%, var(--cap-canvas, #f5f0e8));
   }
-  /* emphasis — a coral-dark hairline underline (the counter accent) */
+  /* emphasis - a coral-dark hairline underline (the counter accent) */
   .caption-word.cap-cta {
     text-decoration: underline;
     text-decoration-thickness: 2px;
@@ -195,11 +195,11 @@
       var end = isLast ? DURATION : Math.min(Number(next.start), Number(group.end) + 0.3);
       if (end <= start) end = start + 0.01;
 
-      // group on/off — exactly one group visible at a time
+      // group on/off - exactly one group visible at a time
       tl.set(groupEl, { opacity: 1 }, start);
       tl.set(groupEl, { opacity: 0 }, end);
 
-      // 3-state karaoke via className SETS — seek-safe (gsap.set applies on the
+      // 3-state karaoke via className SETS - seek-safe (gsap.set applies on the
       // engine's frame-by-frame seek; .call callbacks would NOT fire).
       words.forEach(function (w, i) {
         var el = document.getElementById("caption-word-" + g + "-" + i);

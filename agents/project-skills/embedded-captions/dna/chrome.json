@@ -1,8 +1,8 @@
 {
   "name": "chrome",
-  "title": "Chrome — Y2K liquid metal",
+  "title": "Chrome - Y2K liquid metal",
   "register": "loud-luxe",
-  "when": "fashion-tech, music, Y2K-revival, product-flex content. The hero is cast in liquid metal — a gradient sheen sweeps across it once during the hold. Supporting lines stay cool steel.",
+  "when": "fashion-tech, music, Y2K-revival, product-flex content. The hero is cast in liquid metal - a gradient sheen sweeps across it once during the hold. Supporting lines stay cool steel.",
   "font": {
     "family": "Audiowide",
     "weights": [400]
@@ -63,6 +63,6 @@
   "deliveries": {
     "home": "column",
     "rail": "unvalidated",
-    "note": "signature = liquid-metal wordCss + sheen sweep (engine fx) — std ignores wordCss/fx"
+    "note": "signature = liquid-metal wordCss + sheen sweep (engine fx) - std ignores wordCss/fx"
   }
 }

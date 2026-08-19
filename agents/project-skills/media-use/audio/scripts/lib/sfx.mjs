@@ -1,5 +1,5 @@
-// sfx.mjs — sound effects for the media audio engine. Provider-gated (NOT a
-// per-cue merge): the decision is made once, by whether HeyGen is configured —
+// sfx.mjs - sound effects for the media audio engine. Provider-gated (NOT a
+// per-cue merge): the decision is made once, by whether HeyGen is configured -
 // mirroring how TTS and BGM degrade.
 //
 //   HeyGen credential present  →  retrieve EVERY cue from HeyGen's audio library
@@ -32,7 +32,7 @@ export async function resolveSfx({ cues, heygenOK, headers, hyperframesDir, sfxL
   const anomalies = [];
   const destDir = join(hyperframesDir, "assets", "sfx");
 
-  // Dedupe identical (id,name) cues — the same effect named twice in one line
+  // Dedupe identical (id,name) cues - the same effect named twice in one line
   // downloads/copies once.
   const seen = new Set();
   const uniq = cues.filter((c) => {
@@ -46,14 +46,14 @@ export async function resolveSfx({ cues, heygenOK, headers, hyperframesDir, sfxL
     for (const { id, name } of uniq) {
       try {
         // SFX hits score low (~0.5–0.67), below the API's default 0.7 which
-        // silently drops most named cues — floor to 0.4. (BGM/music score high
+        // silently drops most named cues - floor to 0.4. (BGM/music score high
         // and keep the default.)
         const results = await searchSounds(name, "sound_effects", headers, {
           limit: 3,
           minScore: 0.4,
         });
         if (!results.length) {
-          anomalies.push(`sfx "${name}" (id ${id}): no HeyGen match — skipped`);
+          anomalies.push(`sfx "${name}" (id ${id}): no HeyGen match - skipped`);
           continue;
         }
         const top = results[0];
@@ -69,7 +69,7 @@ export async function resolveSfx({ cues, heygenOK, headers, hyperframesDir, sfxL
           volume: SFX_VOLUME,
         });
       } catch (e) {
-        anomalies.push(`sfx "${name}" (id ${id}): retrieval failed — ${e.message}`);
+        anomalies.push(`sfx "${name}" (id ${id}): retrieval failed - ${e.message}`);
       }
     }
     return { sfx, anomalies };
@@ -79,14 +79,14 @@ export async function resolveSfx({ cues, heygenOK, headers, hyperframesDir, sfxL
   const manifestPath = join(sfxLibDir, "manifest.json");
   if (!existsSync(manifestPath)) {
     if (uniq.length)
-      anomalies.push(`no HeyGen credential and no SFX library at ${sfxLibDir} — all cues dropped`);
+      anomalies.push(`no HeyGen credential and no SFX library at ${sfxLibDir} - all cues dropped`);
     return { sfx, anomalies };
   }
   let manifest;
   try {
     manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   } catch (e) {
-    anomalies.push(`SFX manifest parse failed (${e.message}) — all cues dropped`);
+    anomalies.push(`SFX manifest parse failed (${e.message}) - all cues dropped`);
     return { sfx, anomalies };
   }
   // Build lookups: by manifest key, by file basename, and by slug of either, so
@@ -106,7 +106,7 @@ export async function resolveSfx({ cues, heygenOK, headers, hyperframesDir, sfxL
     if (!hit) {
       const known = [...new Set([...byKey.values()].map((v) => v.key))].slice(0, 8).join(", ");
       anomalies.push(
-        `sfx "${name}" (id ${id}): not in bundled library — skipped (have: ${known}…)`,
+        `sfx "${name}" (id ${id}): not in bundled library - skipped (have: ${known}…)`,
       );
       continue;
     }
@@ -122,7 +122,7 @@ export async function resolveSfx({ cues, heygenOK, headers, hyperframesDir, sfxL
       if (!existsSync(src)) {
         anomalies.push(
           `sfx "${name}" (id ${id}): bundled file ${hit.file} missing from the offline ` +
-            `library (${sfxLibDir}) — skipped. Reinstall the media-use skill to ` +
+            `library (${sfxLibDir}) - skipped. Reinstall the media-use skill to ` +
             `restore assets/sfx/*.mp3, or configure a HeyGen credential for retrieval.`,
         );
         continue;

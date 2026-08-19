@@ -3,7 +3,7 @@
 **Look:** introspective monologue, italic poem stacking on a back wall,
 right-aligned cascade for the climax. Sam Harris / Pico Iyer territory.
 
-**Visual identity (LOCKED — do not change):**
+**Visual identity (LOCKED - do not change):**
 
 - 4-slot typography arc: italic 600 → italic 500 hanging-indent → upright
   700 pivot → uppercase 900 climax
@@ -37,7 +37,7 @@ right-aligned cascade for the climax. Sam Harris / Pico Iyer territory.
 | `plane.rotateX`                | Tiny vertical tilt if wall is angled up/down. Usually 0-2 deg.                                                     | `1`                                                                |
 | `font_scale`                   | Multiplier on the locked cap-N base sizes. Tune for frame height.                                                  | `1.0` for 1280×720, `~1.5` for 1920×1080, `~0.7` for 720p portrait |
 | `groups[].slot`                | Which of the 4 typography slots this group uses (1/2/3/4). Drives the arc.                                         | See below                                                          |
-| `groups[].tone`                | "soft" or "present" — drives motion curve                                                                          | `"soft"` for opening lines, `"present"` for pivot+climax           |
+| `groups[].tone`                | "soft" or "present" - drives motion curve                                                                          | `"soft"` for opening lines, `"present"` for pivot+climax           |
 
 ## Slot assignment rules
 
@@ -47,7 +47,7 @@ can avoid it; don't skip slots without reason.
 | Slot | Use for                                                                                                                                  |
 | ---- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | The opener. The "I was thinking" line. Italic, soft entry.                                                                               |
-| 2    | The dreamy continuation / modifier. Smaller italic, hanging-indent — feels like the second half of a sentence with some staggered drift. |
+| 2    | The dreamy continuation / modifier. Smaller italic, hanging-indent - feels like the second half of a sentence with some staggered drift. |
 | 3    | The pivot. Upright (no italic), the syntactic turn. ("but suddenly", "and then…")                                                        |
 | 4    | The climax. Big uppercase 900. The payoff line. Aim for ≤4 short words so the right-aligned cascade naturally wraps to 2-3 lines.        |
 
@@ -130,5 +130,5 @@ soft lines, but reserve slot 4 for the SINGLE climax.
 ## Don't fight the template
 
 If the user wants different typography, different blend, or different motion:
-**use Standard mode** (`../../standard/`). Don't try to override the locked CSS — the
+**use Standard mode** (`../../standard/`). Don't try to override the locked CSS - the
 template's visual consistency is the whole point.

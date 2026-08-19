@@ -55,7 +55,7 @@ function App() {
 import { Text, View } from 'react-native'
 
 function App() {
-  // No loading state needed—font is already available
+  // No loading state needed - font is already available
   return (
     <View>
       <Text style={{ fontFamily: 'Geist-Bold' }}>Hello</Text>

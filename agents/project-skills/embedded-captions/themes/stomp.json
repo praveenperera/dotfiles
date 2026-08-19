@@ -1,7 +1,7 @@
 {
   "name": "stomp",
-  "voice": "full-frame typographic takeover — every beat is a hard-cut center card over a dimmed plate; a long-held card creeps with tension into a true VOID, then the apex detonates in the accent color; the final word dissolves to blur.",
-  "when": "hooks, manifestos, ads, hype openers. The plate runs dimmed throughout — content where the words ARE the show. Body stays bg (text behind the subject is the identity).",
+  "voice": "full-frame typographic takeover - every beat is a hard-cut center card over a dimmed plate; a long-held card creeps with tension into a true VOID, then the apex detonates in the accent color; the final word dissolves to blur.",
+  "when": "hooks, manifestos, ads, hype openers. The plate runs dimmed throughout - content where the words ARE the show. Body stays bg (text behind the subject is the identity).",
   "register": "takeover",
   "fonts": { "body": "Anton" },
   "palette": { "body": "#F5F1E8", "accent": "#FF5C39" },

@@ -1,8 +1,8 @@
 {
   "name": "ink",
-  "title": "Ink — printed on the scene",
+  "title": "Ink - printed on the scene",
   "register": "premium",
-  "when": "BRIGHT scenes (band luma > 150): white offices, daylight, pale walls — the scenes where cream/screen washes out. Multiply blend makes the type read as printed ON the wall, picking up its texture. Confident, editorial-tech tone.",
+  "when": "BRIGHT scenes (band luma > 150): white offices, daylight, pale walls - the scenes where cream/screen washes out. Multiply blend makes the type read as printed ON the wall, picking up its texture. Confident, editorial-tech tone.",
   "font": {
     "family": "Inter",
     "weights": [500, 700, 900]

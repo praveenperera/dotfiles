@@ -21,7 +21,7 @@ test("entityFrom strips filler words from the intent; --entity wins", () => {
   assert.equal(entityFrom("anything", "Notion"), "notion");
 });
 
-test("titleMatches ignores case, spacing, punctuation — and rejects lookalikes", () => {
+test("titleMatches ignores case, spacing, punctuation - and rejects lookalikes", () => {
   assert.ok(titleMatches("Next.js", "nextjs"));
   assert.ok(titleMatches("Coca-Cola", "coca cola"));
   assert.ok(!titleMatches("Slackware", "slack"));
@@ -82,7 +82,7 @@ test("svglSearch skips a non-array payload and retries with the alias query", as
   assert.ok(seen.length >= 2, "raw query then alias");
 });
 
-test("svglSearch returns null when the network is down — the cascade falls through", async (t) => {
+test("svglSearch returns null when the network is down - the cascade falls through", async (t) => {
   t.mock.method(globalThis, "fetch", async () => {
     throw new Error("network down");
   });
@@ -105,7 +105,7 @@ test("faviconSearch rejects DDG's sub-500B placeholder with null", async (t) => 
   assert.equal(await faviconSearch("someco logo", {}), null);
 });
 
-test("faviconSearch hands verified bytes over as a local file — one fetch, no re-download", async (t) => {
+test("faviconSearch hands verified bytes over as a local file - one fetch, no re-download", async (t) => {
   const fetchMock = t.mock.method(globalThis, "fetch", async () => bin(600));
   const res = await faviconSearch("someco logo", {});
   assert.ok(res.localPath, "returns a localPath, not a url");

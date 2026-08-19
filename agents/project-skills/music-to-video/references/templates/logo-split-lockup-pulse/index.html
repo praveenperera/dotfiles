@@ -16,7 +16,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Logo Split / Lockup Pulse — group_7 reference impl</title>
+    <title>Logo Split / Lockup Pulse - group_7 reference impl</title>
     <script src="../../motion-primitives/assets/gsap.min.js"></script>
     <!-- Velocity-driven directional motion blur (registry: motion-blur). Samples each
          target's GSAP x/y per seek and applies a one-sided ghost trail + top blur
@@ -285,7 +285,7 @@
         //  A two-part mark sits joined at center, SPLITS left<->right to open a
         //  gap, GROWS a center word-lockup one word per onset (key word on the
         //  surge), SNAP-CLOSES on a hit, then PULSES with the roll/hihat bed.
-        //  Reversed from group_7 (Lille — World Design Capital 2020 sting).
+        //  Reversed from group_7 (Lille - World Design Capital 2020 sting).
         // ════════════════════════════════════════════════════════════════
 
         // ── 1. Content variables (what a user changes) ─────────────────────
@@ -315,9 +315,9 @@
         // a left radial SPARK with a hollow hub, a right CLOUD/SWIRL).
         var DEFAULT_LEFT = [
           // radial SPARK: 5 rounded strokes, a tight fan up-and-left from a hollow
-          // hub near the text (NOT converging to a needle — reads as a spark/shine).
+          // hub near the text (NOT converging to a needle - reads as a spark/shine).
           // hub at the INNER (right) edge so the spark hugs the text; 5 long strokes
-          // fanning ~140 up-and-left — a big radial spark that helps wrap the lockup.
+          // fanning ~140 up-and-left - a big radial spark that helps wrap the lockup.
           '<svg viewBox="0 0 150 150" fill="none" stroke="currentColor"',
           ' stroke-width="16" stroke-linecap="round">',
           '<line x1="134" y1="66" x2="112" y2="6"/>',
@@ -342,16 +342,16 @@
           "</svg>",
         ].join("");
 
-        // ── 3. BEAT MAP (filled from <group>.audiomap.json — see README) ────
+        // ── 3. BEAT MAP (filled from <group>.audiomap.json - see README) ────
         // group_7.audiomap.json: BPM 92.3. ABSOLUTE audio seconds.
-        // The marks move on only these DISCRETE anchors — NOT on the sustained hi-hat
+        // The marks move on only these DISCRETE anchors - NOT on the sustained hi-hat
         // fill (f17-f86), which is rhythmic texture, not a motion driver. Left + right
         // always move together (mirrored). After the snap the weld HOLDS dead still.
-        var ENTRY = 0.083; // f2  — joined bracket pair appears at center (perc onset)
-        var SPLIT = 0.25; // f6  — brackets fly apart to full width (perc onset)
+        var ENTRY = 0.083; // f2 - joined bracket pair appears at center (perc onset)
+        var SPLIT = 0.25; // f6 - brackets fly apart to full width (perc onset)
         var WORD_ONSETS = [0.25, 1.0]; // one per word; 1.0 = SURGE@1s (f24) carries the key word
-        var CLOSE = 2.083; // f50 — snap shut: words vanish + brackets weld back together
-        var DUR = 2.875; // f69 — hold, then the source hard-cuts to the next group (f70)
+        var CLOSE = 2.083; // f50 - snap shut: words vanish + brackets weld back together
+        var DUR = 2.875; // f69 - hold, then the source hard-cuts to the next group (f70)
 
         var MARK_PAD = 14; // gap between a mark's inner edge and the nearest word
         var WORD_GAP = 34; // must match .words { gap }
@@ -361,7 +361,7 @@
         document.documentElement.style.setProperty("--mark", vars.markColor);
         document.documentElement.style.setProperty("--text", vars.textColor);
 
-        // Insert SVG markup as SANITIZED parsed nodes — never innerHTML, and never
+        // Insert SVG markup as SANITIZED parsed nodes - never innerHTML, and never
         // a raw appendChild. DOMParser builds the tree, then cleanSvg() hard-strips
         // everything that isn't inert drawing: only allow-listed shape elements +
         // presentation attributes survive, so <script>, <image>/<use>/<foreignObject>,
@@ -515,22 +515,22 @@
           // ── MOTION = the few DISCRETE anchors only (the hi-hat bed is texture, not
           //    a motion driver). Left + right always move TOGETHER (mirrored). ──
 
-          // f2  ENTRY — the joined bracket pair BLOOMS in at center (smooth scale-in,
-          //     not a 1-frame pop — the soft grow is what makes the start feel silky).
+          // f2  ENTRY - the joined bracket pair BLOOMS in at center (smooth scale-in,
+          //     not a 1-frame pop - the soft grow is what makes the start feel silky).
           tl.to(
             [markLeft, markRight],
             { autoAlpha: 1, scale: 1, duration: 0.16, ease: "power2.out" },
             ENTRY,
           );
 
-          // f6  SPLIT — both brackets GLIDE apart together to the FULL lockup width in ONE
+          // f6  SPLIT - both brackets GLIDE apart together to the FULL lockup width in ONE
           //     move: a fast launch + long settle (expo.out), and the velocity motion blur
           //     (attached below) smooths the travel so it reads silky, not stiff. Then HOLD
-          //     — words fill the reserved center space; the marks don't track each word.
+          // - words fill the reserved center space; the marks don't track each word.
           tl.to(markLeft, { x: -OFF_FULL, duration: 0.3, ease: "expo.out" }, SPLIT);
           tl.to(markRight, { x: OFF_FULL, duration: 0.3, ease: "expo.out" }, SPLIT);
 
-          // word reveals — each word eases in with a soft stretch on its onset (the key
+          // word reveals - each word eases in with a soft stretch on its onset (the key
           // word on the SURGE). Smooth deceleration (power3.out), NO poppy overshoot.
           wordEls.forEach(function (el, i) {
             var t =
@@ -546,7 +546,7 @@
             );
           });
 
-          // f50 SNAP-CLOSE — 1 frame: words vanish + both brackets teleport back together
+          // f50 SNAP-CLOSE - 1 frame: words vanish + both brackets teleport back together
           //     (the teleport reads as an impact streak through the motion blur).
           tl.set(wordEls, { autoAlpha: 0, display: "none" }, CLOSE);
           tl.set(markLeft, { x: OVL }, CLOSE);
@@ -558,10 +558,10 @@
             CLOSE,
           );
 
-          // SEE-SAW BOUNCE — the welded unit does a damped vertical spring + a building
+          // SEE-SAW BOUNCE - the welded unit does a damped vertical spring + a building
           // rigid tilt (rotation: +deg = left-spark UP / right-cloud DOWN), beat-synced to
           // the hi-hat hits after the snap: f51 slam-down (lowest), f55 up-rebound (highest),
-          // f58 smaller dip, f63 final flick — amplitude decays, ending tilted to the f70 cut.
+          // f58 smaller dip, f63 final flick - amplitude decays, ending tilted to the f70 cut.
           var B1 = 2.125,
             B2 = 2.292,
             B3 = 2.417,

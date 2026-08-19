@@ -1,11 +1,11 @@
-// pad-frame-duration.mjs — keeps a frame's own #root/clip data-duration in
+// pad-frame-duration.mjs - keeps a frame's own #root/clip data-duration in
 // sync with the padded index.html wrapper duration transitions.mjs computes.
 //
 // The frame's OWN internal file declares its #root/clip data-duration to the
 // STORYBOARD's content-only length (frame-worker.md: duration is "fixed
 // upstream"). When an outgoing transition pads the index.html WRAPPER's
 // data-duration to cover the transition tail, the frame's own internal
-// duration is left short — the render engine clip-gates the sub-composition's
+// duration is left short - the render engine clip-gates the sub-composition's
 // visible content at that shorter value, so content vanishes abruptly at
 // content-end instead of fading gracefully through the wrapper's extended
 // fade-out tween. Pad the frame's own file to match so both durations agree.

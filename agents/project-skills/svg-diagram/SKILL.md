@@ -18,12 +18,12 @@ After final verification, remove the generated Rust build cache as described in
 
 Read these based on the task:
 
-- **[overflow.md](references/overflow.md)** — wrap rules and the overflow gate
-- **[build.md](references/build.md)** — render, list, check, and `just check`
-- **[figures.md](references/figures.md)** — add or change a `FigureDef`, register it, pick a size
-- **[examples.md](references/examples.md)** — copyable figures, registration, and embed
-- **[authoring.md](references/authoring.md)** — `El` tree, flex, text, and box style
-- **[components.md](references/components.md)** — `shell`, `card`, `kicker`, `body_text`
-- **[theming.md](references/theming.md)** — `Palette`, `Variant`, `ArrowColor`
-- **[decor.md](references/decor.md)** — connectors, charts, and painter marks
-- **[publish.md](references/publish.md)** — output sets, fonts, and the post embed
+- **[overflow.md](references/overflow.md)** - wrap rules and the overflow gate
+- **[build.md](references/build.md)** - render, list, check, and `just check`
+- **[figures.md](references/figures.md)** - add or change a `FigureDef`, register it, pick a size
+- **[examples.md](references/examples.md)** - copyable figures, registration, and embed
+- **[authoring.md](references/authoring.md)** - `El` tree, flex, text, and box style
+- **[components.md](references/components.md)** - `shell`, `card`, `kicker`, `body_text`
+- **[theming.md](references/theming.md)** - `Palette`, `Variant`, `ArrowColor`
+- **[decor.md](references/decor.md)** - connectors, charts, and painter marks
+- **[publish.md](references/publish.md)** - output sets, fonts, and the post embed

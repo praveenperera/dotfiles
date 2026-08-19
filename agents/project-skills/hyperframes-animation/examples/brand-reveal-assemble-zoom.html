@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene 3 — Assembly Focus Reveal (hyperframes)</title>
+    <title>Scene 3 - Assembly Focus Reveal (hyperframes)</title>
 
     <!--
       HyperFrames composition.tsx.
@@ -77,7 +77,7 @@
         align-items: center;
       }
 
-      /* Companion text — fixed width to prevent assembly jitter */
+      /* Companion text - fixed width to prevent assembly jitter */
       .companion {
         width: 600px;
         display: flex;
@@ -153,7 +153,7 @@
               <div class="brand-group" data-layout-allow-overflow>
                 <span class="brand-text">Hyperframes</span>
                 <div class="hero">
-                  <!-- Inline-SVG placeholder mark — swap for your logo image -->
+                  <!-- Inline-SVG placeholder mark - swap for your logo image -->
                   <svg
                     class="logo-mark"
                     viewBox="0 0 100 100"
@@ -189,7 +189,7 @@
 
     <script>
       /* ================================================================
-         CONSTANTS — composition dimensions baked in.
+         CONSTANTS - composition dimensions baked in.
          ================================================================ */
       const W = 1920,
         H = 1080;
@@ -239,7 +239,7 @@
       ];
 
       /* ================================================================
-         TIMELINE — built synchronously so HyperFrames can seek it.
+         TIMELINE - built synchronously so HyperFrames can seek it.
          ================================================================ */
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
@@ -312,7 +312,7 @@
         );
 
         /* ============================================================
-           PHASE 4: Zoom — scale (outer) + counter-translate (middle) + brand text exits.
+           PHASE 4: Zoom - scale (outer) + counter-translate (middle) + brand text exits.
            ============================================================ */
         tl.to(
           ".zoom-scale",
@@ -348,7 +348,7 @@
         );
 
         /* ============================================================
-           PHASE 5: Breathing — onUpdate so it MULTIPLIES on the hero's
+           PHASE 5: Breathing - onUpdate so it MULTIPLIES on the hero's
            final pop scale, doesn't overwrite it.
            ============================================================ */
         const heroEl = document.querySelector(".hero");

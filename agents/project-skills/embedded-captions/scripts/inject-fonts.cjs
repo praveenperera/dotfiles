@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /*
- * inject-fonts.cjs — inline the @font-face blocks each HTML actually uses.
+ * inject-fonts.cjs - inline the @font-face blocks each HTML actually uses.
  *
  *   node inject-fonts.cjs <project-dir> [file.html ...]
  *
  * hyperframes' renderer only auto-supplies its ~18 CANONICAL_FONTS. Every other
  * family (Anton, Bangers, VT323, Press Start 2P, …) falls back to a generic font
- * unless the HTML ships a local @font-face — even when it "looks fine" locally,
+ * unless the HTML ships a local @font-face - even when it "looks fine" locally,
  * because that only works when the font happens to be installed as a system font.
  * On a clean/offline/CI machine it silently degrades. (hyperframes' own font
  * linter flags exactly this: font_family_without_font_face.)
  *
- * This step reads the bundled font library (modes/standard/fonts/fonts.css —
+ * This step reads the bundled font library (modes/standard/fonts/fonts.css -
  * base64 woff2, no sub-resources), finds which of those families the HTML uses,
  * and inlines just those @font-face blocks into a <style id="hf-embedded-fonts">.
  * Idempotent (re-running replaces the block). Families already declared in the
@@ -55,7 +55,7 @@ function loadFontLibrary() {
     css = fs.readFileSync(FONTS_CSS, "utf8");
   } catch {
     console.error(
-      `[inject-fonts] missing ${FONTS_CSS} — run modes/standard/fonts/build-fonts-css.cjs`,
+      `[inject-fonts] missing ${FONTS_CSS} - run modes/standard/fonts/build-fonts-css.cjs`,
     );
     process.exit(2);
   }
@@ -95,7 +95,7 @@ function usedFamilies(html) {
   return out;
 }
 
-// Families the HTML ALREADY declares via @font-face — leave those alone.
+// Families the HTML ALREADY declares via @font-face - leave those alone.
 function declaredFamilies(html) {
   const out = new Set();
   const famRe = /font-family\s*:\s*(['"]?)([^;'"]+)\1/i;
@@ -123,7 +123,7 @@ function injectInto(file, lib) {
   for (const fam of used) {
     if (already.has(fam)) continue;
     const lb = lib.get(fam);
-    if (!lb) continue; // canonical / system / unknown — not ours to supply
+    if (!lb) continue; // canonical / system / unknown - not ours to supply
     blocks.push(...lb);
     inlined.push(fam);
   }
@@ -131,7 +131,7 @@ function injectInto(file, lib) {
     fs.writeFileSync(file, html);
     return { file: path.basename(file), inlined: [] };
   }
-  const style = `<style id="${MARKER}">\n/* auto-embedded by inject-fonts.cjs — deterministic template fonts */\n${blocks.join("\n")}\n</style>`;
+  const style = `<style id="${MARKER}">\n/* auto-embedded by inject-fonts.cjs - deterministic template fonts */\n${blocks.join("\n")}\n</style>`;
   // Prefer right after <head...>; fall back to before </head>, then <html>, then prepend.
   if (/<head[^>]*>/i.test(html)) html = html.replace(/<head[^>]*>/i, (m0) => `${m0}\n${style}`);
   else if (/<\/head>/i.test(html)) html = html.replace(/<\/head>/i, `${style}\n</head>`);

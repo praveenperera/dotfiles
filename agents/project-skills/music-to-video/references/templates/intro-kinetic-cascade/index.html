@@ -2,8 +2,8 @@
 <html
   lang="en"
   data-composition-variables='[
-    {"id":"theme",   "type":"string", "label":"Palette — light | dark | bold",                         "default":"light"},
-    {"id":"icon",    "type":"string", "label":"Climax icon — bell|cursor|sparkle|bolt|play|heart|check|star, an emoji, <svg>, or none", "default":"bell"},
+    {"id":"theme",   "type":"string", "label":"Palette - light | dark | bold",                         "default":"light"},
+    {"id":"icon",    "type":"string", "label":"Climax icon - bell|cursor|sparkle|bolt|play|heart|check|star, an emoji, <svg>, or none", "default":"bell"},
     {"id":"phrases", "type":"string", "label":"Phrases JSON (empty = built-in intro)",                  "default":""},
     {"id":"climax",  "type":"string", "label":"Climax JSON {text,in,iconAt,hold,size} (empty = default)","default":""}
   ]'
@@ -11,7 +11,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Intro Kinetic Cascade · beat-synced kinetic typography — reference impl</title>
+    <title>Intro Kinetic Cascade · beat-synced kinetic typography - reference impl</title>
     <script src="../../motion-primitives/assets/gsap.min.js"></script>
     <style>
       *,
@@ -165,7 +165,7 @@
           //  swappable, ringing ICON. Asset-free: system type, inline-SVG icon library,
           //  bundled GSAP. Reversed from the VO intro `act0-intro-bell`.
           //
-          //  COMPOSE BY DATA — `phrases` (the cascade) + `climax` (the finale) + `icon`
+          //  COMPOSE BY DATA - `phrases` (the cascade) + `climax` (the finale) + `icon`
           //  (which glyph rings) + `theme` (palette). The icon is its own knob so it can
           //  match the scene: bell for timing, cursor for a click, sparkle for AI, …
           // ════════════════════════════════════════════════════════════════════
@@ -236,7 +236,7 @@
               "</svg>"
             );
           }
-          // Insert SVG markup as SANITIZED parsed nodes — never innerHTML, and never
+          // Insert SVG markup as SANITIZED parsed nodes - never innerHTML, and never
           // a raw appendChild. DOMParser builds the tree, then cleanSvg() hard-strips
           // everything that isn't inert drawing: only allow-listed shape elements +
           // presentation attributes survive, so <script>, <image>/<use>/<foreignObject>,

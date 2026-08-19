@@ -34,7 +34,7 @@ runtime adapter:
 5. HF's render loop seeks the player frame-by-frame via `seekTo(frame)`.
 
 Result: Remotion's React tree renders at HF's deterministic frame ticks.
-Custom hooks, useState, useEffect, MUI components — all work because
+Custom hooks, useState, useEffect, MUI components - all work because
 Remotion's React reconciler is doing the rendering.
 
 ## The recommendation message
@@ -72,19 +72,19 @@ When the skill detects a blocker, output something like:
 ## The lint output already includes recommendations
 
 `lint_source.py` emits a `recommendation` field per finding. Surface those
-verbatim — they're tuned per blocker rule:
+verbatim - they're tuned per blocker rule:
 
 ```json
 {
   "rule": "r2hf/use-state",
-  "message": "useState detected — Remotion compositions that drive animation via React state are not deterministic frame-capture targets in HyperFrames",
+  "message": "useState detected - Remotion compositions that drive animation via React state are not deterministic frame-capture targets in HyperFrames",
   "recommendation": "Use the runtime interop pattern from PR #214 instead of attempting a translation"
 }
 ```
 
 ## When NOT to bow out: warnings only
 
-Some patterns produce warnings, not blockers — translate after dropping
+Some patterns produce warnings, not blockers - translate after dropping
 the wrappers:
 
 | Rule                      | Action                                                              |
@@ -99,7 +99,7 @@ the wrappers:
 
 These are documented in T4 cases 05–07.
 
-`r2hf/lambda-import` is a warning — not a blocker — because Lambda
+`r2hf/lambda-import` is a warning - not a blocker - because Lambda
 configuration is orthogonal to the rendered composition. Translating an
 otherwise-clean Remotion comp shouldn't fail just because the author also
 configured AWS Lambda for distributed rendering. The skill drops the
@@ -110,6 +110,6 @@ set up HF rendering separately.
 ## When the source has BOTH blockers AND warnings
 
 Bow out. The presence of a single blocker means the skill shouldn't
-attempt translation — even if the rest of the composition is clean.
+attempt translation - even if the rest of the composition is clean.
 The user should use interop for the whole thing OR refactor the
 blocker patterns out of their Remotion source first.

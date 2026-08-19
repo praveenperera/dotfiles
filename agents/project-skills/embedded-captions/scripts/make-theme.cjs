@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * make-theme.cjs — THEME mode compiler (third compiler, beside standard/cinematic).
+ * make-theme.cjs - THEME mode compiler (third compiler, beside standard/cinematic).
  *
  * A theme DNA (themes/<name>.json) is a complete visual constitution composed
  * from two registries implemented HERE, once, for all DNAs:
@@ -157,7 +157,7 @@ function fitHeroPx(text, basePx, emPerChar, maxFrac) {
   let px = basePx;
   const maxW = W * (maxFrac || 0.92);
   if (est(px) > maxW) px = Math.floor(maxW / (text.length * emPerChar));
-  // short words: allow growth toward the poster fill, capped — except in the
+  // short words: allow growth toward the poster fill, capped - except in the
   // calm register, where the DNA base size IS the ceiling (quiet briefs got a
   // 188px hero from this growth in the cold-start E2E)
   else if (est(px) < W * 0.55 && dna.register !== "calm")
@@ -208,7 +208,7 @@ function takeWord(authored) {
     if (norm(tWords[i].text) === target) {
       if (tWords[i].used)
         throw new Error(
-          `[make-theme] "${authored}" is already claimed by hero.match — embed setpieces own the hero word: leave it OUT of lines (rail↔climax hand-off)`,
+          `[make-theme] "${authored}" is already claimed by hero.match - embed setpieces own the hero word: leave it OUT of lines (rail↔climax hand-off)`,
         );
       tWords[i].used = true;
       cursor = i + 1;
@@ -216,7 +216,7 @@ function takeWord(authored) {
     }
   }
   throw new Error(
-    `[make-theme] cannot match authored word "${authored}" near transcript position ${cursor} ("${(tWords[cursor] || {}).text}") — lines must follow transcript order verbatim`,
+    `[make-theme] cannot match authored word "${authored}" near transcript position ${cursor} ("${(tWords[cursor] || {}).text}") - lines must follow transcript order verbatim`,
   );
 }
 
@@ -237,7 +237,7 @@ function findPhrase(phrase) {
 }
 const heroInline = !!dna.hero.inline;
 // theme.hero is OPTIONAL: a heroless theme runs pure-body (the right authoring
-// for quiet briefs — "安静/每个词都要读到" wants no setpiece at all).
+// for quiet briefs - "安静/每个词都要读到" wants no setpiece at all).
 const HEROLESS = !theme.hero;
 if (HEROLESS) theme.hero = {};
 const hero = theme.hero.match ? findPhrase(theme.hero.match) : null;
@@ -250,7 +250,7 @@ const heroDisplay = theme.hero.text || theme.hero.match; // case preserved for d
 
 // mark hero transcript words as consumed when the setpiece is EMBED (not inline):
 // the rail/panel/poem must NOT contain them (rail↔climax hand-off), except panel
-// with redact linkage (panel shows them redacted — author includes them).
+// with redact linkage (panel shows them redacted - author includes them).
 const redactLinkage = (dna.linkages || []).includes("redact-until-hero");
 if (!heroInline && !HEROLESS && !redactLinkage) {
   for (let k = 0; k < hero.len; k++) tWords[hero.idx + k].used = true;
@@ -289,7 +289,7 @@ LINES.forEach((L, i) => {
 });
 const LASTWORD = LINES[LINES.length - 1].words[LINES[LINES.length - 1].words.length - 1];
 
-// hero window: onset → bounded hold (maxHold; 0 = to clip end — neonsign's
+// hero window: onset → bounded hold (maxHold; 0 = to clip end - neonsign's
 // lit-sign design). Unbounded default holds turned short clips into wallpaper.
 const heroIn = hero ? hero.start : -999;
 const MAXHOLD = dna.hero.maxHold ?? 3.2;
@@ -340,7 +340,7 @@ if (!heroInline && !HEROLESS) {
     HG.halfW = (n * tw + (n - 1) * gap + 40) / 2;
   } else if (dna.hero.setpiece === "ledwipe") {
     // LED transit panel: the word lights inside a fixed departure-board panel
-    // (demo 1080×232 @ 120px VT323 ≈ 0.50em/char incl tracking) — width-fit
+    // (demo 1080×232 @ 120px VT323 ≈ 0.50em/char incl tracking) - width-fit
     // shrinks the type, never the panel; panel height derives from the type
     const panelW = Math.min(dna.hero.params.panelW || 1080, W - 120);
     const units = heroText.length * 0.5;
@@ -369,7 +369,7 @@ if (!heroInline && !HEROLESS) {
     HG.halfW = (heroText.length * 0.615 * HG.fontPx + (92 * HG.fontPx) / 120) / 2;
   } else if (dna.hero.setpiece === "lasercage") {
     // beam-cage word (demo: Audiowide 100px): exact em width from the measured
-    // char table — the converging beams, cage lines and glow stack all derive
+    // char table - the converging beams, cage lines and glow stack all derive
     // from the word rect, so the fit must not guess
     const em1 = wordPx(heroText, dna.fonts.hero, 1, 0.02) || heroText.length * 0.8;
     HG.fontPx = Math.min(dna.hero.fontPx || 100, Math.floor((W * 0.9) / em1));
@@ -377,7 +377,7 @@ if (!heroInline && !HEROLESS) {
     HG.halfW = (em1 * HG.fontPx) / 2;
   } else if (dna.hero.setpiece === "boltstrike") {
     // storm slam (demo: Anton 145px REMARKABLE): exact em width from the
-    // measured char table — the bolt offsets, word scrim and ozone glow all
+    // measured char table - the bolt offsets, word scrim and ozone glow all
     // derive from the word rect (demo rect: 720×145 → halfW 360)
     const em1 = wordPx(heroText, dna.fonts.hero, 1, 0.012) || heroText.length * 0.56;
     HG.fontPx = Math.min(dna.hero.fontPx || 145, Math.floor((W * 0.92) / em1));
@@ -385,7 +385,7 @@ if (!heroInline && !HEROLESS) {
     HG.halfW = (em1 * HG.fontPx) / 2;
   } else if (dna.hero.setpiece === "holoboot") {
     // volumetric projection word (demo: Orbitron 700 118px, letter-spacing 0):
-    // exact em width from the measured char table — the projection cone, seed
+    // exact em width from the measured char table - the projection cone, seed
     // beam, emitter dot and scrim all derive from the word rect
     const em1 = wordPx(heroText, dna.fonts.hero, 1, 0) || heroText.length * 0.8;
     HG.fontPx = Math.min(dna.hero.fontPx || 118, Math.floor((W * 0.9) / em1));
@@ -393,7 +393,7 @@ if (!heroInline && !HEROLESS) {
     HG.halfW = (em1 * HG.fontPx) / 2;
   } else if (dna.hero.setpiece === "biobloom") {
     // abyss bloom word (demo: Fredoka 700 120px RECOVER, 0.01em tracking):
-    // exact em width from the measured char table — the tendril anchors,
+    // exact em width from the measured char table - the tendril anchors,
     // pocket scrim, pre-glow and spill all derive from the word rect
     const em1 = wordPx(heroText, dna.fonts.hero, 1, 0.01) || heroText.length * 0.66;
     HG.fontPx = Math.min(dna.hero.fontPx || 120, Math.floor((W * 0.9) / em1));
@@ -451,8 +451,8 @@ if (!heroInline && !HEROLESS) {
   } else if (dna.hero.setpiece === "chalkwrite") {
     // hand-written chalk word (demo: HersheyScript "remarkable" ≈860px ink,
     // ink 130 tall, ink CENTER on HG.y): the writing starts at the board's
-    // LEFT margin — a hand writes from the left, never centered on the
-    // subject — so x derives from the body strip, not the hero anchor; the
+    // LEFT margin - a hand writes from the left, never centered on the
+    // subject - so x derives from the body strip, not the hero anchor; the
     // stroke path is parsed at compile time inside the setpiece and the
     // board rect / underlines / fg dust clap all register on the measured
     // ink box. 130 ≈ the chalk ink height (band top → ink center).
@@ -466,7 +466,7 @@ if (!heroInline && !HEROLESS) {
   } else if (dna.hero.setpiece === "spraytag") {
     // spray-painted tag (demo: HersheyScript "recover" w=1000 → ink ≈1010×120,
     // ink center (646,252)): the tag CENTERS on the hero anchor in the sky
-    // band — crossing the subject silhouette is the point; the stroke path is
+    // band - crossing the subject silhouette is the point; the stroke path is
     // parsed at compile time inside the setpiece, which registers the
     // pen-finish point on HG for the fg paint splat (fx.paintsplat). 120 ≈ the
     // tag's ink height (band top → ink center); halfW adds the halo overspray.
@@ -477,7 +477,7 @@ if (!heroInline && !HEROLESS) {
   } else if (dna.hero.setpiece === "brushwrite") {
     // sumi-e gesture (demo: HersheyScript "remarkable" w=760 → ink ≈760×115,
     // ink center (863,202)): the gesture CENTERS on the hero anchor in the sky
-    // band — crossing the subject silhouette is the point; the stroke path is
+    // band - crossing the subject silhouette is the point; the stroke path is
     // parsed at compile time inside the setpiece, which registers the
     // pen-START point on HG for the fg ink flecks (fx.brushflecks). 120 ≈ the
     // gesture's ink height (band top → ink center); halfW adds spatter margin.
@@ -488,7 +488,7 @@ if (!heroInline && !HEROLESS) {
   } else if (dna.hero.setpiece === "inkbloom") {
     // sumi drop in still water (demo: Shippori Mincho 700 132px "pixel size.",
     // 0.02em tracking, case preserved): exact em width from the measured char
-    // table — the blob stack, ripple rings and wisp anchors all derive from
+    // table - the blob stack, ripple rings and wisp anchors all derive from
     // the word rect (kx/ky scale units inside the setpiece)
     const em1 = wordPx(heroDisplay, dna.fonts.hero, 1, 0.02) || heroDisplay.length * 0.5;
     HG.fontPx = Math.min(dna.hero.fontPx || 132, Math.floor((W * 0.9) / em1));
@@ -512,7 +512,7 @@ if (!heroInline && !HEROLESS) {
     HG.halfW = (em1 * HG.fontPx + n * 6) / 2;
   } else if (dna.hero.setpiece === "coverword") {
     // metric-exact fit from the replica font's advance widths (logo case:
-    // first letter upper, rest lower — the official mark's own arrangement)
+    // first letter upper, rest lower - the official mark's own arrangement)
     const CPM = JSON.parse(
       fs.readFileSync(path.join(SKILL, "assets/brand/cyberpunk-widths.json"), "utf8"),
     );
@@ -520,7 +520,7 @@ if (!heroInline && !HEROLESS) {
     const bad = [...disp].filter((c) => !(c in CPM.widths));
     if (bad.length)
       throw new Error(
-        `[make-theme] coverword: no replica glyph for ${JSON.stringify(bad)} in "${heroText}" — pick a hero without digits/special chars or use hero.text`,
+        `[make-theme] coverword: no replica glyph for ${JSON.stringify(bad)} in "${heroText}" - pick a hero without digits/special chars or use hero.text`,
       );
     const em = [...disp].reduce((a, c) => a + CPM.widths[c], 0) + 0.01 * (disp.length - 1);
     // glyph ink is small inside the em box (x-height ~0.3em) -> size by INK:
@@ -535,7 +535,7 @@ if (!heroInline && !HEROLESS) {
     HG.coverDisp = disp;
     HG.coverInk = { inkTop, inkBot, inkH };
   }
-  // keep the word on frame (when wider than the frame, CENTER it — an inverted
+  // keep the word on frame (when wider than the frame, CENTER it - an inverted
   // Math.max/Math.min clamp would silently pin to the lower bound off-center)
   if (HG.halfW)
     HG.x =
@@ -546,7 +546,7 @@ if (!heroInline && !HEROLESS) {
 // ---------- shared emit helpers ----------
 const MULBERRY = `function mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;}}`;
 
-// bundled @font-face subset for this DNA's families — the renderer only
+// bundled @font-face subset for this DNA's families - the renderer only
 // auto-supplies its canonical fonts; anything else silently falls back unless
 // the page ships a local @font-face (same determinism contract as Standard).
 const FONT_FACES = (() => {
@@ -588,7 +588,7 @@ const GSAP = `<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.mi
 function bgSkeleton(stageHtml, css, js) {
   const FONT_CSS = fontCssFor(stageHtml + css);
   return `<!doctype html>
-<!-- generated by make-theme.cjs — theme DNA "${dna.name}" (bg layer) -->
+<!-- generated by make-theme.cjs - theme DNA "${dna.name}" (bg layer) -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -629,7 +629,7 @@ ${js}
 function fgSkeleton(stageHtml, css, js) {
   const FONT_CSS = fontCssFor(stageHtml + css);
   return `<!doctype html>
-<!-- generated by make-theme.cjs — theme DNA "${dna.name}" (fg alpha layer) -->
+<!-- generated by make-theme.cjs - theme DNA "${dna.name}" (fg alpha layer) -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -666,7 +666,7 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
 const J = JSON.stringify;
 
 /* =====================================================================
- * BODY PARADIGMS — each returns { css, html, js } for the fg (or bg) file
+ * BODY PARADIGMS - each returns { css, html, js } for the fg (or bg) file
  * ===================================================================== */
 
 function paradigmRail() {
@@ -728,7 +728,7 @@ ${
         tl.set(el, { textShadow: "2px 0 0 #00F0FF, -2px 0 0 #FF003C, 0 2px 10px rgba(0,0,0,0.75)" }, st + 2 * F);
       }`
     : fade
-      ? `      // FADE: 2-frame fade-up — the word simply reads (anchor register)
+      ? `      // FADE: 2-frame fade-up - the word simply reads (anchor register)
       tl.fromTo(el, { opacity: 0, y: 4 }, { opacity: 1, y: 0, duration: 0.12, ease: "power2.out" }, st);
       if (minor) tl.fromTo(el, { scale: 1.07 }, { scale: 1, duration: 0.3, ease: "power2.out" }, st);`
       : stamp
@@ -775,7 +775,7 @@ ${
     ? `  // rail yields while the apex lands (furniture never contests the hero).
   // Overlap guards: dim starts after the line is IN, never runs into the exit;
   // restore is emitted only with clear runway before the exit (else the line
-  // simply exits dimmed — never two owners of one opacity).
+  // simply exits dimmed - never two owners of one opacity).
   RAIL.forEach((L) => {
     if (L.in < ${heroIn.toFixed(3)} + 0.9 && L.out > ${heroIn.toFixed(3)} - 0.3) {
       const XO2 = L.out - ${b.exit === "drop" ? "0.18" : "0.17"};
@@ -905,7 +905,7 @@ function paradigmPoem() {
   });
   if (stanzas.some((s) => s.length > b.stanzaTops.length))
     console.warn(
-      "[make-theme] poem stanza exceeds available slots — extra lines share the last slot",
+      "[make-theme] poem stanza exceeds available slots - extra lines share the last slot",
     );
   const stanzaData = stanzas.map((s, si) =>
     s.map((L, li) => ({
@@ -1111,7 +1111,7 @@ function paradigmTakeover() {
 }
 
 /* =====================================================================
- * HERO SETPIECES (embedded, bg layer) — { css, html, js } for index.html
+ * HERO SETPIECES (embedded, bg layer) - { css, html, js } for index.html
  * ===================================================================== */
 
 function setpieceDetonation() {
@@ -1277,7 +1277,7 @@ function setpieceDrawon() {
   const h = dna.hero,
     p = h.params,
     I = heroIn;
-  // generate the stroke path at COMPILE time — any word, zero tuning
+  // generate the stroke path at COMPILE time - any word, zero tuning
   const fontPath = path.join(SKILL, "assets/strokefonts", dna.fonts.strokeFont);
   const gen = path.join(SKILL, "scripts/gen-stroke-path.py");
   const tw = Math.min(p.targetWidth || 640, W - 200);
@@ -1368,7 +1368,7 @@ ${
 }
 
 /* =====================================================================
- * FRONT FX (fg layer additions) — flash / rings / sparks / scanband
+ * FRONT FX (fg layer additions) - flash / rings / sparks / scanband
  * ===================================================================== */
 function frontFx() {
   const fx = dna.fx || {};
@@ -1462,7 +1462,7 @@ function frontFx() {
   }
   if (fx.coinflash) {
     // 1-frame arcade impact flash at the boss-word strike (the coin blip at
-    // max amplitude) — vertical center rides the hero band
+    // max amplitude) - vertical center rides the hero band
     const FT = I + ((dna.hero.params || {}).flashDelay ?? 0.14);
     const cyP = Math.round((HG.y / H) * 100);
     css += `
@@ -1475,7 +1475,7 @@ function frontFx() {
   }
   if (fx.inkflecks) {
     // red ink flecks spatter off the rubber-stamp contact (fg layer, ballistic
-    // with gravity) — fires at C = heroIn + params.crush, the punch anchor
+    // with gravity) - fires at C = heroIn + params.crush, the punch anchor
     const C4 = I + ((dna.hero.params || {}).crush ?? 0.074);
     css += `
   .fxfleck { position:absolute; left:${HG.x}px; top:${HG.y}px; border-radius:50%;
@@ -1499,7 +1499,7 @@ function frontFx() {
   }
   if (fx.laserflash) {
     // apex contact flash in FRONT of everything (the laser ignite pop, 4
-    // frames) — sized from the hero rect, tinted with the accent
+    // frames) - sized from the hero rect, tinted with the accent
     const fw = Math.round(2 * (HG.halfW || 330) + 80),
       fh = Math.round((HG.fontPx || 100) * 4.8);
     css += `
@@ -1514,7 +1514,7 @@ function frontFx() {
   if (fx.strikeflash) {
     // full-frame lightning flash in FRONT of everything: leader blink 2 frames
     // before contact (bright / dim alternation), return stroke at contact + 1f,
-    // expo-out decay — same flicker grammar as the bg bolt
+    // expo-out decay - same flicker grammar as the bg bolt
     css += `
   #fxstrike { position:absolute; inset:0; opacity:0;
            background: radial-gradient(80% 65% at 50% 38%, rgba(245,250,255,0.9) 0%, rgba(205,228,252,0.5) 40%, rgba(110,140,180,0) 100%); }`;
@@ -1527,7 +1527,7 @@ function frontFx() {
   }
   if (fx.holoflash) {
     // cyan LOCK flash in front of everything when the projection boots to
-    // full brightness — a radial centered on the hero (frame-fraction anchor)
+    // full brightness - a radial centered on the hero (frame-fraction anchor)
     const hxP = ((HG.x / W) * 100).toFixed(1),
       hyP = ((HG.y / H) * 100).toFixed(1);
     css += `
@@ -1540,7 +1540,7 @@ function frontFx() {
   }
   if (fx.sporeburst) {
     // bioluminescent spores burst PAST the bloom at contact (fg, in front of
-    // the subject) — seeded radial puffs from the hero center, slight sink
+    // the subject) - seeded radial puffs from the hero center, slight sink
     const C6 = I + ((dna.hero.params || {}).crush ?? 0.11);
     css += `
   .fxspore { position:absolute; left:${HG.x}px; top:${HG.y}px; border-radius:50%;
@@ -1563,7 +1563,7 @@ function frontFx() {
   }
   if (fx.silkmotes) {
     // gentle aurora light motes drifting up near the ribbon during its hold
-    // (fg layer) — seeded along the ribbon span at the demo's spread fractions
+    // (fg layer) - seeded along the ribbon span at the demo's spread fractions
     // (the gap around 0.4 keeps them off the subject's face)
     const halfW = HG.halfW || 440;
     css += `
@@ -1590,7 +1590,7 @@ function frontFx() {
   }
   if (fx.paperscraps) {
     // torn paper scraps puff PAST the subject at each apex chip contact (fg,
-    // in front) — ballistic steps(4) arcs, one accent scrap per puff
+    // in front) - ballistic steps(4) arcs, one accent scrap per puff
     // (the papermat landing rhythm); centers baked from the chip geometry
     const N9 = heroText.length;
     const pitch9 = HG.pitch || 132,
@@ -1632,7 +1632,7 @@ function frontFx() {
   }
   if (fx.confetti) {
     // paper confetti flicks up PAST the subject when the apex word pops (fg,
-    // in front) — seeded ballistic arcs with card tumble; launch line baked
+    // in front) - seeded ballistic arcs with card tumble; launch line baked
     // from the centerfold hinge (90% of the burst box, where the paper folds)
     const u0 = (HG.burstR || 220) / 220;
     const boxH0 = HG.boxH || 560;
@@ -1666,7 +1666,7 @@ function frontFx() {
   }
   if (fx.chalkclap) {
     // hand-slap dust CLAP in FRONT of the subject the instant the chalk word
-    // completes (the bg board shakes the same frame) — seeded radial specks +
+    // completes (the bg board shakes the same frame) - seeded radial specks +
     // a soft blurred puff, centered on the pen's final contact point (baked
     // by setpieceChalkwrite into HG.clapX/Y/T)
     const cx9 = Math.round(HG.clapX ?? HG.x + (HG.halfW || 80)),
@@ -1702,7 +1702,7 @@ function frontFx() {
   }
   if (fx.paintsplat) {
     // paint SPLAT in FRONT of the subject the instant the spray tag completes
-    // — a hot magenta ring + a soft paint-color ring + seeded droplets with
+    // - a hot magenta ring + a soft paint-color ring + seeded droplets with
     // gravity, centered on the pen-finish point (baked by setpieceSpraytag
     // into HG.splatX/Y/T)
     const sx = Math.max(60, Math.min(W - 60, Math.round(HG.splatX ?? HG.x + (HG.halfW || 80))));
@@ -1744,7 +1744,7 @@ function frontFx() {
   }
   if (fx.brushflecks) {
     // ink flecks kicked PAST the subject at the brush's first contact (the
-    // start-splat depth pass) — seeded upward ballistic arcs from the pen-START
+    // start-splat depth pass) - seeded upward ballistic arcs from the pen-START
     // point (baked by setpieceBrushwrite into HG.fleckX/Y/T)
     const bx = Math.max(40, Math.min(W - 40, Math.round(HG.fleckX ?? HG.x - (HG.halfW || 80))));
     const by = Math.round(HG.fleckY ?? HG.y);
@@ -1867,7 +1867,7 @@ function paradigmLastpage() {
   });
   // the field breathes imperceptibly (alive, unreadable)
   ${inst.map((f, i) => `tl.to("#f${i}", { y: ${prnd() - 0.5 > 0 ? "+" : "-"}${(3 + prnd() * 5).toFixed(1)}, duration: ${(2.4 + prnd() * 2).toFixed(1)}, ease: "sine.inOut" }, 0);`).join("\n  ")}
-  // APEX: rack focus — the future was only ever one sentence
+  // APEX: rack focus - the future was only ever one sentence
   tl.to(".fld", { filter: "blur(0px)", duration: 0.38, ease: "power3.inOut" }, I - 0.1);
   ${inst
     .map((f, i) =>
@@ -2006,7 +2006,7 @@ ${
     gsap.set(line, { xPercent: -50, yPercent: -50 });
     L.words.forEach(([txt, st, em], wi) => {
       const { tile, flap, rl, w1, w2 } = tiles[wi];
-      // flick 1 (wrong), flick 2 (wrong), flick 3 (real) — the flap motif
+      // flick 1 (wrong), flick 2 (wrong), flick 3 (real) - the flap motif
       tl.set(tile, { opacity: 1 }, st);
       tl.set(w1, { display: "block" }, st);
       tl.fromTo(flap, { rotationX: -88 }, { rotationX: 0, duration: 0.05, ease: "power1.in" }, st);
@@ -2042,7 +2042,7 @@ ${
     const t = L.words[0][1];
     tl.set("#n" + k, { display: "none" }, t);
     tl.set("#n" + (k + 1), { display: "block" }, t);
-    // immediateRender:false — the flap is visible from t=0; the from-state must
+    // immediateRender:false - the flap is visible from t=0; the from-state must
     // not leak into the opening hold (paused timeline + seek renders it)
     tl.fromTo("#ctrflap", { rotationX: -80 }, { rotationX: 0, duration: 0.07, ease: "power2.in", immediateRender: false }, t);
     tl.set("#ctrflap", { scaleY: 0.92 }, t + 0.07);
@@ -2269,7 +2269,7 @@ function paradigmVhsrail() {
     GRN = dna.palette.green || dna.palette.accent,
     RED = dna.palette.red || "#FF2E2E",
     CYN = dna.palette.cyan || "#3FE8E8";
-  // line windows: `out` is the REWIND start — early into dead air (with the
+  // line windows: `out` is the REWIND start - early into dead air (with the
   // PLAY→REW gag), before the clip end for the last line
   const lineData = LINES.map((L, i) => {
     const lastEnd = L.words[L.words.length - 1].end;
@@ -2592,13 +2592,13 @@ ${
 function paradigmCarbonstrip() {
   // CARBONSTRIP: cold-war case-file transcript strip docked on the clearer
   // side (manila gradient, punch holes, faint red watermark, typed case
-  // header). Carbon type HAMMERS in per word — per-char sets 30ms apart,
-  // scale 1.35→1 in one frame (the stamp motif at low amplitude) — every
+  // header). Carbon type HAMMERS in per word - per-char sets 30ms apart,
+  // scale 1.35→1 in one frame (the stamp motif at low amplitude) - every
   // strike kicks the strip 1px (y-channel locked while the strip itself is
   // tweened); seeded ±1.2px baselines + seeded ribbon-ink weight. Emphasis
   // words get a red ink ellipse drawn around them. Lines live on up to
   // body.rows fixed slots; PAGES (broken at full rows, dead-air gaps > 0.7s,
-  // and after the hero hand-off line — it is filed away while the stamp owns
+  // and after the hero hand-off line - it is filed away while the stamp owns
   // the frame) exit by X-row over-strike (3 chunks per line, lines 0.16s
   // apart) then a carriage yank-down feed; the final page is pulled with the
   // whole strip at clip end. The strip top-shadow breathes during the
@@ -2733,7 +2733,7 @@ ${pageData
   // ---- body paradigm: CARBONSTRIP (typewriter hammer in / X-strike + carriage-feed out) ----
   const strip = document.getElementById("strip");
   const krnd = mulberry32(${b.seed || 180618});
-  // y-channel windows where the strip is tweened — no kicks allowed inside
+  // y-channel windows where the strip is tweened - no kicks allowed inside
   const YLOCK = ${J(YLOCK)};
   function kick(t) {
     for (const [a, b] of YLOCK) if (t >= a && t <= b + 0.045) return;
@@ -2832,14 +2832,14 @@ ${
     : ""
 }
 
-  // ===== ending: the file is pulled — strip yanks down and is gone =====
+  // ===== ending: the file is pulled - strip yanks down and is gone =====
   tl.to(strip, { y: 34, duration: 0.09, ease: "power3.in" }, ${FY});
   tl.to(strip, { opacity: 0, duration: 0.06 }, ${(FY + 0.02).toFixed(3)});`;
   return { css, html, js };
 }
 
 function paradigmLaserrail() {
-  // LASERRAIL: concert lower third — every word is IGNITED where two thin
+  // LASERRAIL: concert lower third - every word is IGNITED where two thin
   // laser beams (accent from the top-left, magenta from the top-right) sweep
   // to CONVERGE on its position 2 frames early; at convergence a flare pops
   // and the word snaps on in laser color (the apex motif at low amplitude:
@@ -3034,7 +3034,7 @@ function paradigmStormrail() {
   const lineData = LINES.map((L) => ({
     id: "st" + L.id,
     in: +L.in.toFixed(3),
-    // wash start: just before the next line — but a line facing dead air
+    // wash start: just before the next line - but a line facing dead air
     // washes away early (the demo's r1 exits at lastWord + 1.08s)
     out: +Math.min(L.out - 0.05, L.words[L.words.length - 1].end + 1.08, DUR - 0.2).toFixed(3),
     words: L.words.map((w) => [w.display, +w.start.toFixed(3), w.minor ? 1 : 0]),
@@ -3256,12 +3256,12 @@ function paradigmHolorail() {
       }
     });
 
-    // slow rotateY drift — it IS a projection
+    // slow rotateY drift - it IS a projection
     const dS = L.words[0][1] + 0.08;
     const dD = Math.max(0.3, L.exit - dS - 0.04);
     tl.to(line, { keyframes: { rotationY: [-3.5, 3.5, -2.5] }, duration: dD, ease: "none" }, dS);
 
-    // EXIT: projector cut — line collapses to a bright slit, then to a dot
+    // EXIT: projector cut - line collapses to a bright slit, then to a dot
     const ex = L.exit;
     tl.set(line, { filter: "brightness(2.2)" }, ex);
     tl.to(line, { scaleY: 0.045, duration: 0.07, ease: "power3.in" }, ex + 0.005);
@@ -3284,7 +3284,7 @@ ${
 }
 
 function paradigmPlanktonrail() {
-  // PLANKTONRAIL: deep-sea lower third on TWO coexisting row slots — even
+  // PLANKTONRAIL: deep-sea lower third on TWO coexisting row slots - even
   // lines ride the upper row, odd lines the lower, so couplets share the
   // water like drifting strata. Words GLOW ON like jellyfish (the apex bloom
   // at low amplitude): 2-frame opacity + radial bloom from center (scale
@@ -3294,7 +3294,7 @@ function paradigmPlanktonrail() {
   // Furniture: seeded plankton motes drift f(t) in the open water; the ones
   // seeded in a ring around the apex get ATTRACTED to the bloom and brighten
   // as it lands. The line feeding the apex dims while the bloom owns the
-  // frame (no restore — it exits dimmed, by design); a line entering during
+  // frame (no restore - it exits dimmed, by design); a line entering during
   // the hold arrives dimmed and restores once the bloom settles.
   const b = dna.body;
   const A = dna.palette.accent,
@@ -3433,7 +3433,7 @@ function paradigmPlanktonrail() {
       }
     });
 
-    // EXIT: light sinks — drift down +15 while dimming
+    // EXIT: light sinks - drift down +15 while dimming
     if (L.out != null) {
       tl.to(line, { y: 15, opacity: 0, duration: 0.3, ease: "power1.in" }, L.out);
       tl.set(line, { display: "none" }, Math.min(L.out + 0.32, ${(DUR - 0.02).toFixed(2)}));
@@ -3459,18 +3459,18 @@ function paradigmPlanktonrail() {
 }
 
 function paradigmSheenrail() {
-  // SHEENRAIL: iridescent silk lower third on TWO coexisting row slots — even
+  // SHEENRAIL: iridescent silk lower third on TWO coexisting row slots - even
   // lines ride the upper row (H − bottomPx − rowDy), odd lines the lower
   // (H − bottomPx), so couplets read together like a woven pair. Words are
   // aurora-gradient ink (background-clip:text over a rose→teal→violet wash
-  // whose backgroundPosition DRIFTS f(t) across the whole clip — the body's
+  // whose backgroundPosition DRIFTS f(t) across the whole clip - the body's
   // hold life) above a blurred dark understroke; entrance = 2-frame opacity
   // + y8 settle (the ribbon's flow at low amplitude); emphasis = ONE bright
   // sheen sweep marching through the word + a brightness pulse. Exits
   // dissolve UPWARD (y−12, blur 3, staggered) and each line releases 3-4
   // drifting light streaks that float up from its row. A soft radial band
-  // scrim sits under the rows (stable reading surface); the whole rail —
-  // band included — yields while the ribbon writes. Line scheduling mirrors
+  // scrim sits under the rows (stable reading surface); the whole rail -
+  // band included - yields while the ribbon writes. Line scheduling mirrors
   // planktonrail's two-row coexistence: a row clears when next needed (line
   // i+2) or shortly after its couplet finishes speaking (staggered pair
   // exits); the pre-apex leftover clears at heroIn−0.32 while the FEEDING
@@ -3586,10 +3586,10 @@ function paradigmSheenrail() {
       }
     }
   });
-  // continuous iridescent sheen drift f(t) — the body's hold life
+  // continuous iridescent sheen drift f(t) - the body's hold life
   tl.fromTo(allGrads, { backgroundPosition: "0% 50%" },
             { backgroundPosition: "300% 50%", duration: ${(DUR - 0.04).toFixed(3)}, ease: "none" }, 0);
-  // rail yields — band included — while the ribbon writes (apex owns the frame)
+  // rail yields - band included - while the ribbon writes (apex owns the frame)
   tl.to("#skwrap", { opacity: ${yld.dim ?? 0.5}, duration: 0.2, ease: "sine.in" }, I - ${(yld.pre ?? 0.16).toFixed(2)});
   tl.to("#skwrap", { opacity: 1, duration: 0.3, ease: "sine.out" }, I + ${(yld.post ?? 0.62).toFixed(2)});`;
   return { css, html, js };
@@ -3597,7 +3597,7 @@ function paradigmSheenrail() {
 
 function paradigmScoperail() {
   // SCOPERAIL: oscilloscope lower third. A dark phosphor scope band (HUD
-  // readouts, graticule) hosts an ALWAYS-ALIVE waveform — an SVG polyline
+  // readouts, graticule) hosts an ALWAYS-ALIVE waveform - an SVG polyline
   // rebuilt from baked point-set states (seeded pseudo-RMS envelope: speech
   // grows it, silence flattens it, every word arrival kicks a local gaussian
   // burst for ~3 frames; the hero words kick WIDE bursts where the trace
@@ -3607,7 +3607,7 @@ function paradigmScoperail() {
   // words get a ticking frequency-readout chip; the trig LED blinks on every
   // word arrival. Lines collapse INTO the waveform on exit. At the FINAL word
   // the trace explodes to max-amp chaos, flatlines, collapses to a single dot
-  // and `body.siglost` stamps — the scope dies with the clip.
+  // and `body.siglost` stamps - the scope dies with the clip.
   const b = dna.body;
   const A = dna.palette.accent,
     BRT = dna.palette.bright || "#d6ffe4",
@@ -3618,7 +3618,7 @@ function paradigmScoperail() {
   const bandTop = H - bandH;
   const waveH = b.waveH || 84;
   const NZ = +LASTWORD.start.toFixed(3); // the scope-death beat
-  // line windows: exits collapse into the trace — early into dead air
+  // line windows: exits collapse into the trace - early into dead air
   // (lastWordStart+0.67), else just before the next line needs the slot
   const lineData = LINES.map((L, i) => {
     const lastSt = L.words[L.words.length - 1].start;
@@ -3705,13 +3705,13 @@ function paradigmScoperail() {
     lineData.map((L) => `        <div class="scln" id="${L.id}"></div>`).join("\n") +
     `
       </div>
-      <div id="scsiglost">${esc(b.siglost || "— SIGNAL LOST —")}</div>
+      <div id="scsiglost">${esc(b.siglost || " - SIGNAL LOST - ")}</div>
       <div id="scdot"></div>`;
   const js = `
   // ---- body paradigm: SCOPERAIL (trace-wipe words, waveform alive all clip) ----
   const rnd = mulberry32(${b.waveSeed || 7});
   const NZ = ${NZ.toFixed(3)}, ENDC = ${(DUR - 0.02).toFixed(3)};
-  const BURST = ${J(burst)};            // [t, x, big] — word arrivals kick the trace
+  const BURST = ${J(burst)};            // [t, x, big] - word arrivals kick the trace
   const allT = BURST.map((q) => q[0]);
   const burstAt = {}; const bigAt = {};
   BURST.forEach(([t, x, big]) => { burstAt[t] = x; if (big) bigAt[t] = 1; });
@@ -3863,7 +3863,7 @@ ${
 }
 
 function paradigmPaperrail() {
-  // PAPERRAIL: stop-motion craft table — a kraft strip (torn top edge, washi-
+  // PAPERRAIL: stop-motion craft table - a kraft strip (torn top edge, washi-
   // taped corners, handwritten tag) holds cream paper chips that are PLACED
   // one by one: opacity full in 0 frames, y −16 + scale 1.06→1 with steps(2),
   // seeded ±2.5° crooked = the papermat drop at low amplitude. The strip
@@ -3996,7 +3996,7 @@ ${resT + 0.3 < DUR ? `  tl.to(["#pstrip", "#plines"], { opacity: 1, duration: 0.
       }
       const r0 = (rrnd()-0.5)*5;         // seeded ±2.5° crooked placement
       gsap.set(el, { transformOrigin: "50% 80%" });
-      // PLACED: the apex drop at low amplitude — opacity full in 0 frames
+      // PLACED: the apex drop at low amplitude - opacity full in 0 frames
       tl.set(el, { opacity: 1, rotation: r0 }, st);
       tl.fromTo(el, { y: -16, scale: 1.06 }, { y: 0, scale: 1, duration: 0.12, ease: "steps(2)" }, st);
       // handmade hold wobble (rotation only, ~5fps)
@@ -4022,7 +4022,7 @@ ${resT + 0.3 < DUR ? `  tl.to(["#pstrip", "#plines"], { opacity: 1, duration: 0.
 }
 
 function paradigmPopuprail() {
-  // POPUPRAIL: pop-up book page — a cream page strip (center foldline) unfolds
+  // POPUPRAIL: pop-up book page - a cream page strip (center foldline) unfolds
   // up from the bottom edge (scaleY back.out, the stage is built); words POP
   // UP on a baseline hinge (rotationX 85→0, back.out = the centerfold motif at
   // low amplitude) on two reading rows that alternate per line. Emphasis words
@@ -4136,7 +4136,7 @@ ${lineData.map((L) => `        <div class="puline" id="${L.id}"></div>`).join("\
     L.words.forEach(([txt, st, kind, wobT, wobD, strutT], wi) => {
       const { w, strut, slot } = els[wi];
       gsap.set(w, { transformPerspective: 650, transformOrigin: "50% 100%", rotationX: 85 });
-      // POP UP — baseline hinge, paper overshoot; back-shadow grows as it rises
+      // POP UP - baseline hinge, paper overshoot; back-shadow grows as it rises
       tl.set(w, { opacity: 1, textShadow: "0 0px 0px rgba(70,50,25,0)" }, st);
       tl.to(w, { rotationX: 0, duration: 0.25, ease: "back.out(1.4)" }, st);
       tl.to(w, { textShadow: "0 3px 5px rgba(70,50,25,0.38)", duration: 0.25, ease: "power1.out" }, st);
@@ -4153,7 +4153,7 @@ ${lineData.map((L) => `        <div class="puline" id="${L.id}"></div>`).join("\
         tl.set(strut, { opacity: 1 }, strutT);
         tl.to(strut, { scaleY: 1, duration: 0.12, ease: "back.out(2)" }, strutT);
       }
-      // EXIT — the page closes: words fold flat in an L→R wave
+      // EXIT - the page closes: words fold flat in an L→R wave
       const ft = L.foldT + wi * 0.045;
       tl.to(w, { rotationX: 88, duration: 0.12, ease: "power2.in" }, ft);
       tl.to(w, { textShadow: "0 0px 0px rgba(70,50,25,0)", duration: 0.12 }, ft);
@@ -4164,7 +4164,7 @@ ${lineData.map((L) => `        <div class="puline" id="${L.id}"></div>`).join("\
 ${
   b.yield && !heroInline
     ? `
-  // APEX OWNS ITS WINDOW — page yields while the centerfold lands, restores
+  // APEX OWNS ITS WINDOW - page yields while the centerfold lands, restores
   tl.to("#pupage", { opacity: ${b.yield.dim}, duration: 0.12, ease: "power1.out" }, ${(heroIn - (b.yield.pre || 0.03)).toFixed(3)});
   tl.to("#pupage", { opacity: 1, duration: 0.22, ease: "power1.in" }, ${(heroIn + (b.yield.post || 0.47)).toFixed(3)});`
     : ""
@@ -4184,12 +4184,12 @@ ${
 }
 
 function paradigmChalkrail() {
-  // CHALKRAIL: night-lecture chalk band — a deep-green board strip (worn top
+  // CHALKRAIL: night-lecture chalk band - a deep-green board strip (worn top
   // hairline, eraser smudges, handwritten header tag, two chalk sticks) docked
   // at the bottom edge holds reading rows that ACCUMULATE: lines fill the rows
   // top→bottom in phases of rows.length; when the next phase needs the rows an
   // ERASER SWIPE clears the board (a blurred light band sweeps across, the
-  // words SMEAR out scaleX 1.3 + blur(8), faint ghost smudges stay — chalk
+  // words SMEAR out scaleX 1.3 + blur(8), faint ghost smudges stay - chalk
   // never fully erases). Words are chalk-written fast: 2-frame pop + scribble
   // clip-reveal steps(4) + 6 seeded dust specks puffing at the base + seeded
   // ±2° tilt = the chalkwrite verb at low amplitude. Emphasis = double
@@ -4214,7 +4214,7 @@ function paradigmChalkrail() {
       li === LINES.length - 1 && wi === L.words.length - 1 ? 1 : 0, // yellow sign-off
     ]),
   }));
-  // eraser passes: one per phase boundary — swipe after the previous phase's
+  // eraser passes: one per phase boundary - swipe after the previous phase's
   // last word ends, always landing clear of the next phase's first word
   const erases = [];
   for (let pi = R; pi < LINES.length; pi += R) {
@@ -4358,7 +4358,7 @@ ${lineData.map((L) => `        <div class="crow" id="${L.id}" style="top:${L.top
 ${
   b.yield && !heroInline
     ? `
-  // APEX OWNS ITS WINDOW — band yields while the chalk word writes, restores
+  // APEX OWNS ITS WINDOW - band yields while the chalk word writes, restores
   tl.to("#cband", { opacity: ${b.yield.dim}, duration: 0.14, ease: "power1.in"  }, ${(heroIn - (b.yield.pre || 0.07)).toFixed(3)});
 ${
   heroIn + (b.yield.post || 0.41) < DUR - 0.3
@@ -4371,13 +4371,13 @@ ${
 }
 
 function paradigmMarkerrail() {
-  // MARKERRAIL: street handstyle rail — marker words FLICK onto a stable
+  // MARKERRAIL: street handstyle rail - marker words FLICK onto a stable
   // bottom rail (opacity full in 1 frame + 1-frame squeak skew, seeded crooked
-  // rotation settling back.out — the spray-write verb at low amplitude);
+  // rotation settling back.out - the spray-write verb at low amplitude);
   // emphasis words take an alternating paint color (`palette.em`/`em2`) + a
   // spray-underline SWOOSH (dash-revealed squiggle) with 8 seeded overspray
   // dots; the FINAL transcript word lands BIG in `palette.em` with mini
-  // apex-impact physics (crush → squash → elastic — it rides the plate punch).
+  // apex-impact physics (crush → squash → elastic - it rides the plate punch).
   // Spent lines are ROLLER-BUFFED: a gray paint roller sweeps across, the
   // words vanish under it and the wet smear lingers before fading; the last
   // line is never buffed (the sign-off stays painted). Rail yields while the
@@ -4471,7 +4471,7 @@ function paradigmMarkerrail() {
       tl.set(el, { opacity: 1, scale: big ? 1.5 : 1.18, rotation: rot0, skewX: 7,
                    color: em || ${J(dna.palette.body)}, transformOrigin: "50% 88%" }, st);
       tl.set(el, { skewX: 0 }, st + F);
-      if (big) { // sign-off lands with the plate punch — mini apex-impact physics
+      if (big) { // sign-off lands with the plate punch - mini apex-impact physics
         tl.to(el, { scale: 1, duration: 0.09, ease: "power3.in" }, st + F);
         tl.set(el, { scaleX: 1.1, scaleY: 0.9 }, st + F + 0.09);
         tl.to(el, { scaleX: 1, scaleY: 1, duration: 0.26, ease: "elastic.out(1, 0.4)" }, st + F + 0.09 + 2 * F);
@@ -4493,7 +4493,7 @@ function paradigmMarkerrail() {
   });
 ${
   b.yield && !heroInline
-    ? `  // APEX OWNS ITS WINDOW — the line visible at the tag's onset yields.
+    ? `  // APEX OWNS ITS WINDOW - the line visible at the tag's onset yields.
   // Restore only with runway before the buff (else the line exits dimmed).
   RAILM.forEach((L) => {
     if (L.in <= ${heroIn.toFixed(3)} && L.out > ${(heroIn - (b.yield.pre || 0.04)).toFixed(3)}) {
@@ -4513,7 +4513,7 @@ ${
 }
 
 function paradigmBrushrail() {
-  // BRUSHRAIL: washi paper band — a deckle-edged paper band (two faintly
+  // BRUSHRAIL: washi paper band - a deckle-edged paper band (two faintly
   // rotated under-sheets + a warm translucent main sheet) swipes in L→R behind
   // a traveling brush-head shadow (the ink gesture at low amplitude); body
   // words are brush-WIPED on (clip reveal 0.16s behind a per-word brush head)
@@ -4662,7 +4662,7 @@ ${lineData.map((L) => `        <div class="bline" id="${L.id}"></div>`).join("\n
       }
     });
 
-    // EXIT: the reveal in reverse — a wet cloth wipes R→L, erase head riding
+    // EXIT: the reveal in reverse - a wet cloth wipes R→L, erase head riding
     gsap.set(line, { clipPath: "inset(-30% 0% -30% 0%)" });
     tl.to(line, { clipPath: "inset(-30% 100% -30% 0%)", duration: L.eraseEnd - L.eraseT,
                   ease: "power2.in" }, L.eraseT);
@@ -4674,7 +4674,7 @@ ${lineData.map((L) => `        <div class="bline" id="${L.id}"></div>`).join("\n
 ${
   b.yield && !heroInline
     ? `
-  // APEX OWNS ITS WINDOW — band + the line under the gesture yield, band restores
+  // APEX OWNS ITS WINDOW - band + the line under the gesture yield, band restores
   tl.to(${heroLi >= 0 ? `["#band", "#br${heroLi}"]` : `"#band"`}, { opacity: ${b.yield.dim}, duration: 0.16 }, ${(heroIn - (b.yield.pre || 0.16)).toFixed(3)});
 ${
   heroIn + (b.yield.post || 0.46) + 0.3 < DUR
@@ -4693,15 +4693,15 @@ ${
 }
 
 function paradigmInkrail() {
-  // INKRAIL: sumi ink on still water — up to three fixed reading ROWS at the
+  // INKRAIL: sumi ink on still water - up to three fixed reading ROWS at the
   // bottom center (rows cycle in pairs, the closing line takes the third row,
   // so the final thought ACCUMULATES instead of replacing) where Mincho-serif
   // ink words BLEED in over a paper-white halo glow (opacity snaps in 2
-  // frames; blur 12→0 + scale 1.25→1 carry the bleed — the apex bloom at low
+  // frames; blur 12→0 + scale 1.25→1 carry the bleed - the apex bloom at low
   // amplitude) while a duplicate blurred dark halo overshoots then tightens;
   // an ink-settling RULE (gradient hairline) draws beneath each line;
   // emphasis words shed a faint ink wisp curling off the word top; spent
-  // lines RE-DISSOLVE (blur up + spread + fade + slight rise — ink dispersing
+  // lines RE-DISSOLVE (blur up + spread + fade + slight rise - ink dispersing
   // back into the water) as the line-after-next approaches (= the next
   // occupant of their row); the closing lines persist to clip end; the rows
   // visible under the bloom yield while the drop blooms.
@@ -4798,8 +4798,8 @@ function paradigmInkrail() {
     tl.set(rule, { opacity: 0.55 }, L.words[0][1] + 0.12);
     tl.fromTo(rule, { scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: "power2.out" },
               L.words[0][1] + 0.12);
-    // EXIT: re-dissolve — blur up + spread + fade + slight rise, ink dispersing
-    // (the closing lines persist — the final thought stays readable)
+    // EXIT: re-dissolve - blur up + spread + fade + slight rise, ink dispersing
+    // (the closing lines persist - the final thought stays readable)
     if (L.outT !== null) {
       tl.to(line, { filter: "blur(9px)", scale: 1.13, opacity: 0, y: -8,
                     duration: L.outDur, ease: "power1.in", transformOrigin: "50% 50%" }, L.outT);
@@ -4811,7 +4811,7 @@ ${
     ? `
   // rows visible under the bloom yield while the drop blooms, restore after.
   // Overlap guards: dim only after the line is IN with runway before its exit;
-  // restore only with clear runway (else the line exits dimmed — one owner).
+  // restore only with clear runway (else the line exits dimmed - one owner).
   RAILI.forEach((L) => {
     const dimT = ${(heroIn + (b.yield.delay ?? 0.12)).toFixed(3)};
     if (L.in < dimT - 0.05 && (L.outT === null || L.outT > dimT + 0.35)) {
@@ -4828,7 +4828,7 @@ ${
 
 // ---- ransom shared pieces: the cutout-chip recipes and the seeded paper-tear
 // polygon are ONE paper stock used by both layers (ransomrail body chips in the
-// fg, ransomnote letter chips in the bg) — emitted into each page separately
+// fg, ransomnote letter chips in the bg) - emitted into each page separately
 function ransomChipCss(ls) {
   const p = dna.palette;
   return `
@@ -4837,7 +4837,7 @@ function ransomChipCss(ls) {
   .cc { background:${p.news || "#d8d3c5"}; color:${p.newsInk || "#262017"}; font-family:'${dna.fonts.news}', monospace; }
   .cd { background:${p.accent || "#ffd23f"}; color:${p.accentInk || "#1c160c"}; font-family:'${dna.fonts.accent}', cursive; }`;
 }
-// seeded 12-vertex tear polygon — j() call order matches the demo exactly so
+// seeded 12-vertex tear polygon - j() call order matches the demo exactly so
 // identical seeds reproduce the demo's torn edges
 const RANSOM_TEAR = `function tearPoly(r){
     const j = () => +(r()*5).toFixed(1);
@@ -4847,11 +4847,11 @@ const RANSOM_TEAR = `function tearPoly(r){
   }`;
 
 function paradigmRansomrail() {
-  // RANSOMRAIL: kidnapper's collage — every transcript word is a cutout chip
+  // RANSOMRAIL: kidnapper's collage - every transcript word is a cutout chip
   // in one of 4 cycled recipes (paper/Anton, black/Inter-800, newsprint/
   // Special Elite, accent/Permanent Marker; emphasis words snap to the accent
   // chip) PASTED along the bottom rail line with seeded crookedness, seeded
-  // ±px sizes and misaligned baselines — the paste is the apex slam motif at
+  // ±px sizes and misaligned baselines - the paste is the apex slam motif at
   // low amplitude (1f appear at scale 1.12 → power3.in crush → 2-frame contact
   // squash → elastic settle). Emphasis = 1-frame RE-PASTE lift (shadow grows,
   // rotation flips sign for good); exits = chips RIPPED off one by one with
@@ -4864,7 +4864,7 @@ function paradigmRansomrail() {
     const stag = li === last ? 0.04 : 0.045;
     const ripDur = li === last ? 0.12 : 0.14;
     const lastSt = L.words[n - 1].start;
-    // rip cadence (demo): chips tear off just before the next line pastes —
+    // rip cadence (demo): chips tear off just before the next line pastes -
     // the rip tail overlaps the new line a beat (collage chaos, by design);
     // a line whose last word just spoke waits lastWord+0.14 first
     let ripStart =
@@ -4957,7 +4957,7 @@ ${lineData.map((L) => `        <div class="rline" id="${L.id}"></div>`).join("\n
 ${
   b.yield && !heroInline
     ? `  // rail yields while the apex letters slam behind the subject (container
-  // opacity — never contests the per-chip channels)
+  // opacity - never contests the per-chip channels)
   tl.to("#rrailwrap", { opacity: ${b.yield.dim}, duration: 0.12 }, ${Math.max(0.05, heroIn - (b.yield.pre ?? 0.02)).toFixed(3)});
 ${
   heroIn + (b.yield.post ?? 0.71) < DUR - 0.3
@@ -4999,7 +4999,7 @@ function setpieceCpslam() {
   // CP-language EMBED climax: acid-yellow word slams in BEHIND the subject with
   // REAL notch cuts (SVG mask = true transparency over footage), a chromatic
   // split that settles to a PERMANENT registration error, seeded glitch ticks,
-  // and a glitch-out exit. The frame stays footage — the word is set dressing.
+  // and a glitch-out exit. The frame stays footage - the word is set dressing.
   const h = dna.hero,
     p = h.params || {},
     I = heroIn;
@@ -5023,7 +5023,7 @@ function setpieceCpslam() {
     BH = Math.round(hpx * 1.5);
   const CX = BW - 80 > W ? W / 2 : Math.max(BW / 2 - 40, Math.min(W - BW / 2 + 40, HG.x)),
     CY = HG.y;
-  // seeded diagonal cuts through the letter band (precision is not the point —
+  // seeded diagonal cuts through the letter band (precision is not the point -
   // the cuts read as stencil damage wherever they land)
   const nN = Math.max(2, Math.floor(DISP.length / 2.2));
   const used = [];
@@ -5082,7 +5082,7 @@ function setpieceCpslam() {
   tl.set("#cpsW", { scaleX: 1.09, scaleY: 0.93 }, I + 0.08);
   tl.to("#cpsW", { scaleX: 1, scaleY: 1, duration: 0.46, ease: "elastic.out(1.05, 0.36)" }, I + 0.16);
   // SVG <g> children move via attr.transform ONLY (banned: gsap x/y component
-  // props on SVG children — getBBox parse path). Frame-quantized step chain
+  // props on SVG children - getBBox parse path). Frame-quantized step chain
   // replaces the 0.16s recoil tween (identical on screen at 24fps).
   const RG = (dx, dy, at) => { tl.set("#cpC", { attr: { transform: "translate(" + dx + " " + dy + ")" } }, at); tl.set("#cpR", { attr: { transform: "translate(" + (-dx) + " " + (-dy) + ")" } }, at); };
   RG(9, 0, I - 0.04);
@@ -5114,7 +5114,7 @@ function setpieceCpslam() {
 function setpieceCoverword() {
   // CP2077 COVER-LETTERFORM slam, precision pass: the spoken apex word set in
   // the replica typeface of the official mark (assets/brand/CyberpunkReplica.ttf
-  // — lowercase glyphs carry the logo's actual brush chops, blade terminals and
+  // - lowercase glyphs carry the logo's actual brush chops, blade terminals and
   // spikes), in logo case (First-upper). The setpiece adds only what the FONT
   // does not carry: the solid cyan duplicate offset down-left, the baseline
   // streak + cyan pixel debris, the circuit trace off the tail, and the
@@ -5470,7 +5470,7 @@ function setpieceFlapboard() {
                     duration: ${Math.max(0.4, E - 0.49 - (lockEnd + 0.15)).toFixed(2)}, ease: "none" }, ${(lockEnd + 0.15).toFixed(3)});
   tl.fromTo("#ruleF", { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.3, ease: "expo.out" }, ${(lockEnd + 0.05).toFixed(3)});
 ${p.tag ? `  tl.to("#tagwrapF", { width: ${tagW}, duration: 0.4, ease: "steps(16)" }, ${(lockEnd + 0.11).toFixed(3)});` : ""}
-  // hold life: loom + one mechanical re-flutter tic — boards do this
+  // hold life: loom + one mechanical re-flutter tic - boards do this
   tl.to("#board", { scaleX: 1.022, scaleY: 1.022, duration: ${Math.max(0.4, Math.min(1.0, exit0 - lockEnd - 0.55)).toFixed(2)}, ease: "power1.inOut" }, ${(lockEnd + 0.5).toFixed(3)});
   const T6 = btiles[${flutterIdx}];
   if (T6 && ${(lockEnd + 1.0).toFixed(3)} < ${(exit0 - 0.2).toFixed(3)}) {
@@ -5589,7 +5589,7 @@ function setpieceLedwipe() {
   tl.set(["#ptagL", "#gtagL"], { opacity: 0.4 }, I - 0.045);
   tl.set(["#ptagL", "#gtagL"], { opacity: 0.9 }, I - 0.003);
 
-  // ===== APEX: L→R illumination wipe — LEDs light column by column =====
+  // ===== APEX: L→R illumination wipe - LEDs light column by column =====
   tl.set("#awordL", { opacity: 1, color: "${HOT}" }, I);
   tl.fromTo("#awordL", { clipPath: "inset(0% 100% 0% 0%)" },
             { clipPath: "inset(0% 0% 0% 0%)", duration: ${(p.wipeDur || 0.3).toFixed(2)}, ease: "steps(${wipeSteps})" }, I);
@@ -5720,7 +5720,7 @@ function setpieceVhsosd() {
   gsap.set(${J(["#mr", "#mc", ...bandIds, "#oe"])}, { xPercent:-50, yPercent:-50 });
   gsap.set("#weave", { x: 0, y: 0 });
 
-  // camcorder lens vignette — present the whole clip
+  // camcorder lens vignette - present the whole clip
   tl.set("#vig", { opacity: 1 }, 0.02);
 
   // backlight-compensation scrim behind the word (the sky is bright up there)
@@ -5767,7 +5767,7 @@ ${
     : ""
 }
 
-  // ===== EXIT: REWIND — streak left with echo copy =====
+  // ===== EXIT: REWIND - streak left with echo copy =====
   tl.to("#osdw", { x: -190, scaleX: 1.3, opacity: 0, duration: 0.13, ease: "power2.in" }, X);
   tl.set("#oecho", { opacity: 1 }, X);
   tl.fromTo("#oe", { x: 0, opacity: 0.4 }, { x: -95, opacity: 0, duration: 0.18, ease: "power2.in" }, X + 0.01);
@@ -5780,7 +5780,7 @@ function setpieceBossintro() {
   // pulses on the last emphasis before the boss and spills magenta on the
   // strobe + the final word), WARNING blinks 2x above the word rect, then
   // ~COLS×ROWS seeded pixel blocks fall steps(3) into a tight matrix grid
-  // covering the word rect (1-frame white land tick each — the coin-blip motif
+  // covering the word rect (1-frame white land tick each - the coin-blip motif
   // at block scale), and the word flashes ON (instant, oversized, quantized
   // crush → 2-frame squash → elastic settle) with chromatic ghost layers and a
   // 3-frame palette strobe. Hold: quantized breathe + CRT glow cycle + baked
@@ -5945,14 +5945,14 @@ ${
     if (FLASH + dt < OUT) tl.set(main, { textShadow: "0 0 22px " + gc + "d9" + HALO }, FLASH + dt);
   });
 
-  // exit: checkerboard dissolve — letters vanish in 2 alternating set passes
+  // exit: checkerboard dissolve - letters vanish in 2 alternating set passes
   letters.forEach((s, i) => {
     tl.set(s, { opacity: 0 }, i % 2 === 0 ? OUT : OUT + 0.083);
   });
   tl.set(["#bwC", "#bwM"], { opacity: 0 }, OUT + 0.042);
   tl.set("#bossWord", { opacity: 0, display: "none" }, OUT + 0.17);`;
   // fg furniture: letterbox bars + HI-SCORE odometer ride the fg alpha layer
-  // (in FRONT of the subject — the cabinet frames the player)
+  // (in FRONT of the subject - the cabinet frames the player)
   const fgCss = `
   #lbTop { position:absolute; left:0; top:-${lb}px;    width:${W}px; height:${lb}px; background:#000; z-index:14; }
   #lbBot { position:absolute; left:0; bottom:-${lb}px; width:${W}px; height:${lb}px; background:#000; z-index:14; }
@@ -5993,9 +5993,9 @@ ${
 }
 
 function setpieceRubberstamp() {
-  // RUBBER STAMP: the footage becomes an archival page at the apex — vignette
+  // RUBBER STAMP: the footage becomes an archival page at the apex - vignette
   // charge (plate.charge) + manila sepia wash + a dim kick (plate.dim) that
-  // cools — then the verdict slams in BEHIND the subject as a bordered rubber
+  // cools - then the verdict slams in BEHIND the subject as a bordered rubber
   // stamp at params.rotation: crush 2.2→1 power4.in, 2-frame contact squash,
   // double-strike ghost print, two thin-ink patches (clip-path circles in
   // paper color), wet-ink saturate/brightness settle, and a paper indent
@@ -6010,7 +6010,7 @@ function setpieceRubberstamp() {
   const X = theme.hero.exitAt ?? Math.min(heroOut - 0.06, C + (p.hold ?? 2.02));
   const ROT = p.rotation ?? -8;
   const RED = dna.palette.accent || "#b3271e";
-  const s = HG.fontPx / 120; // demo face was cut at 120px — chrome scales with it
+  const s = HG.fontPx / 120; // demo face was cut at 120px - chrome scales with it
   const bw = Math.max(3, Math.round(6 * s)),
     rad = Math.round(14 * s);
   const padT = Math.round(20 * s),
@@ -6105,7 +6105,7 @@ function setpieceRubberstamp() {
   tl.to("#dindent",  { keyframes: { opacity: [0.42, 0.30, 0.40, 0.31, 0.38, 0.33] },
                        duration: ${breDur.toFixed(2)}, ease: "none" }, C + 0.45);
 
-  // ===== EXIT: page filed away — mechanical 3-frame yank-down cut =====
+  // ===== EXIT: page filed away - mechanical 3-frame yank-down cut =====
   tl.set("#dapex", { y: 10 }, X);
   tl.set("#dapex", { y: 28, opacity: 0.5 }, X + F);
   tl.set("#dapex", { opacity: 0 }, X + 2 * F);`;
@@ -6113,7 +6113,7 @@ function setpieceRubberstamp() {
 }
 
 function setpieceLasercage() {
-  // LASER CAGE: concert blackout — the plate dims and haze cones breathe in
+  // LASER CAGE: concert blackout - the plate dims and haze cones breathe in
   // the top corners; a 6-beam laser array (alternating accent/magenta,
   // emitters along the top edge) snaps on and SWEEPS to converge on the word
   // center, a hot core pops at convergence, and the word IGNITES behind the
@@ -6339,7 +6339,7 @@ function setpieceLasercage() {
 
 function setpieceBoltstrike() {
   // THUNDER apex: the storm is the editor. A slate storm mood sits on the room
-  // from t=0 and the sky "kisses" (1-frame brighten) on every body word —
+  // from t=0 and the sky "kisses" (1-frame brighten) on every body word -
   // double-kiss on emphasis words, re-flashes during the hold. Before the
   // strike the room charge-dims under a radial word scrim; a hand-authored
   // branched bolt (haze/glow/core stack) flashes 2 frames BEFORE the word
@@ -6361,7 +6361,7 @@ function setpieceBoltstrike() {
   const scW = Math.round(2 * halfW + 380),
     scH = Math.round(hpx * 2.28);
   // hand-authored branched bolt (5-seg zigzag + 2 branches) measured off the
-  // demo cut — offsets from the word center in halfW (x) / fontPx (y) units;
+  // demo cut - offsets from the word center in halfW (x) / fontPx (y) units;
   // the leader always enters from above the frame
   const sgn = p.side === "right" ? -1 : 1;
   const kx = ((halfW || 360) / 360) * sgn,
@@ -6531,14 +6531,14 @@ function setpieceHoloboot() {
   // HOLOGRAM apex: full volumetric boot behind the subject. A desk emitter dot
   // pops, the projection cone SNAPS wide (scaleX expo), a seed beam fires up
   // from the emitter, and the word boots with a RISING clip sweep (opacity is
-  // instant — the reveal is a wipe) into a 7-layer projection stack (dark
+  // instant - the reveal is a wipe) into a 7-layer projection stack (dark
   // backing shadow / wide glow / magenta+cyan chromatic fringes / core /
   // scanline mask / climbing interference bands). Contact = over-bright flash
   // + squash held 2 frames + elastic settle + 1-frame x interference jumps;
   // fringes blow wide then settle to a constant registration offset. Hold
   // life: bands climb, rotationY oscillates, glow/cone breathe, emitter dot
   // pulses, slow loom; a hand "passes through" the projection (skew + blur +
-  // fringe blowout, pure projection logic). Exit: the projector cut — the
+  // fringe blowout, pure projection logic). Exit: the projector cut - the
   // word collapses to a horizontal line, then to the base dot. A second,
   // smaller emitter cone rises from the desk under the holorail plate all
   // video (the body rail is cast from the SAME projector grammar).
@@ -6736,7 +6736,7 @@ ${
     : ""
 }
 
-  // ===== EXIT: projector cut — collapse to a horizontal line, then to the base dot
+  // ===== EXIT: projector cut - collapse to a horizontal line, then to the base dot
   tl.set("#apxclip", { filter: "brightness(2.4)" }, CUT - 0.02);
   tl.to("#apx", { scaleY: 0.018, duration: 0.09, ease: "power3.in" }, CUT);
   tl.to("#apx", { scaleX: 0.015, duration: 0.075, ease: "power3.in" }, CUT + 0.10);
@@ -6749,7 +6749,7 @@ ${
 
 function setpieceBiobloom() {
   // BIOLUME apex: a bioluminescent BLOOM behind the subject. The abyss grade
-  // (params.mood) + a breathing vignette sit on the room from t=0 — the world
+  // (params.mood) + a breathing vignette sit on the room from t=0 - the world
   // IS underwater before anything speaks. A creature pre-glow gathers with a
   // double-beat anticipation and crushes to a point; a dark pocket scrim
   // (plate.scrim) opens behind the word zone; the word CONDENSES in (scale
@@ -6759,7 +6759,7 @@ function setpieceBiobloom() {
   // outward from the word rect, staggered; through the hold the glow breathes
   // 8–14%, two counter-drifting caustic gradients shimmer over the text zone
   // and the bloom drifts slowly with the current (params.drift). Exit: the
-  // light SINKS — every glowing thing drifts down while dimming. Tendril
+  // light SINKS - every glowing thing drifts down while dimming. Tendril
   // geometry is hand-authored from the demo and baked at compile time as
   // offsets from the word center (halfW/x × fontPx/120 units, frame-clamped).
   const p = dna.hero.params || {},
@@ -6920,7 +6920,7 @@ function setpieceBiobloom() {
     tpaths.push([mk(gGlow, ${Math.max(6, Math.round(9 * ky))}), mk(gCore, ${Math.max(2, Math.round(3 * ky))})]);
   });
 
-  // ===== anticipation: a creature approaches — double-beat pre-glow =====
+  // ===== anticipation: a creature approaches - double-beat pre-glow =====
   tl.to("#preglow", { keyframes: { opacity: [0.34, 0.14, 0.46, 0.34],
                                    scale:   [0.9, 0.72, 1.08, 0.95] },
                       duration: 0.19, ease: "sine.inOut" }, ${Math.max(0.05, I - 0.31).toFixed(3)});
@@ -6999,12 +6999,12 @@ function setpieceSilkribbon() {
   // f(t) from t=0 (~params.wash) and DEEPEN as the ribbon writes; a top
   // scrim (plate.scrim) charges in at I−0.34 (sky washout guard); a light
   // spill tints the sky once the ribbon completes, flickering gently; the
-  // halo breathes through the hold. Gentle — no shake, no contact squash:
+  // halo breathes through the hold. Gentle - no shake, no contact squash:
   // the apex verb is the writing itself.
   const h = dna.hero,
     p = h.params,
     I = heroIn;
-  // stroke path baked at COMPILE time — any word, zero tuning (drawon pattern)
+  // stroke path baked at COMPILE time - any word, zero tuning (drawon pattern)
   const fontPath = path.join(SKILL, "assets/strokefonts", dna.fonts.strokeFont);
   const gen = path.join(SKILL, "scripts/gen-stroke-path.py");
   const tw = HG.ribbonW || Math.min(p.targetWidth || 880, W - 240);
@@ -7136,7 +7136,7 @@ function setpieceSilkribbon() {
   tl.to("#nibCore", { scale: 2.4, opacity: 0, duration: 0.16, ease: "sine.in",
                       transformOrigin: "50% 50%" }, DRAWN);
 
-  // SIGNATURE: the gradient FLOWS through the drawn ribbon — translate the
+  // SIGNATURE: the gradient FLOWS through the drawn ribbon - translate the
   // userSpaceOnUse gradient (x1/x2 together); reflect spread makes the aurora
   // colors march continuously along the silk during the hold
   tl.fromTo("#agrad", { attr: { x1: ${gx1}, x2: ${gx1 + span} } },
@@ -7161,7 +7161,7 @@ function setpieceScopetrace() {
   // ---- setpiece: SCOPETRACE (the trace leaps off the scope and WRITES the word) ----
   // A surge column jumps from the scope band up to the pen-start point, then
   // the waveform WRITES the hero word in a thin phosphor stroke (sequential
-  // Hershey stroke reveal — core only, no halo: it is a trace, not a tube).
+  // Hershey stroke reveal - core only, no halo: it is a trace, not a tube).
   // The phosphor FILL flicker-arrives 2 frames + a 5-step blink AFTER the
   // write completes (scope persistence), hums + breathes 1.6% through the
   // hold, then the word COLLAPSES to a flatline (scaleY crush + horizontal
@@ -7462,7 +7462,7 @@ function setpiecePapermat() {
 
     // anticipation shadow blob appears on the landing spot 3 frames early
     tl.set(shad, { opacity: 0.16, scaleX: 1.35 }, C - 0.125);
-    // DROP: two airborne poses then contact — steps(3) gravity, 1-frame overshoot
+    // DROP: two airborne poses then contact - steps(3) gravity, 1-frame overshoot
     tl.fromTo(chip, { y: ${dropL}, rotation: r0 - 8 },
               { y: 8, rotation: r0, duration: 0.21, ease: "steps(3)" }, C - 0.21);
     tl.set(chip, { scaleX: 1.07, scaleY: 0.90 }, C);                  // contact squash
@@ -7472,11 +7472,11 @@ function setpiecePapermat() {
     tl.set(chip, { y: 0,  scaleY: 1,    scaleX: 1    }, C + 0.25);    // rest
     tl.to(shad, { opacity: 0.34, duration: 0.3, ease: "power1.out" }, C + 0.30);
 
-    // HOLD: 8fps wobble — baked sets every 3 frames (the stop-motion heartbeat)
+    // HOLD: 8fps wobble - baked sets every 3 frames (the stop-motion heartbeat)
     for (let t = C + 0.50; t < SCAT - 0.13; t += 0.125)
       tl.set(chip, { rotation: r0 + (prnd()-0.5)*1.4, x: (prnd()-0.5)*1.4, y: (prnd()-0.5)*1.4 }, t);
 
-    // SCATTER on the final word — chips slide off-table down-right, steps(4)
+    // SCATTER on the final word - chips slide off-table down-right, steps(4)
     const S = SCAT + i*0.045;
     tl.to(chip, { x: 250 + prnd()*200, y: ${H - 110} + prnd()*110, rotation: r0 + 28 + prnd()*24,
                   duration: 0.30, ease: "steps(4)" }, S);
@@ -7600,7 +7600,7 @@ ${Array.from({ length: segs }, (_, i) => `            <div class="cfseg" id="cfs
   // scrim charges before the unfold (bright sky insurance)
   tl.to("#cfscrim", { opacity: ${p.scrim ?? 0.42}, duration: 0.28, ease: "power2.out" }, ${scrimT});
 
-  // backdrop unfolds FIRST — baseline hinge, paper overshoot
+  // backdrop unfolds FIRST - baseline hinge, paper overshoot
   tl.set("#cfbBlue", { opacity: 1 }, ${blueT});
   tl.to("#cfbBlue", { scaleY: 1, duration: 0.26, ease: "back.out(1.6)" }, ${blueT});
   tl.set("#cfbCream", { opacity: 1 }, ${(+blueT + 0.06).toFixed(3)});
@@ -7637,7 +7637,7 @@ ${
     : ""
 }
 
-  // EXIT — the centerfold folds flat (book closing)
+  // EXIT - the centerfold folds flat (book closing)
   for (let i = 0; i < ${segs}; i++) {
     const ft = XO + i * 0.05, el = "#cfsg" + i;
     tl.to(el, { rotationX: 88, duration: 0.14, ease: "power2.in" }, ft);
@@ -7657,10 +7657,10 @@ function setpieceChalkwrite() {
   // ---- setpiece: CHALKWRITE (the board grows and a hand WRITES the word) ----
   // The lower chalk band grows into a FULL deep-green board behind the subject
   // 0.3s before the apex (scaleY power3.out from the bottom edge, the room
-  // dims with it); the hero word is HAND-WRITTEN in chalk — sequential Hershey
+  // dims with it); the hero word is HAND-WRITTEN in chalk - sequential Hershey
   // stroke reveal (drawon pattern), dry/rough via seeded ±1px jitter baked
   // onto every pen point, a blurred halo under a tight core, a chalk-stick
-  // nib riding the pen — while dust specks fall from the nib. On completion a
+  // nib riding the pen - while dust specks fall from the nib. On completion a
   // hand-slap CLAP shakes the board 1 frame (the dust burst lives in the
   // rail, in FRONT of the subject: fx.chalkclap), then TWO violent
   // accelerating underlines slash beneath (nib rides them, dust kicks at the
@@ -7885,8 +7885,8 @@ function setpieceSpraytag() {
   // ---- setpiece: SPRAYTAG (a writer steps up and TAGS the hero word) ----
   // The dusk wall dims + a radial scrim charges as the writer steps up; the
   // can RATTLES at the start point (seeded set-chain nib jitter), then the
-  // hero word is spray-written stroke by stroke — sequential Hershey dash
-  // reveal (drawon pattern) — as a TRIPLE stack per stroke: fat dark
+  // hero word is spray-written stroke by stroke - sequential Hershey dash
+  // reveal (drawon pattern) - as a TRIPLE stack per stroke: fat dark
   // under-stroke (sky-contrast armor) + blurred overspray halo + wet paint
   // core, the glowing nib riding each stroke. Seeded overspray dots pop near
   // the nib as it passes; the nib throws off at the finish (the magenta splat
@@ -7960,7 +7960,7 @@ function setpieceSpraytag() {
   tl.fromTo("#stDim",   { opacity: 0 }, { opacity: ${p.dim ?? 0.22}, duration: 0.40, ease: "power2.in" }, ${(I - 0.42).toFixed(3)});
   tl.fromTo("#stScrim", { opacity: 0 }, { opacity: ${p.scrim ?? 0.62}, duration: 0.40, ease: "power2.in" }, ${(I - 0.42).toFixed(3)});
 
-  // per-stroke TRIPLE stack (split at pen lifts) — sequential dash reveal
+  // per-stroke TRIPLE stack (split at pen lifts) - sequential dash reveal
   const subsG = Dg.split(/(?=M )/).map(s => s.trim()).filter(Boolean);
   const SVGNSG = "http://www.w3.org/2000/svg";
   function mkG(parent, d, stroke, w) {
@@ -7973,7 +7973,7 @@ function setpieceSpraytag() {
     return el;
   }
   const strokesG = subsG.map((d) => ({
-    under: mkG("stUnderG", d, ${J(UNDER)}, ${p.underWidth ?? 21}),  // dark edge — sky-contrast armor
+    under: mkG("stUnderG", d, ${J(UNDER)}, ${p.underWidth ?? 21}),  // dark edge - sky-contrast armor
     halo:  mkG("stHaloG",  d, ${J(PAINT)}, ${p.haloWidth ?? 36}),   // fat soft overspray spread
     core:  mkG("stCoreG",  d, ${J(PAINT)}, ${p.coreWidth ?? 13}),   // wet paint core
   }));
@@ -8089,18 +8089,18 @@ function setpieceSpraytag() {
 }
 
 function setpieceBrushwrite() {
-  // ---- setpiece: BRUSHWRITE (sumi-e — ONE violent calligraphic gesture) ----
+  // ---- setpiece: BRUSHWRITE (sumi-e - ONE violent calligraphic gesture) ----
   // A warm paper wash charges behind the word; the brush SLAPS down at the
-  // first pen point (start-splat: irregular ink blob + seeded satellites —
+  // first pen point (start-splat: irregular ink blob + seeded satellites -
   // the fg fleck pass rides fx.brushflecks), then the hero word is written in
-  // ONE sequential gesture — Hershey dash reveal at constant pen speed — as a
+  // ONE sequential gesture - Hershey dash reveal at constant pen speed - as a
   // FOUR-layer stack per stroke (blurred bleed under fat/mid/core widths =
   // pressure-tapered wet brush), the round ink nib riding the pen and
   // flicking off at the finish. Spatter droplets eject perpendicular at the
   // sharpest-curvature points of the gesture. Through the hold the ink
   // BLEEDS into the paper (the blurred under-layer swells visible) and the
   // whole work breathes; then the vermilion SEAL chop stamps beside the ink
-  // (power4 crush → 2-frame squash → elastic settle, red flecks kicked) —
+  // (power4 crush → 2-frame squash → elastic settle, red flecks kicked) -
   // the plate punch lands on the chop contact.
   const h = dna.hero,
     p = h.params,
@@ -8312,7 +8312,7 @@ ${
 ${
   SEALC + 0.38 <= ENDT
     ? `
-  // vermilion SEAL chop stamps the work — the plate punch lands on the contact
+  // vermilion SEAL chop stamps the work - the plate punch lands on the contact
   gsap.set("#bwSeal", { xPercent: -50, yPercent: -50, rotation: -6, transformOrigin: "50% 50%" });
   tl.set("#bwSeal", { opacity: 1, scale: 1.7 }, ${(SEALC - 0.1).toFixed(3)});
   tl.to("#bwSeal", { scale: 1, duration: 0.09, ease: "power4.in" }, ${(SEALC - 0.095).toFixed(3)});
@@ -8337,20 +8337,20 @@ ${
 
 function setpieceInkbloom() {
   // INKWATER apex: a sumi ink drop falls into still water BEHIND the subject.
-  // Scene reaction: paper-white radial washes behind the two text zones — the
+  // Scene reaction: paper-white radial washes behind the two text zones - the
   // body rows get a PERSISTENT paper backing from t≈0.15 (the closing lines
-  // keep their ground) and the apex zone charges just before the drop — plus
+  // keep their ground) and the apex zone charges just before the drop - plus
   // a gentle vignette that STILLS the world while the ink blooms. The drop
   // appears above the word point, swells, falls (power2.in, scaleY stretch),
   // squashes on contact (2 frames) and merges into the bloom: 3 stacked
   // blurred irregular ellipses scaling at different rates with counter-
   // rotations + 2 thin concentric ripple rings expanding on the water
   // surface; the hero words RESOLVE out of the blob (opacity snaps, blur
-  // 16→0 + scale 1.12→1 carries the bleed) — the first at contact, the
+  // 16→0 + scale 1.12→1 carries the bleed) - the first at contact, the
   // following at their own spoken times; through the hold the glyph edges
   // BREATHE (baked blur keyframes), the whole group looms 1.018 and faint
   // ink wisps curl off the word top; exit: RE-DISSOLVE (blur up + spread +
-  // fade — the ink disperses back into the water), timed to clear before the
+  // fade - the ink disperses back into the water), timed to clear before the
   // next body line needs the reader. Blob / ring / wisp geometry is the
   // demo's, scaled from the measured word rect (kx = halfW/demoHalf,
   // ky = fontPx/132); the rail wash registers on the body row geometry.
@@ -8527,7 +8527,7 @@ ${
     : ""
 }
 
-  // exit: re-dissolve — blur up + spread + fade, ink dispersing
+  // exit: re-dissolve - blur up + spread + fade, ink dispersing
   tl.to("#inkG", { scale: 1.15, filter: "blur(11px)", opacity: 0,
                    duration: 0.52, ease: "power1.in" }, ${XOUT});
   tl.set("#inkG", { display: "none" }, ${Math.min(XOUT + 0.6, DUR - 0.02).toFixed(3)});`;
@@ -8542,7 +8542,7 @@ function setpieceRansomnote() {
   // flight shadow that POPS tight on contact (power3.in crush → 2-frame
   // squash → elastic settle) at S_i = I + 0.01 + step·i. When the LAST letter
   // lands the whole word takes a collective 1-frame JOLT + a scene pulse
-  // (the plate punch anchors here — punchOffset is recomputed from the real
+  // (the plate punch anchors here - punchOffset is recomputed from the real
   // letter count so the punch always lands on the jolt). Hold = slow loom
   // keyframes (the crooked grid never straightens). Exit = letters RIPPED
   // off one by one, a 1-frame paper-tear flash under each. Scene reaction =
@@ -8719,7 +8719,7 @@ const bgHtml = bgSkeleton(
 fs.writeFileSync(path.join(PROJECT, "index.html"), bgHtml);
 
 // fg file (rail.html): body paradigm (when fg) + setpiece fg parts + front fx
-// (a setpiece may emit fgHtml/fgCss/fgJs — e.g. a verbatim caption chip that
+// (a setpiece may emit fgHtml/fgCss/fgJs - e.g. a verbatim caption chip that
 // must ride ABOVE the matte while the setpiece scenery stays embedded behind)
 if (!bodyInBg || fx.html || fx.js || setp.fgHtml) {
   const fgHtml = fgSkeleton(
@@ -8761,7 +8761,7 @@ const rgba = P.rgbashift
 fs.writeFileSync(
   path.join(PROJECT, "_postfx.sh"),
   `#!/usr/bin/env bash
-# generated by make-theme.cjs — plate reaction for theme "${dna.name}"
+# generated by make-theme.cjs - plate reaction for theme "${dna.name}"
 set -euo pipefail
 cd "$(dirname "$0")"
 ffmpeg -y -v error -i final.mp4 -filter_complex "

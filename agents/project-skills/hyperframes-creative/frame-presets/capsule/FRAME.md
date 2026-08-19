@@ -1,13 +1,13 @@
 ---
 version: alpha
-name: Capsule — Frame (video / frame layer)
+name: Capsule - Frame (video / frame layer)
 description: >
   Video-first companion to Capsule's design.md. The unit is the frame (1920×1080). Atoms are
-  identical and sacred — the pill geometry (9999px small / 2rem cards) with a 2px ink outline on
+  identical and sacred - the pill geometry (9999px small / 2rem cards) with a 2px ink outline on
   everything, the sun-bleached cream canvas, the nine-color candy palette, Bodoni Moda + Space
   Grotesk, soft hard-offset shadows (4/6/8/12px in 8% ink), floating decorative-pill wallpaper,
   radial accent glows, and the grain overlay. Composition + frame scale rewritten. Motion out of scope.
-unit: the frame — 1920×1080 primary; 9:16 and 1:1 documented
+unit: the frame - 1920×1080 primary; 9:16 and 1:1 documented
 principle: atoms are sacred · composition is free · numbers come from the script
 
 colors:
@@ -26,12 +26,12 @@ colors:
   shadow: "rgba(26,26,26,0.08)"
 
 typography:
-  # — reading ramp (Space Grotesk) —
+  # - reading ramp (Space Grotesk) -
   body:      { fontFamily: "Space Grotesk", cqw: 0.85, weight: 400, lineHeight: 1.6 }
   subtitle:  { fontFamily: "Space Grotesk", cqw: 0.95, weight: 400, tracking: "0.18em", upper: true }
   pill-text: { fontFamily: "Space Grotesk", cqw: 0.75, weight: 600, tracking: "0.12em", upper: true }
   label:     { fontFamily: "Space Grotesk", px: 14, weight: 500, tracking: "0.1em", upper: true }
-  # — display / hero ramp (Bodoni Moda, ink, sentence case) —
+  # - display / hero ramp (Bodoni Moda, ink, sentence case) -
   card-headline:{ fontFamily: "Bodoni Moda", cqw: 1.9, weight: 700, lineHeight: 1.1 }
   orbit-numeral:{ fontFamily: "Bodoni Moda", cqw: 2.6, weight: 700, lineHeight: 1.0 }
   quote-display:{ fontFamily: "Bodoni Moda", cqw: 4.2, weight: 600, lineHeight: 1.3, tracking: "-0.01em" }
@@ -51,7 +51,7 @@ components:
     rounded: "9999px (small) / 2rem (cards)"
     border: "0.2cqw solid {colors.outline}"
     backgroundColor: "any candy or {colors.white}"
-    description: "The universal container — every chip/button/label/stat tile/node/bar. No unstroked pill exists."
+    description: "The universal container - every chip/button/label/stat tile/node/bar. No unstroked pill exists."
   pill-card:
     backgroundColor: "{colors.white}"
     border: "0.2cqw solid {colors.outline}"
@@ -87,12 +87,12 @@ components:
     transform: "rotate(−20°..+25°)"
     shadow: "none"
     typography: "{typography.pill-text}"
-    description: "Decorative wallpaper confetti, 5–8 per declarative frame. Flat — no shadow."
+    description: "Decorative wallpaper confetti, 5–8 per declarative frame. Flat - no shadow."
   quote-highlight:
     backgroundColor: "{colors.lime} / {colors.sky}"
     border: "0.2cqw solid {colors.outline}"
     rounded: "9999px"
-    description: "Inline candy pill wrapping a phrase inside a Bodoni quote — the emphasis mechanism, replacing bold/italic."
+    description: "Inline candy pill wrapping a phrase inside a Bodoni quote - the emphasis mechanism, replacing bold/italic."
   bar-track:
     backgroundColor: "{colors.cream}"
     border: "0.2cqw solid {colors.outline}"
@@ -109,29 +109,29 @@ components:
     description: "Baseline canvas layers on every frame. Never absent."
 ---
 
-# Capsule — Frame (video / frame layer)
+# Capsule - Frame (video / frame layer)
 
 ## Overview
 
 Capsule at frame scale is a **playful editorial system where every container is a pill.** The
 `border-radius: 9999px` (small) / `2rem` (cards) rule plus a 2px ink outline wraps every chip,
-card, icon, bar, and node — inflated, friendly, graphically distinct. The canvas is sun-bleached
+card, icon, bar, and node - inflated, friendly, graphically distinct. The canvas is sun-bleached
 cream warmed by soft radial candy glows and a permanent 4% grain overlay.
 
 The voice is a two-face conversation: **Bodoni Moda** (didone serif, weight 700–800, always ink,
 always sentence case) carries every headline, stat, and quote; **Space Grotesk** carries body and
 all uppercase tracked pill/label text. Nine candy accents fill pills interchangeably with no
-semantic meaning. Depth is a **soft hard-offset shadow** (4/6/8/12px in 8% ink) — lifted, not
-stamped — reserved for content-bearing containers; decorative floating pills are flat.
+semantic meaning. Depth is a **soft hard-offset shadow** (4/6/8/12px in 8% ink) - lifted, not
+stamped - reserved for content-bearing containers; decorative floating pills are flat.
 
 **Key characteristics at frame scale:**
 
-- **Pill geometry everywhere** — 9999px small, 2rem cards — each wrapped in a 2px `{colors.outline}` stroke.
+- **Pill geometry everywhere** - 9999px small, 2rem cards - each wrapped in a 2px `{colors.outline}` stroke.
 - **Bodoni Moda** display (ink, sentence case) + **Space Grotesk** body/pills (uppercase, tracked).
 - **Nine candy accents**, interchangeable; color touches stat numerals + pill fills, never headlines.
 - **Soft offset shadows** (4/6/8/12px, 8% ink) on content containers only; floating pills are flat.
 - **Floating decorative-pill wallpaper** (5–8, tilted) + radial glows + 4% grain on declarative frames.
-- **Cream canvas** warmed by atmosphere — bare corners read as broken.
+- **Cream canvas** warmed by atmosphere - bare corners read as broken.
 
 ## The Frame
 
@@ -139,25 +139,25 @@ stamped — reserved for content-bearing containers; decorative floating pills a
 
 Three eyeball tests gate every frame before any structural check:
 
-- **Squint** — one Bodoni headline or stat dominates at **3–6× its nearest neighbor**.
-- **Silence** — declarative frames carry **atmosphere, not clutter** (pills as wallpaper, not content); the **pillar-cards and stat grid are the dense exception**.
-- **Restraint** — every pill carries the 2px outline; color touches **fills + stat numerals only** (never a headline); soft shadow on content-bearing pills only (floating pills are flat); no tenth accent.
-- **Reference** — aim at a **Memphis / ice-cream-parlor editorial spread**; failure looks like a **flat, sticker-less SaaS card grid**.
+- **Squint** - one Bodoni headline or stat dominates at **3–6× its nearest neighbor**.
+- **Silence** - declarative frames carry **atmosphere, not clutter** (pills as wallpaper, not content); the **pillar-cards and stat grid are the dense exception**.
+- **Restraint** - every pill carries the 2px outline; color touches **fills + stat numerals only** (never a headline); soft shadow on content-bearing pills only (floating pills are flat); no tenth accent.
+- **Reference** - aim at a **Memphis / ice-cream-parlor editorial spread**; failure looks like a **flat, sticker-less SaaS card grid**.
 
 - **Primary:** 1920×1080 (16:9). Display authored in **`cqw`** (`px ÷ 1920 × 100 = cqw`).
 - **Vertical:** 1080×1920 (9:16). **Square:** 1080×1080 (1:1).
 - **Safe area:** `pad` (5cqw); floating pills may bleed off edges as wallpaper.
 
 **The container law (load-bearing).** Every frame ground sets `container-type: size` AND carries
-the radial-glow + grain atmosphere; ALL frame-relative units are `cqw`/`cqh` against it — never
+the radial-glow + grain atmosphere; ALL frame-relative units are `cqw`/`cqh` against it - never
 `vw`. Pill radii stay `9999px`/`2rem` (shape, not scale); shadow offsets scale in `cqw`.
 
 ## Colors
 
 Tokens identical to the source. `{colors.cream}` is the ground; `{colors.ink}`/`{colors.outline}`
 is type + the universal 2px stroke; the nine candy accents fill pills with **no semantic mapping**
-— pair a warm (coral/yellow/peach) with a cool (sky/lavender/violet/mint) with a neutral-bright
-(lime); never two same-family adjacent. Color appears on **stat numerals and pill fills only** —
+ - pair a warm (coral/yellow/peach) with a cool (sky/lavender/violet/mint) with a neutral-bright
+(lime); never two same-family adjacent. Color appears on **stat numerals and pill fills only** -
 never on a Bodoni headline. Shadow is always `{colors.shadow}` (8% ink). No tenth color.
 
 ## Typography
@@ -176,22 +176,22 @@ Soft hard-offset shadow is the only depth, in `{colors.shadow}` (8% ink), bottom
 
 - **0.2cqw (4px)** small nodes; **0.3cqw (6px)** stat-pills, orbit pills, diagram nodes; **0.4cqw (8px)** pillar-cards; **0.6cqw (12px)** the visual frame.
 - The **2px outline** does most of the lift against cream; the shadow adds the float.
-- **Decorative floating pills cast no shadow** — this separates content from atmosphere at a glance.
+- **Decorative floating pills cast no shadow** - this separates content from atmosphere at a glance.
 
 **Ceiling:** no blurred shadow, no re-colored shadow, no gradient depth.
 
 ## Shapes
 
-- **9999px** — all small pills (chips, buttons, bars, nodes, floating pills, quote highlights, accent lines).
-- **2rem** — larger cards (pillar-card, stat-pill, chart container, visual frame).
-- **50%** — circular pills (card-icon 60px, step-node 56px, orbit-center 160px, nav dots).
-- **0** — only the grain overlay and the gradient region inside a visual frame. No sharp-cornered text container exists.
+- **9999px** - all small pills (chips, buttons, bars, nodes, floating pills, quote highlights, accent lines).
+- **2rem** - larger cards (pillar-card, stat-pill, chart container, visual frame).
+- **50%** - circular pills (card-icon 60px, step-node 56px, orbit-center 160px, nav dots).
+- **0** - only the grain overlay and the gradient region inside a visual frame. No sharp-cornered text container exists.
 
 ## Components
 
-- **pill** — the universal 2px-outlined container. **pill-card / stat-pill / title-pill** — the white/yellow content pills with soft shadows.
-- **card-icon** — circular candy mark; **floating-pill** — flat tilted wallpaper confetti; **quote-highlight** — inline candy emphasis pill.
-- **bar-track** — pill-shaped chart bar; **accent-line** — coral pill rule; **atmosphere** — the baseline glow + grain on every frame.
+- **pill** - the universal 2px-outlined container. **pill-card / stat-pill / title-pill** - the white/yellow content pills with soft shadows.
+- **card-icon** - circular candy mark; **floating-pill** - flat tilted wallpaper confetti; **quote-highlight** - inline candy emphasis pill.
+- **bar-track** - pill-shaped chart bar; **accent-line** - coral pill rule; **atmosphere** - the baseline glow + grain on every frame.
 
 ## Frame Treatments
 
@@ -202,9 +202,9 @@ Soft hard-offset shadow is the only depth, in `{colors.shadow}` (8% ink), bottom
 
 **Ground** cream + atmosphere, floating-pill wallpaper. **Composes** title-pill, display, accent-line, floating-pills (5–8). **Focal** a 1–2 line Bodoni `display` headline in ink (italic key word in a candy hue), centered, under a yellow title-pill; a coral accent-line below. **Chrome** uppercase Space Grotesk sub. **Accent** the italic word + candy floating pills. **Silence** content centered; pills fill the edges. **Fixed** pill outlines, Bodoni ink, flat floating pills. **Free** title, which candy hues, pill words/positions. **Density** medium-atmospheric.
 
-### 2 · Pillar Cards (catalog · move: 3-up grid · left — the dense frame)
+### 2 · Pillar Cards (catalog · move: 3-up grid · left - the dense frame)
 
-**Ground** cream + atmosphere. **Composes** title-pill (lavender), section-headline, 3× pill-card. **Focal** three white 2rem pill-cards (circular candy card-icon, Bodoni card-headline, Space Grotesk body) with 0.4cqw shadows, under a Bodoni section-headline. **Chrome** a lavender header tag-pill. **Accent** the three card-icon fills (coral/sky/lime sequence). **Silence** tight — the density exception (no floating pills here). **Fixed** 2px outlines, soft shadows, ink headlines. **Free** card content, icon hues. **Density** dense-exception.
+**Ground** cream + atmosphere. **Composes** title-pill (lavender), section-headline, 3× pill-card. **Focal** three white 2rem pill-cards (circular candy card-icon, Bodoni card-headline, Space Grotesk body) with 0.4cqw shadows, under a Bodoni section-headline. **Chrome** a lavender header tag-pill. **Accent** the three card-icon fills (coral/sky/lime sequence). **Silence** tight - the density exception (no floating pills here). **Fixed** 2px outlines, soft shadows, ink headlines. **Free** card content, icon hues. **Density** dense-exception.
 
 ### 3 · Stat Grid (data · move: stat pills · centered head)
 
@@ -212,7 +212,7 @@ Soft hard-offset shadow is the only depth, in `{colors.shadow}` (8% ink), bottom
 
 ### 4 · Pull Quote (quote · move: highlight pill · left)
 
-**Ground** cream + atmosphere, a few floating pills. **Composes** quote-display, quote-highlight, accent-line. **Focal** a Bodoni quote in ink with one phrase wrapped in a lime/sky `quote-highlight` pill (the emphasis mechanism — never bold). **Chrome** uppercase attribution. **Accent** the highlight pill. **Silence** ~50%. **Fixed** Bodoni 600, highlight-pill emphasis. **Free** quote, highlight color/phrase. **Density** sparse.
+**Ground** cream + atmosphere, a few floating pills. **Composes** quote-display, quote-highlight, accent-line. **Focal** a Bodoni quote in ink with one phrase wrapped in a lime/sky `quote-highlight` pill (the emphasis mechanism - never bold). **Chrome** uppercase attribution. **Accent** the highlight pill. **Silence** ~50%. **Fixed** Bodoni 600, highlight-pill emphasis. **Free** quote, highlight color/phrase. **Density** sparse.
 
 ### 5 · Orbit (concept · move: gravitational pills · centered)
 
@@ -239,7 +239,7 @@ Soft hard-offset shadow is the only depth, in `{colors.shadow}` (8% ink), bottom
 - No colored Bodoni headline; no uppercase Bodoni.
 - No blurred or re-colored shadow; no tenth accent color.
 - No shadow on decorative floating pills.
-- Don't blow a headline edge-to-edge — fit to measure.
+- Don't blow a headline edge-to-edge - fit to measure.
 
 ## Aspect-Ratio Behavior
 
@@ -257,24 +257,24 @@ on tighter ratios so they stay wallpaper, not clutter.
 
 ## Approved Entities
 
-No real customers, logos, or vendors are defined in the source — render any such mark as a
+No real customers, logos, or vendors are defined in the source - render any such mark as a
 placeholder. Floating-pill words are neutral atmospheres ("VISION", "FUTURE", "NEXT"), never content-specific.
 
 ## Numerals & Claims (hard rule)
 
-Never invent figures, stats, or counts at frame scale. Render slots as `— figure —`, `{metric}`,
+Never invent figures, stats, or counts at frame scale. Render slots as ` - figure - `, `{metric}`,
 `N%`. Stat-pill numbers and bar-track widths carry placeholders until the script supplies values.
 
 ## Pre-Render Self-Audit
 
-- **Squint** — one Bodoni element dominates at 3–5× its neighbor.
-- **Silence** — declarative frames carry atmosphere not clutter; only pillar/stat grids run dense.
-- **Pills** — every container is a pill with a 2px outline; no sharp text container.
-- **Color** — candy on fills + stat numerals only; headlines ink; no tenth hue.
-- **Depth** — soft offset shadow on content only; floating pills flat; no blur.
-- **Type** — Bodoni ink sentence-case, fit-to-measure; pills uppercase tracked; ≥1.4cqw floor.
-- **Anchor** — centered on cover/closer/orbit, left on cards/quote; no 3 consecutive alike.
-- **Fabrication** — every numeral traces to the script, else placeholder.
+- **Squint** - one Bodoni element dominates at 3–5× its neighbor.
+- **Silence** - declarative frames carry atmosphere not clutter; only pillar/stat grids run dense.
+- **Pills** - every container is a pill with a 2px outline; no sharp text container.
+- **Color** - candy on fills + stat numerals only; headlines ink; no tenth hue.
+- **Depth** - soft offset shadow on content only; floating pills flat; no blur.
+- **Type** - Bodoni ink sentence-case, fit-to-measure; pills uppercase tracked; ≥1.4cqw floor.
+- **Anchor** - centered on cover/closer/orbit, left on cards/quote; no 3 consecutive alike.
+- **Fabrication** - every numeral traces to the script, else placeholder.
 
 ## Known Gaps
 

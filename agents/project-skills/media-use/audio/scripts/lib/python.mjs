@@ -1,16 +1,16 @@
-// python.mjs — resolve which Python 3 executable to spawn, per platform.
+// python.mjs - resolve which Python 3 executable to spawn, per platform.
 //
 // The audio engine (tts.mjs, bgm.mjs) shells out to `python3` for ElevenLabs
 // TTS and the local Lyria/MusicGen BGM paths. `python3` is the right name on
 // macOS/Linux, but on Windows the python.org installer only creates
-// `python.exe` plus the `py` launcher — there is no `python3.exe` (only the
+// `python.exe` plus the `py` launcher - there is no `python3.exe` (only the
 // Microsoft Store build adds one). So a bare `spawn("python3", …)` ENOENTs on a
 // standard Windows Python install, silently disabling every Python-backed audio
 // feature until the user hand-creates a `python3.exe` shim (reported twice).
 //
 // Resolve once, per process: probe the platform's candidates in order and take
 // the first that actually runs. `py` is the launcher, so it needs a `-3` arg to
-// select Python 3 — hence candidates are argv PREFIXES, not bare names.
+// select Python 3 - hence candidates are argv PREFIXES, not bare names.
 
 import { spawnSync } from "node:child_process";
 
@@ -29,7 +29,7 @@ function defaultProbe(cmd, args) {
  * Pure except for `probe` (which runs `<cmd> … --version`); both `platform`
  * and `probe` are injectable so every branch is unit-testable without spawning.
  * If nothing probes OK, falls back to the canonical name for the platform so
- * the eventual spawn fails loudly exactly as it did before — never worse.
+ * the eventual spawn fails loudly exactly as it did before - never worse.
  */
 export function resolvePythonCommand(platform = process.platform, probe = defaultProbe) {
   const candidates =
@@ -42,7 +42,7 @@ export function resolvePythonCommand(platform = process.platform, probe = defaul
 
 let cached = null;
 
-/** Cached `resolvePythonCommand()` — probing spawns, so resolve at most once. */
+/** Cached `resolvePythonCommand()` - probing spawns, so resolve at most once. */
 export function pythonCommand() {
   if (!cached) cached = resolvePythonCommand();
   return cached;

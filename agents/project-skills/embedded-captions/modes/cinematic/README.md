@@ -1,8 +1,8 @@
-# Cinematic mode (pure embed) — one engine, six DNAs
+# Cinematic mode (pure embed) - one engine, six DNAs
 
 > Cinematic mode compiles **[../../dna/](../../dna/README.md)** through
 > **[engine.html](engine.html)** (`make-composition.cjs`). The old per-template HTML
-> shells are retired — `cinematic-cream` maps to `dna: "cream"` automatically; the other
+> shells are retired - `cinematic-cream` maps to `dna: "cream"` automatically; the other
 > archived templates (memory-wall / champion / portrait-header, in [\_archive/](_archive/))
 > remain as design references only.
 
@@ -18,7 +18,7 @@ blocks, per-line typography within the DNA).
 2. Pick a DNA ([../../dna/README.md](../../dna/README.md)): bright hero band → `ink`,
    else by register (cream / editorial / keynote / documentary / loud). Recommend, let
    the user pick.
-3. Author `<project>/cinematic.json` — `"dna": "<name>"` + thought-blocks (schema:
+3. Author `<project>/cinematic.json` - `"dna": "<name>"` + thought-blocks (schema:
    `scripts/make-cinematic.cjs` header)
 4. `node scripts/make-cinematic.cjs <project>` → plan.json → engine-compiled index.html
 5. `node scripts/preview-frames.cjs <project>` → § Visual QA (failure checks + the 5
@@ -35,14 +35,14 @@ blocks, per-line typography within the DNA).
 
 ## What you DON'T do
 
-- Override `.cap` color / blend / shadow / filter / motion curves — that's the DNA.
+- Override `.cap` color / blend / shadow / filter / motion curves - that's the DNA.
   Scene fights the look → pick a different DNA (bright → `ink`), never recolor.
 - Hand-position the hero into a clean margin (it belongs ON the subject, ~30–55%
-  occluded — safe-zones `heroBands.best`).
+  occluded - safe-zones `heroBands.best`).
 - Add full-frame grades/textures over the footage (hard rule: the video ships untouched).
 
 ## Adding a DNA
 
-`dna/<name>.json` — copy one, change the voice (see [../../dna/README.md](../../dna/README.md)
+`dna/<name>.json` - copy one, change the voice (see [../../dna/README.md](../../dna/README.md)
 § Adding). The engine consumes it with no code change. A DNA must be a distinct voice
 with a reason to exist, not a recolor.

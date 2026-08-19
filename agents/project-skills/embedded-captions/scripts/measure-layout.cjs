@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * measure-layout.cjs — pixel-perfect bbox measurement using headless Chromium.
+ * measure-layout.cjs - pixel-perfect bbox measurement using headless Chromium.
  *
  * Loads the compiled index.html, seeks the GSAP timeline to specified sample
  * times, queries every .cap container + every .w word span via
@@ -8,7 +8,7 @@
  *
  * check-occlusion.cjs then reads _layout.json + frames_fg/*.png and computes
  * per-word occlusion against the actual subject silhouette (matte alpha via
- * sharp) — pixel accurate, no char_ratio guessing.
+ * sharp) - pixel accurate, no char_ratio guessing.
  *
  * Usage:
  *   node measure-layout.cjs <project-dir> [times...]
@@ -54,18 +54,18 @@ for (const root of HF_ROOTS) {
 }
 if (!puppeteer) {
   console.error(
-    "[measure] could not locate puppeteer — set HYPERFRAMES_ROOT to a built hyperframes checkout",
+    "[measure] could not locate puppeteer - set HYPERFRAMES_ROOT to a built hyperframes checkout",
   );
   process.exit(3);
 }
 
 // Resolve hyperframes' bundled GSAP. The templates load GSAP from a CDN
 // (cdn.jsdelivr.net), but in headless Chromium that request can be slow or
-// blocked — the page's inline `gsap.timeline()` then throws "gsap is not
+// blocked - the page's inline `gsap.timeline()` then throws "gsap is not
 // defined" and the occlusion gate hard-fails. We inject this local copy on
 // every new document (before any page script runs) so window.gsap always
 // exists, and abort the CDN request so the parser never stalls on it. The
-// render path is unaffected — this is measurement-only.
+// render path is unaffected - this is measurement-only.
 let gsapSource = null;
 for (const root of HF_ROOTS) {
   const cands = [path.join(root, "node_modules", "gsap", "dist", "gsap.min.js")];
@@ -101,7 +101,7 @@ async function main() {
   }
   const indexPath = path.resolve(projectDir, "index.html");
   if (!fs.existsSync(indexPath)) {
-    console.error(`[measure] missing ${indexPath} — run make-composition.cjs first`);
+    console.error(`[measure] missing ${indexPath} - run make-composition.cjs first`);
     process.exit(2);
   }
 
@@ -118,7 +118,7 @@ async function main() {
     const allTimes = new Set();
     for (const g of plan.groups) {
       const dur = g.out - g.in;
-      // 4 samples per group: 15%, 40%, 65%, 90% through window — covers entry/peak/exit
+      // 4 samples per group: 15%, 40%, 65%, 90% through window - covers entry/peak/exit
       [0.15, 0.4, 0.65, 0.9].forEach((p) => allTimes.add(+(g.in + dur * p).toFixed(3)));
     }
     sampleTimes = [...allTimes].sort((a, b) => a - b);
@@ -187,7 +187,7 @@ async function main() {
       if (fs.existsSync(fontsCss))
         await page.addStyleTag({ content: fs.readFileSync(fontsCss, "utf8") });
     } catch {
-      /* best-effort — fonts.css missing just reverts to old behavior */
+      /* best-effort - fonts.css missing just reverts to old behavior */
     }
     // let webfonts settle so measured glyph metrics match the render
     await page.evaluate(async () => {
@@ -277,7 +277,7 @@ async function main() {
     );
   } finally {
     // Chromium occasionally hangs on shutdown. This script runs synchronously
-    // inside check-occlusion.cjs, which the render gate blocks on — a hung close
+    // inside check-occlusion.cjs, which the render gate blocks on - a hung close
     // would wedge the whole render. Cap the close, then force-exit below.
     await Promise.race([browser.close().catch(() => {}), new Promise((r) => setTimeout(r, 8000))]);
   }

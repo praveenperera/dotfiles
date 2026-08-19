@@ -1,23 +1,23 @@
-// Official brand marks — the `logo` type's provider tiers, tried in registry
+// Official brand marks - the `logo` type's provider tiers, tried in registry
 // order. Every tier was verified against a 54-brand stress test (2026-07,
-// 100% cascade hit). Hit counts below are a snapshot of that run — they
+// 100% cascade hit). Hit counts below are a snapshot of that run - they
 // drift as the alias/org maps grow; re-run the stress test to refresh them.
 //
-//   1. svgl          — official full-color vector SVGs (+ wordmark variants);
+//   1. svgl - official full-color vector SVGs (+ wordmark variants);
 //                      40/54 first-hits. Search is substring-based, so
 //                      entities go through alias normalization first
 //                      ("nextjs" never matches "Next.js" raw).
-//   2. simple-icons  — monochrome official glyphs; caught the long tail the
+//   2. simple-icons - monochrome official glyphs; caught the long tail the
 //                      others miss (nike, visa, toyota, wechat, bytedance).
 //                      Pinned CDN build for determinism.
-//   3. github avatar — the org's official logo for brands with a GitHub
+//   3. github avatar - the org's official logo for brands with a GitHub
 //                      presence. Known orgs only: guessing a login risks a
 //                      same-named personal account.
-//   4. domain favicon — small-raster last resort (DuckDuckGo ip3). Responses
+//   4. domain favicon - small-raster last resort (DuckDuckGo ip3). Responses
 //                      under ~500B are DDG's globe placeholder, not a hit.
 //
 // HeyGen asset search is deliberately absent: for brand queries it returns
-// generic look-alike icons (0/3 in testing) — worse than a miss. A total miss
+// generic look-alike icons (0/3 in testing) - worse than a miss. A total miss
 // falls through to resolve's normal failure path (`no provider could resolve
 // logo`, exit 1).
 
@@ -44,7 +44,7 @@ const SIMPLE_ICON_SLUGS = {
   aws: "amazonwebservices",
 };
 
-// Known GitHub orgs. Only mapped entities resolve at this tier — a brand name
+// Known GitHub orgs. Only mapped entities resolve at this tier - a brand name
 // is NOT a GitHub login, and guessing hits same-named personal accounts.
 const GITHUB_ORGS = {
   slack: "slackhq",
@@ -80,7 +80,7 @@ export function entityFrom(intent, entity) {
     .replace(/\s+/g, " ");
 }
 
-/** Exact match after stripping case/spacing/punctuation — "Next.js" ≡ "nextjs". */
+/** Exact match after stripping case/spacing/punctuation - "Next.js" ≡ "nextjs". */
 export function titleMatches(title, entity) {
   return norm(title) === norm(entity);
 }
@@ -122,7 +122,7 @@ export async function svglSearch(intent, ctx = {}) {
     try {
       items = await fetchJson(`${SVGL_API}?search=${encodeURIComponent(q)}`);
     } catch {
-      return null; // network down — let the next tier try its own host
+      return null; // network down - let the next tier try its own host
     }
     if (!Array.isArray(items)) continue;
     const hit = items.find((it) => titleMatches(it.title, q) || titleMatches(it.title, entity));
@@ -214,7 +214,7 @@ export async function faviconSearch(intent, ctx = {}) {
     ext: ".ico",
     source: "search",
     metadata: {
-      description: `${entity} favicon (small raster — chip-size use only)`,
+      description: `${entity} favicon (small raster - chip-size use only)`,
       provider: "favicon.ddg",
       provenance: { entity, domain, bytes, low_res: true },
     },

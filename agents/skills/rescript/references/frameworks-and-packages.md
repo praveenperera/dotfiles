@@ -88,8 +88,8 @@ required. Prefer Vite for local tools and client-only applications.
 ## Package-binding reality
 
 The official package index has a small official core and broad community coverage. Bindings exist
-for many established areas—React Native, Relay, MUI, Jotai, RxJS, Firebase, Supabase, Stripe,
-date libraries, and test tools—but existence does not imply current compatibility.
+for many established areas - React Native, Relay, MUI, Jotai, RxJS, Firebase, Supabase, Stripe,
+date libraries, and test tools - but existence does not imply current compatibility.
 
 Before installing a binding:
 

@@ -7,7 +7,7 @@
          DROP-IN circle-highlight (editorial amber annotation style). To reuse:
            1) set CFG below (asset path, EVEN stage dims, BOX from the locate protocol, LABEL)
            2) render with even width/height (ODD width => ffmpeg encode fails!)
-         BOX comes from grounding/PROTOCOL.md (locate.mjs loop) — NEVER eyeball coords.
+         BOX comes from grounding/PROTOCOL.md (locate.mjs loop) - NEVER eyeball coords.
          Everything (wash pool, double ring, connector, callout, brackets) is
          computed from BOX. Set MODE='full' (ring+label+brackets) or 'circle'
          (ring only). Gotchas are flagged inline.
@@ -156,7 +156,7 @@
   </head>
   <body>
     <!-- ⚠ data-width/height + the #stage width/height MUST be set STATICALLY here
-         (the renderer's StaticGuard reads them at compile time, BEFORE JS runs — JS
+         (the renderer's StaticGuard reads them at compile time, BEFORE JS runs - JS
          setAttribute is too late and the render falls back to portrait 1080×1920).
          Keep these EQUAL to CFG.W/CFG.H below, and EVEN. -->
     <div
@@ -186,7 +186,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <script>
-      // ====== CONFIG — set these (BOX from the locate protocol) ======
+      // ====== CONFIG - set these (BOX from the locate protocol) ======
       const CFG = {
         asset: "assets/shot.png",
         W: 1998,

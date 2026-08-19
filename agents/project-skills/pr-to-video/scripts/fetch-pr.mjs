@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-// Step 1 — PR fetch (deterministic; runs gh; large-PR-safe; NO scratch dir).
+// Step 1 - PR fetch (deterministic; runs gh; large-PR-safe; NO scratch dir).
 //
 // Replaces a bare `gh pr view … > capture/pr.json` in the orchestrator. It folds
 // the PR into the two artifacts ingest.mjs consumes:
 //   capture/pr.json    the gh pr view core (title, body, author, refs, commits,
 //                      reviews, comments, assignees, +/− stats, …) with its `files`
 //                      list COMPLETED via a paginated `gh api .../pulls/N/files`
-//                      call — `gh pr view --json files` truncates at ~100 files, so a
+//                      call - `gh pr view --json files` truncates at ~100 files, so a
 //                      big PR would otherwise lose the tail. Commits keep gh pr view's
-//                      rich `authors[]` (co-authors) — only `files` needs the override.
+//                      rich `authors[]` (co-authors) - only `files` needs the override.
 //   capture/diff.patch the full unified diff (`gh pr diff`).
 //
 // gh runs HERE so auth / not-found / private-repo errors surface with gh's own stderr
-// and exit 1 (the orchestrator then stops). Intermediates are held in memory — this
+// and exit 1 (the orchestrator then stops). Intermediates are held in memory - this
 // writes ONLY the two files above, so there is no `_ingest_tmp/` scratch to clean up
 // (the previous "let the agent fetch in pieces" approach polluted videos/ and was
 // non-deterministic). ingest.mjs stays a pure offline transform downstream.
@@ -41,7 +41,7 @@ const prRef = flag("pr", null);
 if (!prRef) die('--pr "<url | owner/repo#N | N>" is required');
 const outDir = resolve(flag("out-dir", "./capture"));
 
-// Run gh, capture stdout. Returns { ok, stdout, stderr } — never throws (callers
+// Run gh, capture stdout. Returns { ok, stdout, stderr } - never throws (callers
 // decide whether a failure is fatal). 64 MB buffer covers large diffs / file lists.
 function ghTry(args) {
   try {
@@ -56,9 +56,9 @@ function ghTry(args) {
   }
 }
 
-// ── 0. auth — fail fast with gh's own hint ───────────────────────────────────
+// ── 0. auth - fail fast with gh's own hint ───────────────────────────────────
 if (!ghTry(["auth", "status"]).ok) {
-  die("gh is not authenticated — run: gh auth login");
+  die("gh is not authenticated - run: gh auth login");
 }
 
 // ── 1. core PR object (gh pr view) ───────────────────────────────────────────
@@ -129,11 +129,11 @@ if (owner && repo && number != null) {
     }
   } else {
     console.error(
-      `  (warn: gh api files failed — keeping pr view's files: ${apiFiles.stderr.split("\n")[0]})`,
+      `  (warn: gh api files failed - keeping pr view's files: ${apiFiles.stderr.split("\n")[0]})`,
     );
   }
 } else {
-  console.error("  (warn: could not parse owner/repo from PR url — keeping pr view's files)");
+  console.error("  (warn: could not parse owner/repo from PR url - keeping pr view's files)");
 }
 
 // ── 3. write capture/pr.json + capture/diff.patch ────────────────────────────
@@ -147,9 +147,9 @@ if (diff.ok) {
   writeFileSync(diffPath, diff.stdout);
 } else {
   // The brief still builds without the diff (ingest treats it as optional), so this
-  // is a warning, not fatal — but surface it.
+  // is a warning, not fatal - but surface it.
   console.error(
-    `  (warn: gh pr diff failed — brief builds without it: ${diff.stderr.split("\n")[0]})`,
+    `  (warn: gh pr diff failed - brief builds without it: ${diff.stderr.split("\n")[0]})`,
   );
 }
 
@@ -157,7 +157,7 @@ if (diff.ok) {
 const repoLabel = owner && repo ? `${owner}/${repo}` : "(repo?)";
 console.log(
   [
-    `✓ fetch-pr: ${repoLabel} PR #${number ?? "?"} — "${(pr.title || "").slice(0, 72)}"`,
+    `✓ fetch-pr: ${repoLabel} PR #${number ?? "?"} - "${(pr.title || "").slice(0, 72)}"`,
     `  files: ${filesNote}; diff: ${diff.ok ? `${diff.stdout.length} chars` : "MISSING"}`,
     `  wrote ${prJsonPath}${diff.ok ? ` + ${diffPath}` : ""}`,
   ].join("\n"),

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup.sh — generate the binary assets this fixture needs.
+# setup.sh - generate the binary assets this fixture needs.
 #
 # Both Remotion and HyperFrames variants need a 200x200 blue PNG and a
 # 6-second silent WAV. Generating them via ffmpeg keeps binaries out of

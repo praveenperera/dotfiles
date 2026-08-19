@@ -34,7 +34,7 @@ see T2's `setup.sh` for an example pattern.
 ></audio>
 ```
 
-`data-start` and `data-duration` are required — the runtime needs them to
+`data-start` and `data-duration` are required - the runtime needs them to
 schedule the audio. Default to the composition's full duration if Remotion
 didn't specify trim.
 
@@ -103,7 +103,7 @@ collapses to a regular `<video>`.
 ```
 
 Width/height get rounded to integer px. If the original style has
-animated dimensions, the GSAP tween animates them — see [timing.md](timing.md).
+animated dimensions, the GSAP tween animates them - see [timing.md](timing.md).
 
 ## `<IFrame>`
 
@@ -131,7 +131,7 @@ useEffect(() => {
 ```
 
 Drop. HF waits on asset readiness via the [Frame Adapter pattern](https://hyperframes.heygen.com/concepts/frame-adapters)
-— images, videos, fonts, and Lottie animations all signal load
+ - images, videos, fonts, and Lottie animations all signal load
 completion natively. There's nothing to do at the application level.
 
 ## When the asset isn't a file
@@ -140,10 +140,10 @@ If Remotion's media source is a Buffer, dataURL, or URL.createObjectURL,
 the asset doesn't exist on disk and can't be copied via setup.sh. Two
 options:
 
-1. Materialize the asset at translation time — write the buffer to a file
+1. Materialize the asset at translation time - write the buffer to a file
    in `hf-src/assets/`.
 2. Embed as a data URL directly in the HTML (`src="data:image/png;base64,..."`)
    for small assets (< 100 KB).
 
-For audio/video Buffers, option 1 is preferred — base64-encoded media
+For audio/video Buffers, option 1 is preferred - base64-encoded media
 bloats the HTML and slows the renderer.

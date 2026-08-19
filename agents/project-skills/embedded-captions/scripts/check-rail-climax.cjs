@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /*
- * check-rail-climax.cjs — enforce the Rail ↔ climax hand-off (PIPELINE.md).
+ * check-rail-climax.cjs - enforce the Rail ↔ climax hand-off (PIPELINE.md).
  *
  *   node check-rail-climax.cjs <project-dir>
  *
- * The embed climax is a PROMOTED word — lifted out of the rail into the hero
+ * The embed climax is a PROMOTED word - lifted out of the rail into the hero
  * layer. It must NEVER also be revealed in the rail. This gate loads index.html
  * (the climax) and rail.html (the verbatim rail) in headless Chromium, finds the
  * climax's on-screen window + its word(s), then checks whether the rail reveals
@@ -13,7 +13,7 @@
  *
  * Conservative by design: only a CONFIRMED duplicate fails. Anything we can't
  * determine (no rail.html, no puppeteer, timeline never registers, no climax)
- * exits 0 — infra problems never block a render.
+ * exits 0 - infra problems never block a render.
  */
 const path = require("path");
 const fs = require("fs");
@@ -110,7 +110,7 @@ async function load(page, file) {
 }
 // visible text of a selector at time t, by seeking the page's main timeline.
 // Visibility must be EFFECTIVE (own opacity × every ancestor's): a rail line that
-// fades out as a CONTAINER leaves its word spans at opacity:1 — checking only the
+// fades out as a CONTAINER leaves its word spans at opacity:1 - checking only the
 // span's own style false-positives on text that is actually invisible.
 async function visibleAt(page, t, selector, childSel) {
   return page.evaluate(
@@ -153,8 +153,8 @@ async function main() {
   const indexPath = path.join(project, "index.html");
   const railPath = path.join(project, "rail.html");
   if (!fs.existsSync(railPath) || !fs.existsSync(indexPath))
-    ok("[rail-climax] no rail.html+index.html — not Standard, skipping");
-  if (!puppeteer) ok("[rail-climax] puppeteer unavailable — skipping (set HYPERFRAMES_ROOT)");
+    ok("[rail-climax] no rail.html+index.html - not Standard, skipping");
+  if (!puppeteer) ok("[rail-climax] puppeteer unavailable - skipping (set HYPERFRAMES_ROOT)");
 
   const exe =
     process.platform === "darwin"
@@ -168,14 +168,14 @@ async function main() {
       args: ["--disable-web-security", "--allow-file-access-from-files", "--disable-dev-shm-usage"],
     });
   } catch (e) {
-    ok(`[rail-climax] could not launch Chromium — skipping (${e.message})`);
+    ok(`[rail-climax] could not launch Chromium - skipping (${e.message})`);
   }
 
   try {
     // index.html → climax window + climax word tokens
     const ip = await newPage(browser, 1920, 1080);
     if (!(await load(ip, indexPath)))
-      ok("[rail-climax] index timeline never registered — skipping");
+      ok("[rail-climax] index timeline never registered - skipping");
     const dur =
       +(await ip.evaluate(() => {
         const r = document.querySelector("#root") || document.querySelector("[data-duration]");
@@ -194,11 +194,11 @@ async function main() {
       }
     }
     if (!climaxTokens.size || winIn === null)
-      ok("[rail-climax] no visible climax found in index.html — skipping");
+      ok("[rail-climax] no visible climax found in index.html - skipping");
 
     // rail.html → words visible during [winIn, winOut]
     const rp = await newPage(browser, 1920, 1080);
-    if (!(await load(rp, railPath))) ok("[rail-climax] rail timeline never registered — skipping");
+    if (!(await load(rp, railPath))) ok("[rail-climax] rail timeline never registered - skipping");
     const hits = new Map(); // token -> first t seen
     for (let t = Math.max(0, winIn - STEP); t <= winOut + 0.001; t += STEP) {
       const railToks = new Set(toks(await visibleAt(rp, +t.toFixed(2), ".w", null)));
@@ -213,13 +213,13 @@ async function main() {
         `[rail-climax] ✗ DUPLICATE PROMOTED WORD: the climax word(s) ${[...climaxTokens].map((w) => `"${w}"`).join(", ")} ` +
           `are on screen during the climax window [${winIn.toFixed(2)}–${winOut.toFixed(2)}s], ` +
           `and the rail ALSO reveals: ${list}.\n` +
-          `  The promoted word must be handed off, never duplicated — see PIPELINE.md "Rail ↔ climax hand-off":\n` +
+          `  The promoted word must be handed off, never duplicated - see PIPELINE.md "Rail ↔ climax hand-off":\n` +
           `  freeze the rail before the promoted word, let the climax carry it, hold the climax across the rail's\n` +
           `  page-flip, and exit it at the end of the thought. The rail must never reveal the promoted word.`,
       );
     }
     console.log(
-      `[rail-climax] ✓ ok — promoted word(s) ${[...climaxTokens].map((w) => `"${w}"`).join(", ")} not duplicated in the rail (window ${winIn.toFixed(2)}–${winOut.toFixed(2)}s)`,
+      `[rail-climax] ✓ ok - promoted word(s) ${[...climaxTokens].map((w) => `"${w}"`).join(", ")} not duplicated in the rail (window ${winIn.toFixed(2)}–${winOut.toFixed(2)}s)`,
     );
   } finally {
     await Promise.race([browser.close().catch(() => {}), new Promise((r) => setTimeout(r, 8000))]);
@@ -228,6 +228,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((e) => {
-    console.error(`[rail-climax] (skipped — ${e.message})`);
+    console.error(`[rail-climax] (skipped - ${e.message})`);
     process.exit(0);
   });

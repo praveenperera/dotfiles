@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene 07 — HyperFrames Video Kinetic Text Pivot</title>
+    <title>Scene 07 - HyperFrames Video Kinetic Text Pivot</title>
 
     <!--
       HyperFrames composition.tsx.
@@ -127,7 +127,7 @@
       }
 
       /* ============================================================
-         VIDEO CARD — three nested wrappers
+         VIDEO CARD - three nested wrappers
          ============================================================ */
       .video-pos {
         position: absolute;
@@ -208,7 +208,7 @@
       }
 
       /* ============================================================
-         MP4 STAT — three nested wrappers + depth stack
+         MP4 STAT - three nested wrappers + depth stack
          ============================================================ */
       .stat-pos {
         position: absolute;
@@ -243,7 +243,7 @@
       }
 
       /* ============================================================
-         TYPING STAGE — center, fades in during pivot
+         TYPING STAGE - center, fades in during pivot
          ============================================================ */
       .typing-stage {
         position: absolute;
@@ -456,7 +456,7 @@
         statBreathAt: 3.0, // entry settles by here, breath begins
         statBreathDur: 0.86, // until exit at 3.86
 
-        // Phase 3: pivot — both exit, typing begins
+        // Phase 3: pivot - both exit, typing begins
         pivotAt: 3.86,
         exitDur: 0.6,
         videoExitX: -W * 0.5,
@@ -496,7 +496,7 @@
       const TYPING_DUR = (BOUNDS.line2End - 0) / TIMING.typeRate; // ≈ 1.3 s
 
       /* ================================================================
-         BUILD DOM — 5-layer depth stack for "MP4"
+         BUILD DOM - 5-layer depth stack for "MP4"
          ================================================================ */
       const LAYER_COUNT = 5;
       const OFFSET_X = 1;
@@ -589,7 +589,7 @@
       );
 
       /* ----------------------------------------------------------------
-         PHASE 3: Pivot — video + stat exit; typing fades in
+         PHASE 3: Pivot - video + stat exit; typing fades in
          ---------------------------------------------------------------- */
       tl.to(
         "#video-pos",
@@ -715,7 +715,7 @@
       );
 
       /* ----------------------------------------------------------------
-         CONTINUOUS SCENE-TICKER — float, breath, cursor blink
+         CONTINUOUS SCENE-TICKER - float, breath, cursor blink
          All gated by time windows so they only fire when visible.
          ---------------------------------------------------------------- */
       const videoFloat = document.getElementById("video-float");
@@ -734,19 +734,19 @@
             const idx = typedIndexAt(t);
             renderTypedText(idx);
 
-            // Video float — only while video is visible (Phase 1 + 2)
+            // Video float - only while video is visible (Phase 1 + 2)
             if (t < TIMING.pivotAt) {
               const floatY = Math.sin(t * 0.9) * 6;
               gsap.set(videoFloat, { y: floatY });
             }
 
-            // Stat breath — only while MP4 is settled and not yet exiting
+            // Stat breath - only while MP4 is settled and not yet exiting
             if (t > TIMING.statBreathAt && t < TIMING.pivotAt) {
               const breath = 1 + Math.sin((t - TIMING.statBreathAt) * 1.2) * 0.02;
               gsap.set(statBreathEl, { scale: breath });
             }
 
-            // Cursor blink — 1 Hz (Math.floor(t * 2) % 2 === 0 → on for 0.5s, off for 0.5s)
+            // Cursor blink - 1 Hz (Math.floor(t * 2) % 2 === 0 → on for 0.5s, off for 0.5s)
             const blink = Math.floor(t * 2) % 2 === 0 ? 1 : 0;
 
             // Cursor 1: visible while typing line 1 (idx < accent2End)

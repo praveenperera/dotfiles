@@ -1,5 +1,5 @@
 <!--
-  Cartesian — caption skin (preset-local source).
+  Cartesian - caption skin (preset-local source).
 
   This is the preset's own lower-third karaoke caption look. product-launch-video's
   Step 2 copies it into the project as caption-skin.html; captions.mjs then fills the
@@ -9,7 +9,7 @@
     · the 0 duration + 0 width/height   → real total + canvas size
     · the empty data-brand-tokens style → :root tokens derived from the project's frame.md
 
-  Token contract — reference ONLY this fixed vocab (captions.mjs injects it from
+  Token contract - reference ONLY this fixed vocab (captions.mjs injects it from
   frame.md, so the Step-2 brand overlay flows through; each var has a cartesian literal
   fallback for standalone preview):
     --cap-ink · --cap-canvas · --cap-accent · --cap-accent-2 · --font-display ·
@@ -19,10 +19,10 @@
   State changes use gsap.set({className}) (applied on the engine's frame-by-frame seek);
   never tl.call() callbacks (seek does not fire them → wrong state on render).
 
-  Visual: a museum-catalog lower-third — a warm-stone card on a single 1px taupe
+  Visual: a museum-catalog lower-third - a warm-stone card on a single 1px taupe
   hairline border (cartesian's universal structural device), SHARP corners, ZERO
   shadow, ZERO fill beyond the stone canvas. Playfair Display 400, sentence case, ink
-  glyphs. Upcoming words sit in faint ink; the current word is marked QUIETLY — a faint
+  glyphs. Upcoming words sit in faint ink; the current word is marked QUIETLY - a faint
   stone wash with a 1px taupe hairline underline (restraint, not a loud block); spoken
   words settle to solid ink, the wash and underline cleared.
 -->
@@ -43,7 +43,7 @@
     z-index: 20;
     pointer-events: none;
   }
-  /* the keep-out band, from captionBand(H) — frame content stays above it */
+  /* the keep-out band, from captionBand(H) - frame content stays above it */
   .caption-stage {
     position: absolute;
     left: 0;
@@ -55,7 +55,7 @@
     justify-content: center;
   }
   .caption-group {
-    /* every group is absolutely stacked over the SAME band — exactly one shown at a
+    /* every group is absolutely stacked over the SAME band - exactly one shown at a
        time via opacity. Must be absolute: in-flow groups would lay out side-by-side. */
     position: absolute;
     inset: 0;
@@ -65,7 +65,7 @@
     opacity: 0;
   }
 
-  /* THE stone card — single 1px taupe hairline border (cartesian's universal
+  /* THE stone card - single 1px taupe hairline border (cartesian's universal
      structural device), SHARP corners, ZERO shadow, ZERO fill beyond the stone canvas */
   .caption-pill {
     max-width: 78%;
@@ -86,21 +86,21 @@
     letter-spacing: -0.01em;
   }
 
-  /* upcoming — faint ink, no mark */
+  /* upcoming - faint ink, no mark */
   .caption-word {
     display: inline-block;
     padding: 0 0.06em;
     border-bottom: 1px solid transparent;
     color: color-mix(in srgb, var(--cap-ink, #1a1a1a) 42%, var(--cap-canvas, #ede8e0));
   }
-  /* current word — a QUIET marker: a faint warm-stone wash behind solid ink, plus a
+  /* current word - a QUIET marker: a faint warm-stone wash behind solid ink, plus a
      1px taupe hairline underline (restraint, not a loud block; SHARP, NO shadow) */
   .caption-word.is-active {
     color: var(--cap-ink, #1a1a1a);
     background: color-mix(in srgb, var(--cap-accent, #8a8178) 18%, var(--cap-canvas, #ede8e0));
     border-bottom: 1px solid var(--cap-accent, #8a8178);
   }
-  /* already spoken — solid ink, wash + underline cleared */
+  /* already spoken - solid ink, wash + underline cleared */
   .caption-word.is-spoken {
     color: var(--cap-ink, #1a1a1a);
     background: transparent;
@@ -108,16 +108,16 @@
   }
 
   /* optional per-word accents (dormant until a word-classer tags them) */
-  /* brand / key term — Playfair Display italic, cartesian's only display inflection */
+  /* brand / key term - Playfair Display italic, cartesian's only display inflection */
   .caption-word.cap-brand {
     font-style: italic;
   }
-  /* numerals / data — the body sans voice, slightly recessed */
+  /* numerals / data - the body sans voice, slightly recessed */
   .caption-word.cap-num {
     font-family: var(--font-body, "Inter"), ui-sans-serif, sans-serif;
     color: color-mix(in srgb, var(--cap-ink, #1a1a1a) 72%, var(--cap-canvas, #ede8e0));
   }
-  /* emphasis — a 1px taupe hairline underline (no second color; stone-and-ink only) */
+  /* emphasis - a 1px taupe hairline underline (no second color; stone-and-ink only) */
   .caption-word.cap-cta {
     text-decoration: underline;
     text-decoration-thickness: 1px;
@@ -191,11 +191,11 @@
       var end = isLast ? DURATION : Math.min(Number(next.start), Number(group.end) + 0.3);
       if (end <= start) end = start + 0.01;
 
-      // group on/off — exactly one group visible at a time
+      // group on/off - exactly one group visible at a time
       tl.set(groupEl, { opacity: 1 }, start);
       tl.set(groupEl, { opacity: 0 }, end);
 
-      // 3-state karaoke via className SETS — seek-safe (gsap.set applies on the
+      // 3-state karaoke via className SETS - seek-safe (gsap.set applies on the
       // engine's frame-by-frame seek; .call callbacks would NOT fire).
       words.forEach(function (w, i) {
         var el = document.getElementById("caption-word-" + g + "-" + i);

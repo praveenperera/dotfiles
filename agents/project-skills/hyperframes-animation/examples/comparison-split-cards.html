@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene 09 — Split Comparison Reveal</title>
+    <title>Scene 09 - Split Comparison Reveal</title>
 
     <!--
       HyperFrames composition.tsx.
@@ -20,7 +20,7 @@
           don't fight on the same alias
         - All continuous floating consolidated into one shared scene-ticker onUpdate
           (6 gsap.set calls per frame, batched by the browser)
-        - Phase offset Math.PI between the two cards' floats — opposed breathing
+        - Phase offset Math.PI between the two cards' floats - opposed breathing
         - Card images are HyperFrames workflow mockups (no asset files needed)
         - Ambient dual-glow via two radial-gradients in a single overlay
     -->
@@ -184,7 +184,7 @@
       /* ============================================================
          CARD IMAGE PLACEHOLDERS (mock UI)
          ============================================================ */
-      /* Left card — HTML Composition: gradient + timed clip grid */
+      /* Left card - HTML Composition: gradient + timed clip grid */
       .card-left .card-image {
         background: linear-gradient(
           135deg,
@@ -220,7 +220,7 @@
         color: rgba(255, 255, 255, 0.8);
       }
 
-      /* Right card — Render Pipeline: validation rows */
+      /* Right card - Render Pipeline: validation rows */
       .card-right .card-image {
         background: linear-gradient(
           135deg,
@@ -513,7 +513,7 @@
       };
 
       /* ================================================================
-         BADGE POSITIONS — set via CSS left/top once (not tweened)
+         BADGE POSITIONS - set via CSS left/top once (not tweened)
          ================================================================ */
       const badgeLeftEl = document.getElementById("badge-left");
       const badgeRightEl = document.getElementById("badge-right");
@@ -610,7 +610,7 @@
       );
 
       /* ----------------------------------------------------------------
-         CONTINUOUS FLOATING — shared scene-ticker onUpdate
+         CONTINUOUS FLOATING - shared scene-ticker onUpdate
          Six gsap.set calls per frame, batched by the browser.
          ---------------------------------------------------------------- */
       const leftPos = document.querySelector("#card-left  .card-pos");
@@ -636,7 +636,7 @@
             gsap.set(leftTilt, { rotationY: TIMING.baseTilt + lR });
             gsap.set(rightTilt, { rotationY: -TIMING.baseTilt + rR });
 
-            // Badges — small shared y oscillation.
+            // Badges - small shared y oscillation.
             const bY = Math.sin(t * TIMING.badgeYSpeed) * TIMING.badgeYAmp;
             gsap.set(badgeLeftEl, { y: bY });
             gsap.set(badgeRightEl, { y: bY });

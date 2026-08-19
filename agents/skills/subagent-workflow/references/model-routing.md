@@ -91,7 +91,7 @@ Counter its failure modes in the prompt. Launch-era reports describe a model tha
 Finish the entire objective before reporting. Do not stop at a partial result, and do not report success while any part of the success condition is unmet. Follow the explicit requirements above even where you would choose a different approach; if you believe a requirement is wrong, say so in the final report and still satisfy it. Stop early only for one of the listed stop conditions, and name which one.
 ```
 
-Send Opus 5 a focused self-contained prompt rather than pointing it at a large bundle of instruction files, and use `high` effort by default, as with Sol. For how to write that prompt—judgment over hard style rules, interfaces over examples, progressive disclosure, rich references, and a short completion rider—read [opus5-prompting.md](opus5-prompting.md).
+Send Opus 5 a focused self-contained prompt rather than pointing it at a large bundle of instruction files, and use `high` effort by default, as with Sol. For how to write that prompt - judgment over hard style rules, interfaces over examples, progressive disclosure, rich references, and a short completion rider - read [opus5-prompting.md](opus5-prompting.md).
 
 Sol remains the default delegated implementer under both roots. When the user directs "use opus", usually because Sol usage limits are running low, Opus 5 owns delegated implementation for that session. The launch benchmarks support the substitution: Opus 5 matches or beats Sol on FrontierCode (53.4 vs 47.5), terminal coding (43.3 vs 34.4), and AutomationBench (26.0 vs 18.1), and trails only on DeepSWE (68.8 vs 72.7). Under this substitution:
 

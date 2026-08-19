@@ -1,4 +1,4 @@
-// T4 case 02 — useEffect with non-empty deps performs side effects per render.
+// T4 case 02 - useEffect with non-empty deps performs side effects per render.
 //
 // Should be detected by lint_source.py as blocker r2hf/use-effect-deps.
 // The skill should refuse to translate.

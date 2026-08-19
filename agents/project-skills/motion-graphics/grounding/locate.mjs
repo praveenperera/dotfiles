@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-/* locate.mjs — find "X" in an image WITHOUT any detector API or key.
+/* locate.mjs - find "X" in an image WITHOUT any detector API or key.
  *
  * You (the author model) are weak at regressing pixel coordinates but strong at
- * "which numbered strip is the target in?" — so localization = RSVP grid-index
+ * "which numbered strip is the target in?" - so localization = RSVP grid-index
  * (ACL 2025 long.715): pick strips on a numbered grid, reconstruct the box
- * geometrically. Zero npm deps — node + ffmpeg (both already required by
+ * geometrically. Zero npm deps - node + ffmpeg (both already required by
  * hyperframes). Full protocol: grounding/PROTOCOL.md.
  *
  * THE LOOP (you read images between steps):
@@ -17,7 +17,7 @@
  *   3) node locate.mjs final <img> --region x0,y0,x1,y1 --vids 3,4 --hids 3,4
  *        → {box, center} normalized to the FULL image.
  *   4) node locate.mjs mark <img> --box x0,y0,x1,y1 --out DIR/check.png
- *        → VERIFY: read check.png — is the red box on the target? If off,
+ *        → VERIFY: read check.png - is the red box on the target? If off,
  *        redo step 2/3 with corrected strips. Never skip this.
  */
 import { execFileSync } from "node:child_process";
@@ -171,7 +171,7 @@ if (cmd === "overlay") {
     next:
       "VERIFY: locate.mjs mark <img> --box " +
       box.join(",") +
-      " --out <dir>/check.png — then READ it",
+      " --out <dir>/check.png - then READ it",
   });
 } else if (cmd === "mark") {
   const box = opt.box.split(",").map(Number);
@@ -184,10 +184,10 @@ if (cmd === "overlay") {
   ff(["-i", img, "-vf", `drawbox=x=${bx}:y=${by}:w=${bw}:h=${bh}:color=${RED}@1:t=6`, dst]);
   out({
     marked: dst,
-    next: "READ it — red box on the target? If off, redo region/final with corrected strips.",
+    next: "READ it - red box on the target? If off, redo region/final with corrected strips.",
   });
 } else if (cmd === "auto") {
-  // OPTIONAL fast path — only if a strong detector key happens to exist. Never assume it.
+  // OPTIONAL fast path - only if a strong detector key happens to exist. Never assume it.
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
     console.error(

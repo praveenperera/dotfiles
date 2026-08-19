@@ -1,13 +1,13 @@
 ---
 version: alpha
-name: BlockFrame — Frame (video / frame layer)
+name: BlockFrame - Frame (video / frame layer)
 description: >
   Video-first companion to BlockFrame's design.md. The unit is the frame (1920×1080). Atoms are
-  identical and sacred — 4px black borders + 8px hard offset shadows, the five-pastel candy palette
+  identical and sacred - 4px black borders + 8px hard offset shadows, the five-pastel candy palette
   (pink/blue/green/yellow/cream) plus black/white/off-white, Inter 800–900 uppercase display +
   Space Grotesk label chrome, square corners, label-pills, tilted decorations, star bursts, stripe
   blocks, dot grids. Composition + frame scale rewritten. Motion out of scope.
-unit: the frame — 1920×1080 primary; 9:16 and 1:1 documented
+unit: the frame - 1920×1080 primary; 9:16 and 1:1 documented
 principle: atoms are sacred · composition is free · numbers come from the script
 
 colors:
@@ -24,12 +24,12 @@ borders: { primary: "4px solid black", thin: "3px solid black" }
 shadows: { default: "8px 8px 0 black", small: "4px 4px 0 black", hover: "6px 6px 0 black", close-yellow: "12px 12px 0 yellow", close-white: "6px 6px 0 white" }
 
 typography:
-  # — reading + chrome ramp —
+  # - reading + chrome ramp -
   body:    { fontFamily: "Inter", cqw: 0.95, weight: 500, lineHeight: 1.6 }
   card-title:{ fontFamily: "Inter", cqw: 1.15, weight: 700, upper: true, lineHeight: 1.2 }
   label:   { fontFamily: "Space Grotesk", px: 13, weight: 600, tracking: "0.08em", upper: true }
   counter: { fontFamily: "Space Grotesk", px: 14, weight: 700, tracking: "0.1em", upper: true }
-  # — display ramp (Inter 800–900, uppercase, negative tracking) —
+  # - display ramp (Inter 800–900, uppercase, negative tracking) -
   heading-md:{ fontFamily: "Inter", cqw: 2.1, weight: 700, lineHeight: 1.1, tracking: "-0.01em", upper: true }
   quote-text:{ fontFamily: "Inter", cqw: 2.7, weight: 900, lineHeight: 1.15, tracking: "-0.02em", upper: true }
   stat-number:{ fontFamily: "Inter", cqw: 3.3, weight: 900, lineHeight: 1.0 }
@@ -60,7 +60,7 @@ components:
     rounded: "9999px"
     shadow: "0.4cqw 0.4cqw 0 {colors.black}"
     typography: "{typography.label}"
-    description: "The universal eyebrow — never plain text."
+    description: "The universal eyebrow - never plain text."
   button-primary:
     backgroundColor: "{colors.yellow}"
     textColor: "{colors.black}"
@@ -96,23 +96,23 @@ components:
     border: "0.4cqw solid {colors.white}"
     rounded: "0"
     shadow: "1.2cqw 1.2cqw 0 {colors.yellow}"
-    description: "Inverted closer — the only colored shadow."
+    description: "Inverted closer - the only colored shadow."
 ---
 
-# BlockFrame — Frame (video / frame layer)
+# BlockFrame - Frame (video / frame layer)
 
 ## Overview
 
 BlockFrame at frame scale is a **maximalist neobrutalist** system on five laws: every region has a
 4px black border, every elevated element an 8px hard offset shadow, every corner square, every
 accent a saturated pastel, and every layout allowed to be a little crooked. The joy is the
-deliberate collision — bordered cards meeting bordered cards, shadows stacking, tilted decorations
+deliberate collision - bordered cards meeting bordered cards, shadows stacking, tilted decorations
 puncturing the grid.
 
 The voice is **Inter** at weight 800–900 in tight uppercase with negative tracking (display) +
 weight 500 sentence body, and **Space Grotesk** weight 600 uppercase 0.08em as the label/chrome
 voice. Five candy pastels (pink/blue/green/yellow/cream) cycle as full-bleed grounds across frames
-— the color cycling is the primary rhythm. Depth is **hard offset shadow** (8px/4px, solid black,
+ - the color cycling is the primary rhythm. Depth is **hard offset shadow** (8px/4px, solid black,
 zero blur, bottom-right); the close-frame's 12px yellow shadow is the one colored exception.
 
 **Key characteristics at frame scale:**
@@ -122,7 +122,7 @@ zero blur, bottom-right); the close-frame's 12px yellow shadow is the one colore
 - **Inter 800–900 uppercase** negative-tracked display; **Space Grotesk** label chrome.
 - **Square corners** everywhere (only the stat-deco dot is round); **tilted decorations** puncture the grid.
 - **Label-pills** open every region; star bursts, stripe blocks, dot grids are reusable attention units.
-- **Comfortably dense** — packed reads as authoritative; empty corners read as broken.
+- **Comfortably dense** - packed reads as authoritative; empty corners read as broken.
 
 ## The Frame
 
@@ -130,25 +130,25 @@ zero blur, bottom-right); the close-frame's 12px yellow shadow is the one colore
 
 Three eyeball tests gate every frame before any structural check:
 
-- **Squint** — one Inter display moment dominates at 3–6× its neighbor; cards read as a system, not rivals.
-- **Silence** — cover/quote/close keep air (decorations, not content); the **feature-card and stat grids are the dense exception**.
-- **Restraint** — the 4px→08px / 3px→4px coupling holds; black borders only (white on close); pastel ground **cycles** one per frame; no sixth pastel.
-- **Reference** — aim at a **zine / 1990s sticker-book / toy-packaging spread** (bordered blocks, tilted decorations); failure looks like a **flat, borderless, blurred-shadow web card grid**.
+- **Squint** - one Inter display moment dominates at 3–6× its neighbor; cards read as a system, not rivals.
+- **Silence** - cover/quote/close keep air (decorations, not content); the **feature-card and stat grids are the dense exception**.
+- **Restraint** - the 4px→08px / 3px→4px coupling holds; black borders only (white on close); pastel ground **cycles** one per frame; no sixth pastel.
+- **Reference** - aim at a **zine / 1990s sticker-book / toy-packaging spread** (bordered blocks, tilted decorations); failure looks like a **flat, borderless, blurred-shadow web card grid**.
 
 - **Primary:** 1920×1080 (16:9). Display authored in **`cqw`** (`px ÷ 1920 × 100 = cqw`).
 - **Vertical:** 1080×1920 (9:16). **Square:** 1080×1080 (1:1).
 - **Safe area:** `slide-pad` ~3.1cqw; decorations may bleed off edges.
 
 **The container law (load-bearing).** Every frame ground sets `container-type: size`; ALL
-frame-relative units are `cqw`/`cqh` against it — never `vw`. Borders/shadows scale in `cqw` so the
+frame-relative units are `cqw`/`cqh` against it - never `vw`. Borders/shadows scale in `cqw` so the
 4px↔8px coupling holds proportionally; corners stay square.
 
 ## Colors
 
 Tokens identical to the source. `{colors.offwhite}` is the default ground, but frames **cycle**
-through `{colors.cream}`/`blue`/`pink`/`green`/`yellow` grounds — the cycle is the rhythm.
+through `{colors.cream}`/`blue`/`pink`/`green`/`yellow` grounds - the cycle is the rhythm.
 `{colors.black}` is every border + structural text; `{colors.white}` is card fills. The five pastels
-are interchangeable with **no semantic meaning** — pair by juxtaposition (pink+blue+green trio,
+are interchangeable with **no semantic meaning** - pair by juxtaposition (pink+blue+green trio,
 cream+yellow warm pair). `{colors.yellow}` is the CTA + the one colored (close) shadow;
 `{colors.black}` ground is the close surface. **No sixth pastel.**
 
@@ -167,9 +167,9 @@ carries copy + chrome; the **display ramp** (Inter `heading-md` 2.1cqw → `head
 Hard offset shadow, solid black, zero blur, bottom-right:
 
 - **0.8cqw (8px)** primary cards; **0.4cqw (4px)** chrome; **0.6cqw (6px)** hover.
-- **Border-based depth** — the 4px/3px borders do much of the lift; shadow makes it "elevated."
-- **Tilt** — ±2°–12° rotation breaks the grid for perceived dimension.
-- **Inverted close** — 12px YELLOW shadow (and 6px white on close-btn) — the only colored shadows.
+- **Border-based depth** - the 4px/3px borders do much of the lift; shadow makes it "elevated."
+- **Tilt** - ±2°–12° rotation breaks the grid for perceived dimension.
+- **Inverted close** - 12px YELLOW shadow (and 6px white on close-btn) - the only colored shadows.
 
 **Ceiling:** no blurred shadow, no rounded corner (save the stat-deco dot), no gradient depth.
 
@@ -179,10 +179,10 @@ Hard offset shadow, solid black, zero blur, bottom-right:
 
 ## Components
 
-- **card-elevated / card-small** — the bordered+shadowed content cards (weight-coupled).
-- **label-pill** — the universal eyebrow (border+shadow+pastel). **button-primary** — yellow CTA.
-- **star-burst / stripe-block / bg-dot-grid / tilt-deco** — the reusable decoration units (one per frame min).
-- **stat-deco-dot** — the lone round shape. **close-frame** — the inverted black+white+yellow-shadow closer.
+- **card-elevated / card-small** - the bordered+shadowed content cards (weight-coupled).
+- **label-pill** - the universal eyebrow (border+shadow+pastel). **button-primary** - yellow CTA.
+- **star-burst / stripe-block / bg-dot-grid / tilt-deco** - the reusable decoration units (one per frame min).
+- **stat-deco-dot** - the lone round shape. **close-frame** - the inverted black+white+yellow-shadow closer.
 
 ## Frame Treatments
 
@@ -195,7 +195,7 @@ Hard offset shadow, solid black, zero blur, bottom-right:
 
 ### 2 · Feature Cards (catalog · move: 3-up bordered grid · blue ground)
 
-**Ground** `{colors.blue}`, `slide-pad`. **Composes** label-pill, heading-lg, 3× card-elevated (icon-square + card-title + body). **Focal** three white bordered+shadowed cards. **Chrome** label-pill eyebrow. **Accent** the pastel icon-squares (pink/green/yellow). **Silence** tight — dense by design. **Fixed** 4px border + 8px shadow, square, uppercase card-titles. **Free** card content, icon hues. **Density** dense-exception.
+**Ground** `{colors.blue}`, `slide-pad`. **Composes** label-pill, heading-lg, 3× card-elevated (icon-square + card-title + body). **Focal** three white bordered+shadowed cards. **Chrome** label-pill eyebrow. **Accent** the pastel icon-squares (pink/green/yellow). **Silence** tight - dense by design. **Fixed** 4px border + 8px shadow, square, uppercase card-titles. **Free** card content, icon hues. **Density** dense-exception.
 
 ### 3 · Stat Grid (data · move: tilted stat cards · green ground)
 
@@ -217,7 +217,7 @@ Hard offset shadow, solid black, zero blur, bottom-right:
 
 ### Do
 
-- Pair **4px borders with 8px shadows**, **3px with 4px** — the coupling is non-negotiable.
+- Pair **4px borders with 8px shadows**, **3px with 4px** - the coupling is non-negotiable.
 - **Cycle pastel grounds** across frames; keep the deck visually rhythmic.
 - Set Inter display **uppercase, 800–900, negative-tracked**; open every region with a **label-pill**.
 - Render shadows **solid black, zero blur, bottom-right**; add **≥1 decoration** (tilt/star/stripe/dots) per frame.
@@ -230,7 +230,7 @@ Hard offset shadow, solid black, zero blur, bottom-right:
 - No colored borders (black only, save the close-frame white); no sixth pastel.
 - No sentence-case Inter display; no untracked display; no label as plain text.
 - Don't keep everything perfectly aligned (tilt is the signature); don't leave corners empty.
-- Don't blow a headline edge-to-edge — fit to measure.
+- Don't blow a headline edge-to-edge - fit to measure.
 
 ## Aspect-Ratio Behavior
 
@@ -248,28 +248,28 @@ on tighter ratios so the frame stays bordered, not cluttered.
 
 ## Approved Entities
 
-No real customers, logos, or vendors are defined in the source — render any such mark as a
+No real customers, logos, or vendors are defined in the source - render any such mark as a
 placeholder. Pastel fills, decorations, and tilts are content-agnostic.
 
 ## Numerals & Claims (hard rule)
 
-Never invent figures, stats, or counts at frame scale. Render slots as `— figure —`, `{metric}`,
+Never invent figures, stats, or counts at frame scale. Render slots as ` - figure - `, `{metric}`,
 `N×`. Stat cards and charts carry placeholders until the script supplies values. Slide counters and
 list numbers are decorative.
 
 ## Pre-Render Self-Audit
 
-- **Squint** — one Inter display moment dominates; cards read as a system.
-- **Silence** — only feature/stat grids run dense; cover/quote/close keep air with decorations.
-- **Borders/shadows** — 4px↔8px / 3px↔4px coupling holds; solid black, zero blur.
-- **Color** — pastel ground cycles; black borders only (white on close); no sixth pastel.
-- **Type** — Inter uppercase 800–900 negative-tracked, fit-to-measure; Space Grotesk labels 0.08em; ≥1.4cqw floor.
-- **Shape** — square corners (only stat-deco dot round); ≥1 tilt/decoration per frame.
-- **Fabrication** — every numeral traces to the script, else placeholder.
+- **Squint** - one Inter display moment dominates; cards read as a system.
+- **Silence** - only feature/stat grids run dense; cover/quote/close keep air with decorations.
+- **Borders/shadows** - 4px↔8px / 3px↔4px coupling holds; solid black, zero blur.
+- **Color** - pastel ground cycles; black borders only (white on close); no sixth pastel.
+- **Type** - Inter uppercase 800–900 negative-tracked, fit-to-measure; Space Grotesk labels 0.08em; ≥1.4cqw floor.
+- **Shape** - square corners (only stat-deco dot round); ≥1 tilt/decoration per frame.
+- **Fabrication** - every numeral traces to the script, else placeholder.
 
 ## Known Gaps
 
 - **Motion intentionally out of scope.** frame.md specifies composition only; the source toggles slides via display, no transition.
-- **Inter + Space Grotesk via Google Fonts.** CJK: Noto Sans SC 900 (sentence case — the uppercase signal drops); lean harder on borders/shadows/decoration to carry the brutalist identity.
+- **Inter + Space Grotesk via Google Fonts.** CJK: Noto Sans SC 900 (sentence case - the uppercase signal drops); lean harder on borders/shadows/decoration to carry the brutalist identity.
 - **9:16 / 1:1 are guidance**; verify the floor and that decoration count scales down.
 - Star bursts (clip-path), stripe blocks, dot grids, and tilts are CSS-only; no external imagery is required.

@@ -1,5 +1,5 @@
 <!--
-  BlockFrame — caption skin (preset-local source).
+  BlockFrame - caption skin (preset-local source).
 
   This is the preset's own lower-third karaoke caption look. product-launch-video's
   Step 2 copies it into the project as caption-skin.html; captions.mjs then fills the
@@ -9,7 +9,7 @@
     · the 0 duration + 0 width/height   → real total + canvas size
     · the empty data-brand-tokens style → :root tokens derived from the project's frame.md
 
-  Token contract — reference ONLY this fixed vocab (captions.mjs injects it from
+  Token contract - reference ONLY this fixed vocab (captions.mjs injects it from
   frame.md, so the Step-2 brand overlay flows through; each var has a blockframe literal
   fallback for standalone preview):
     --cap-ink · --cap-canvas · --cap-accent · --cap-accent-2 · --font-display ·
@@ -20,12 +20,12 @@
   never tl.call() callbacks (seek does not fire them → wrong state on render).
 
   Visual: a white card carved by a 4px black border with an 8px hard offset shadow
-  (solid black, zero blur, bottom-right — blockframe's sacred depth), square corners.
+  (solid black, zero blur, bottom-right - blockframe's sacred depth), square corners.
   Inter 900, UPPERCASE, negative-tracked. Upcoming words sit in faded ink; the current
-  word gets a saturated-yellow stamp-block — a hard square highlight (box-shadow spread,
+  word gets a saturated-yellow stamp-block - a hard square highlight (box-shadow spread,
   no blur) with black ink reading on top, blockframe's signature stamp gesture; spoken
   words settle to solid black ink, stamp cleared. The word pops in with a snappy
-  back.out overshoot — loud, a little crooked.
+  back.out overshoot - loud, a little crooked.
 -->
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
 
@@ -44,7 +44,7 @@
     z-index: 20;
     pointer-events: none;
   }
-  /* the keep-out band, from captionBand(H) — frame content stays above it */
+  /* the keep-out band, from captionBand(H) - frame content stays above it */
   .caption-stage {
     position: absolute;
     left: 0;
@@ -56,7 +56,7 @@
     justify-content: center;
   }
   .caption-group {
-    /* every group is absolutely stacked over the SAME band — exactly one shown at a
+    /* every group is absolutely stacked over the SAME band - exactly one shown at a
        time via opacity. Must be absolute: in-flow groups would lay out side-by-side. */
     position: absolute;
     inset: 0;
@@ -66,8 +66,8 @@
     opacity: 0;
   }
 
-  /* THE bordered card — 4px black border + 8px hard offset shadow (solid black,
-     zero blur, bottom-right — blockframe's sacred depth), square corners */
+  /* THE bordered card - 4px black border + 8px hard offset shadow (solid black,
+     zero blur, bottom-right - blockframe's sacred depth), square corners */
   .caption-pill {
     max-width: 80%;
     padding: 18px 40px 22px;
@@ -89,20 +89,20 @@
     letter-spacing: -0.02em;
   }
 
-  /* upcoming — faded black ink, no stamp */
+  /* upcoming - faded black ink, no stamp */
   .caption-word {
     display: inline-block;
     padding: 0 0.1em;
     color: color-mix(in srgb, var(--cap-ink, #000000) 40%, var(--cap-canvas, #ffffff));
   }
-  /* current word — THE yellow stamp-block (box-shadow spread = a hard square block
-     w/o layout shift; no blur), black ink reading on top — blockframe's signature stamp */
+  /* current word - THE yellow stamp-block (box-shadow spread = a hard square block
+     w/o layout shift; no blur), black ink reading on top - blockframe's signature stamp */
   .caption-word.is-active {
     color: var(--cap-ink, #000000);
     background: var(--cap-accent, #f7cb46);
     box-shadow: 0 0 0 0.08em var(--cap-accent, #f7cb46);
   }
-  /* already spoken — solid black ink, stamp cleared */
+  /* already spoken - solid black ink, stamp cleared */
   .caption-word.is-spoken {
     color: var(--cap-ink, #000000);
     background: transparent;
@@ -110,16 +110,16 @@
   }
 
   /* optional per-word accents (dormant until a word-classer tags them) */
-  /* brand / key term — heavier ink weight, blockframe's display is already 900 */
+  /* brand / key term - heavier ink weight, blockframe's display is already 900 */
   .caption-word.cap-brand {
     color: var(--cap-ink, #000000);
   }
-  /* numerals / data — the body voice, slightly recessed */
+  /* numerals / data - the body voice, slightly recessed */
   .caption-word.cap-num {
     font-family: var(--font-body, "Inter"), ui-monospace, monospace;
     color: color-mix(in srgb, var(--cap-ink, #000000) 74%, var(--cap-canvas, #ffffff));
   }
-  /* emphasis — a cream hard underline bar (the second-chroma accent) */
+  /* emphasis - a cream hard underline bar (the second-chroma accent) */
   .caption-word.cap-cta {
     text-decoration: underline;
     text-decoration-thickness: 4px;
@@ -193,11 +193,11 @@
       var end = isLast ? DURATION : Math.min(Number(next.start), Number(group.end) + 0.3);
       if (end <= start) end = start + 0.01;
 
-      // group on/off — exactly one group visible at a time
+      // group on/off - exactly one group visible at a time
       tl.set(groupEl, { opacity: 1 }, start);
       tl.set(groupEl, { opacity: 0 }, end);
 
-      // 3-state karaoke via className SETS — seek-safe (gsap.set applies on the
+      // 3-state karaoke via className SETS - seek-safe (gsap.set applies on the
       // engine's frame-by-frame seek; .call callbacks would NOT fire).
       words.forEach(function (w, i) {
         var el = document.getElementById("caption-word-" + g + "-" + i);

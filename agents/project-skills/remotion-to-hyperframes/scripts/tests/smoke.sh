@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# smoke.sh — exercise the eval harness scripts against synthetic inputs.
+# smoke.sh - exercise the eval harness scripts against synthetic inputs.
 #
 # Generates two synthetic videos with ffmpeg's testsrc filter, runs render_diff
 # and frame_strip against them, and runs lint_source against fixture .tsx files.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Self-contained HeyGen TTS — single text in → one wav (+ optional words JSON)
+// Self-contained HeyGen TTS - single text in → one wav (+ optional words JSON)
 // out. A thin CLI over lib/tts.mjs (the same code the audio engine uses), so the
 // HeyGen REST call, starfish voice pick, mp3→wav transcode, and word-timestamp
 // filtering live in exactly one place. Bypasses the `hyperframes` CLI, which in
@@ -112,7 +112,7 @@ if (wordsPath) {
     writeFileSync(wordsPath, JSON.stringify(withWordIds(words), null, 2));
     wordCount = words.length;
   } else {
-    console.error("⚠ no word_timestamps in response — run `hyperframes transcribe` instead");
+    console.error("⚠ no word_timestamps in response - run `hyperframes transcribe` instead");
   }
 }
 

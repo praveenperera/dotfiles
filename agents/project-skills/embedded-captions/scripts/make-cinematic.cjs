@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /*
- * make-cinematic.cjs — compile cinematic.json → plan.json (then make-composition.cjs).
- * CINEMATIC MODE, raised to BLOCK level. The agent authors thought-BLOCKS — lines of
- * words, which plane each block stacks in, at most one promoted HERO word — and the
+ * make-cinematic.cjs - compile cinematic.json → plan.json (then make-composition.cjs).
+ * CINEMATIC MODE, raised to BLOCK level. The agent authors thought-BLOCKS - lines of
+ * words, which plane each block stacks in, at most one promoted HERO word - and the
  * compiler lowers that into the classic plan.json with everything deterministic
  * generated, so the Cinematic failure modes seen in the wild become impossible:
  *   - READING ORDER by construction: lines stack in declaration order inside a flex
@@ -21,7 +21,7 @@
  * {
  *   "template": "cinematic-cream",
  *   "width": 1920, "height": 1080, "fps": 30,
- *   "planes": {                       // layout REGIONS — place them using safe-zones.json
+ *   "planes": {                       // layout REGIONS - place them using safe-zones.json
  *     "narr": "top: 14%; left: 4%; width: 26%;",            // string or {css}
  *     "hero": null                    // null/absent → auto from safe-zones heroAnchor
  *   },
@@ -54,7 +54,7 @@ const norm = (s) =>
 const LOOKAHEAD = 40;
 
 // Authored css WITHOUT a font-size renders at browser-default ~16px (an
-// invisible ribbon) and every gate still passes — observed in the cold-start
+// invisible ribbon) and every gate still passes - observed in the cold-start
 // E2E. Guarantee the default is present whenever the author omitted it.
 function ensureFontSize(css, defaultDecl) {
   if (!css) return defaultDecl;
@@ -71,8 +71,8 @@ function main() {
   if (!process.argv[2]) die("usage: make-cinematic.cjs <project-dir>");
   const cj = path.join(project, "cinematic.json");
   const tj = path.join(project, "transcript.json");
-  if (!fs.existsSync(cj)) die(`missing ${cj} — author it first (schema in this header)`);
-  if (!fs.existsSync(tj)) die(`missing ${tj} — run prepare.sh first`);
+  if (!fs.existsSync(cj)) die(`missing ${cj} - author it first (schema in this header)`);
+  if (!fs.existsSync(tj)) die(`missing ${tj} - run prepare.sh first`);
   const C = JSON.parse(fs.readFileSync(cj, "utf8"));
   const tr = (JSON.parse(fs.readFileSync(tj, "utf8")).words || []).filter(
     (w) => w && "start" in w && "end" in w,
@@ -86,7 +86,7 @@ function main() {
   } catch {}
   // author override first (borderline scenes: coverage near the line, agitated subject),
   // else the safe-zones verdict.
-  // narration legibility follows the verdict; the HERO is judged separately — it WANTS
+  // narration legibility follows the verdict; the HERO is judged separately - it WANTS
   // occlusion (~30–55% is the product). fg for the hero is the LAST resort: only when no
   // height band achieves ≤62% predicted occlusion (safe-zones heroBands). An explicit
   // author caption_layer:"fg" still forces everything front.
@@ -125,10 +125,10 @@ function main() {
     }
   if (missing.length)
     die(
-      `words not in transcript (in order): ${missing.join(" ")} — lines must match the transcript verbatim`,
+      `words not in transcript (in order): ${missing.join(" ")} - lines must match the transcript verbatim`,
     );
 
-  // COMPLETENESS GATE — verbatim is a hard rule, so enforce it at compile time: the
+  // COMPLETENESS GATE - verbatim is a hard rule, so enforce it at compile time: the
   // sequence matcher's lookahead can silently SKIP transcript words the author forgot
   // (a real case shipped missing "in our newly released model."). Every transcript word
   // must be consumed; the only legitimate drops are filler (um/uh/stutters), declared in
@@ -146,18 +146,18 @@ function main() {
       );
     if (skipped.length)
       die(
-        `VERBATIM VIOLATION — ${skipped.length} transcript word(s) never authored (the matcher skipped them): ` +
-          `${skipped.map(({ w }) => `"${w.text}"`).join(" ")} — add them to a line, or declare true filler in "drops": []`,
+        `VERBATIM VIOLATION - ${skipped.length} transcript word(s) never authored (the matcher skipped them): ` +
+          `${skipped.map(({ w }) => `"${w.text}"`).join(" ")} - add them to a line, or declare true filler in "drops": []`,
       );
   }
 
   // text override + multiple words double-renders (override replaces word 1, words
-  // 2..n still draw) — caught cold by a clean-room agent; illegal for ANY hero line.
+  // 2..n still draw) - caught cold by a clean-room agent; illegal for ANY hero line.
   for (const b of blocks)
     for (const ln of b.lines || []) {
       if (ln.hero && ln.text && (ln.words || []).length > 1)
         die(
-          `hero line ["${(ln.words || []).join('" "')}"] has BOTH multiple words and a "text" override — drop "text" (words render verbatim; DNA case applies) or promote a single word.`,
+          `hero line ["${(ln.words || []).join('" "')}"] has BOTH multiple words and a "text" override - drop "text" (words render verbatim; DNA case applies) or promote a single word.`,
         );
     }
 
@@ -197,7 +197,7 @@ function main() {
     }
   } catch {}
   const DUR = +(srcDur || bw[bw.length - 1].last + 0.6).toFixed(3);
-  // ── SLOT layout + paging. Lines get FIXED absolute positions (no flex reflow — the
+  // ── SLOT layout + paging. Lines get FIXED absolute positions (no flex reflow - the
   // "lower line jumps up when the upper one clears" bug is impossible by construction).
   // Lines accumulate down the plane like a poem; the plane PAGE-FLIPS (all visible lines
   // clear together, the next line restarts at the top) only when (a) the plane is full,
@@ -206,7 +206,7 @@ function main() {
   for (let i = 0; i < bw.length; i++) {
     bw[i].in = Math.max(0, bw[i].first - LEAD);
     bw[i].out = Math.min(DUR - 0.05, Math.min(bw[i].last, DUR - 0.05) + 0.9);
-    // a block's hold (incl. a LOCKUP's) yields to the NEXT block's entrance — the same
+    // a block's hold (incl. a LOCKUP's) yields to the NEXT block's entrance - the same
     // page-flip semantics columns already have; floor: its own words must finish
     if (i + 1 < bw.length)
       bw[i].out = Math.max(
@@ -230,9 +230,9 @@ function main() {
 
   // ── planes: agent's + auto LOCKUP planes (one per hero block) ───────────────
   // The LOCKUP is the layout answer to "the sentence reads broken around the hero":
-  // a hero block's lines do NOT scatter into the narration column — kicker, HERO and
+  // a hero block's lines do NOT scatter into the narration column - kicker, HERO and
   // tail compose as ONE bonded ORBIT (context anchored at the hero's edges, diagonal
-  // read). DEPTH: context EMBEDS (bg) with the hero — one shared depth; per-line
+  // read). DEPTH: context EMBEDS (bg) with the hero - one shared depth; per-line
   // `layer:"fg"` is the escape hatch when the matte eats a context line (gate tells you).
   const planes = {};
   for (const [k, v] of Object.entries(C.planes || {})) {
@@ -241,24 +241,24 @@ function main() {
     if (!/text-align\s*:/.test(css)) css += " text-align:center;"; // slot children are absolute; only alignment carries
     planes[k] = { css };
   }
-  // multiple heroes allowed — scarcity is per BLOCK (≤1 per thought), not per clip.
+  // multiple heroes allowed - scarcity is per BLOCK (≤1 per thought), not per clip.
   // The LARGEST authored hero is the APEX: it gets the full lockup embed (centered on
   // the subject, matte showcase). Smaller heroes are MINOR peaks: they stay IN their
-  // column's flow as oversized emphasis lines (fg, hero motion at reduced amplitude) —
+  // column's flow as oversized emphasis lines (fg, hero motion at reduced amplitude) -
   // not every beat needs the matte showcase; that's what keeps the apex an event.
   const allHeroBlocks = [];
   blocks.forEach((b, bi) => {
     const hs = (b.lines || []).filter((l) => l.hero === true);
     if (hs.length > 1)
       die(
-        `block ${bi} has ${hs.length} hero lines — at most ONE hero per block (scarcity = per beat)`,
+        `block ${bi} has ${hs.length} hero lines - at most ONE hero per block (scarcity = per beat)`,
       );
     if (hs.length === 1)
       allHeroBlocks.push({ b, bi, ln: hs[0], frac: fracOfLine(hs[0].css) || 0.24 });
   });
   const apexFracAll = Math.max(...allHeroBlocks.map((h) => h.frac), 0);
   // placement: "column" keeps even an APEX in its column's flow (the hero bursts the
-  // column instead of crossing the subject) — the sanctioned alternative to the
+  // column instead of crossing the subject) - the sanctioned alternative to the
   // subject-anchored lockup. Author it per hero line: { "hero": true, "placement": "column" }.
   const heroBlocks = allHeroBlocks.filter(
     (h) => h.frac >= apexFracAll - 1e-6 && (h.ln.placement || "subject") !== "column",
@@ -284,11 +284,11 @@ function main() {
         ? C.planes.lockup
         : C.planes.lockup.css
       : null;
-  delete planes.lockup; // template only — not a real plane
+  delete planes.lockup; // template only - not a real plane
   for (const hRef of heroBlocks) {
     const a = sz && sz.heroAnchor && sz.heroAnchor.plane;
     // band pick: target ~40% occlusion AND a band the DNA's text can survive on
-    // (skip bright bands when luma data exists) — heroAnchor.yPct is the fallback
+    // (skip bright bands when luma data exists) - heroAnchor.yPct is the fallback
     let heroTop = a ? a.yPct : 30;
     if (hb && hb.profile && hb.profile.length) {
       const ok = hb.profile.filter(
@@ -301,7 +301,7 @@ function main() {
       heroTop = +(best.topPct + 6.5).toFixed(1);
     }
     const heroFrac = (hRef.ln.css || "").match(/calc\(\s*([\d.]+)\s*\*\s*var\(--h\)/);
-    // the lockup is taller than the hero alone (context above+below) — anchor so the
+    // the lockup is taller than the hero alone (context above+below) - anchor so the
     // HERO band (not the plane top) lands on the target, then clamp so the WHOLE
     // lockup (pre + hero + post) stays on frame
     const heroIdx2 = (hRef.b.lines || []).indexOf(hRef.ln);
@@ -341,7 +341,7 @@ function main() {
   // ── PER-PLANE LEGIBILITY COMPENSATION ────────────────────────────────────
   // The DNA fixes hue + blend; the SCENE decides whether that survives. Match each
   // plane to its best-overlapping measured zone and ladder the treatment:
-  //   luma > 150 → opaque (blend:normal) + strong tight scrim — screen/blend washes out
+  //   luma > 150 → opaque (blend:normal) + strong tight scrim - screen/blend washes out
   //   luma 95–150 → keep the DNA blend, strengthen the glyph scrim
   const planeComp = {};
   if (sz && sz.zones) {
@@ -363,7 +363,7 @@ function main() {
         }
       }
       if (!best) continue;
-      // gate on the time PEAK too — a dark wall swept by a bright moving object
+      // gate on the time PEAK too - a dark wall swept by a bright moving object
       // (handheld drift, screens) averages "clean" but peaks hot, and text there
       // washes out exactly when the bright thing passes (real cold-start case)
       const pkL = best.peakLuma != null ? best.peakLuma : best.meanLuma;
@@ -400,7 +400,7 @@ function main() {
       // so this only fires if a future DNA declares a different home.
       if (d0.deliveries && d0.deliveries.home && d0.deliveries.home !== "column")
         console.warn(
-          `[make-cinematic] WARN: DNA "${dn0}" declares home="${d0.deliveries.home}" — cinematic use is cross-category and unvalidated.`,
+          `[make-cinematic] WARN: DNA "${dn0}" declares home="${d0.deliveries.home}" - cinematic use is cross-category and unvalidated.`,
         );
     }
   } catch (e) {
@@ -427,21 +427,21 @@ function main() {
       });
     });
   });
-  // size sanity: narration below 0.05·h is whisper-tier (36px at 720p) — warn loudly
+  // size sanity: narration below 0.05·h is whisper-tier (36px at 720p) - warn loudly
   {
     const tiny = flat.filter((l) => !l.isMinorHero && l.frac > 0 && l.frac < 0.05);
     if (tiny.length)
       console.log(
-        `[make-cinematic] ⚠ ${tiny.length} narration line(s) authored below 0.05·h (whisper tier) — body narration wants 0.055–0.07·h: ${tiny
+        `[make-cinematic] ⚠ ${tiny.length} narration line(s) authored below 0.05·h (whisper tier) - body narration wants 0.055–0.07·h: ${tiny
           .slice(0, 3)
           .map((l) => `"${l.ln.words.slice(0, 3).join(" ")}…"`)
           .join(" ")}`,
       );
   }
-  // RATIO LOCK — poster lockup typography: context is sized FROM the hero, the way a
+  // RATIO LOCK - poster lockup typography: context is sized FROM the hero, the way a
   // title system locks its eyebrow/tagline (kicker & tail ≈ 0.26× the hero height,
   // clamped to [0.05, 0.085]·h). Hero dominance is structural (~4× height + weight
-  // contrast), so the old mass-rule downscale is gone — whisper-small context was the
+  // contrast), so the old mass-rule downscale is gone - whisper-small context was the
   // disease, not the cure. Too MUCH context is a line-count problem, never a size one.
   for (const hRef of heroRefs) {
     const ctx = flat.filter((l) => l.bi === hRef.bi);
@@ -450,7 +450,7 @@ function main() {
     const ratioFrac = +Math.min(0.085, Math.max(0.05, heroFracV * 0.26)).toFixed(4);
     if (ctx.length > 3)
       console.log(
-        `[make-cinematic] ⚠ lockup-b${hRef.bi} has ${ctx.length} context lines — a lockup wants kicker + hero + tail; move narration to the column (a leading clause can be its own block)`,
+        `[make-cinematic] ⚠ lockup-b${hRef.bi} has ${ctx.length} context lines - a lockup wants kicker + hero + tail; move narration to the column (a leading clause can be its own block)`,
       );
     const moved = ctx.filter((l) => Math.abs(l.frac - ratioFrac) > 0.002).length;
     ctx.forEach((l) => {
@@ -473,11 +473,11 @@ function main() {
   for (const hRef of heroRefs) if (!byPlane[hRef.plane]) byPlane[hRef.plane] = [];
   for (const [pk, ls] of Object.entries(byPlane)) {
     const isLockup = /^lockup-b/.test(pk);
-    const budget = isLockup ? H : planeBudgetPx(pk); // a lockup is ONE composition — never paginate inside it
+    const budget = isLockup ? H : planeBudgetPx(pk); // a lockup is ONE composition - never paginate inside it
     const hRef = isLockup ? heroRefs.find((h) => h.plane === pk) : null;
     const heroH = hRef ? (fracOfLine(hRef.ln.css || "") || 0.24) * H * 1.12 + 12 : 0;
     // ORBIT estimate: where do the hero's left/right edges land inside the (frame-wide,
-    // centered) lockup plane — kicker hangs off the left edge, tail off the right
+    // centered) lockup plane - kicker hangs off the left edge, tail off the right
     let orbit = null;
     if (hRef) {
       const disp = String(hRef.ln.text || (hRef.ln.words || []).join(" "));
@@ -490,7 +490,7 @@ function main() {
       const _pl = ((planeCss0.match(/left:\s*([\d.]+)%/) || [0, 0])[1] * W) / 100;
       const pw = ((planeCss0.match(/width:\s*([\d.]+)%/) || [0, 100])[1] * W) / 100;
       const heroLeft = Math.max(0, (pw - estW) / 2);
-      // side-aware: anchor context to the CLEANER side of THIS hero's window — the
+      // side-aware: anchor context to the CLEANER side of THIS hero's window - the
       // kicker/tail must land on scene, not on a large/moving subject
       let side = (sz && sz.subject && sz.subject.clearerSide) || "left";
       try {
@@ -514,11 +514,11 @@ function main() {
         hRef.slotPx = Math.round(slot);
         slot += heroH;
       }
-      const lineH = l.frac * H * 1.32 + Math.max(12, Math.round(l.frac * H * 0.38)); // ink overflows the 1.0 line-box (+shadows) — breathe in proportion to the type
+      const lineH = l.frac * H * 1.32 + Math.max(12, Math.round(l.frac * H * 0.38)); // ink overflows the 1.0 line-box (+shadows) - breathe in proportion to the type
       const prev = page[page.length - 1];
       const pauseGap = prev ? l.first - prev.lastEnd : 0;
       const boundary = prev && l.bi !== prev.bi;
-      // a block carrying a COLUMN-PLACED apex is one composition — never split it on
+      // a block carrying a COLUMN-PLACED apex is one composition - never split it on
       // budget (the oversized hero legitimately exceeds the column's page height)
       const unbreakable = columnApexBis.has(l.bi) && prev && prev.bi === l.bi;
       if (
@@ -579,12 +579,12 @@ function main() {
   let gid = 0;
   for (const l of flat) {
     l.gid = l.isMinorHero ? `h-${l.bi}` : `b${l.bi}-l${gid++}`;
-    // depth model: lockup CONTEXT embeds (bg) WITH the hero — the orbit anchors it
+    // depth model: lockup CONTEXT embeds (bg) WITH the hero - the orbit anchors it
     // beside the head/shoulder so it reads on the scene, one shared depth; narration
     // columns embed too unless the DNA declares bodyLayer:"fg" (loud's announce-style).
     // Minor heroes ride their column in FRONT. Per-line layer overrides any default.
     // ORBIT depth: lockup context lands BESIDE the subject (kicker/tail at the hero's
-    // edges) — so it EMBEDS (bg) like the hero; the whole composition shares one depth.
+    // edges) - so it EMBEDS (bg) like the hero; the whole composition shares one depth.
     // fg remains for: minor heroes (column emphasis), a DNA's bodyLayer (loud announces),
     // scene verdict FG (globalFg), and explicit per-line "layer" overrides.
     const defLayer = l.isMinorHero ? "fg" : dnaBodyLayer || "bg";
@@ -595,12 +595,12 @@ function main() {
       ...(l.isMinorHero ? { hero: true, ...(columnApexBis.has(l.bi) ? {} : { minor: true }) } : {}),
       tone: l.isMinorHero ? tones.hero || "present" : l.ln.tone || tones.default || "soft",
       allow_overlap: true,
-      // a MINOR hero holds only to the end of ITS thought (+a breath) — lingering with
+      // a MINOR hero holds only to the end of ITS thought (+a breath) - lingering with
       // the page through a long pause leaves it co-visible with the next apex
       in: l.in,
       out: l.isMinorHero ? +Math.min(l.out, bw[l.bi].out + 0.3).toFixed(3) : l.out,
       // carry the PLANE's text-align onto each slotted line (absolute children don't
-      // reliably inherit through the template's .cap centering — authored "right edge
+      // reliably inherit through the template's .cap centering - authored "right edge
       // hugs the silhouette" was silently centered)
       css:
         (l.lockupPos && l._orbit
@@ -666,11 +666,11 @@ function main() {
     const gap = heroGs[i].in - heroGs[i - 1].out;
     if (gap < 0.6)
       console.log(
-        `[make-cinematic] ⚠ heroes "${heroGs[i - 1].words[0].text}" and "${heroGs[i].words[0].text}" are only ${gap.toFixed(2)}s apart — peaks need a beat of air between them (consider demoting one to an emphasis line)`,
+        `[make-cinematic] ⚠ heroes "${heroGs[i - 1].words[0].text}" and "${heroGs[i].words[0].text}" are only ${gap.toFixed(2)}s apart - peaks need a beat of air between them (consider demoting one to an emphasis line)`,
       );
   }
   // proximity: narration planes should HUG the silhouette (the embed reads as in-scene
-  // only when typography interacts with the subject) — warn on far-parked planes.
+  // only when typography interacts with the subject) - warn on far-parked planes.
   if (sz && sz.subject) {
     for (const [pk2, pv] of Object.entries(C.planes || {})) {
       if (/^lockup/.test(pk2) || pk2 === "hero" || pv == null) continue;
@@ -688,7 +688,7 @@ function main() {
             : 0;
       if (gap > 12)
         console.log(
-          `[make-cinematic] ⚠ plane "${pk2}" sits ${gap.toFixed(0)}% away from the silhouette — embeds read in-scene when text HUGS the subject (use safe-zones zones.hugLeft/hugRight, gap 2–6%)`,
+          `[make-cinematic] ⚠ plane "${pk2}" sits ${gap.toFixed(0)}% away from the silhouette - embeds read in-scene when text HUGS the subject (use safe-zones zones.hugLeft/hugRight, gap 2–6%)`,
         );
     }
   }
@@ -734,7 +734,7 @@ function main() {
         l,
       );
     }
-    // the HERO is a real member of its lockup's stack — re-slot must move it (and the
+    // the HERO is a real member of its lockup's stack - re-slot must move it (and the
     // post-context below it) from MEASURED heights, or a wrapped pre-line / raised hero
     // font reopens the very overlap this pass exists to prevent
     for (const hRef of heroRefs) {
@@ -787,7 +787,7 @@ function main() {
               changes++;
             }
             top +=
-              (realH || l.frac * H * 1.25) + Math.max(12, Math.round((l.frac || 0.05) * H * 0.38)); // box is lh1.12 — contains its own ink
+              (realH || l.frac * H * 1.25) + Math.max(12, Math.round((l.frac || 0.05) * H * 0.38)); // box is lh1.12 - contains its own ink
           }
         }
         if (changes) {
@@ -806,21 +806,21 @@ function main() {
     }
   }
 
-  // ── HERO post-pass (real measurement, up to 2 re-emits) — runs PER HERO ─────
+  // ── HERO post-pass (real measurement, up to 2 re-emits) - runs PER HERO ─────
   // (a) SIZE: a timid hero is the #1 quality kill. If the authored font leaves >25%
   //     of the usable width unused, raise it to the width-fit maximum (DNA sizeRange cap).
   // (b) CLEARANCE vs OTHER planes: the hero band must not overlap caps outside its own
   //     lockup (its own context is composed around it by the slot layout). On a hit,
   //     shift the whole LOCKUP plane vertically.
-  // (c) LOCKUP RE-STACK: a size change moves the hero's height — restack the lockup's
+  // (c) LOCKUP RE-STACK: a size change moves the hero's height - restack the lockup's
   //     slots from measured heights so post-context stays bonded BELOW the hero.
-  // HERO words never wrap — a mid-word break ("Watermelo|n") is wrong in every case,
+  // HERO words never wrap - a mid-word break ("Watermelo|n") is wrong in every case,
   // and author css REPLACES the default (which silently lost white-space:nowrap).
   // Forced here so no authoring path can drop it; centered nowrap text overflows a
   // narrow plane SYMMETRICALLY, which also keeps width-fit honest (it measures the
   // true single-line width instead of a wrapped row).
   // narration lines whipped away by a mid-sentence page-flip are the same disease
-  // in mild form — warn (a deliberate quick beat is legal, so no die)
+  // in mild form - warn (a deliberate quick beat is legal, so no die)
   for (const g of groups)
     if (!g.hero && g.words && g.words.length && g.out - g.in < 0.6) {
       console.log(
@@ -830,10 +830,10 @@ function main() {
           .slice(
             0,
             28,
-          )}" visible only ${(g.out - g.in).toFixed(2)}s (page-flip) — merge micro-lines or give the plane more height so the page holds`,
+          )}" visible only ${(g.out - g.in).toFixed(2)}s (page-flip) - merge micro-lines or give the plane more height so the page holds`,
       );
     }
-  // MIN DWELL — a peak on screen <0.5s is unreadable ("stars" shipped at 0.47s and
+  // MIN DWELL - a peak on screen <0.5s is unreadable ("stars" shipped at 0.47s and
   // the user couldn't read it). Merge the block with the next (one thought), promote
   // a word with room, or demote to an emphasized line. <0.8s gets a loud warning.
   for (const g of groups)
@@ -841,11 +841,11 @@ function main() {
       const dwell = g.out - g.in;
       if (dwell < 0.5)
         die(
-          `hero "${(g.words[0] || {}).text}" is on screen only ${dwell.toFixed(2)}s (<0.5s readability floor) — merge its block with the next, promote a word with more room, or demote it to an emphasized (non-hero) line.`,
+          `hero "${(g.words[0] || {}).text}" is on screen only ${dwell.toFixed(2)}s (<0.5s readability floor) - merge its block with the next, promote a word with more room, or demote it to an emphasized (non-hero) line.`,
         );
       if (dwell < 0.8)
         console.log(
-          `[make-cinematic] ⚠ hero "${(g.words[0] || {}).text}" dwell ${dwell.toFixed(2)}s is tight (<0.8s) — consider merging blocks so the peak can breathe`,
+          `[make-cinematic] ⚠ hero "${(g.words[0] || {}).text}" dwell ${dwell.toFixed(2)}s is tight (<0.8s) - consider merging blocks so the peak can breathe`,
         );
     }
   {
@@ -894,7 +894,7 @@ function main() {
     }
   } catch {}
   // the APEX (largest authored hero) gets the width-fit raise; minor heroes keep their
-  // authored size — inter-hero hierarchy is a deliberate choice, not timidity
+  // authored size - inter-hero hierarchy is a deliberate choice, not timidity
   const apexFrac = Math.max(
     ...heroRefs.map((h) => fracOf((groups.find((g) => g.id === `h-${h.bi}`) || {}).css) || 0),
     0,
@@ -970,7 +970,7 @@ function main() {
         } else if (hc.cap_bbox.w >= maxW * 0.88) {
           if (pass === 0)
             console.log(
-              `[make-cinematic] hero "${heroG.words[0].text}" at width CEILING (${Math.round(hc.cap_bbox.w)}/${Math.round(maxW)}px) — cannot enlarge.`,
+              `[make-cinematic] hero "${heroG.words[0].text}" at width CEILING (${Math.round(hc.cap_bbox.w)}/${Math.round(maxW)}px) - cannot enlarge.`,
             );
         } else if (!didRaise && hc.cap_bbox.w < maxW * 0.88 && isApex) {
           // NO DEAD ZONE: anything under 88% of usable width is raised toward a 93%
@@ -983,15 +983,15 @@ function main() {
                 `[make-cinematic] hero "${heroG.words[0].text}" TIMID (${Math.round(hc.cap_bbox.w)}px of ${Math.round(maxW)}px usable) → ${f0}h→${nf.toFixed(3)}h (width-fit max)`,
               );
             // SHORT-WORD FILL: height cap bound before the width target → fill with
-            // TRACKING (film-title craft — HER, DUNE), ≤0.32em so it stays a word.
+            // TRACKING (film-title craft - HER, DUNE), ≤0.32em so it stays a word.
             const wAtCap = (hc.cap_bbox.w * nf) / f0;
             const dispT = String(heroG.text || (heroG.words || []).map((w) => w.text).join(" "));
-            // never letterspace lowercase (tracked lowercase falls apart — caps only)
+            // never letterspace lowercase (tracked lowercase falls apart - caps only)
             const capsy = dnaHeroCase === "uppercase" || dispT === dispT.toUpperCase();
             if (fit > dnaSizeCap && wAtCap < maxW * 0.85 && capsy) {
               const disp = dispT;
               // letter-spacing adds a gap after EVERY char (N gaps) and the centering
-              // text-indent adds one more — budget N+1 gaps or the word leaves the frame
+              // text-indent adds one more - budget N+1 gaps or the word leaves the frame
               const gaps = disp.length + 1;
               const tr = +Math.min(0.32, (maxW * 0.88 - wAtCap) / (gaps * nf * H)).toFixed(3);
               if (tr >= 0.04) {
@@ -1014,7 +1014,7 @@ function main() {
         }
       }
       const hbx = hc.cap_bbox;
-      // colliders OUTSIDE the lockup only — the lockup composes around the hero by design
+      // colliders OUTSIDE the lockup only - the lockup composes around the hero by design
       const hits = others.filter((o) => {
         const b = o.cap_bbox;
         const ix = Math.min(hbx.x + hbx.w, b.x + b.w) - Math.max(hbx.x, b.x);
@@ -1034,7 +1034,7 @@ function main() {
           "top: " + newTop.toFixed(1) + "%",
         );
         console.log(
-          `[make-cinematic] hero "${heroG.words[0].text}" OVERLAPS ${hits.map((o) => o.id).join(",")} — lockup top ${curTop}% → ${newTop.toFixed(1)}%`,
+          `[make-cinematic] hero "${heroG.words[0].text}" OVERLAPS ${hits.map((o) => o.id).join(",")} - lockup top ${curTop}% → ${newTop.toFixed(1)}%`,
         );
         changed = true;
       }
@@ -1061,12 +1061,12 @@ function main() {
           }
         }
       }
-      // LOCKUP RE-STACK from measured heights — runs EVERY pass for lockups (orbit
+      // LOCKUP RE-STACK from measured heights - runs EVERY pass for lockups (orbit
       // max-widths wrap context lines, so the re-slot's estimates can leave the tail
       // displaced or the whole composition off frame)
       if (lockupMates.length) {
         const caps2 = capsEnd; // lockup-END sample: every context line is revealed there
-        // TOWER CHECK — a context line wrapped to 3+ rows means its orbit max-width is
+        // TOWER CHECK - a context line wrapped to 3+ rows means its orbit max-width is
         // too narrow for the (re-locked) font; widen toward the plane before stacking,
         // or the tower blows the stack past the frame and the walk-back eats the hero
         for (const m of lockupMates) {
@@ -1082,7 +1082,7 @@ function main() {
             if (nw > +mwM[1] + 10) {
               m.css = m.css.replace(/max-width:\s*[\d.]+px/, "max-width:" + nw + "px");
               console.log(
-                `[make-cinematic] context "${((m.words || [])[0] || {}).text}…" wrapped to ${rows} rows — orbit max-width ${Math.round(+mwM[1])}→${nw}px (towers break the stack)`,
+                `[make-cinematic] context "${((m.words || [])[0] || {}).text}…" wrapped to ${rows} rows - orbit max-width ${Math.round(+mwM[1])}→${nw}px (towers break the stack)`,
               );
               changed = true;
             }
@@ -1095,7 +1095,7 @@ function main() {
             const fr = fracOf(g.css) || 0.05;
             // SLOT HEIGHT = the LAYOUT box (cap_bbox), not the glyph box: words reveal
             // over time, so at the hero-mid sample a context line's later words are
-            // still opacity-0 — glyph-box measured a wrapped line one row short and the
+            // still opacity-0 - glyph-box measured a wrapped line one row short and the
             // next line slotted INTO its wrap band (real text-on-text shipped).
             const measuredH = c && c.cap_bbox ? c.cap_bbox.h : null;
             const h2 = g.id === heroG.id && didRaise ? fr * H * 1.12 : measuredH || fr * H * 1.25;
@@ -1108,9 +1108,9 @@ function main() {
             e.g.css = e.g.css.replace(/top:\s*-?[\d.]+px/, "top:" + Math.round(top) + "px");
             changed = true;
           }
-          top += e.h + Math.max(12, Math.round((fracOf(e.g.css) || 0.05) * H * 0.38)); // box is lh1.12 — contains its own ink
+          top += e.h + Math.max(12, Math.round((fracOf(e.g.css) || 0.05) * H * 0.38)); // box is lh1.12 - contains its own ink
         }
-        // RE-CLAMP the plane after MEASURED growth — keep the whole composition on frame
+        // RE-CLAMP the plane after MEASURED growth - keep the whole composition on frame
         const planeCss3 = plan.planes[hRef.plane].css;
         const curTopPct = +(planeCss3.match(/top:\s*([\d.]+)%/) || [0, 30])[1];
         const maxTopPct = Math.max(2, ((H * 0.97 - top) / H) * 100);
@@ -1120,12 +1120,12 @@ function main() {
             "top: " + maxTopPct.toFixed(1) + "%",
           );
           console.log(
-            `[make-cinematic] lockup measured ${Math.round(top)}px tall — plane top ${curTopPct}% → ${maxTopPct.toFixed(1)}% (kept on frame)`,
+            `[make-cinematic] lockup measured ${Math.round(top)}px tall - plane top ${curTopPct}% → ${maxTopPct.toFixed(1)}% (kept on frame)`,
           );
           changed = true;
         }
         // even at the 2% ceiling the stack can exceed the frame (TIMID raise + ratio
-        // context on a tall lockup) — walk the hero back 8% and re-lock until it fits
+        // context on a tall lockup) - walk the hero back 8% and re-lock until it fits
         if (top > H * 0.95 && maxTopPct <= 2.01) {
           const f0c = fracOf(heroG.css);
           if (f0c && f0c > 0.14) {
@@ -1133,7 +1133,7 @@ function main() {
             // ratio-locked to it), so aim straight at a 93% fill instead of nibbling
             const nf2 = +Math.max(0.14, Math.min(f0c * 0.92, (f0c * (H * 0.93)) / top)).toFixed(3);
             console.log(
-              `[make-cinematic] lockup stack ${Math.round(top)}px exceeds the frame even at top 2% — hero ${f0c}h → ${nf2}h (fit)`,
+              `[make-cinematic] lockup stack ${Math.round(top)}px exceeds the frame even at top 2% - hero ${f0c}h → ${nf2}h (fit)`,
             );
             heroG.css = setFrac(heroG.css, nf2);
             relockMates(nf2);
@@ -1152,7 +1152,7 @@ function main() {
       } catch {}
     }
   }
-  // MINOR HERO measure pass — minors keep their authored size (hierarchy is a choice)
+  // MINOR HERO measure pass - minors keep their authored size (hierarchy is a choice)
   // but never ship broken: wider than the frame's usable width shrinks to fit, and a
   // column overflow gets a loud note (centered spill is legal on a clear side only).
   {
@@ -1186,7 +1186,7 @@ function main() {
         const pwPx = W * (+(planeCssM.match(/width:\s*([\d.]+)%/) || [0, 100])[1] / 100);
         if (bb.w > pwPx * 1.05)
           console.log(
-            `[make-cinematic] note: minor hero "${(mg.words[0] || {}).text}" (${Math.round(bb.w)}px) spills its ${Math.round(pwPx)}px column — fine on a clear side; reduce size if it crosses the subject`,
+            `[make-cinematic] note: minor hero "${(mg.words[0] || {}).text}" (${Math.round(bb.w)}px) spills its ${Math.round(pwPx)}px column - fine on a clear side; reduce size if it crosses the subject`,
           );
       }
       try {

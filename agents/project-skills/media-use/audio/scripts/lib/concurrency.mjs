@@ -1,4 +1,4 @@
-// mapWithConcurrency — run `fn` over `items` with at most `limit` in flight at
+// mapWithConcurrency - run `fn` over `items` with at most `limit` in flight at
 // once. Preserves input order in the result array regardless of completion order.
 export async function mapWithConcurrency(items, limit, fn) {
   const results = new Array(items.length);

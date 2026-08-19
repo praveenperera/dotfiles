@@ -1,6 +1,6 @@
 {
   "name": "terminal",
-  "voice": "console session — the transcript is a signal log typed into a docked glass panel; the apex decodes out of noise as slot-machine glyph reels, and the log REDACTS the apex words (█████) until the decode locks. The feed corrupts on the final word.",
+  "voice": "console session - the transcript is a signal log typed into a docked glass panel; the apex decodes out of noise as slot-machine glyph reels, and the log REDACTS the apex words (█████) until the decode locks. The feed corrupts on the final word.",
   "when": "tech, data, AI, engineering, investigative explainers. Cool scenes preferred (the cyan is scene-motivated on cool/dusk palettes).",
   "register": "creator-tech",
   "fonts": { "body": "VT323", "hero": "Orbitron", "tag": "VT323" },

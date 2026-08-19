@@ -6,7 +6,7 @@
  * using MOTION-ENERGY deltas: for each sample window [t, t+interval], the
  * frame difference ref(t+i)-ref(t) is compared (PSNR) against
  * render(t+i)-render(t). Static import divergence (fonts, rasterized edges,
- * subpixel geometry — the hybrid-fidelity ceiling) cancels out of both
+ * subpixel geometry - the hybrid-fidelity ceiling) cancels out of both
  * deltas, so the score isolates choreography: trajectories, timing, easing
  *
  * Calibration (SDS "Unlocked" card, 2026-07): a faithful translation scored
@@ -168,8 +168,8 @@ console.log(
 );
 if (min < minMotion) {
   console.log(
-    "VERDICT: FAIL — choreography diverges from the Figma export (check timings, invented keyframes, durations)",
+    "VERDICT: FAIL - choreography diverges from the Figma export (check timings, invented keyframes, durations)",
   );
   process.exit(1);
 }
-console.log("VERDICT: PASS — motion matches the Figma export within the static-fidelity ceiling");
+console.log("VERDICT: PASS - motion matches the Figma export within the static-fidelity ceiling");

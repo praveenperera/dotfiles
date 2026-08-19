@@ -10,7 +10,7 @@ npx hyperframes info ./my-video        # specific project
 npx hyperframes info --json
 ```
 
-Prints **project** metadata: name, resolution, duration, element counts by type, track count, and total project size. Project-level — not environment. For environment health use `doctor`.
+Prints **project** metadata: name, resolution, duration, element counts by type, track count, and total project size. Project-level - not environment. For environment health use `doctor`.
 
 ## upgrade
 
@@ -34,7 +34,7 @@ npx hyperframes docs rendering         # print one topic inline in the terminal
 
 `compositions` lists every `data-composition-id` in the project (including sub-comps) with duration, resolution, and element count.
 
-`docs` prints inline documentation **in the terminal** — it does not open a browser. Topics: `data-attributes`, `examples`, `rendering`, `gsap`, `troubleshooting`, `compositions`. Run without a topic to see the list.
+`docs` prints inline documentation **in the terminal** - it does not open a browser. Topics: `data-attributes`, `examples`, `rendering`, `gsap`, `troubleshooting`, `compositions`. Run without a topic to see the list.
 
 ## benchmark
 
@@ -45,7 +45,7 @@ npx hyperframes benchmark --runs 5     # repeat each config N times (default 3)
 npx hyperframes benchmark --json
 ```
 
-Renders the project with 5 preset configurations — `30fps draft 2w`, `30fps standard 2w`, `30fps high 2w`, `30fps standard 4w`, `60fps standard 4w` — and prints a comparison of render speed and output file size. Use it to find the fastest acceptable preset for your machine. Not a single-render-with-stage-breakdown.
+Renders the project with 5 preset configurations - `30fps draft 2w`, `30fps standard 2w`, `30fps high 2w`, `30fps standard 4w`, `60fps standard 4w` - and prints a comparison of render speed and output file size. Use it to find the fastest acceptable preset for your machine. Not a single-render-with-stage-breakdown.
 
 ## telemetry
 
@@ -57,7 +57,7 @@ npx hyperframes telemetry enable      # re-enable telemetry
 
 Telemetry is anonymous usage counters only. Disable globally with `HYPERFRAMES_NO_TELEMETRY=1` if env-var control is preferred over the subcommand.
 
-Events include two fingerprint properties used to distinguish managed-sandbox runs from real laptops — no PII, no env-var **values**, only existence checks:
+Events include two fingerprint properties used to distinguish managed-sandbox runs from real laptops - no PII, no env-var **values**, only existence checks:
 
 - **`sandbox_runtime`**: `gvisor` / `firecracker` / `docker` / `kvm` / `wsl` / `null`. gVisor via kernel string + `/proc/version`. Firecracker via `/dev/vsock` + DMI sys_vendor. Docker via `/.dockerenv` + cgroup.
 - **`agent_runtime`**: `claude_code` / `codex` / `cursor` / `copilot_agent` / `jules` / `replit` / `devin` / `aider` / `gemini_cli` / `hermes` / `openclaw` / `null`. Detected by the existence of well-known vendor env vars; the values themselves are never read.

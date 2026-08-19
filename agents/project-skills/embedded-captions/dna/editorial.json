@@ -1,8 +1,8 @@
 {
   "name": "editorial",
-  "title": "Editorial — serif voice, magazine cadence",
+  "title": "Editorial - serif voice, magazine cadence",
   "register": "editorial-luxe",
-  "when": "introspective monologue, fashion / beauty, poetic or lyrical content, premium brand films on mid/dark scenes. The serif italic carries intimacy that a grotesque can't. The hero stays lowercase italic — elegance over shout.",
+  "when": "introspective monologue, fashion / beauty, poetic or lyrical content, premium brand films on mid/dark scenes. The serif italic carries intimacy that a grotesque can't. The hero stays lowercase italic - elegance over shout.",
   "font": {
     "family": "Bodoni Moda",
     "weights": [400, 700]

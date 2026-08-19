@@ -1,11 +1,11 @@
-// T4 case 03 — calculateMetadata returns a Promise.
+// T4 case 03 - calculateMetadata returns a Promise.
 //
 // Should be detected by lint_source.py as blocker r2hf/async-metadata.
 // The skill should refuse to translate.
 //
 // Why this is a blocker: HF needs the composition's duration, dimensions,
 // and props known up-front to produce HTML and seed the timeline. Async
-// metadata fetched from a server at render time has no equivalent in HF —
+// metadata fetched from a server at render time has no equivalent in HF -
 // the metadata would need to be resolved at build time before the HTML is
 // authored.
 

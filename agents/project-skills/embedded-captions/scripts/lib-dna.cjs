@@ -1,17 +1,17 @@
 /*
- * lib-dna.cjs — DNA registry loader + scene-token resolver.
+ * lib-dna.cjs - DNA registry loader + scene-token resolver.
  *
  * A DNA is a complete visual language (type, palette logic, motion grammar, hero
  * orchestration) that PARAMETERIZES per scene instead of shipping fixed look files.
  * The resolver folds in safe-zones.json's v2 scene measurements (palette / optics /
  * lighting) and envelope.json's loudness so the compiled tokens fit THIS clip:
  *
- *   accent      — scene-sampled when the DNA says "scene" (clamped readable)
- *   text shadow — contact shadow cast along the measured light direction
- *   depth match — embed text blur follows the scene's depth-of-field
- *   hero amp    — entrance amplitude coupled to the spoken word's loudness (RMS)
+ *   accent - scene-sampled when the DNA says "scene" (clamped readable)
+ *   text shadow - contact shadow cast along the measured light direction
+ *   depth match - embed text blur follows the scene's depth-of-field
+ *   hero amp - entrance amplitude coupled to the spoken word's loudness (RMS)
  *
- * Everything is read from files written by deterministic scripts — no randomness.
+ * Everything is read from files written by deterministic scripts - no randomness.
  */
 const path = require("path");
 const fs = require("fs");
@@ -85,7 +85,7 @@ function resolveTokens(dna, project, opts) {
 
   // accent: "scene" → sampled suggestion, else literal.
   // accentMode "counter" (loud registers): the accent must FIGHT the scene's
-  // temperature, not harmonize with it — a sampled warm sienna inside a tungsten room
+  // temperature, not harmonize with it - a sampled warm sienna inside a tungsten room
   // camouflages (the warm-on-warm failure a blind review caught across three DNAs).
   // Counter-pole = rotate the sampled hue 180° and push saturation/lightness hot.
   let accent =
@@ -154,7 +154,7 @@ function resolveTokens(dna, project, opts) {
   const filterBg = `${baseFilter}${blurPx ? ` blur(${blurPx}px)` : ""}`.trim() || "none";
   const filterFg = baseFilter || "none";
 
-  // hero orchestration + loudness coupling — one config PER hero (scarcity is per
+  // hero orchestration + loudness coupling - one config PER hero (scarcity is per
   // beat/block, not per clip; each hero's amplitude follows ITS spoken loudness)
   const heroGroups = (opts && (opts.heroGroups || (opts.heroGroup ? [opts.heroGroup] : []))) || [];
   const heroes = heroGroups.map((hg) => {
@@ -162,7 +162,7 @@ function resolveTokens(dna, project, opts) {
     const amp = +((0.75 + impact * 0.5) * (hg.minor ? 0.7 : 1)).toFixed(3); // 0.75…1.25, minors damped
     return {
       // spread the DNA's full hero block (entrance/perLetter/glow/breathe/ripple/loom/
-      // letterBlur/sheen/echoes/… — new fx fields flow through with no plumbing),
+      // letterBlur/sheen/echoes/… - new fx fields flow through with no plumbing),
       // then the per-hero computed values
       ...dna.hero,
       entrance: dna.hero.entrance || "emergence",

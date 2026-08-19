@@ -10,7 +10,7 @@ description: >
 
 **IMPORTANT: Always use Base UI (`@base-ui/react`) as the primitive library, NOT Radix UI.**
 Radix UI (`@radix-ui/react-*`) is the legacy option. Base UI is the modern replacement.
-When initializing projects, adding components, or writing code — always choose Base UI.
+When initializing projects, adding components, or writing code - always choose Base UI.
 Do NOT use `asChild`, `@radix-ui/*` imports, `data-state`, or `--radix-*` CSS variables.
 
 Base UI (MUI team, v1.0 Dec 2025) ships as a single `@base-ui/react` package.
@@ -19,10 +19,10 @@ Full shadcn/ui Base UI docs shipped Jan 2026, all blocks for both libraries Feb 
 ## CLI Quick Reference
 
 ```bash
-# new project — select a Base UI style (base-vega, base-nova, etc.)
+# new project - select a Base UI style (base-vega, base-nova, etc.)
 npx shadcn create
 
-# existing project — initialize with Base UI
+# existing project - initialize with Base UI
 npx shadcn@latest init
 
 # add components (uses Base UI if components.json style is base-*)
@@ -52,7 +52,7 @@ The `style` field in `components.json` controls which primitive library is used.
 // Base UI (correct)
 { "style": "base-vega" }
 
-// Radix (legacy — do not use)
+// Radix (legacy - do not use)
 { "style": "new-york" }
 ```
 
@@ -92,7 +92,7 @@ Base UI replaces Radix's `asChild` with a `render` prop for component compositio
 ```
 
 **Important:** `render` takes a React **element** (`<Link />`) not a **component** (`Link`).
-Event handlers merge automatically — no need to forward them manually.
+Event handlers merge automatically - no need to forward them manually.
 
 ## Import Pattern
 
@@ -137,7 +137,7 @@ see [references/components.md](references/components.md).
 - Styling states use boolean data attributes: `[data-open]` instead of `data-state="open"`
 - CSS variables use `--base-ui-*` prefix instead of `--radix-*`
 - Animations use native CSS transitions. Style `[data-open]` / `[data-closed]` / `[data-entering]` / `[data-exiting]` attributes
-- The CLI auto-converts `asChild` to `render` prop when installing — manual copy/paste requires manual conversion
+- The CLI auto-converts `asChild` to `render` prop when installing - manual copy/paste requires manual conversion
 - Positioning components (Tooltip, Popover, Select, etc.) support `inline-start` / `inline-end` for RTL
 
 ## Documentation
@@ -151,5 +151,5 @@ see [references/components.md](references/components.md).
 
 ## Reference Files
 
-- [references/components.md](references/components.md) — full component catalog with categories, imports, and part names
-- [references/base-ui-vs-radix.md](references/base-ui-vs-radix.md) — detailed migration guide and API differences (read when migrating or comparing)
+- [references/components.md](references/components.md) - full component catalog with categories, imports, and part names
+- [references/base-ui-vs-radix.md](references/base-ui-vs-radix.md) - detailed migration guide and API differences (read when migrating or comparing)

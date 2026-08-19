@@ -26,17 +26,17 @@ Drop `type: "spacing"` entries; you only need words.
 
 Cut a new group at ANY of:
 
-1. **Pause ≥ 500ms** (gap between word.end[i] and word.start[i+1]) — speaker took a breath.
-2. **Sentence terminator** — word ends with `.`, `?`, `!`, or an em-dash-like pause.
-3. **Strong comma** — `,` followed by pause ≥ 250ms.
-4. **Discourse reset** — words like "but", "so", "and then", "you know" starting a clause often merit their own or new group.
-5. **Group reaches 6 words OR 2.5 seconds** — whichever first. Long groups feel like subtitles, not embedded typography.
+1. **Pause ≥ 500ms** (gap between word.end[i] and word.start[i+1]) - speaker took a breath.
+2. **Sentence terminator** - word ends with `.`, `?`, `!`, or an em-dash-like pause.
+3. **Strong comma** - `,` followed by pause ≥ 250ms.
+4. **Discourse reset** - words like "but", "so", "and then", "you know" starting a clause often merit their own or new group.
+5. **Group reaches 6 words OR 2.5 seconds** - whichever first. Long groups feel like subtitles, not embedded typography.
 
 Hard constraints:
 
 - Minimum 2 words per group (1-word exceptions: interjections like "Wait." or the crown line).
 - Minimum 0.5s on screen. If a group is less, merge into neighbor.
-- No overlapping groups — at most one visible at a time.
+- No overlapping groups - at most one visible at a time.
 
 ## Timing the group
 
@@ -52,7 +52,7 @@ The last group extends to the video end if needed.
 See `typography-presets.md` for how to pick `style` and `tone` per group. Work left-to-right through the groups and:
 
 1. First group: default `intro` + `soft`.
-2. Watch for emphasis signals (ALL CAPS in transcript is rare but possible; more often it's semantic — superlatives, proper nouns).
+2. Watch for emphasis signals (ALL CAPS in transcript is rare but possible; more often it's semantic - superlatives, proper nouns).
 3. Escalate tone into `present` once the monologue shifts from setup to statement.
 4. Reserve `crown` for at most ONE group, typically the final line.
 
@@ -123,8 +123,8 @@ Plus the crown:
 { "id": "cg-crown", "style": "crown", "words": ["Wimbledon", "Champion"], "in": 10.8, "out": 12.08 }
 ```
 
-Notice "had" was dropped from cg-2 ("had the great foundation" → "the great foundation"), "I was" was dropped from cg-4, and "a" was dropped from crown — all for visual cadence.
+Notice "had" was dropped from cg-2 ("had the great foundation" → "the great foundation"), "I was" was dropped from cg-4, and "a" was dropped from crown - all for visual cadence.
 
 ## word.start/end inside groups
 
-Pass through the original timestamps from the transcript. Don't retime individual words — only the group `in`/`out`. The word-level karaoke reveal inside each group uses the original w.start.
+Pass through the original timestamps from the transcript. Don't retime individual words - only the group `in`/`out`. The word-level karaoke reveal inside each group uses the original w.start.

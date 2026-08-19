@@ -1,22 +1,22 @@
 #!/usr/bin/env node
-// transitions.mjs — inter-frame transition injector + verifier for the video workflow.
+// transitions.mjs - inter-frame transition injector + verifier for the video workflow.
 //
-//   inject  — read STORYBOARD frame order + each frame's transition_in, overlap
+//   inject - read STORYBOARD frame order + each frame's transition_in, overlap
 //             the frame clip wrappers in index.html, and stamp the GSAP template.
-//   verify  — deterministic gate over the injector's output.
+//   verify - deterministic gate over the injector's output.
 //
 // transition_in (written by story-design on the INCOMING frame) names a registry
 // type directly: crossfade | blur-crossfade | push-slide | zoom-through | squeeze,
 // optionally "<type> <DIR>" / "<type> <N>s" (e.g. "push-slide LEFT", "crossfade
 // 0.4s"). `cut` / `none` / empty ⇒ hard cut (no overlap, no stamp).
 //
-// Mechanics — EXTEND-OUTGOING-ONLY (keeps voice/SFX/captions synced; their timing
+// Mechanics - EXTEND-OUTGOING-ONLY (keeps voice/SFX/captions synced; their timing
 // is keyed to the original frame start). At boundary i→i+1 (type = the incoming
 // frame's transition_in): extend ONLY the outgoing wrapper's data-duration by
 // `dur` so it holds its final frame across the window; do NOT move any data-start;
-// the incoming — already present from the cut on a higher track — fades/pushes in
+// the incoming - already present from the cut on a higher track - fades/pushes in
 // over it. Then 0/1-ping-pong ALL frame clips' data-track-index (adjacent
-// overlapping wrappers never share a track — lint timeline_track_too_dense) and
+// overlapping wrappers never share a track - lint timeline_track_too_dense) and
 // stamp the token-substituted GSAP template into __timelines["main"] at T =
 // incoming start. captions(2)/voice(10)/bgm(11)/sfx(20+) are never touched.
 //
@@ -67,7 +67,7 @@ function mountedFramesInOrder(manifest, html) {
 
 // Frame clip wrappers parsed out of index.html (ids carry hyphens; excludes
 // el-captions and audio by keying off the known frame-id set). The id is matched
-// from anywhere in the tag's attribute list — never assume it is the first attribute
+// from anywhere in the tag's attribute list - never assume it is the first attribute
 // (the index assembler emits data-hf-id before id, so an id-first regex finds nothing
 // and inject crashes on the empty clip map).
 function parseFrameClips(html, frameIds) {
@@ -98,7 +98,7 @@ function resolveRecord(spec, byName, reg, warn) {
   let rec = byName.get(spec.type);
   if (!rec) {
     rec = byName.get(reg.default_calm);
-    warn(`transition_in "${spec.type}" not in registry — using ${reg.default_calm}`);
+    warn(`transition_in "${spec.type}" not in registry - using ${reg.default_calm}`);
   }
   return rec;
 }
@@ -158,13 +158,13 @@ function runInject(argv) {
   const reg = loadTransitionRegistry();
   const byName = transitionsByName();
 
-  // Read directly and handle ENOENT here, rather than an existsSync precheck —
+  // Read directly and handle ENOENT here, rather than an existsSync precheck -
   // the check→write pair (write-back below) is a TOCTOU race CodeQL flags.
   let html = "";
   try {
     html = readFileSync(indexPath, "utf8");
   } catch {
-    die(`index.html not found at ${indexPath} — run assemble-index.mjs first`);
+    die(`index.html not found at ${indexPath} - run assemble-index.mjs first`);
   }
   const order = mountedFramesInOrder(manifest, html);
   if (order.length === 0) die("no frame clips found in index.html");
@@ -197,7 +197,7 @@ function runInject(argv) {
   }
 
   if (applied.length === 0) {
-    console.log(`✓ transitions inject: 0 transitions (all cuts) — index.html unchanged`);
+    console.log(`✓ transitions inject: 0 transitions (all cuts) - index.html unchanged`);
     return;
   }
 
@@ -222,7 +222,7 @@ function runInject(argv) {
   // last transition (e.g. 24.7s), shorter than the real composition. The Studio
   // reads main.duration() as its master duration and parses clips against it, so a
   // short master collapses its timeline (clips dropped, duration wrong, blank stage)
-  // — the render engine is unaffected (it trusts the root data-duration attr). Stamp
+  // - the render engine is unaffected (it trusts the root data-duration attr). Stamp
   // a full-span anchor so main.duration() == composition total. Mirrors the
   // `tl.to({}, { duration })` anchor captions.html already uses.
   const rootDurMatch = html.match(/data-composition-id="main"[^>]*?data-duration="([\d.]+)"/);
@@ -234,7 +234,7 @@ function runInject(argv) {
     ...gsapLines.map((l) => "        " + l),
     ...(totalDur
       ? [
-          `        tl.to({}, { duration: ${totalDur} }, 0); // full-span anchor — main.duration() == composition total (Studio master duration)`,
+          `        tl.to({}, { duration: ${totalDur} }, 0); // full-span anchor - main.duration() == composition total (Studio master duration)`,
         ]
       : []),
     "      })();",

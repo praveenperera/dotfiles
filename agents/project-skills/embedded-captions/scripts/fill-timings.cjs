@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * fill-timings.cjs — fill plan.json group/word times DIRECTLY from transcript.json,
+ * fill-timings.cjs - fill plan.json group/word times DIRECTLY from transcript.json,
  * by SEQUENCE (Cinematic mode). Kills the timing-drift + duplicate-word class of
  * occlusion/timing-gate re-tries: the agent only decides the GROUPING (which words form
  * each group, in spoken order); times come from the transcript by position, so the
@@ -51,7 +51,7 @@ function fillGroup(g, tw, state) {
     const firstStart = +matched[0].start.toFixed(3);
     const lastEnd = +matched[matched.length - 1].end.toFixed(3);
     // WORD start/end are filled above (deterministic). For the group's DISPLAY window we
-    // only GUARANTEE it brackets the words (never clip a word) — we do NOT tighten it:
+    // only GUARANTEE it brackets the words (never clip a word) - we do NOT tighten it:
     // a deliberately later `out` is the apex HOLD / sentence ACCUMULATION the author set,
     // and an earlier `in` is a pre-entry. Preserve both; clamp only if they'd clip.
     g.in = g.in == null ? firstStart : Math.min(g.in, firstStart);
@@ -72,18 +72,18 @@ function main() {
   try {
     plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
   } catch {
-    console.error(`[fill-timings] no plan.json (Cinematic only) — skipping`);
+    console.error(`[fill-timings] no plan.json (Cinematic only) - skipping`);
     process.exit(0);
   }
   try {
     trWordsRaw = JSON.parse(fs.readFileSync(trPath, "utf8")).words || [];
   } catch {
-    console.error(`[fill-timings] no transcript.json — skipping`);
+    console.error(`[fill-timings] no transcript.json - skipping`);
     process.exit(0);
   }
   const tw = trWordsRaw.filter((w) => w && "start" in w && "end" in w);
   if (!tw.length) {
-    console.error(`[fill-timings] transcript has no word timings — skipping`);
+    console.error(`[fill-timings] transcript has no word timings - skipping`);
     process.exit(0);
   }
 
@@ -114,7 +114,7 @@ function main() {
   console.log(
     `[fill-timings] filled ${totalMatched} word time(s) from transcript by sequence` +
       (totalUnmatched
-        ? `; ${totalUnmatched} unmatched (kept prior time — check those words)`
+        ? `; ${totalUnmatched} unmatched (kept prior time - check those words)`
         : `; all matched ✓`),
   );
   console.log(

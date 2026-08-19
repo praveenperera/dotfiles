@@ -9,7 +9,7 @@ tags: animation, gestures, press, reanimated
 
 For animated press states (scale, opacity on press), use `GestureDetector` with
 `Gesture.Tap()` and shared values instead of Pressable's
-`onPressIn`/`onPressOut`. Gesture callbacks run on the UI thread as worklets—no
+`onPressIn`/`onPressOut`. Gesture callbacks run on the UI thread as worklets - no
 JS thread round-trip for press animations.
 
 **Incorrect (Pressable with JS thread callbacks):**

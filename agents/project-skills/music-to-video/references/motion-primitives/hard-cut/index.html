@@ -99,7 +99,7 @@
       }
 
       // Sample-accurate 0ms cuts: at each beat, hide current panel, show next.
-      // tl.set has no duration and no ease — brutal instant switching.
+      // tl.set has no duration and no ease - brutal instant switching.
       for (let i = 1; i < N; i++) {
         const t = i * STEP;
         tl.set("#p" + (i - 1), { opacity: 0 }, t);

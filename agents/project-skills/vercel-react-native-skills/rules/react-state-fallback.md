@@ -8,7 +8,7 @@ tags: state, hooks, derived-state, props, initialState
 ## Use fallback state instead of initialState
 
 Use `undefined` as initial state and nullish coalescing (`??`) to fall back to
-parent or server values. State represents user intent only—`undefined` means
+parent or server values. State represents user intent only - `undefined` means
 "user hasn't chosen yet." This enables reactive fallbacks that update when the
 source changes, not just on initial render.
 

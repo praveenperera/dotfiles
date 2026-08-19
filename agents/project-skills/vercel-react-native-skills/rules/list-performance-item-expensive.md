@@ -9,7 +9,7 @@ tags: lists, performance, virtualization, hooks
 
 List items should be as inexpensive as possible to render. Minimize hooks, avoid
 queries, and limit React Context access. Virtualized lists render many items
-during scroll—expensive items cause jank.
+during scroll - expensive items cause jank.
 
 **Incorrect (heavy list item):**
 

@@ -1,35 +1,35 @@
 #!/usr/bin/env node
-// Step 1 — PR ingest (deterministic; no subagent; NO network).
+// Step 1 - PR ingest (deterministic; no subagent; NO network).
 //
 // Pure transform. The orchestrator (SKILL.md Step 1) runs `gh` itself so auth /
 // not-found / private-repo errors surface with gh's own stderr; THIS script never
 // touches the network. It only folds the two gh artifacts into the synthetic
 // capture package the shared Gen-B backend (build-frame / captions / assemble-index)
-// expects — the same shape faceless-explainer's Step 1 writes by hand, so the
+// expects - the same shape faceless-explainer's Step 1 writes by hand, so the
 // whole downstream runs unchanged. `capture/extracted/` is kept (no website was
-// captured — the PR is ingested into the same folder the engine reads by default).
+// captured - the PR is ingested into the same folder the engine reads by default).
 //
 // Reads:
 //   --pr-json <path>   gh pr view --json number,title,body,author,url,baseRefName,
 //                      headRefName,commits,files,additions,deletions,changedFiles,labels,
 //                      reviews,latestReviews,comments,assignees,reviewDecision,mergedBy
-//   --diff <path>      gh pr diff (raw unified diff)  [optional — brief still builds without it]
+//   --diff <path>      gh pr diff (raw unified diff)  [optional - brief still builds without it]
 // Writes (under --out-dir, default ./capture/extracted):
 //   tokens.json        synthetic design tokens (colors:[] → claude native palette)
 //   visible-text.txt   the narrative SOURCE: a readable plain-text brief assembled
 //                      from title + meta + people + body + commits + changed files + a
 //                      budget-bounded selection of representative diff hunks.
 //   people.json        the contributors (PR author / commit authors / reviewers /
-//                      commenters / assignees — the PR `author` is only the opener, so
+//                      commenters / assignees - the PR `author` is only the opener, so
 //                      commit authors from commits[].authors[] are tracked separately),
 //                      bot-filtered + deduped, each with a GitHub avatar URL + intended
 //                      assets/<login>.png path. The avatars themselves are
-//                      downloaded by the orchestrator (fetch-people-avatars.mjs) — THIS
+//                      downloaded by the orchestrator (fetch-people-avatars.mjs) - THIS
 //                      script stays offline. people.json + the avatars are the ONE place
 //                      the faceless default is relaxed: an optional credits/shipped-by close.
 //
 // The story-design subagent reads visible-text.txt for the narrative AND gets the
-// full diff.patch separately for deep hunk selection — so this brief is curated,
+// full diff.patch separately for deep hunk selection - so this brief is curated,
 // not exhaustive: noisy files (lockfiles / dist / maps) are deprioritised so real
 // source hunks win the char budget.
 //
@@ -58,14 +58,14 @@ const prJsonPath = resolve(flag("pr-json", "./capture/pr.json"));
 const diffPath = flag("diff") ? resolve(flag("diff")) : resolve("./capture/diff.patch");
 const outDir = resolve(flag("out-dir", "./capture/extracted"));
 
-// Budgets — keep visible-text.txt readable and bounded for the story-design agent.
+// Budgets - keep visible-text.txt readable and bounded for the story-design agent.
 const MAX_BODY_CHARS = parseInt(flag("max-body-chars", "2600"), 10);
 const MAX_DIFF_CHARS = parseInt(flag("max-diff-chars", "4800"), 10);
 const MAX_HUNK_LINES = parseInt(flag("max-hunk-lines", "22"), 10); // per hunk, post-context-trim
 const MAX_COMMITS = parseInt(flag("max-commits", "12"), 10);
 const MAX_FILES_LISTED = parseInt(flag("max-files-listed", "40"), 10);
 
-// Noisy paths whose diff bodies rarely teach anything — deprioritised in hunk
+// Noisy paths whose diff bodies rarely teach anything - deprioritised in hunk
 // selection (still listed in "Files changed" with their stats).
 const NOISE_RX =
   /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|npm-shrinkwrap\.json|go\.sum|Cargo\.lock|composer\.lock|Gemfile\.lock|poetry\.lock)$|\.(min\.js|min\.css|map|snap)$|(^|\/)(dist|build|out|vendor|node_modules|\.next|coverage)\//;
@@ -76,7 +76,7 @@ let pr;
 try {
   pr = JSON.parse(readFileSync(prJsonPath, "utf8"));
 } catch (e) {
-  die(`pr.json is not valid JSON (${e.message}) — check the gh pr view output`);
+  die(`pr.json is not valid JSON (${e.message}) - check the gh pr view output`);
 }
 
 // ---------- read diff (optional) ----------
@@ -110,7 +110,7 @@ const labels = Array.isArray(pr.labels)
   : [];
 
 // ---------- people (author / reviewers / commenters / assignees) ----------
-// Offline bot heuristic — gh gives reviewer/commenter authors as a bare `login`
+// Offline bot heuristic - gh gives reviewer/commenter authors as a bare `login`
 // (no `is_bot`), so we filter by the GitHub `[bot]` suffix + a denylist of the
 // review/CI bots that dominate org PRs. Best-effort: a bot that slips through
 // just gets an avatar downloaded and can still be excluded by story-design.
@@ -153,7 +153,7 @@ const isBot = (login) => {
 };
 
 // "author" = the PR opener; "committer" = wrote/co-authored commits in this PR
-// (often differs from the opener — a teammate force-pushes the branch, or commits
+// (often differs from the opener - a teammate force-pushes the branch, or commits
 // are co-authored). Commit authors are first-class contributors for a credits close.
 const ROLE_ORDER = ["author", "committer", "reviewer", "commenter", "assignee"];
 const peopleMap = new Map(); // login -> { login, roles:Set, reviewState, association, commitCount }
@@ -183,7 +183,7 @@ const authorLogin = pr.author?.login || null;
   if (p) p.roles.add("author");
 }
 
-// Commit authors — the people who actually wrote the code. pr.commits[].authors[]
+// Commit authors - the people who actually wrote the code. pr.commits[].authors[]
 // carries login/name/email; co-authored commits list several. Counts drive ordering
 // and the brief ("@login (N commits)"). Authors with no GitHub login (email-only)
 // can't be avatar'd, so they're skipped here.
@@ -196,7 +196,7 @@ for (const c of Array.isArray(pr.commits) ? pr.commits : []) {
   }
 }
 
-// Reviewers — prefer latestReviews (one row per reviewer, final state); fall back
+// Reviewers - prefer latestReviews (one row per reviewer, final state); fall back
 // to reviews[] (all events → keep the last state per reviewer).
 let reviewSource = Array.isArray(pr.latestReviews) ? pr.latestReviews : [];
 if (!reviewSource.length && Array.isArray(pr.reviews)) {
@@ -242,7 +242,7 @@ const people = [...peopleMap.values()]
     commitCount: p.commitCount || 0,
     reviewState: p.reviewState || null,
     association: p.association || null,
-    // Unauthenticated avatar endpoint — redirects to the user's avatar; the
+    // Unauthenticated avatar endpoint - redirects to the user's avatar; the
     // orchestrator's fetch-people-avatars.mjs downloads it here.
     avatarUrl: `https://github.com/${encodeURIComponent(p.login)}.png?size=200`,
     avatarFile: `assets/${p.login}.png`,
@@ -408,7 +408,7 @@ if (labels.length) lines.push(`Labels: ${labels.join(", ")}`);
 if (url) lines.push(`URL: ${url}`);
 lines.push("");
 
-// People & reviews — human context for an optional credits / shipped-by close.
+// People & reviews - human context for an optional credits / shipped-by close.
 // Avatars land in assets/<login>.png (downloaded by the orchestrator).
 if (people.length) {
   lines.push("## People & reviews");
@@ -441,7 +441,7 @@ if (people.length) {
     lines.push(`Commenters: ${commentersOnly.map((p) => `@${p.login}`).join(", ")}`);
   if (reviewDecision) lines.push(`Review decision: ${reviewDecision}`);
   if (mergedByLogin) lines.push(`Merged by: @${mergedByLogin}`);
-  lines.push(`Avatars: assets/<login>.png (${people.length} contributor(s) — see people.json)`);
+  lines.push(`Avatars: assets/<login>.png (${people.length} contributor(s) - see people.json)`);
   if (botsFiltered.size) lines.push(`(bots filtered out: ${[...botsFiltered].join(", ")})`);
   lines.push("");
 }
@@ -478,13 +478,13 @@ if (diffSections.length) {
   if (filesOmitted > 0) {
     lines.push("");
     lines.push(
-      `…(diff truncated to fit; ${filesOmitted} more changed file(s) omitted — see capture/diff.patch for the full change)`,
+      `…(diff truncated to fit; ${filesOmitted} more changed file(s) omitted - see capture/diff.patch for the full change)`,
     );
   }
   lines.push("");
 } else if (diffRaw) {
   lines.push("## Representative diff");
-  lines.push("(diff present but no parseable hunks — see capture/diff.patch)");
+  lines.push("(diff present but no parseable hunks - see capture/diff.patch)");
   lines.push("");
 }
 
@@ -530,7 +530,7 @@ const reviewerCount = people.filter((p) => p.roles.includes("reviewer")).length;
 const committerCount = people.filter((p) => p.roles.includes("committer")).length;
 console.log(
   [
-    `✓ ingest: ${repo || "(repo?)"} PR #${number} — "${title}"`,
+    `✓ ingest: ${repo || "(repo?)"} PR #${number} - "${title}"`,
     `  +${additions} / -${deletions} across ${changedFiles} file(s); ${commitLines.length} commit(s)`,
     `  diff: ${filesShown} file(s) shown, ${filesOmitted} omitted (budget ${MAX_DIFF_CHARS} chars)`,
     `  people: ${people.length} contributor(s) (${committerCount} commit author(s), ${reviewerCount} reviewer(s)${reviewDecision ? `, decision ${reviewDecision}` : ""}${botsFiltered.size ? `; ${botsFiltered.size} bot(s) filtered` : ""})`,

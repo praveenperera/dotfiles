@@ -9,7 +9,7 @@ tags: scrollview, layout, contentInset, performance
 
 When adding space to the top or bottom of a ScrollView that may change
 (keyboard, toolbars, dynamic content), use `contentInset` instead of padding.
-Changing `contentInset` doesn't trigger layout recalculation—it adjusts the
+Changing `contentInset` doesn't trigger layout recalculation - it adjusts the
 scroll area without re-rendering content.
 
 **Incorrect (padding causes layout recalculation):**

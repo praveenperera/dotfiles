@@ -9,7 +9,7 @@ tags: reanimated, react-compiler, shared-values
 
 With React Compiler enabled, use `.get()` and `.set()` instead of reading or
 writing `.value` directly on Reanimated shared values. The compiler can't track
-property access—explicit methods ensure correct behavior.
+property access - explicit methods ensure correct behavior.
 
 **Incorrect (breaks with React Compiler):**
 

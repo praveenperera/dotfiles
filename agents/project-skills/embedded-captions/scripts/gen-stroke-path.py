@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""gen-stroke-path.py — generalized draw-on path generator.
+"""gen-stroke-path.py - generalized draw-on path generator.
 
-Lays out ANY word in a single-line (pen-path) SVG font — Hershey/EMS — and emits
+Lays out ANY word in a single-line (pen-path) SVG font - Hershey/EMS - and emits
 one continuous-dash-revealable path `d`. The glyph data IS the pen path, so
 stroke-order reveal is exact by construction for any text, no per-word tuning.
 

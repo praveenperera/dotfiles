@@ -1,5 +1,5 @@
 {
-  "_comment": "Vendored transition registry for the product-launch workflow — the curated Tier-B subset (transform/opacity/filter on the two frame clip wrappers #el-<id>, no overlay DOM, no per-frame cooperation). Each type carries its GSAP template; the transitions.mjs injector stamps it onto window.__timelines[\"main\"]. Recipes originate from the shared catalog skills/hyperframes-animation/transitions/ (css-*.md) — keep in step if those change. Token placeholders the injector substitutes: __OLD__ (#el-<from>), __NEW__ (#el-<to>), __T__ (overlap-start s), __DUR__ (this boundary's duration), __DX__/__DXIN__ (horizontal travel + incoming offset), __DY__/__DYIN__ (vertical).",
+  "_comment": "Vendored transition registry for the product-launch workflow - the curated Tier-B subset (transform/opacity/filter on the two frame clip wrappers #el-<id>, no overlay DOM, no per-frame cooperation). Each type carries its GSAP template; the transitions.mjs injector stamps it onto window.__timelines[\"main\"]. Recipes originate from the shared catalog skills/hyperframes-animation/transitions/ (css-*.md) - keep in step if those change. Token placeholders the injector substitutes: __OLD__ (#el-<from>), __NEW__ (#el-<to>), __T__ (overlap-start s), __DUR__ (this boundary's duration), __DX__/__DXIN__ (horizontal travel + incoming offset), __DY__/__DYIN__ (vertical).",
   "transitions": [
     {
       "name": "crossfade",
@@ -18,7 +18,7 @@
       "default_duration_s": 0.6,
       "directions": [],
       "source": "css-dissolve.md",
-      "note": "Default when the two frames' #root backgrounds differ a lot — the blur masks the background-color clash a plain crossfade would expose.",
+      "note": "Default when the two frames' #root backgrounds differ a lot - the blur masks the background-color clash a plain crossfade would expose.",
       "gsap_template": [
         "tl.to(__OLD__, { filter: \"blur(10px)\", scale: 1.03, opacity: 0, duration: __DUR__, ease: \"power2.inOut\" }, __T__);",
         "tl.fromTo(__NEW__, { filter: \"blur(10px)\", scale: 0.97, opacity: 0 }, { filter: \"blur(0px)\", scale: 1, opacity: 1, duration: __DUR__, ease: \"power2.inOut\" }, __T__);"

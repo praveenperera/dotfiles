@@ -1,13 +1,13 @@
 ---
 version: alpha
-name: Daisy Days — Frame (video / frame layer)
+name: Daisy Days - Frame (video / frame layer)
 description: >
   Video-first companion to Daisy Days' design.md. The unit is the frame (1920×1080). Atoms are
-  identical and sacred — the sunny-garden pastel palette (cream + turquoise/pink/butter/mint/
+  identical and sacred - the sunny-garden pastel palette (cream + turquoise/pink/butter/mint/
   lavender/peach/sky + coral accent), charcoal 3px outlines, hard offset shadows (6/4px, no blur),
   the Fredoka + Quicksand pairing, generous radii, headline text-shadow on color, dot bullets, and
   the hand-drawn SVG ornament layer. Composition + frame scale rewritten. Motion out of scope.
-unit: the frame — 1920×1080 primary; 9:16 and 1:1 documented
+unit: the frame - 1920×1080 primary; 9:16 and 1:1 documented
 principle: atoms are sacred · composition is free · numbers come from the script
 
 colors:
@@ -28,11 +28,11 @@ borders: { primary: "3px solid text-dark", thin: "2px solid text-dark" }
 shadows: { default: "6px 6px 0 text-dark", small: "4px 4px 0 text-dark", text-headline: "3px 3px 0 text-dark", text-headline-soft: "3px 3px 0 rgba(0,0,0,0.2)" }
 
 typography:
-  # — reading ramp (Quicksand) —
+  # - reading ramp (Quicksand) -
   body:    { fontFamily: "Quicksand", cqw: 0.95, weight: 500, lineHeight: 1.6 }
   body-strong:{ fontFamily: "Quicksand", cqw: 0.95, weight: 600, lineHeight: 1.5 }
   meta:    { fontFamily: "Quicksand", cqw: 0.78, weight: 600, lineHeight: 1.45 }
-  # — display ramp (Fredoka One / Fredoka 600 — single weight, never italic) —
+  # - display ramp (Fredoka One / Fredoka 600 - single weight, never italic) -
   badge:   { fontFamily: "Fredoka One", cqw: 0.9, tracking: "0.02em" }
   label-display:{ fontFamily: "Fredoka One", cqw: 1.3, lineHeight: 1.3, tracking: "0.02em" }
   subtitle:{ fontFamily: "Fredoka One", cqw: 1.8, lineHeight: 1.2, tracking: "0.02em" }
@@ -60,7 +60,7 @@ components:
     border: "3px solid {colors.text-dark} (one continuous)"
     rounded: "{spacing.radius-lg}"
     shadow: "6px 6px 0 {colors.text-dark}"
-    description: "Pastel header strip flush above a white body — one unit, one shadow."
+    description: "Pastel header strip flush above a white body - one unit, one shadow."
   badge-pill:
     backgroundColor: "{colors.butter}"
     border: "3px solid {colors.text-dark}"
@@ -97,29 +97,29 @@ components:
     description: "Makes the headline read 'outlined' like the shapes."
 ---
 
-# Daisy Days — Frame (video / frame layer)
+# Daisy Days - Frame (video / frame layer)
 
 ## Overview
 
-Daisy Days at frame scale is a **cheerful, childlike system** — picture-book illustration meets
+Daisy Days at frame scale is a **cheerful, childlike system** - picture-book illustration meets
 sticker-sheet kawaii. Every shape carries a **3px charcoal outline**, every elevated element a
 **solid hard offset shadow** (no blur), every surface a sunny-garden pastel. The voice is one
 pairing: **Fredoka One** (chunky rounded, single weight) for every headline, **Quicksand** for
-every body and meta line. The signature is the **hand-drawn SVG ornament layer** — daisies, stars,
+every body and meta line. The signature is the **hand-drawn SVG ornament layer** - daisies, stars,
 suns, clouds, rainbows clustering at corners and cropping past the edge.
 
 The palette is **multi-pastel with one warm pop**: cream canvas, seven pastel surfaces, and
 `{colors.coral}` reserved for small high-attention markers only. Headlines on a saturated surface
 get a 3px charcoal text-shadow (so they read "outlined" like the shapes) and switch to white;
-headlines on cream sit flat in charcoal. Depth is 2D and graphic — thick outline + hard offset =
+headlines on cream sit flat in charcoal. Depth is 2D and graphic - thick outline + hard offset =
 sticker-on-paper.
 
 **Key characteristics at frame scale:**
 
 - **Cream default + rotating pastel surfaces**; `{colors.coral}` is a marker accent, never a surface.
-- **Fredoka One** headlines + **Quicksand 500/600** body — strict by role, never crossed.
+- **Fredoka One** headlines + **Quicksand 500/600** body - strict by role, never crossed.
 - **3px charcoal outline + hard offset shadow** (6/4px, zero blur) on every elevated shape.
-- **Generous radii** — 20px cards, 28px featured, pill badges, full-circle markers; no square corners.
+- **Generous radii** - 20px cards, 28px featured, pill badges, full-circle markers; no square corners.
 - **Headline text-shadow on saturated surfaces** (white text); flat charcoal on cream.
 - **Dot bullets** (outlined butter discs, never glyphs) + a **3–7 ornament wreath** per frame.
 
@@ -129,26 +129,26 @@ sticker-on-paper.
 
 Three eyeball tests gate every frame before any structural check:
 
-- **Squint** — one Fredoka headline or content card dominates at 3–6× its neighbor.
-- **Silence** — **one content container per frame** surrounded by an ornament wreath; the **info-card grid is the one dense exception**. Empty corners read as broken.
-- **Restraint** — cream or **one** pastel surface; coral is a small-marker accent (never a surface); charcoal borders + hard offset shadows only; no ninth color.
-- **Reference** — aim at a **children's picture-book / sticker-sheet kawaii zine**; failure looks like a **flat, square-cornered, blurred-shadow corporate slide**.
+- **Squint** - one Fredoka headline or content card dominates at 3–6× its neighbor.
+- **Silence** - **one content container per frame** surrounded by an ornament wreath; the **info-card grid is the one dense exception**. Empty corners read as broken.
+- **Restraint** - cream or **one** pastel surface; coral is a small-marker accent (never a surface); charcoal borders + hard offset shadows only; no ninth color.
+- **Reference** - aim at a **children's picture-book / sticker-sheet kawaii zine**; failure looks like a **flat, square-cornered, blurred-shadow corporate slide**.
 
 - **Primary:** 1920×1080 (16:9). Display authored in **`cqw`** (`px ÷ 1920 × 100 = cqw`).
 - **Vertical:** 1080×1920 (9:16). **Square:** 1080×1080 (1:1).
 - **Safe area:** `pad-slide` ~3cqw; ornaments deliberately bleed past the edge.
 
 **The container law (load-bearing).** Every frame ground sets `container-type: size`; ALL
-frame-relative units are `cqw`/`cqh` against it — never `vw`. Borders stay 3px/2px; radii stay
+frame-relative units are `cqw`/`cqh` against it - never `vw`. Borders stay 3px/2px; radii stay
 20/28/50px; shadow offsets scale in `cqw` so the sticker offset holds proportionally.
 
 ## Colors
 
 Tokens identical to the source. Default ground `{colors.cream}`; rotate saturated pastels
 (turquoise / soft-pink / butter / mint / lavender / peach / sky) for tonal mood. **Cards are white**
-on any surface. **Borders + shadows are always `{colors.text-dark}` charcoal** — never colored,
+on any surface. **Borders + shadows are always `{colors.text-dark}` charcoal** - never colored,
 never blurred, never `rgba` (save the soft text-shadow variant). `{colors.coral}` is the lone
-high-saturation accent — small markers (step circles, dots, headers) **only**, never a surface.
+high-saturation accent - small markers (step circles, dots, headers) **only**, never a surface.
 Body is charcoal/muted; pastels carry **no semantic meaning**. No ninth color.
 
 ## Typography
@@ -159,28 +159,28 @@ every headline, title, quote, and marker numeral.
 
 - **Legibility floor:** any load-bearing line ≥ **1.4cqw**; meta is chrome only.
 - **Fit-to-measure:** size the headline to its length. Cap the block at **≤ 78cqw**; ≤3 words → `display`; 4–6 → `headline`; 7+ → `title`.
-- **Fredoka One for all display, Quicksand for all body — never crossed.** Fredoka is single-weight (no italic, no underline, no alt weights); Quicksand stays 500/600/700. Fredoka tracking 0.02em; Quicksand body never uppercase.
+- **Fredoka One for all display, Quicksand for all body - never crossed.** Fredoka is single-weight (no italic, no underline, no alt weights); Quicksand stays 500/600/700. Fredoka tracking 0.02em; Quicksand body never uppercase.
 
 ## Depth & Surface
 
-2D graphic depth — hard offset shadow, solid charcoal, zero blur, bottom-right:
+2D graphic depth - hard offset shadow, solid charcoal, zero blur, bottom-right:
 
 - **`shadows.default` 6px** cards, frames, badges, chart containers.
 - **`shadows.small` 4px** small cards, step circles, avatars.
-- **Text-headline shadow** — 3px charcoal on Fredoka headlines over saturated surfaces (20% soft variant on pink/mint); cream headlines flat.
+- **Text-headline shadow** - 3px charcoal on Fredoka headlines over saturated surfaces (20% soft variant on pink/mint); cream headlines flat.
 - **Outline + offset** together are the sticker-on-paper signature.
 
 **Ceiling:** no blurred shadow, no `rgba` (except the soft text-shadow), no gradient, no glow; an element either casts a hard charcoal offset or none.
 
 ## Shapes
 
-- **20px** cards, **28px** featured, **50px** pill (badges, counter), **50%** all circles, **4px** legend swatch. Zero square corners — every region is rounded.
+- **20px** cards, **28px** featured, **50px** pill (badges, counter), **50%** all circles, **4px** legend swatch. Zero square corners - every region is rounded.
 
 ## Components
 
-- **card / framed-header** — the white-fill bordered containers (one shadow). **badge-pill** — butter section tag.
-- **circle-marker** family (bullet 20 / icon 44 / dot 48 / step 90) + **bullet-dot** — outlined pastel discs, Fredoka numerals.
-- **ornament** — the hand-drawn SVG sticker layer (3–7 per frame). **quote-mark** — soft-pink Fredoka anchor. **text-headline-shadow** — the on-color headline treatment.
+- **card / framed-header** - the white-fill bordered containers (one shadow). **badge-pill** - butter section tag.
+- **circle-marker** family (bullet 20 / icon 44 / dot 48 / step 90) + **bullet-dot** - outlined pastel discs, Fredoka numerals.
+- **ornament** - the hand-drawn SVG sticker layer (3–7 per frame). **quote-mark** - soft-pink Fredoka anchor. **text-headline-shadow** - the on-color headline treatment.
 
 ## Frame Treatments
 
@@ -193,7 +193,7 @@ every headline, title, quote, and marker numeral.
 
 ### 2 · Info Cards (catalog · move: 3-up white cards · cream · the dense frame)
 
-**Ground** `{colors.cream}`, `pad-slide`. **Composes** headline (flat charcoal), 3× card (circle-icon + Fredoka title + Quicksand body), a couple ornaments. **Focal** three white 3px-bordered cards with 6px shadows. **Chrome** flat headline. **Accent** the pastel circle-icons (rotate turquoise/coral/lavender). **Silence** tight — the density exception (fewer ornaments here). **Fixed** white cards, 3px + 6px, 20px radius. **Free** card content, icon hues. **Density** dense-exception.
+**Ground** `{colors.cream}`, `pad-slide`. **Composes** headline (flat charcoal), 3× card (circle-icon + Fredoka title + Quicksand body), a couple ornaments. **Focal** three white 3px-bordered cards with 6px shadows. **Chrome** flat headline. **Accent** the pastel circle-icons (rotate turquoise/coral/lavender). **Silence** tight - the density exception (fewer ornaments here). **Fixed** white cards, 3px + 6px, 20px radius. **Free** card content, icon hues. **Density** dense-exception.
 
 ### 3 · Process Steps (sequence · move: rotating circle markers · peach · centered)
 
@@ -205,7 +205,7 @@ every headline, title, quote, and marker numeral.
 
 ### 5 · Framed Section (feature · move: cap+body card · cream)
 
-**Ground** `{colors.cream}`. **Composes** framed-header (pastel cap + white body), bullet-dot list, ornaments. **Focal** a framed-header — a pastel cap strip (Fredoka title, optional text-shadow) above a white body with a butter-dot bullet list. **Accent** the cap color + bullet dots. **Silence** moderate. **Fixed** one continuous 3px border + one shadow, butter dot bullets. **Free** cap color, list. **Density** standard.
+**Ground** `{colors.cream}`. **Composes** framed-header (pastel cap + white body), bullet-dot list, ornaments. **Focal** a framed-header - a pastel cap strip (Fredoka title, optional text-shadow) above a white body with a butter-dot bullet list. **Accent** the cap color + bullet dots. **Silence** moderate. **Fixed** one continuous 3px border + one shadow, butter dot bullets. **Free** cap color, list. **Density** standard.
 
 ### 6 · Closing (closer · move: ornament wreath · saturated · centered)
 
@@ -228,7 +228,7 @@ every headline, title, quote, and marker numeral.
 - No colored borders (charcoal only); no coral surface; no ninth color.
 - No third font; no Quicksand headline or Fredoka body; no italic/underline Fredoka; no uppercase Quicksand body.
 - No glyph bullets; no empty corners (ornaments fill them); no two competing content panels.
-- Don't blow a headline edge-to-edge — fit to measure.
+- Don't blow a headline edge-to-edge - fit to measure.
 
 ## Aspect-Ratio Behavior
 
@@ -246,29 +246,29 @@ the ornament count toward the upper end (5–7) so corners never read empty.
 
 ## Approved Real Entities
 
-No real customers, logos, or vendors are defined in the source — render any such mark as a
+No real customers, logos, or vendors are defined in the source - render any such mark as a
 placeholder. Ornaments and pastels are content-agnostic; counters/badges carry per-deck text.
 
 ## Numerals & Claims (hard rule)
 
-Never invent figures, dates, or counts at frame scale. Render slots as `— figure —`, `{metric}`,
+Never invent figures, dates, or counts at frame scale. Render slots as ` - figure - `, `{metric}`,
 `N`. Step numbers and any chart values carry placeholders until the script supplies them; the slide
 counter is decorative chrome.
 
 ## Pre-Render Self-Audit
 
-- **Squint** — one Fredoka headline or content card dominates per frame.
-- **Silence** — one container per frame surrounded by an ornament wreath; only the info-card grid runs dense.
-- **Color** — cream or one pastel surface; coral markers only; charcoal borders/shadows; no ninth hue.
-- **Type** — Fredoka headlines (text-shadow + white on saturated, flat charcoal on cream), Quicksand body; ≥1.4cqw floor.
-- **Depth** — 3px outline + hard offset (no blur, no rgba save soft text-shadow); rounded corners only.
-- **Ornaments** — 3–7 per frame, cropping past edges; no empty corners. **Bullets** — outlined discs, never glyphs.
-- **Fabrication** — every numeral traces to the script, else placeholder.
+- **Squint** - one Fredoka headline or content card dominates per frame.
+- **Silence** - one container per frame surrounded by an ornament wreath; only the info-card grid runs dense.
+- **Color** - cream or one pastel surface; coral markers only; charcoal borders/shadows; no ninth hue.
+- **Type** - Fredoka headlines (text-shadow + white on saturated, flat charcoal on cream), Quicksand body; ≥1.4cqw floor.
+- **Depth** - 3px outline + hard offset (no blur, no rgba save soft text-shadow); rounded corners only.
+- **Ornaments** - 3–7 per frame, cropping past edges; no empty corners. **Bullets** - outlined discs, never glyphs.
+- **Fabrication** - every numeral traces to the script, else placeholder.
 
 ## Known Gaps
 
 - **Motion intentionally out of scope.** frame.md specifies composition only; the source uses scroll-snap nav, no transition spec.
-- **Fonts:** the source names _Fredoka One_; Google now serves the **Fredoka** variable family — request `Fredoka:wght@500;600;700` and set display weight 600 (visually equal to Fredoka One), with `Fredoka One` kept first in the stack for environments that still serve it. Quicksand loads normally. CJK: ZCOOL XiaoWei (display) / Yozai (body).
+- **Fonts:** the source names _Fredoka One_; Google now serves the **Fredoka** variable family - request `Fredoka:wght@500;600;700` and set display weight 600 (visually equal to Fredoka One), with `Fredoka One` kept first in the stack for environments that still serve it. Quicksand loads normally. CJK: ZCOOL XiaoWei (display) / Yozai (body).
 - **9:16 / 1:1 are guidance**; keep ornament count high so corners stay filled per ratio.
 - Ornaments (daisy/star/sun/cloud/rainbow), markers, and framed headers are CSS/SVG-only; recoloring SVG ornaments requires editing their stroke values.
 - **Contrast:** keep `{colors.text-muted}` off pastel surfaces (cream/white cards only); small text on saturated grounds should be charcoal or white.

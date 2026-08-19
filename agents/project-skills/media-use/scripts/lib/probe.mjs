@@ -9,7 +9,7 @@ export function probe(filePath) {
 
   try {
     // execFileSync (no shell) so a hostile filename like `"; rm -rf ~; ".png`
-    // can't break out of the quoting — filePath is passed as a literal argv entry.
+    // can't break out of the quoting - filePath is passed as a literal argv entry.
     const raw = execFileSync(
       "ffprobe",
       ["-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", filePath],

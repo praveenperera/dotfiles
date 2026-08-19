@@ -8,7 +8,7 @@ How Remotion's nested `Sequence` tree maps to HF's flat `data-start` /
 Remotion's `<Sequence from={F} durationInFrames={D}>` is a coordinate
 transform: it shifts `useCurrentFrame()` by `F` and clips the child
 component to the window `[F, F+D]`. HF doesn't have a per-element
-"current frame" — there's a single composition seek time and the
+"current frame" - there's a single composition seek time and the
 runtime hides/shows elements based on their `data-start` / `data-duration`.
 
 Result: the nested tree flattens into a list of siblings on the same
@@ -126,7 +126,7 @@ with `data-start` accumulating:
 ## Crossfading scene boundaries
 
 Remotion `<Sequence>` shows/hides at hard boundaries by default. HF does
-the same — but if your composition needs a smooth fade between scenes,
+the same - but if your composition needs a smooth fade between scenes,
 you have to drive opacity explicitly with GSAP at the boundary:
 
 ```js
@@ -163,7 +163,7 @@ spinTl.to(spinner, { rotate: 360, duration: 1.0, ease: "none" });
 mainTl.add(spinTl, 3);
 ```
 
-This is fragile — Remotion's `<Loop>` resets internal state every iteration,
+This is fragile - Remotion's `<Loop>` resets internal state every iteration,
 which GSAP repeat does too, but if the looped child has its own animation,
 you need to be careful that GSAP's `repeatRefresh` is on or off as needed.
 For most simple "spin forever" cases this is fine.
@@ -177,7 +177,7 @@ For most simple "spin forever" cases this is fine.
 ```
 
 Drop the wrapper. `<Freeze>` pins `useCurrentFrame()` at a constant for
-the children — but in HF, the children's animation is already driven by
+the children - but in HF, the children's animation is already driven by
 explicit GSAP tweens, so freeze translates to "don't tween this element".
 
 ## Multiple parallel tracks

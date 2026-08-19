@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene 7 — HyperFrames Decrypt Pan Track</title>
+    <title>Scene 7 - HyperFrames Decrypt Pan Track</title>
 
     <!--
       HyperFrames composition.tsx.
@@ -14,7 +14,7 @@
         2.8 – 3.5s   Horizontal pan to Shot 2 with parallax exit + scale-in
         3.7 – 6.1s   Cursor-tracked typing: "HTML, CSS and JS become MP4"
           (NOT @the source/layout-utils, NOT a charWidthRatio constant)
-        - Bar width pre-allocated from the full text — never tweened
+        - Bar width pre-allocated from the full text - never tweened
         - Camera follows cursor by tweening the strip's `x`, with a piecewise
           Math.min(initialOffset, trackingOffset) for the two-phase camera
         - Hacker-flip glyph flicker via deterministic int hash, not Math.random
@@ -77,7 +77,7 @@
       }
 
       /* ============================================================
-         SHOT 1 — "HyperFrames renders video"
+         SHOT 1 - "HyperFrames renders video"
          ============================================================ */
       .shot1-content {
         position: absolute;
@@ -133,7 +133,7 @@
       }
 
       /* ============================================================
-         SHOT 2 — Search bar with cursor-tracked typing
+         SHOT 2 - Search bar with cursor-tracked typing
          ============================================================ */
       .shot2-bar {
         position: absolute;
@@ -193,7 +193,7 @@
       <div class="viewport" data-layout-allow-overflow>
         <div class="strip" data-layout-allow-overflow>
           <!-- =====================================================
-               SHOT 1 — "HyperFrames renders video"
+               SHOT 1 - "HyperFrames renders video"
                ===================================================== -->
           <div
             id="shot-decode"
@@ -213,7 +213,7 @@
           </div>
 
           <!-- =====================================================
-               SHOT 2 — Search bar typing
+               SHOT 2 - Search bar typing
                ===================================================== -->
           <div
             id="shot-typing"
@@ -232,7 +232,7 @@
 
     <script>
       /* ================================================================
-         CONSTANTS — all baked at setup time.
+         CONSTANTS - all baked at setup time.
          ================================================================ */
       const W = 1920,
         H = 1080;
@@ -268,7 +268,7 @@
       const PARALLAX_DIST = 400; // px Shot 1 moves extra during pan
 
       /* ================================================================
-         BUILD DOM — flip glyphs (Shot 1) generated synchronously.
+         BUILD DOM - flip glyphs (Shot 1) generated synchronously.
          The accent text is "video" → 5 glyphs.
          ================================================================ */
       const accentEl = document.querySelector(".shot1-accent");
@@ -291,7 +291,7 @@
       });
 
       /* ================================================================
-         TEXT MEASUREMENT — uses a hidden DOM probe so we capture
+         TEXT MEASUREMENT - uses a hidden DOM probe so we capture
          real letter-spacing, kerning, and font-feature widths.
          Must run AFTER document.fonts.ready.
          ================================================================ */
@@ -308,7 +308,7 @@
       }
 
       /* ================================================================
-         TIMELINE BUILD — fires after fonts are ready so measurements
+         TIMELINE BUILD - fires after fonts are ready so measurements
          use the real rendered metrics, not fallback fonts.
          ================================================================ */
       window.__timelines = window.__timelines || {};
@@ -322,7 +322,7 @@
         const fullTextWidth = measureNodeWidth(FULL_TEXT, searchFont);
         const barWidth = PADDING_LEFT + fullTextWidth + CURSOR_VIS_W + PADDING_RIGHT;
 
-        // Pre-allocate the bar's final width — no width tweens ever.
+        // Pre-allocate the bar's final width - no width tweens ever.
         const barEl = document.querySelector(".shot2-bar");
         barEl.style.width = barWidth + "px";
 
@@ -353,7 +353,7 @@
         const FLICKER = 3;
         const REVEAL_AT = 0.6;
 
-        // Deterministic 32-bit mix — replaces Math.random / seeded RNG.
+        // Deterministic 32-bit mix - replaces Math.random / seeded RNG.
         function pseudoHash(i, t) {
           return ((i * 374761393 + t * 668265263) >>> 0) % CHAR_POOL.length;
         }
@@ -392,7 +392,7 @@
         // PHASE 3: Horizontal pan + parallax exit + Shot 2 entry
         // All three tweens at the same timeline position run in parallel.
         // ============================================================
-        // (a) Camera pan — strip slides one full viewport left.
+        // (a) Camera pan - strip slides one full viewport left.
         tl.to(
           ".strip",
           {
@@ -403,7 +403,7 @@
           TIMING.panStart,
         );
 
-        // (b) Shot 1 parallax exit — content moves EXTRA -PARALLAX_DIST.
+        // (b) Shot 1 parallax exit - content moves EXTRA -PARALLAX_DIST.
         tl.to(
           ".shot1-content",
           {
@@ -425,7 +425,7 @@
           TIMING.panStart,
         );
 
-        // (c) Shot 2 bar entry — fade + scale with mild overshoot ("landing").
+        // (c) Shot 2 bar entry - fade + scale with mild overshoot ("landing").
         tl.fromTo(
           ".shot2-bar",
           { opacity: 0, scale: 0.8 },
@@ -456,7 +456,7 @@
         // i.e. bar already sits at BAR_LEFT_MARGIN inside Shot 2.
         const INITIAL_OFFSET = 0;
 
-        // Typing driver — a clock that runs from 0 to FULL_TEXT.length.
+        // Typing driver - a clock that runs from 0 to FULL_TEXT.length.
         const typingProxy = { progress: 0 };
         const typingDur = FULL_TEXT.length * TIMING.charRate;
         const typingEnd = TIMING.typingStart + typingDur;

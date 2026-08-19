@@ -1,14 +1,14 @@
 <!--
-  Frame: hairline — double stroke + four-corner viewfinder ticks
+  Frame: hairline - double stroke + four-corner viewfinder ticks
   ─────────────────────────────────────────────────────────────────────
   When to use
     - Professional / cinematographic feel without going full polaroid.
     - Pairs well with: split, stack, pip layouts.
     - Pairs well with: academic, audit, swiss, terminal styles.
-    - Skip on overlay layout — the decorative chrome clashes with full-bleed video.
+    - Skip on overlay layout - the decorative chrome clashes with full-bleed video.
 
   How to apply in the composition
-    Add ONE decorative div as a sibling of #video-wrap (not a child — the
+    Add ONE decorative div as a sibling of #video-wrap (not a child - the
     video element is muted/playsinline and the decorative div should sit
     above it). The accent color is configurable per scene.
 
@@ -24,7 +24,7 @@
       <span class="tick br"></span>
     </div>
 
-    CSS (4 corners via explicit spans — preferred over ::before/::after
+    CSS (4 corners via explicit spans - preferred over ::before/::after
     because pseudo-elements give you at most 2 corners cleanly):
 
     .frame-deco { position: absolute; pointer-events: none; z-index: 3; }
@@ -163,7 +163,7 @@
         <span class="tick br"></span>
       </div>
       <div class="note">
-        HAIRLINE — double stroke (2px inner + soft 6px halo) + four-corner viewfinder ticks. Accent
+        HAIRLINE - double stroke (2px inner + soft 6px halo) + four-corner viewfinder ticks. Accent
         color matches the card style.
       </div>
     </div>

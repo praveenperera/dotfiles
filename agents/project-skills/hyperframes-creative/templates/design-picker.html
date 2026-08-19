@@ -742,7 +742,7 @@
         <div class="md-header">
           <div class="md-title">
             design.md
-            <span style="font-size: 11px; font-weight: 400; color: #555">— edit, then copy</span>
+            <span style="font-size: 11px; font-weight: 400; color: #555"> - edit, then copy</span>
           </div>
           <div class="md-actions">
             <button class="copy-btn" id="copy-btn">Copy</button>
@@ -1361,19 +1361,19 @@
         md +=
           "## Colors\n\n- **Primary** (`" +
           bg +
-          "`) — Canvas background\n- **On-Primary** (`" +
+          "`) - Canvas background\n- **On-Primary** (`" +
           fg +
-          "`) — Text and content\n- **Accent** (`" +
+          "`) - Text and content\n- **Accent** (`" +
           ac +
-          "`) — CTAs, highlights\n- **Muted** (`" +
+          "`) - CTAs, highlights\n- **Muted** (`" +
           mt +
-          "`) — Secondary text\n\n";
+          "`) - Secondary text\n\n";
         md +=
-          "## Typography\n\n- **Headline** — " +
+          "## Typography\n\n- **Headline** - " +
           t.headline.family +
           " at weight " +
           t.headline.weight +
-          "\n- **Body** — " +
+          "\n- **Body** - " +
           t.body.family +
           " at weight " +
           t.body.weight +
@@ -1381,7 +1381,7 @@
         md +=
           "## Layout\n\n- Structure: " +
           a.name +
-          " — " +
+          " - " +
           a.tag +
           "\n- Density: " +
           dn.name +
@@ -1392,13 +1392,13 @@
           " (" +
           cr.value +
           ")\n\n";
-        md += "## Elevation\n\n" + dp.name + " — " + dp.desc + ".\n\n";
+        md += "## Elevation\n\n" + dp.name + " - " + dp.desc + ".\n\n";
         var easeObj = picks.easing !== null ? EASINGS[picks.easing] : null;
         if (easeObj) {
           md +=
             "## Motion\n\n- **Entry easing:** `" +
             easeObj.value +
-            "` — " +
+            "` - " +
             easeObj.desc +
             "\n- **Energy:** " +
             easeObj.name +

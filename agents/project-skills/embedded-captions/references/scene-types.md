@@ -1,16 +1,16 @@
-# Scene Types — picking the right template
+# Scene Types - picking the right template
 
 The three templates differ in one thing: **what surface (if any) the text physically sits on**. Pick by reading the scene, not by the genre label.
 
-## wall-embed — "text is printed on a real surface"
+## wall-embed - "text is printed on a real surface"
 
 Original Memory Wall render used this. Text uses perspective transform + `mix-blend-mode: overlay` to look like it was silk-screened onto a wall behind the subject. The illusion is strong when it works and completely broken when forced.
 
-### Four conditions — ALL must hold
+### Four conditions - ALL must hold
 
 1. **A flat or near-flat surface exists somewhere in the frame, larger than the caption block.** Good: acoustic foam panel, painted wall, door, stone facade, large backdrop cloth, blackboard. Bad: bookshelf (3D depth + decorative items), mic shield (too small), window (transparent, content behind it shifts), brick wall with mortar patterns (competes).
-2. **The surface is at a non-zero angle to the camera.** Perspective is what sells "embedded". If the wall is perfectly parallel (0° rotation relative to camera), pasting rotateY:0 text onto it looks like a sticker, not embedded. Memory Wall's foam wall was tilted ~13° — perfect. A wall directly behind a centered frontal subject usually has no exploitable angle.
-3. **The surface is mid-luminance.** Overlay blend neutralizes mid-tones — text keeps contrast against a mid-grey wall. On near-black surfaces (luminance < 60), overlay makes text vanish → switch to `mix-blend-mode: screen`. On near-white surfaces (> 180), overlay also fails → switch to `mix-blend-mode: normal` with opaque color.
+2. **The surface is at a non-zero angle to the camera.** Perspective is what sells "embedded". If the wall is perfectly parallel (0° rotation relative to camera), pasting rotateY:0 text onto it looks like a sticker, not embedded. Memory Wall's foam wall was tilted ~13° - perfect. A wall directly behind a centered frontal subject usually has no exploitable angle.
+3. **The surface is mid-luminance.** Overlay blend neutralizes mid-tones - text keeps contrast against a mid-grey wall. On near-black surfaces (luminance < 60), overlay makes text vanish → switch to `mix-blend-mode: screen`. On near-white surfaces (> 180), overlay also fails → switch to `mix-blend-mode: normal` with opaque color.
 4. **The surface has no competing graphical content.** Plain paint, uniform acoustic foam, blurred OOF background all work. Printed wallpaper, picture frames, text on signage, busy bookshelves all compete with the caption and ruin the embed illusion.
 
 If **any** condition fails, **do not use wall-embed**. Pick another template.
@@ -21,12 +21,12 @@ The acoustic foam wall to the right of the subject took ~40% of frame width, til
 
 ### Anti-examples (wall-embed would FAIL)
 
-- **champion / demo1_avatarv** — bookshelf background with books, white vases, picture frames. Cluttered + 3D depth. Fails condition 1 and 4. Used corner-column-crown instead.
-- **Jobs 60 Minutes** — blurry potted plant background. No flat surface at all. Fails condition 1.
-- **Randy Pausch "Time is all we have"** — completely black backdrop. No perspective to exploit, no mid-tone surface. Fails 2 and 3. Used portrait-header.
-- **Any vlog / selfie with handheld camera** — surface moves frame-to-frame, can't lock perspective. Even if conditions 1-4 hold briefly, motion breaks the illusion.
+- **champion / demo1_avatarv** - bookshelf background with books, white vases, picture frames. Cluttered + 3D depth. Fails condition 1 and 4. Used corner-column-crown instead.
+- **Jobs 60 Minutes** - blurry potted plant background. No flat surface at all. Fails condition 1.
+- **Randy Pausch "Time is all we have"** - completely black backdrop. No perspective to exploit, no mid-tone surface. Fails 2 and 3. Used portrait-header.
+- **Any vlog / selfie with handheld camera** - surface moves frame-to-frame, can't lock perspective. Even if conditions 1-4 hold briefly, motion breaks the illusion.
 
-## corner-column-crown — "text sits in a clean region next to the subject"
+## corner-column-crown - "text sits in a clean region next to the subject"
 
 The default for most talking-head content. Works when wall-embed doesn't.
 
@@ -34,15 +34,15 @@ The default for most talking-head content. Works when wall-embed doesn't.
 
 1. **Single subject, fixed camera.** Handheld is tolerable if drift is small.
 2. **At least one clean zone (≥ 15% of frame width) to the left or right of the subject** where captions can sit without continuous body occlusion.
-3. **Background can be cluttered or 3D** — we're not relying on a flat surface, just readable contrast. Screen blend mode picks up darker backgrounds (bookshelves, dark walls) naturally.
+3. **Background can be cluttered or 3D** - we're not relying on a flat surface, just readable contrast. Screen blend mode picks up darker backgrounds (bookshelves, dark walls) naturally.
 4. **Landscape aspect** (16:9 or similar). For portrait, use `portrait-header`.
 
 ### When to add the crown vs when to skip it
 
-- Add crown if there's a natural "title drop" line — the one phrase that lands the story (e.g. "WIMBLEDON CHAMPION", "BEATLES", "SHARP AGAIN"). Check [layout-heuristics.md § Crown placement](layout-heuristics.md) for the three geometric conditions.
+- Add crown if there's a natural "title drop" line - the one phrase that lands the story (e.g. "WIMBLEDON CHAMPION", "BEATLES", "SHARP AGAIN"). Check [layout-heuristics.md § Crown placement](layout-heuristics.md) for the three geometric conditions.
 - Skip crown for factual / neutral monologues where no phrase carries the climax. Short videos (<10s) often don't need it.
 
-## portrait-header — "subject fills center, text lives in top banner"
+## portrait-header - "subject fills center, text lives in top banner"
 
 For 9:16 aspect where the subject inevitably fills the middle.
 
@@ -50,12 +50,12 @@ For 9:16 aspect where the subject inevitably fills the middle.
 
 1. **Portrait aspect** (9:16, 1080×1920 etc.).
 2. **Subject occupies the vertical middle of frame**, leaving ~15-25% of the frame height clear at the top.
-3. **Optional crown at bottom** — only works if there's also clean space beneath the subject's waist, which is rare in close-crop portrait.
+3. **Optional crown at bottom** - only works if there's also clean space beneath the subject's waist, which is rare in close-crop portrait.
 
 ### What to watch
 
-- Subject's head top often approaches y=40 — top banner captions at `top: 30px` will get partially occluded by hair. Accept the partial occlusion (it reads as embed) or bump the caption size down to clear the hair.
-- If the subject already has **baked-in captions** (like the burned-in subtitles test case with yellow subtitles burned in), the skill should refuse — two caption systems compete.
+- Subject's head top often approaches y=40 - top banner captions at `top: 30px` will get partially occluded by hair. Accept the partial occlusion (it reads as embed) or bump the caption size down to clear the hair.
+- If the subject already has **baked-in captions** (like the burned-in subtitles test case with yellow subtitles burned in), the skill should refuse - two caption systems compete.
 
 ## Quick decision flow
 

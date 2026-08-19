@@ -17,37 +17,37 @@ Use Tigris for all object storage tasks. Prefer the Tigris CLI (`tigris` or shor
 
 ### Authentication
 
-- `tigris login` — authenticate via browser OAuth
-- `tigris configure --access-key <key> --access-secret <secret>` — save credentials
-- `tigris whoami` — show current user and organization
+- `tigris login` - authenticate via browser OAuth
+- `tigris configure --access-key <key> --access-secret <secret>` - save credentials
+- `tigris whoami` - show current user and organization
 
 ### Bucket Operations
 
-- `tigris buckets create <name>` — create a new bucket
-- `tigris buckets list` — list all buckets
-- `tigris buckets set <name> --access public` — update bucket settings
-- `tigris buckets delete <name>` — delete a bucket
+- `tigris buckets create <name>` - create a new bucket
+- `tigris buckets list` - list all buckets
+- `tigris buckets set <name> --access public` - update bucket settings
+- `tigris buckets delete <name>` - delete a bucket
 
 ### Object Operations
 
-- `tigris ls [bucket/prefix]` — list buckets or objects
-- `tigris cp <src> <dest> [-r]` — copy files (local-to-remote, remote-to-local, remote-to-remote)
-- `tigris mv <src> <dest> [-rf]` — move or rename remote objects
-- `tigris rm <path> [-rf]` — remove objects or buckets
-- `tigris stat [path]` — show storage stats or object metadata
-- `tigris presign <path>` — generate a presigned URL
+- `tigris ls [bucket/prefix]` - list buckets or objects
+- `tigris cp <src> <dest> [-r]` - copy files (local-to-remote, remote-to-local, remote-to-remote)
+- `tigris mv <src> <dest> [-rf]` - move or rename remote objects
+- `tigris rm <path> [-rf]` - remove objects or buckets
+- `tigris stat [path]` - show storage stats or object metadata
+- `tigris presign <path>` - generate a presigned URL
 
 ### Forks (Copy-on-Write Branches)
 
-- `tigris forks create <bucket> <fork-name>` — create a writable copy-on-write clone
-- `tigris forks list <bucket>` — list forks of a bucket
+- `tigris forks create <bucket> <fork-name>` - create a writable copy-on-write clone
+- `tigris forks list <bucket>` - list forks of a bucket
 
 **Important**: Use `tigris forks create` before experimental writes to avoid modifying production data.
 
 ### Snapshots
 
-- `tigris snapshots take <bucket>` — take a point-in-time snapshot
-- `tigris snapshots list <bucket>` — list snapshots
+- `tigris snapshots take <bucket>` - take a point-in-time snapshot
+- `tigris snapshots list <bucket>` - list snapshots
 
 ## Conventions
 

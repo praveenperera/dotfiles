@@ -30,7 +30,7 @@ function markComplete(entryDir) {
 }
 
 // The manifest helpers append their own ".media" to the dir they get, so the
-// global manifest must be addressed by HOME, not by globalMediaDir() — passing
+// global manifest must be addressed by HOME, not by globalMediaDir() - passing
 // the latter nested it at ~/.media/.media/manifest.jsonl, invisible to the
 // Studio /api/assets/global route (which reads the documented flat path).
 export function readGlobalManifest() {

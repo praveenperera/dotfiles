@@ -3,8 +3,8 @@
 The `@remotion/transitions` package is Remotion's library of pre-built
 scene-to-scene transitions. HF has two paths to translate them:
 
-1. **Manual GSAP crossfade** — for simple opacity/transform transitions. Free, no extra package.
-2. **HF shader-transitions package** — for visually-rich transitions that match the @remotion/transitions presets.
+1. **Manual GSAP crossfade** - for simple opacity/transform transitions. Free, no extra package.
+2. **HF shader-transitions package** - for visually-rich transitions that match the @remotion/transitions presets.
 
 ## Pattern: `<TransitionSeries>` is `<Series>` with overlap
 

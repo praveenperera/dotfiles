@@ -1,4 +1,4 @@
-// dimensions.mjs — canvas size + caption-band geometry for the product-launch
+// dimensions.mjs - canvas size + caption-band geometry for the product-launch
 // pipeline. Single source of truth = the STORYBOARD frontmatter `format` global
 // ("1920x1080" / "1080x1920" / "1080x1080", or a named orientation). Every
 // script and the index assembler reads the size from here; none hardcodes it.
@@ -6,9 +6,9 @@
 // Named orientation presets. Square/portrait are 1080-based so they share the
 // long-edge pixel budget with landscape (same render-cost ballpark).
 export const ORIENTATION_PRESETS = {
-  landscape: { width: 1920, height: 1080 }, // 16:9 — default
-  portrait: { width: 1080, height: 1920 }, // 9:16 — reels / shorts / TikTok
-  square: { width: 1080, height: 1080 }, // 1:1 — feed
+  landscape: { width: 1920, height: 1080 }, // 16:9 - default
+  portrait: { width: 1080, height: 1920 }, // 9:16 - reels / shorts / TikTok
+  square: { width: 1080, height: 1080 }, // 1:1 - feed
 };
 
 export const DEFAULT_DIMENSIONS = ORIENTATION_PRESETS.landscape;

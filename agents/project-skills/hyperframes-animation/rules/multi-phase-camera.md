@@ -7,14 +7,14 @@ metadata:
 
 # Multi-Phase Camera
 
-A camera wrapper around the entire scene that progresses through discrete zoom phases at scripted triggers. Continuous sine-driven micro-drift overlays so the camera never feels static between phases. Distinct from a single linear zoom — multi-phase creates "cinematic pacing" (anticipation → reveal → settle).
+A camera wrapper around the entire scene that progresses through discrete zoom phases at scripted triggers. Continuous sine-driven micro-drift overlays so the camera never feels static between phases. Distinct from a single linear zoom - multi-phase creates "cinematic pacing" (anticipation → reveal → settle).
 
 ## How It Works
 
 The camera is a single wrapping `<div>` whose `transform: scale() translate(x, y)` is driven by:
 
-1. **Phase scale** — a stepwise scale value that advances through phases at trigger times (e.g. `PHASE_1_SCALE` at t=0 → `PHASE_2_SCALE` at PHASE_2_AT → `PHASE_3_SCALE` at PHASE_3_AT)
-2. **Drift offset** — a continuous sine-based `translateX` / `translateY` (small amplitude, slow frequency) ADDED to the phase transform
+1. **Phase scale** - a stepwise scale value that advances through phases at trigger times (e.g. `PHASE_1_SCALE` at t=0 → `PHASE_2_SCALE` at PHASE_2_AT → `PHASE_3_SCALE` at PHASE_3_AT)
+2. **Drift offset** - a continuous sine-based `translateX` / `translateY` (small amplitude, slow frequency) ADDED to the phase transform
 
 Both run inside the GSAP timeline so HF seeks frame-by-frame deterministically.
 
@@ -100,10 +100,10 @@ Both run inside the GSAP timeline so HF seeks frame-by-frame deterministically.
   // Three-phase scale plan: pullback → focus → push
   const phase = { scale: PHASE_1_SCALE };
 
-  // Phase 1 — start pulled back
+  // Phase 1 - start pulled back
   // (no tween needed for the initial value; set via the phase object)
 
-  // Phase 2 — settle to neutral focus
+  // Phase 2 - settle to neutral focus
   tl.to(
     phase,
     {
@@ -114,7 +114,7 @@ Both run inside the GSAP timeline so HF seeks frame-by-frame deterministically.
     PHASE_2_AT,
   );
 
-  // Phase 3 — slow push-in for the climax
+  // Phase 3 - slow push-in for the climax
   tl.to(
     phase,
     {
@@ -125,7 +125,7 @@ Both run inside the GSAP timeline so HF seeks frame-by-frame deterministically.
     PHASE_3_AT,
   );
 
-  // Drift driver — continuous sine motion overlaid on the phase scale
+  // Drift driver - continuous sine motion overlaid on the phase scale
   const drift = { p: 0 };
 
   tl.to(
@@ -154,40 +154,40 @@ Both run inside the GSAP timeline so HF seeks frame-by-frame deterministically.
 
 ## How to Choose Values
 
-- **PHASE_1_SCALE / PHASE_2_SCALE / PHASE_3_SCALE** — three-step zoom values
+- **PHASE_1_SCALE / PHASE_2_SCALE / PHASE_3_SCALE** - three-step zoom values
   - Range: PHASE_1 0.88–0.96; PHASE_2 0.98–1.02; PHASE_3 1.04–1.15
   - Effects: tighter spread = subtler camera; wider = more cinematic
   - Constraints: at PHASE_1_SCALE < 1, `.scene` MUST have `overflow: hidden` or the inner content's edges leak outside the frame
 
-- **PHASE_2_AT / PHASE_2_DUR** — when the focus phase starts and how long it takes
+- **PHASE_2_AT / PHASE_2_DUR** - when the focus phase starts and how long it takes
   - Range: PHASE_2_AT 0.3–1.0 s; PHASE_2_DUR 1.0–1.8 s
   - Effects: longer DUR = slower settle, more cinematic
 
-- **PHASE_3_AT / PHASE_3_DUR** — when the push phase starts and how long it takes
+- **PHASE_3_AT / PHASE_3_DUR** - when the push phase starts and how long it takes
   - Range: PHASE_3_AT 2.0–4.0 s; PHASE_3_DUR 1.0–2.0 s
   - Constraints: PHASE_3_AT must be ≥ PHASE_2_AT + PHASE_2_DUR (otherwise focus is preempted)
 
-- **PHASE_2_EASE / PHASE_3_EASE** — ease per transition
+- **PHASE_2_EASE / PHASE_3_EASE** - ease per transition
   - Discrete choice: `power2.out`, `power3.out`, `power2.inOut`
   - Selection: cinematic feel; spring/back easing on a camera feels uncomfortable. Each later phase should imply more settling than the previous (longer dur OR more out-easing).
 
-- **TOTAL_DURATION** — composition's total runtime (matches `data-duration`)
+- **TOTAL_DURATION** - composition's total runtime (matches `data-duration`)
   - Reference: the drift tween must span the whole composition
 
-- **DRIFT_CYCLES** — number of sine cycles across TOTAL_DURATION
+- **DRIFT_CYCLES** - number of sine cycles across TOTAL_DURATION
   - Range: 1–3
   - Effects: 1 = one slow breath; 3 = noticeably busier
   - Constraints: high values read as mechanical wobble rather than organic drift
 
-- **DRIFT_AMP_X / DRIFT_AMP_Y** — peak drift offset in pixels
+- **DRIFT_AMP_X / DRIFT_AMP_Y** - peak drift offset in pixels
   - Range: DRIFT_AMP_X 2–8 px; DRIFT_AMP_Y 1–4 px
   - Effects: per-frame imperceptible, visible over time. If drift is a discrete shake, it's too much.
 
-- **DRIFT_FREQ_RATIO** — multiplier on the Y-axis sine frequency
+- **DRIFT_FREQ_RATIO** - multiplier on the Y-axis sine frequency
   - Range: 1.2–1.5
   - Effects: 1.0 = perfect diagonal (reads mechanical); ~1.3 = organic Lissajous
 
-- **HERO_AT / TAGLINE_AT / CTA_AT** — content reveal beats
+- **HERO_AT / TAGLINE_AT / CTA_AT** - content reveal beats
   - Constraints: HERO_AT should land AFTER PHASE_1 settles via PHASE_2 (otherwise the hero feels like it's flying away while camera is still pulling back)
 
 ## Phase Patterns
@@ -241,33 +241,33 @@ const offsetY = (viewportCenter.y - (tRect.top + tRect.height / 2)) / phase.scal
 
 ## Key Principles
 
-- **Drift is imperceptible per-frame, visible over time** — if drift reads as discrete shake, the amplitude is too high
-- **Drift X and Y at slightly different frequencies** — `DRIFT_FREQ_RATIO ≈ 1.3` prevents perfect-diagonal motion, which reads as mechanical
-- **Phase springs softer than UI springs** — `power2.inOut` or `power3.out` for cinematic feel; spring/back easing on a camera feels uncomfortable
-- **Each later phase settles "deeper"** — phase 2 ease should imply more settling than phase 1 (longer duration OR more out-easing). Wakes up → settles → settles deeper
-- **Camera wraps EVERYTHING in the scene** — applying camera per-element creates parallax bugs and breaks "this is one viewpoint"
-- **❗ overflow: hidden on .scene** — phases that pull back (`scale < 1`) reveal edges of the inner content. Without `overflow: hidden`, those edges leak outside the stage frame and HF renders them as visible content
-- **❗ Hero reveal starts AFTER initial pullback ease lands** — if the camera is still pulling back when the headline fades in, the headline feels like it's flying away
+- **Drift is imperceptible per-frame, visible over time** - if drift reads as discrete shake, the amplitude is too high
+- **Drift X and Y at slightly different frequencies** - `DRIFT_FREQ_RATIO ≈ 1.3` prevents perfect-diagonal motion, which reads as mechanical
+- **Phase springs softer than UI springs** - `power2.inOut` or `power3.out` for cinematic feel; spring/back easing on a camera feels uncomfortable
+- **Each later phase settles "deeper"** - phase 2 ease should imply more settling than phase 1 (longer duration OR more out-easing). Wakes up → settles → settles deeper
+- **Camera wraps EVERYTHING in the scene** - applying camera per-element creates parallax bugs and breaks "this is one viewpoint"
+- **❗ overflow: hidden on .scene** - phases that pull back (`scale < 1`) reveal edges of the inner content. Without `overflow: hidden`, those edges leak outside the stage frame and HF renders them as visible content
+- **❗ Hero reveal starts AFTER initial pullback ease lands** - if the camera is still pulling back when the headline fades in, the headline feels like it's flying away
 
 ## Critical Constraints
 
 - **Timeline must be paused**: `gsap.timeline({ paused: true })`
 - **Registry key = `data-composition-id`**
-- **No CSS `transition` on `.camera`** — competes with the GSAP transform
-- **`transform-origin: 50% 50%`** on camera — off-center origin creates unpredictable phase-to-phase drift
-- **`will-change: transform`** on `.camera` — the camera transform updates every frame
-- **`overflow: hidden` on `.scene`** — required when any phase scale < 1
-- **Scene background on `.scene`, not `.camera`** — if background is on camera, scaling/translating it reveals the outer void
+- **No CSS `transition` on `.camera`** - competes with the GSAP transform
+- **`transform-origin: 50% 50%`** on camera - off-center origin creates unpredictable phase-to-phase drift
+- **`will-change: transform`** on `.camera` - the camera transform updates every frame
+- **`overflow: hidden` on `.scene`** - required when any phase scale < 1
+- **Scene background on `.scene`, not `.camera`** - if background is on camera, scaling/translating it reveals the outer void
 
 ## Combinations
 
-- [orbit-3d-entry.md](orbit-3d-entry.md) — orbit motion inside a slowly drifting camera
-- [counting-dynamic-scale.md](counting-dynamic-scale.md) — climax phase push synced to counter peak
-- [3d-text-depth-layers.md](3d-text-depth-layers.md) — depth-stacked hero with cinematic camera moves
-- [sine-wave-loop.md](sine-wave-loop.md) — element idle inside the camera (compound motion)
+- [orbit-3d-entry.md](orbit-3d-entry.md) - orbit motion inside a slowly drifting camera
+- [counting-dynamic-scale.md](counting-dynamic-scale.md) - climax phase push synced to counter peak
+- [3d-text-depth-layers.md](3d-text-depth-layers.md) - depth-stacked hero with cinematic camera moves
+- [sine-wave-loop.md](sine-wave-loop.md) - element idle inside the camera (compound motion)
 
 ## Pairs with HF skills
 
-- `/hyperframes-animation` — multi-phase tween + drift onUpdate
-- `/hyperframes-core` — composition wiring, scene wrapper
-- `/hyperframes-cli` — `hyperframes lint`
+- `/hyperframes-animation` - multi-phase tween + drift onUpdate
+- `/hyperframes-core` - composition wiring, scene wrapper
+- `/hyperframes-cli` - `hyperframes lint`

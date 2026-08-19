@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene — HyperFrames Messaging Multi-Phrase</title>
+    <title>Scene - HyperFrames Messaging Multi-Phrase</title>
 
     <!--
       Blueprint: messaging-multi-phrase (HyperFrames preview)
@@ -26,12 +26,12 @@
         Phrase 3 [6.18 – 9.45 s]
           "Endless "      (8 chars × 0.083 = 0.67 s)
         + "possibilities" (13 chars × 0.083 = 1.08 s, accent pink)
-        + hold 2.00 s     (longer — closing beat)
+        + hold 2.00 s     (longer - closing beat)
         → total 0.67 + 1.08 + 2.00 ≈ 3.75 s, but starts at 6.18 → endTime ≈ 9.93 s
 
         Continuous: cursor blink (square wave via `tl.time() % 1.0`)
           color, cursor blink. No per-phrase tweens.
-        - No conditional DOM — phrase container exists from t=0 with empty text;
+        - No conditional DOM - phrase container exists from t=0 with empty text;
           onUpdate overwrites textContent in-place at each frame.
         - TIMELINE is a plain const computed once at script load (no useMemo).
         - Frames become seconds: charSpeed 2.5 frames → 0.083 s; hold 30 frames → 1.0 s.
@@ -89,7 +89,7 @@
       }
 
       /* ============================================================
-         PHRASE STAGE — one shared line with three inline children:
+         PHRASE STAGE - one shared line with three inline children:
            .phrase-main   primary-color portion
            .phrase-accent accent-color portion
            .phrase-cursor block cursor (color overridden per-frame)
@@ -132,7 +132,7 @@
       }
 
       /* ============================================================
-         BACKGROUND TINT — subtle radial glow so pure black doesn't
+         BACKGROUND TINT - subtle radial glow so pure black doesn't
          feel sterile. Drops to ~rgb(8,8,12) at corners.
          ============================================================ */
       .bg-tint {
@@ -175,7 +175,7 @@
       const tl = gsap.timeline({ paused: true });
 
       /* ============================================================
-         SCRIPT — content + per-phrase timing config.
+         SCRIPT - content + per-phrase timing config.
          Change SCRIPT and the timeline reshapes itself.
          ============================================================ */
       const SCRIPT = [
@@ -200,7 +200,7 @@
       ];
 
       /* ============================================================
-         TIMELINE — flat reduce, computed once.
+         TIMELINE - flat reduce, computed once.
          Each entry gains absolute startTime + endTime in seconds.
          ============================================================ */
       let acc = 0;
@@ -219,7 +219,7 @@
       });
       const TOTAL = TIMELINE[TIMELINE.length - 1].endTime;
       // TOTAL ≈ 9.93s with the SCRIPT above. The composition root caps at 7.5s
-      // (data-duration), which is the actual render window — phrases 1+2 fit
+      // (data-duration), which is the actual render window - phrases 1+2 fit
       // comfortably; phrase 3 holds long enough that any time after ~6.18s is
       // already on the closing line. Adjust SCRIPT durations to fit your budget.
 
@@ -228,14 +228,14 @@
          ============================================================ */
       const MAIN_COLOR = "#FFFFFF";
       const ACCENT_COLOR = "#32FFF6";
-      const BLINK_CYCLE = 1.0; // seconds — 0.5s on, 0.5s off (matches 30-frame square wave)
+      const BLINK_CYCLE = 1.0; // seconds - 0.5s on, 0.5s off (matches 30-frame square wave)
 
       const mainEl = document.querySelector(".phrase-main");
       const accentEl = document.querySelector(".phrase-accent");
       const cursorEl = document.querySelector(".phrase-cursor");
 
       /* ============================================================
-         MASTER ENGINE — single onUpdate writes text + cursor every frame.
+         MASTER ENGINE - single onUpdate writes text + cursor every frame.
          ============================================================ */
       // Cache the most-recently-active phrase index for seek-safe scans.
       let lastIdx = 0;

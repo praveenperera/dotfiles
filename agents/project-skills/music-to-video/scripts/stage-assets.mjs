@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// stage-assets.mjs — copy user-supplied media into the project's assets/ so scene
+// stage-assets.mjs - copy user-supplied media into the project's assets/ so scene
 // files (and lint/validate/render) can reference them locally. Only needed when
 // the user provides images/videos for asset treatments (montage.md). First-wins,
 // idempotent, safe to run twice. Never fetches remote URLs.

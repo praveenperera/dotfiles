@@ -1,6 +1,6 @@
 {
   "name": "chalkboard",
-  "voice": "night lecture — the lower third is a worn deep-green chalk band where every word is SCRIBBLED in fast chalk (2-frame pop + scribble reveal + dust puff, seeded crooked), emphasis gets double underline dashes and the final word lands in yellow chalk; between sentences an ERASER SWIPE smears the old words off and leaves ghost smudges. At the apex the band grows into a full blackboard behind the subject and the hero word is HAND-WRITTEN 130px tall in chalk stroke by stroke (jittered nib, dust falling from the pen), finished with a hand-slap dust clap and two violent underlines, then the halo breathes.",
+  "voice": "night lecture - the lower third is a worn deep-green chalk band where every word is SCRIBBLED in fast chalk (2-frame pop + scribble reveal + dust puff, seeded crooked), emphasis gets double underline dashes and the final word lands in yellow chalk; between sentences an ERASER SWIPE smears the old words off and leaves ghost smudges. At the apex the band grows into a full blackboard behind the subject and the hero word is HAND-WRITTEN 130px tall in chalk stroke by stroke (jittered nib, dust falling from the pen), finished with a hand-slap dust clap and two violent underlines, then the halo breathes.",
   "when": "education/explainers, science and lecture content, teacher channels, documentary asides, 'professor energy' brand spots. Reads as handwriting, so it suits thoughtful pacing; the deep-green board supplies its own contrast on bright scenes.",
   "register": "scholarly-warm",
   "fonts": { "body": "Caveat", "tag": "Caveat", "strokeFont": "HersheyScript1.svg" },
@@ -24,7 +24,7 @@
     "fontPx": 52,
     "strip": { "w": 1200, "h": 148, "bottomPx": 0 },
     "rows": [26, 82],
-    "tag": "OBSERVATORY — NIGHT LECTURE · wk 07",
+    "tag": "OBSERVATORY - NIGHT LECTURE · wk 07",
     "seed": 13,
     "eraseDelay": 0.23,
     "yield": { "dim": 0.55, "pre": 0.07, "post": 0.41 }

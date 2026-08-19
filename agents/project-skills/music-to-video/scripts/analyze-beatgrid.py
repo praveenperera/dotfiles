@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Beat-grid + drum/event analysis engine for music-to-video.
 
-Turns a BGM track directly into a deterministic `audiomap.json` — the music skeleton
+Turns a BGM track directly into a deterministic `audiomap.json` - the music skeleton
 that the Director and Builder hang visuals on. It merges:
 
   - a reliable tempo + beat grid + downbeat (librosa beat tracker),
@@ -9,7 +9,7 @@ that the Director and Builder hang visuals on. It merges:
   - drum-element classification (kick / snare / hihat / perc) via band-split,
   - special audio events (riser / glitch / crash-impact / hard-stop silence),
   - an energy narrative (audio-driven energy phases + builds + key moments; the Music
-    Reader names the sections — no fixed Intro/Build/Drop/Outro template),
+    Reader names the sections - no fixed Intro/Build/Drop/Outro template),
   - a phrase layer + per-section density budgets for visual planning.
 
 Output is the canonical `audiomap.json` documented in the skill.
@@ -201,7 +201,7 @@ def energy_structure(y: np.ndarray, sr: int, dur: float, first_onset: float = 0.
 
     # NO forced Intro/Build/Drop/Outro template. The energy phases (audio-driven runs of
     # one energy level, variable count) are the raw structural blocks. The Music Reader
-    # (LLM) decides the actual sections — count, boundaries, and free-form names — from
+    # (LLM) decides the actual sections - count, boundaries, and free-form names - from
     # these phases + key_moments + rolls + hard_stops + phrases. Sections are
     # interpretation; only the timing they snap to is fact.
     phases_sec = []
@@ -221,7 +221,7 @@ def energy_structure(y: np.ndarray, sr: int, dur: float, first_onset: float = 0.
 # ── rolls / fills (localized rapid-onset runs) ───────────────────────────────
 # A roll is where choreography should switch from discrete hits to a continuous /
 # cascading visual (per-letter cascade, stagger). Derived straight from the onset
-# stream — runs never overlap, so no dedup is needed (unlike a band-energy detector).
+# stream - runs never overlap, so no dedup is needed (unlike a band-energy detector).
 ROLL_MIN_HITS = 4
 ROLL_CONT = 0.55      # × beat_dur: gap up to ~half a beat still keeps a run alive
 ROLL_ACCEPT = 0.42    # × beat_dur: mean spacing denser than an 8th note counts
@@ -231,7 +231,7 @@ ROLL_DEDUP = 0.08     # seconds: merge onsets closer than a 32nd (double-trigger
 def detect_rolls(events: list, beat_dur: float) -> list:
     """Runs of >=4 onsets whose MEAN spacing is denser than an 8th note. Tuned so a
     full hihat/snare roll is captured as ONE span (not fragmented down to its tail),
-    while a sparse groove stays out — validated against the golden 7.5-9.5s roll.
+    while a sparse groove stays out - validated against the golden 7.5-9.5s roll.
     The linear scan means runs never overlap (no LEGACY-style double-counting)."""
     cont = beat_dur * ROLL_CONT     # max gap that keeps a run alive
     accept = beat_dur * ROLL_ACCEPT  # max MEAN gap for a run to count
@@ -444,7 +444,7 @@ def analyze(path: str, phrase_bars: int = 4) -> dict:
     for r in rolls:
         r["leads_to"] = next((m["kind"] for m in es["moments"]
                               if 0 <= m["t"] - r["end"] <= 1.2), None)
-    # near-silent windows (= VOID energy phases) — convenience for "hold / breathe"
+    # near-silent windows (= VOID energy phases) - convenience for "hold / breathe"
     silences = [{"start": p["start"], "end": p["end"]}
                 for p in es["phases"] if p["level"] == "VOID"]
     # per-phase sustained spectral character (how each energy block FEELS)

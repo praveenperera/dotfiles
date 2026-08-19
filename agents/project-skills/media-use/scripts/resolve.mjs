@@ -63,7 +63,7 @@ const { values: args } = parseArgs({
 });
 
 if (args.help) {
-  console.log(`media-use resolve — turn a media need into a frozen local file
+  console.log(`media-use resolve - turn a media need into a frozen local file
 
 Usage:
   node resolve.mjs --type <type> --intent "<description>" [--project <dir>]
@@ -125,7 +125,7 @@ if (args.candidates || args["dry-run"]) {
 if (args.doctor) {
   const doctor = runDoctor();
   const failed = doctor.checks.filter((check) => !check.ok);
-  // Non-PII: instrument the exact question the feature exists to answer — how
+  // Non-PII: instrument the exact question the feature exists to answer - how
   // often is --doctor run and which check fails most. Awaited so a short-lived
   // run flushes before exit.
   await track("media_use_doctor_run", {
@@ -223,20 +223,20 @@ function localizeImportedRecord(record, localPath) {
 }
 
 async function run() {
-  // A forced --provider means "(re)generate with THIS provider" — it bypasses
+  // A forced --provider means "(re)generate with THIS provider" - it bypasses
   // every reuse rung (project/entity/assets/global cache) so it can't silently
   // hand back an asset from a different provider. The floor only applies to the
   // default (unforced) cascade.
   const forced = !!args.provider;
 
-  // 1. project manifest — exact-prompt match
+  // 1. project manifest - exact-prompt match
   const projectHit = forced ? null : findByPrompt(projectDir, intent, type);
   if (recordAvailable(projectDir, projectHit)) {
     return result(projectHit, "cached");
   }
 
   // 1b. entity match in project. icon and image are interchangeable for
-  // entity hits — both live in images/, and figma-imported brand marks are
+  // entity hits - both live in images/, and figma-imported brand marks are
   // always recorded as type image while agents ask for logos as type icon.
   if (!forced && entity) {
     const entityHit = findByEntity(projectDir, entity);
@@ -265,7 +265,7 @@ async function run() {
     return result(record, "existing");
   }
 
-  // 2. global cache — exact-prompt or entity match
+  // 2. global cache - exact-prompt or entity match
   const cacheHit = forced ? null : cacheGet(intent, type);
   if (cacheHit) {
     const ext = extname(cacheHit.cached_path);
@@ -306,13 +306,13 @@ async function run() {
   // Adherence nudge (offline, no auto-reuse): the exact-cache floor missed and
   // we're about to fetch/generate. If lexically-similar assets already exist,
   // point the agent at --candidates so it can reuse instead of fetching. Only a
-  // fuzzy match ever reaches the agent this way — never auto-applied. Goes to
+  // fuzzy match ever reaches the agent this way - never auto-applied. Goes to
   // stderr so it reaches --json callers without corrupting stdout. Best-effort.
   try {
     const { similar } = listCandidates({ projectDir, type, intent, cap: CANDIDATE_CAP });
     if (similar > 0) {
       console.error(
-        `media-use: ${similar} similar cached asset${similar === 1 ? "" : "s"} already ${similar === 1 ? "exists" : "exist"} — run \`resolve --candidates --type ${type} --intent "${intent}"\` to review and reuse instead of fetching.`,
+        `media-use: ${similar} similar cached asset${similar === 1 ? "" : "s"} already ${similar === 1 ? "exists" : "exist"} - run \`resolve --candidates --type ${type} --intent "${intent}"\` to review and reuse instead of fetching.`,
       );
     }
   } catch {
@@ -323,7 +323,7 @@ async function run() {
     return resolveColor(type, intent, { projectDir });
   }
 
-  // 3. provider search — registry tries providers in order (heygen-CLI first)
+  // 3. provider search - registry tries providers in order (heygen-CLI first)
   let searchResult = null;
   try {
     searchResult = await runCapability(type, "search", intent, ctx);
@@ -331,7 +331,7 @@ async function run() {
     // search failed, try generate
   }
 
-  // 4. generate fallback — same ordered cascade for the generate capability
+  // 4. generate fallback - same ordered cascade for the generate capability
   if (!searchResult) {
     try {
       searchResult = await runCapability(type, "generate", intent, ctx);
@@ -356,7 +356,7 @@ async function run() {
     // flow rather than reporting a generic miss (B5).
     const msg =
       type === "brand"
-        ? "no brand spec found — add a frame.md or design.md (colors/font/logo) to this project. Run the HyperFrames design flow to create one; brand tokens are read locally for deterministic rendering."
+        ? "no brand spec found - add a frame.md or design.md (colors/font/logo) to this project. Run the HyperFrames design flow to create one; brand tokens are read locally for deterministic rendering."
         : args.provider
           ? `provider "${args.provider}" could not resolve ${type}: "${intent}"${localOnly ? " (--local-only skips network providers; drop it or the --provider override)" : ""}`
           : `no provider could resolve ${type}: "${intent}"`;
@@ -369,7 +369,7 @@ async function run() {
   }
 
   // 5. freeze + register (atomic id+file reservation so concurrent resolves
-  // can't collide on an id during the download — MU-23)
+  // can't collide on an id during the download - MU-23)
   const ext = searchResult.ext || extFromUrl(searchResult.url || "") || defaultExt(type);
   const { id, localPath } = allocateId(projectDir, type, ext);
   const fullPath = join(projectDir, localPath);
@@ -410,7 +410,7 @@ async function run() {
   // Auto-promote: surface every fetched asset in the global cache so it's
   // reusable across all hyperframes projects (B3). Non-fatal; dedup by sha.
   // ponytail: promotes search/generate/ingest assets (the ones media-use
-  // fetched), not bulk --adopt imports — add those if cross-project reuse of
+  // fetched), not bulk --adopt imports - add those if cross-project reuse of
   // pre-existing project assets is wanted.
   try {
     cachePut(fullPath, record);
@@ -777,7 +777,7 @@ async function showCandidates() {
 }
 
 // Best-effort latest stable CLI tag from the CDN (the install script's source of
-// truth). null on any failure (offline, no curl) — treated as "unknown", never fatal.
+// truth). null on any failure (offline, no curl) - treated as "unknown", never fatal.
 function latestHeygenStable() {
   const probe = runCommand("curl", [
     "-fsSL",
@@ -790,9 +790,9 @@ function latestHeygenStable() {
 
 function heygenAuthCheck() {
   // `heygen auth status` already emits JSON by default (only `--human` opts out
-  // to a table) — there is no `--json`/`--output` flag; passing one errors with
+  // to a table) - there is no `--json`/`--output` flag; passing one errors with
   // "unknown flag". emailFromAuthStatus parses that default JSON.
-  // NOTE: JSON-by-default is a v0.3.0 behavior — this probe assumes it, which
+  // NOTE: JSON-by-default is a v0.3.0 behavior - this probe assumes it, which
   // HEYGEN_MIN_VERSION >= 0.3.0 (+ the version gate above) guarantees. If that
   // floor is ever lowered, auth detection on an older CLI would silently break.
   const authProbe = runCommand("heygen", ["auth", "status"]);
@@ -807,7 +807,7 @@ function heygenAuthCheck() {
     detail: email
       ? `heygen authenticated as ${email}`
       : timedOut
-        ? "heygen auth status timed out — possible network issue, not proof of sign-out"
+        ? "heygen auth status timed out - possible network issue, not proof of sign-out"
         : "heygen not authenticated",
     fix: email ? "" : timedOut ? "check network, then re-run --doctor" : HEYGEN_AUTH_COMMAND,
   };
@@ -823,7 +823,7 @@ function runDoctor() {
   checks.push({
     name: "heygen on PATH",
     ok: heygenOnPath,
-    // Just "is the binary here" — the version row below owns the version string,
+    // Just "is the binary here" - the version row below owns the version string,
     // so this row must not also render `heygen v0.3.0` (two byte-identical lines).
     detail: heygenOnPath ? "heygen found on PATH" : "heygen not found",
     fix: heygenOnPath ? "" : HEYGEN_INSTALL_COMMAND,
@@ -845,7 +845,7 @@ function runDoctor() {
   } else if (heygenVersion) {
     const versionOk = !versionLessThan(heygenVersion, HEYGEN_MIN_VERSION);
     // Keep it latest: even when the installed version clears the floor, nudge
-    // `heygen update` if a newer stable exists. Best-effort — silently skipped
+    // `heygen update` if a newer stable exists. Best-effort - silently skipped
     // when the CDN is unreachable, so it never blocks the check.
     const latest = versionOk ? latestHeygenStable() : null;
     const behind = latest && versionLessThan(heygenVersion, latest);
@@ -860,7 +860,7 @@ function runDoctor() {
 
     // Below the OAuth-capable floor the auth probe fails for the SAME root cause
     // (an old CLI can't OAuth and doesn't emit JSON auth status), which would
-    // read as a confusing second "not authenticated" error. Skip it — one root
+    // read as a confusing second "not authenticated" error. Skip it - one root
     // cause, one fix.
     checks.push(
       versionOk
@@ -868,13 +868,13 @@ function runDoctor() {
         : {
             name: "heygen authenticated",
             ok: false,
-            detail: "skipped — update heygen first",
+            detail: "skipped - update heygen first",
             fix: HEYGEN_UPDATE_COMMAND,
           },
     );
   } else {
     // Fail-open: heygen ran but printed no semver (dev/stripped build). We can't
-    // verify the version, so we don't block on it — but say so rather than a bare
+    // verify the version, so we don't block on it - but say so rather than a bare
     // green check that implies a real version comparison happened.
     checks.push({
       name: "heygen version",
@@ -920,9 +920,9 @@ function printDoctor(checks) {
   for (const check of checks) {
     const prefix = check.ok ? "✓" : "✗";
     const freePath = heygenChecks.has(check.name)
-      ? " — free-usage path: bgm/image/voice/avatar-video"
+      ? " - free-usage path: bgm/image/voice/avatar-video"
       : "";
-    const fix = check.ok || !check.fix ? "" : ` — fix: ${check.fix}`;
+    const fix = check.ok || !check.fix ? "" : ` - fix: ${check.fix}`;
     console.log(`${prefix} ${check.detail}${freePath}${fix}`);
   }
 }
@@ -1010,7 +1010,7 @@ async function reuseGlobal(shaArg) {
   const rec = findGlobalBySha(shaArg);
   if (rec && rec.ambiguous) {
     console.error(
-      `error: sha prefix "${shaArg}" is ambiguous (${rec.count} matches) — use more characters`,
+      `error: sha prefix "${shaArg}" is ambiguous (${rec.count} matches) - use more characters`,
     );
     process.exit(2);
   }

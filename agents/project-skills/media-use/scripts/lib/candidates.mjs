@@ -1,7 +1,7 @@
 // Reuse candidates: a side-effect-free view of assets already available to this
 // project (its own manifest) and across every project (the global ~/.media
 // cache), so the calling agent can judge semantic fit itself. No download, no
-// provider, no mutation. The ranker only *surfaces* — it orders by lexical
+// provider, no mutation. The ranker only *surfaces* - it orders by lexical
 // overlap but never filters a candidate out on zero overlap (that would
 // pre-empt the agent's judgment); the agent does the semantic call.
 
@@ -24,7 +24,7 @@ function shape(record, scope, intent) {
     duration: record.duration ?? null,
     width: record.width ?? null,
     height: record.height ?? null,
-    // Only global records carry a content sha — it is the stable reuse handle
+    // Only global records carry a content sha - it is the stable reuse handle
     // for `resolve --reuse <sha>`. Project assets are reused by referencing
     // their path directly, so they need no handle.
     sha: scope === "global" ? record.sha || null : null,
@@ -84,7 +84,7 @@ export function formatCandidates(candidates, { truncated, total } = {}) {
   if (truncated && total) {
     lines.push("");
     lines.push(
-      `  (showing top ${CANDIDATE_CAP} per scope; ${total.project} project / ${total.global} global total — refine --intent to narrow)`,
+      `  (showing top ${CANDIDATE_CAP} per scope; ${total.project} project / ${total.global} global total - refine --intent to narrow)`,
     );
   }
   return lines.join("\n");

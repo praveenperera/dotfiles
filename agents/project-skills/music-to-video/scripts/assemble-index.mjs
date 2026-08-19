@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-// assemble-index.mjs — deterministic top-level index.html assembly for a
+// assemble-index.mjs - deterministic top-level index.html assembly for a
 // music-to-video project. No subagent, no judgment: turns STORYBOARD.md + the
 // built per-frame composition files (+ assets/bgm.mp3) into the standalone
 // index.html the renderer consumes.
 //
 // index.html is a *standalone* composition (root <div id="root"> directly in
-// <body>, no <template> wrapper — template is for the frame sub-comps). Each
+// <body>, no <template> wrapper - template is for the frame sub-comps). Each
 // frame is referenced (not inlined) as a <div class="frame"> with
 // data-composition-src pointing at its file; the renderer seeks each at its
 // absolute data-start. Frames tile the track gap-free, so frame→frame is a
-// plain back-to-back HARD CUT — there is NO transition injector (unlike
+// plain back-to-back HARD CUT - there is NO transition injector (unlike
 // product-launch, whose transitions.mjs exists only for soft transitions).
 //
 // Track lanes:
@@ -62,7 +62,7 @@ if (G.canvas) {
     if (Number.isFinite(c.h)) HEIGHT = c.h;
   } catch {
     anomalies.push(
-      `could not JSON.parse canvas frontmatter: ${G.canvas} — using ${WIDTH}×${HEIGHT}`,
+      `could not JSON.parse canvas frontmatter: ${G.canvas} - using ${WIDTH}×${HEIGHT}`,
     );
   }
 }
@@ -73,7 +73,7 @@ if (existsSync(audiomapPath)) {
   try {
     audioDur = JSON.parse(readFileSync(audiomapPath, "utf8"))?.audio?.duration_sec ?? null;
   } catch (e) {
-    anomalies.push(`audiomap.json parse failed (${e.message}) — using frame sum for duration`);
+    anomalies.push(`audiomap.json parse failed (${e.message}) - using frame sum for duration`);
   }
 }
 
@@ -81,17 +81,17 @@ if (existsSync(audiomapPath)) {
 const mounted = [];
 for (const f of manifest.frames) {
   const label = `frame ${f.number ?? f.index}${f.title ? ` (${f.title})` : ""}`;
-  if (!f.src) die(`${label} has no \`src\` — the planner must write it in STORYBOARD.md`);
+  if (!f.src) die(`${label} has no \`src\` - the planner must write it in STORYBOARD.md`);
   const compAbs = join(hyperframesDir, f.src);
   if (!existsSync(compAbs))
-    die(`${label}: src ${f.src} is not on disk — re-dispatch its frame-worker before assembling`);
+    die(`${label}: src ${f.src} is not on disk - re-dispatch its frame-worker before assembling`);
   if (!Number.isFinite(f.durationSeconds) || f.durationSeconds <= 0)
     die(`${label}: no positive \`duration\` (got ${JSON.stringify(f.duration)})`);
   const compId = basename(f.src).replace(/\.html?$/i, "");
   const inner = readFileSync(compAbs, "utf8");
   if (!inner.trim() || !/<\w/.test(inner))
     die(
-      `${label}: ${f.src} is empty/blank — the frame-worker wrote a partial file. Re-dispatch it.`,
+      `${label}: ${f.src} is empty/blank - the frame-worker wrote a partial file. Re-dispatch it.`,
     );
   if (
     !inner.includes(`data-composition-id="${compId}"`) &&
@@ -102,7 +102,7 @@ for (const f of manifest.frames) {
 }
 if (mounted.length === 0) die("no mountable frames (none with an on-disk src)");
 
-// cumulative starts — start[i] + duration[i] == start[i+1] exactly (gap-free hard cuts)
+// cumulative starts - start[i] + duration[i] == start[i+1] exactly (gap-free hard cuts)
 let acc = 0;
 for (const m of mounted) {
   m.start = r3(acc);
@@ -112,7 +112,7 @@ const FRAME_SUM = r3(acc);
 const TOTAL = r3(audioDur ?? FRAME_SUM);
 if (audioDur != null && Math.abs(FRAME_SUM - audioDur) > 0.1)
   anomalies.push(
-    `frames sum to ${FRAME_SUM}s but audio is ${audioDur}s (Δ${r3(FRAME_SUM - audioDur)}s) — frames should tile the track; check the plan`,
+    `frames sum to ${FRAME_SUM}s but audio is ${audioDur}s (Δ${r3(FRAME_SUM - audioDur)}s) - frames should tile the track; check the plan`,
   );
 
 // ---------- optional VO (deferred hook) ----------
@@ -153,7 +153,7 @@ for (const m of mounted) {
   body.push("");
 }
 
-// BGM (track 11) — full duration; duck slightly when VO present
+// BGM (track 11) - full duration; duck slightly when VO present
 let bgmEmitted = false;
 if (existsSync(join(hyperframesDir, bgmRel))) {
   const vol = voiceCount > 0 ? 0.8 : 0.9;
@@ -164,7 +164,7 @@ if (existsSync(join(hyperframesDir, bgmRel))) {
   );
   bgmEmitted = true;
 } else {
-  anomalies.push(`BGM not found at ${bgmRel} — index has no music track`);
+  anomalies.push(`BGM not found at ${bgmRel} - index has no music track`);
 }
 
 // ---------- head + emit ----------

@@ -4,7 +4,7 @@
 
 Current shipped templates (`modes/cinematic/*`) cover about 30% of this catalog. The rest are future ship-ready aesthetics.
 
-Classification matrix — pick direction by intersection:
+Classification matrix - pick direction by intersection:
 
 | Tone ↓ / Platform → | 9:16 portrait                            | 16:9 landscape           | 1:1 square               |
 | ------------------- | ---------------------------------------- | ------------------------ | ------------------------ |
@@ -12,22 +12,22 @@ Classification matrix — pick direction by intersection:
 | **Conversational**  | portrait-header + default                | memory-wall OR champion  | broadcast-dignified      |
 | **Energetic**       | high-energy-vlog                         | high-energy-vlog-wide    | high-energy-vlog-sq      |
 | **Poetic**          | lyrical-poem-on-wall (portrait)          | lyrical-poem-on-wall     | chapter-card             |
-| **Keynote/tech**    | — (9:16 not ideal)                       | tech-keynote-confident   | tech-keynote-confident   |
-| **Investigative**   | —                                        | investigative-typewriter | investigative-typewriter |
+| **Keynote/tech**    | - (9:16 not ideal)                       | tech-keynote-confident   | tech-keynote-confident   |
+| **Investigative**   | - | investigative-typewriter | investigative-typewriter |
 | **Music video**     | k-pop-lyric                              | k-pop-lyric              | k-pop-lyric              |
 
 ---
 
 ## Direction specs
 
-### 1. documentary-dignified _(Errol Morris / PBS Frontline)_ — Standard-mode direction (no prebuilt Cinematic template)
+### 1. documentary-dignified _(Errol Morris / PBS Frontline)_ - Standard-mode direction (no prebuilt Cinematic template)
 
 - **Family**: Söhne Mono OR GT Sectra for name cards; Inter for body
 - **Weights**: 500 body, 700 name card
 - **Color**: bone `#F5EFE6` on charcoal, OR charcoal `#1A1A1A` on bone. No accent.
 - **Motion**: burn-in (no animation). Held 0.5s past last word.
 - **Placement**: bottom-left block, 10% margin, locked position for whole interview.
-- **Rules**: 2-line max. Speaker name card once at first utterance + after each cut. No emphasis styling — gravitas IS the style.
+- **Rules**: 2-line max. Speaker name card once at first utterance + after each cut. No emphasis styling - gravitas IS the style.
 - **Rhetorical**: aggressive filler suppression. Every word is chosen.
 
 ### 2. cinematic-noir _(Kyle Cooper / Se7en)_
@@ -36,7 +36,7 @@ Classification matrix — pick direction by intersection:
 - **Weights**: 700 mostly; thin italic ONLY for whispers
 - **Color**: off-white `#E8E0D0` with deep red `#8B0000` single-word accent for menace
 - **Motion**: typewriter with 10% chance of 1px jitter on entry; scratched etch for chapter beats
-- **Placement**: off-axis — avoid dead-center, slightly high-left or low-right
+- **Placement**: off-axis - avoid dead-center, slightly high-left or low-right
 - **Rules**: no emoji, no rounded corners, everything hand-feeling
 
 ### 3. tech-keynote-confident _(Apple / Jony Ive ad)_
@@ -50,12 +50,12 @@ Classification matrix — pick direction by intersection:
 
 ### 4. lyrical-poem-on-wall _(extends current memory-wall template)_
 
-- **Family**: Serif with personality — EB Garamond / GT Sectra / Caslon Italic
+- **Family**: Serif with personality - EB Garamond / GT Sectra / Caslon Italic
 - **Weights**: 400–500 only. **This direction rejects bold.**
 - **Color**: picks up wall via `mix-blend-mode: overlay`, opacity 0.85, no stroke
 - **Motion**: etch in 600ms, hold 1.5–3s, etch out
 - **Placement**: always on a surface in the scene (back wall, foam, whiteboard). Uses matte pipeline.
-- **Rules**: captions are **fewer** than spoken text — 40–60%. Intentional silences. No other tool does this; strong differentiation.
+- **Rules**: captions are **fewer** than spoken text - 40–60%. Intentional silences. No other tool does this; strong differentiation.
 
 ### 5. high-energy-vlog _(controlled Hormozi)_
 
@@ -81,7 +81,7 @@ Classification matrix — pick direction by intersection:
 - **Weights**: 500
 - **Color**: white with 3px shadow, no stroke
 - **Motion**: typewriter char-by-char 25ms/char; cursor blink 600ms after last char
-- **Placement**: bottom band with 40% opacity gradient up — **NOT a hard box**
+- **Placement**: bottom band with 40% opacity gradient up - **NOT a hard box**
 - **Rules**: one line only, two-line max. Every caption ends with 1-frame cursor-hold before next enters.
 
 ### 8. k-pop-lyric _(music video typographic flex)_
@@ -90,22 +90,22 @@ Classification matrix — pick direction by intersection:
 - **Weights**: display 900, mono 400
 - **Color**: deep saturated single hue per song/segment
 - **Motion**: cascade entries alternating sides; words cross subject with mix-blend
-- **Placement**: intentionally LARGE — sometimes bigger than the face
-- **Rules**: emotional/musical moments only. Never informational content. **Breaks rule #1 (subject wins) on purpose** — that's the whole point.
+- **Placement**: intentionally LARGE - sometimes bigger than the face
+- **Rules**: emotional/musical moments only. Never informational content. **Breaks rule #1 (subject wins) on purpose** - that's the whole point.
 
 ### 9. broadcast-dignified _(BBC / NYT documentary standard)_
 
 - **Family**: Helvetica Now / Neue Haas Grotesk
 - **Weights**: 500 body, 700 name
-- **Color**: white on 40% black gradient pill (not hard box, not plain shadow — gradient is the signature)
+- **Color**: white on 40% black gradient pill (not hard box, not plain shadow - gradient is the signature)
 - **Motion**: 200ms fade-up, 150ms fade-down
 - **Placement**: bottom-center, 10% margin, title-safe locked
-- **Rules**: strict BBC — 160–180wpm, 32–34 chars/line, 2 lines max, 1.5s min gap. "Export to broadcast" mode. Boring on purpose. Never wrong.
+- **Rules**: strict BBC - 160–180wpm, 32–34 chars/line, 2 lines max, 1.5s min gap. "Export to broadcast" mode. Boring on purpose. Never wrong.
 
 ### 10. conference-lower-third-killer _(B2B but not lame)_
 
 - **Family**: GT America / Aktiv Grotesk
-- **Weights**: dual-weight name card — role 400, name 700, same size
+- **Weights**: dual-weight name card - role 400, name 700, same size
 - **Color**: scene-sampled accent on name, white on role
 - **Motion**: name card swipes in from left 400ms on first appearance only; subsequent static
 - **Placement**: lower-left card + active-word highlight inline in dialogue above
@@ -119,11 +119,11 @@ Current templates: `memory-wall` (roughly direction #4), `champion` (roughly a m
 
 Priority ship order based on competitive gap:
 
-1. **documentary-dignified** — no one else does this well; Errol Morris aesthetic is an unserved niche
-2. **lyrical-poem-on-wall** (as distinct template) — the one that most uses our matte-embed moat
-3. **high-energy-vlog** — matches but out-designs Hormozi/Submagic presets
-4. **tech-keynote-confident** — big for product launch videos
-5. **investigative-typewriter** — niche but highly distinctive
+1. **documentary-dignified** - no one else does this well; Errol Morris aesthetic is an unserved niche
+2. **lyrical-poem-on-wall** (as distinct template) - the one that most uses our matte-embed moat
+3. **high-energy-vlog** - matches but out-designs Hormozi/Submagic presets
+4. **tech-keynote-confident** - big for product launch videos
+5. **investigative-typewriter** - niche but highly distinctive
 
 ---
 

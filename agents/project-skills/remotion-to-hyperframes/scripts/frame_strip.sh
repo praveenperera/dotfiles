@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# frame_strip.sh — produce a side-by-side comparison strip from two videos.
+# frame_strip.sh - produce a side-by-side comparison strip from two videos.
 #
 # Used to debug failing render_diff.sh runs visually: pick a sample timestamp
 # range, extract frames from both videos, lay them out as a grid for review.
@@ -9,9 +9,9 @@
 #
 # Defaults: output-dir=./strip-out, samples=8 (evenly spaced across duration).
 # Output:
-#   strip.png         — single PNG with `samples` rows, each row is
+#   strip.png - single PNG with `samples` rows, each row is
 #                       (baseline frame | translated frame) at one timestamp
-#   timestamps.txt    — the timestamps sampled
+#   timestamps.txt - the timestamps sampled
 
 set -euo pipefail
 

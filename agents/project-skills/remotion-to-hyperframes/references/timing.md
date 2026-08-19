@@ -20,7 +20,7 @@ So at fps=30:
 
 Do this conversion once when translating, not at runtime.
 
-## interpolate — linear
+## interpolate - linear
 
 ```tsx
 const opacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: "clamp" });
@@ -38,11 +38,11 @@ gsap.fromTo(target, { opacity: 0 }, { opacity: 1, duration: 1.0, ease: "none" },
 `from` value if your initial state is in CSS; otherwise use `fromTo`.
 
 `extrapolateLeft`/`extrapolateRight` defaults to `"extend"` in Remotion but
-`"clamp"` is what the agent will see most often. GSAP doesn't extend — values
+`"clamp"` is what the agent will see most often. GSAP doesn't extend - values
 hold at the start and end of the tween. So for `clamp`, GSAP matches; for
 `extend`, you'd need to extend the input range manually before emitting.
 
-## interpolate — multi-segment
+## interpolate - multi-segment
 
 ```tsx
 const opacity = interpolate(frame, [0, 15, 75, 90], [0, 1, 1, 0]);
@@ -57,7 +57,7 @@ tl.to(target, { opacity: 1, duration: 2.0, ease: "none" }, 0.5);
 tl.to(target, { opacity: 0, duration: 0.5, ease: "none" }, 2.5);
 ```
 
-Validated in T1 — mean SSIM 0.974 against Remotion baseline.
+Validated in T1 - mean SSIM 0.974 against Remotion baseline.
 
 ## spring → GSAP back.out
 
@@ -123,7 +123,7 @@ const value = Math.round(target * eased);
 return <div>{value.toLocaleString()}</div>;
 ```
 
-GSAP equivalent — tween a counter object, write `textContent` on update:
+GSAP equivalent - tween a counter object, write `textContent` on update:
 
 ```js
 const counter = { v: 0 };
@@ -143,7 +143,7 @@ tl.to(
 
 `power3.out` matches `1 - (1-t)^3` exactly. Validated in T3 (mean SSIM 0.953).
 Per-frame digit mismatches occur on sub-frame timing offsets but final values
-converge — no SSIM impact above the noise floor.
+converge - no SSIM impact above the noise floor.
 
 ## Stagger via per-instance prop
 
@@ -162,4 +162,4 @@ cards.forEach((card, i) => {
 });
 ```
 
-Validated in T3 — three StatCards staggered at 0.0/0.4/0.8 s.
+Validated in T3 - three StatCards staggered at 0.0/0.4/0.8 s.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* check-timing.cjs — verify plan.json word timings vs transcript.json (1:1 port of check-timing.py).
+/* check-timing.cjs - verify plan.json word timings vs transcript.json (1:1 port of check-timing.py).
  *   node check-timing.cjs <project-dir> [--strict]
  */
 const path = require("path");
@@ -81,7 +81,7 @@ function check(project, strict) {
       if (Math.min(bi, bj) - Math.max(ai, aj) <= 0.05) continue;
       if (Math.min(bbi[1], bbj[1]) - Math.max(bbi[0], bbj[0]) > 2.0)
         issues.push(
-          `[${gi}↔${gj}] groups overlap in time (${Math.max(ai, aj).toFixed(2)}–${Math.min(bi, bj).toFixed(2)}s) AND vertically (band ${Math.max(bbi[0], bbj[0]).toFixed(0)}%–${Math.min(bbi[1], bbj[1]).toFixed(0)}%) — reposition one or add "allow_overlap": true if deliberate.`,
+          `[${gi}↔${gj}] groups overlap in time (${Math.max(ai, aj).toFixed(2)}–${Math.min(bi, bj).toFixed(2)}s) AND vertically (band ${Math.max(bbi[0], bbj[0]).toFixed(0)}%–${Math.min(bbi[1], bbj[1]).toFixed(0)}%) - reposition one or add "allow_overlap": true if deliberate.`,
         );
     }
   }
@@ -96,18 +96,18 @@ function check(project, strict) {
       const e = Math.min(...ws);
       if (e < gin - 0.01)
         issues.push(
-          `[${gid}] group.in=${gin.toFixed(2)} but earliest word starts at ${e.toFixed(2)} — word delayed by ${(gin - e >= 0 ? "+" : "") + (gin - e).toFixed(2)}s. Lower group.in.`,
+          `[${gid}] group.in=${gin.toFixed(2)} but earliest word starts at ${e.toFixed(2)} - word delayed by ${(gin - e >= 0 ? "+" : "") + (gin - e).toFixed(2)}s. Lower group.in.`,
         );
     }
     if (we.length && gout != null) {
       const l = Math.max(...we);
       if (l > gout + 0.01)
         issues.push(
-          `[${gid}] group.out=${gout.toFixed(2)} but latest word ends at ${l.toFixed(2)} — word clipped. Raise group.out.`,
+          `[${gid}] group.out=${gout.toFixed(2)} but latest word ends at ${l.toFixed(2)} - word clipped. Raise group.out.`,
         );
     }
     for (const w of g.words || []) {
-      // Exact pairing: a compiler that KNOWS the transcript index emits `ti` —
+      // Exact pairing: a compiler that KNOWS the transcript index emits `ti` -
       // duplicate words then pair by POSITION, not text-search (which grabs the
       // first occurrence and reports a phantom drift). Sanity-check the text; on
       // mismatch fall back to the text matcher below.
@@ -150,7 +150,7 @@ function check(project, strict) {
             );
         } else
           issues.push(
-            `[${gid}] '${part}' packed with '${parts[0]}': transcript=${ts.toFixed(3)} but entry has no distinct timing — split into separate word entries`,
+            `[${gid}] '${part}' packed with '${parts[0]}': transcript=${ts.toFixed(3)} but entry has no distinct timing - split into separate word entries`,
           );
       });
     }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * safe-zones.cjs — PRECOMPUTE where captions can safely go, from the subject matte.
+ * safe-zones.cjs - PRECOMPUTE where captions can safely go, from the subject matte.
  *
  *   node safe-zones.cjs <project-dir>            → safe-zones.json (global + per-sentence windows) + summary
  *   node safe-zones.cjs <project-dir> <in> <out> → just that time window's zones (ad-hoc query)
@@ -109,7 +109,7 @@ function analyze(occ, GW, GH, W, H, lum, lumSeries) {
   const clearerSide = colMin >= GW - 1 - colMax ? "left" : "right";
   const cellW = W / GW,
     cellH = H / GH;
-  // HERO anchor — where the ONE big promoted word should sit: ON the subject (centered,
+  // HERO anchor - where the ONE big promoted word should sit: ON the subject (centered,
   // crossing it so the head/torso occludes the middle). The OPPOSITE of the clean zones
   // above (those are for narration). A wide band ≈ centered on the subject, vertically
   // crossing the head/upper torso. Only meaningful when there IS a subject.
@@ -128,7 +128,7 @@ function analyze(occ, GW, GH, W, H, lum, lumSeries) {
         y1 = Math.min(GH, y0 + Math.max(2, Math.round(GH * 0.14)));
       const x0 = Math.round((xPct / 100) * GW),
         x1 = Math.min(GW, Math.round(((xPct + wPct) / 100) * GW));
-      // luma of the BACKGROUND cells only — that's where the hero's glyphs are visible
+      // luma of the BACKGROUND cells only - that's where the hero's glyphs are visible
       // (the subject-occluded middle doesn't show text; averaging it in hides washout).
       let s2 = 0,
         n = 0;
@@ -145,11 +145,11 @@ function analyze(occ, GW, GH, W, H, lum, lumSeries) {
       plane: { xPct, yPct, wPct, align: "center" },
       ...(bandLuma != null ? { bandLuma, washoutRisk: bandLuma > 175 } : {}),
       note:
-        "Place the ONE big hero here (centered on the subject); the head/torso occludes its middle (~30-55%) — that is the embed. Do NOT put the hero in a clean zone." +
+        "Place the ONE big hero here (centered on the subject); the head/torso occludes its middle (~30-55%) - that is the embed. Do NOT put the hero in a clean zone." +
         (bandLuma != null && bandLuma > 175
           ? " ⚠ BAND IS BRIGHT (luma " +
             bandLuma +
-            "): cream/screen text will wash out — lower the hero onto the darker subject body, or use a template/mode with opaque text."
+            "): cream/screen text will wash out - lower the hero onto the darker subject body, or use a template/mode with opaque text."
           : ""),
     };
   }
@@ -212,7 +212,7 @@ function analyze(occ, GW, GH, W, H, lum, lumSeries) {
     right: toZone(largestRect(safe, GW, Math.round(GW / 2), GW, 0, GH)),
     top: toZone(largestRect(safe, GW, 0, GW, 0, Math.max(2, Math.round(GH * 0.38)))),
   };
-  // HUGGING zones — clean strips that ABUT the silhouette (the embed aesthetic wants
+  // HUGGING zones - clean strips that ABUT the silhouette (the embed aesthetic wants
   // text NEAR the subject, not parked in the farthest corner). Grown outward from the
   // subject's edge at upper-body height; prefer these for narration.
   const hug = (side) => {
@@ -249,7 +249,7 @@ function analyze(occ, GW, GH, W, H, lum, lumSeries) {
   };
   zones.hugLeft = hug("left");
   zones.hugRight = hug("right");
-  // HERO BAND PROFILE — per-height predicted occlusion of a centered hero band. The hero
+  // HERO BAND PROFILE - per-height predicted occlusion of a centered hero band. The hero
   // WANTS ~30–55% (occlusion IS the embed); fg is the LAST resort, only when no height
   // achieves ≤62%. Even an 88%-coverage frame usually has a feasible band over the hairline.
   let heroBands = null;
@@ -302,11 +302,11 @@ function analyze(occ, GW, GH, W, H, lum, lumSeries) {
 // ── SCENE OPTICS + PALETTE (v2) ──────────────────────────────────────────────
 // Deterministic scene measurements that drive the DNA tokens, so "design that fits
 // the scene" is a pipeline product, not agent inspiration:
-//   palette  — dominant scene colors + a READABLE accent suggestion (sampled, then
+//   palette - dominant scene colors + a READABLE accent suggestion (sampled, then
 //              clamped to usable saturation/lightness) + warm/cool temperature
-//   optics   — background vs subject sharpness (Laplacian proxy) → suggested text
+//   optics - background vs subject sharpness (Laplacian proxy) → suggested text
 //              blur so embed type matches the scene's depth-of-field
-//   lighting — bright-side estimate → contact-shadow direction for embed type
+//   lighting - bright-side estimate → contact-shadow direction for embed type
 
 function rgb2hsv(r, g, b) {
   r /= 255;
@@ -427,7 +427,7 @@ async function regionSharpness(imgPath, rect, W, H) {
     y = Math.max(0, Math.min(H - 2, Math.round(rect.y)));
   const w = Math.max(2, Math.min(W - x, Math.round(rect.w))),
     h = Math.max(2, Math.min(H - y, Math.round(rect.h)));
-  // two passes: crop to a buffer FIRST, then convolve+stats on the crop — sharp's
+  // two passes: crop to a buffer FIRST, then convolve+stats on the crop - sharp's
   // internal pipeline ordering otherwise convolves/stats the full frame and the two
   // regions measure identical.
   const crop = await sharp(imgPath)
@@ -554,11 +554,11 @@ async function main() {
   }
   const fgDir = path.join(project, "frames_fg");
   if (!fs.existsSync(fgDir)) {
-    console.error(`[safe-zones] no ${fgDir} — run matte.cjs first`);
+    console.error(`[safe-zones] no ${fgDir} - run matte.cjs first`);
     process.exit(2);
   }
   if (!sharp) {
-    console.error("[safe-zones] sharp unavailable — set HYPERFRAMES_ROOT");
+    console.error("[safe-zones] sharp unavailable - set HYPERFRAMES_ROOT");
     process.exit(0);
   }
 
@@ -587,7 +587,7 @@ async function main() {
   const bgDir = path.join(project, "frames_bg");
   const hasBg = fs.existsSync(bgDir);
   // cache evenly-sampled frame grids once (each = per-cell avg subject alpha 0..1,
-  // plus per-cell mean LUMINANCE from frames_bg — bright zones wash out cream/screen text)
+  // plus per-cell mean LUMINANCE from frames_bg - bright zones wash out cream/screen text)
   const sampleIdx = [
     ...new Set(
       Array.from({ length: SAMPLES }, (_, i) =>
@@ -739,7 +739,7 @@ async function main() {
       lighting = sceneLighting(globalLum, occCellG, GW, GH);
     }
   } catch (e) {
-    console.error(`[safe-zones] scene optics skipped — ${e.message}`);
+    console.error(`[safe-zones] scene optics skipped - ${e.message}`);
   }
 
   const out = {
@@ -758,7 +758,7 @@ async function main() {
   const z = (n, zn) =>
     zn
       ? `${n}: ${zn.wPct}%×${zn.hPct}% @ (${zn.xPct}%,${zn.yPct}%) [${zn.areaPct}%${zn.meanLuma != null ? ` · luma ${zn.meanLuma}${zn.bright ? " ⚠BRIGHT" : ""}` : ""}]`
-      : `${n}: —`;
+      : `${n}: - `;
   console.log(
     `[safe-zones] ${W}×${H} grid ${GW}×${GH} @ ${fps}fps · GLOBAL coverage ${global.coverage}% · clearer ${global.subject.clearerSide} · verdict ${global.recommendation.toUpperCase()}`,
   );
@@ -767,28 +767,28 @@ async function main() {
   );
   if (global.recommendation === "embed") {
     console.log(
-      `[safe-zones] ✅ EMBED — NARRATION planes go in the clean zones (prefer ${global.subject.clearerSide}/top).`,
+      `[safe-zones] ✅ EMBED - NARRATION planes go in the clean zones (prefer ${global.subject.clearerSide}/top).`,
     );
     if (global.heroAnchor)
       console.log(
-        `[safe-zones] 🎯 HERO → centered ON the subject: plane ≈ x${global.heroAnchor.plane.xPct}% y${global.heroAnchor.plane.yPct}% w${global.heroAnchor.plane.wPct}% center · BIG (~0.22–0.34·h) · target ~30–55% occlusion${global.heroAnchor.bandLuma != null ? ` · band luma ${global.heroAnchor.bandLuma}${global.heroAnchor.washoutRisk ? " ⚠WASHOUT RISK — see heroAnchor.note" : ""}` : ""}`,
+        `[safe-zones] 🎯 HERO → centered ON the subject: plane ≈ x${global.heroAnchor.plane.xPct}% y${global.heroAnchor.plane.yPct}% w${global.heroAnchor.plane.wPct}% center · BIG (~0.22–0.34·h) · target ~30–55% occlusion${global.heroAnchor.bandLuma != null ? ` · band luma ${global.heroAnchor.bandLuma}${global.heroAnchor.washoutRisk ? " ⚠WASHOUT RISK - see heroAnchor.note" : ""}` : ""}`,
       );
     if (global.heroBands)
       console.log(
-        `[safe-zones] hero bands: best top ${global.heroBands.best.topPct}% (predicted occlusion ${global.heroBands.best.occPct}%) · bg-hero ${global.heroBands.feasible ? "FEASIBLE — keep the hero EMBEDDED (fg is last resort)" : "INFEASIBLE (no band ≤62%) → hero fg"}`,
+        `[safe-zones] hero bands: best top ${global.heroBands.best.topPct}% (predicted occlusion ${global.heroBands.best.occPct}%) · bg-hero ${global.heroBands.feasible ? "FEASIBLE - keep the hero EMBEDDED (fg is last resort)" : "INFEASIBLE (no band ≤62%) → hero fg"}`,
       );
     if (global.zones.hugLeft || global.zones.hugRight)
       console.log(
-        `[safe-zones] hugging zones (narration belongs HERE, abutting the silhouette): L ${global.zones.hugLeft ? global.zones.hugLeft.wPct + "%×" + global.zones.hugLeft.hPct + "%@x" + global.zones.hugLeft.xPct + "%" + (global.zones.hugLeft.bright ? "⚠bright" : "") : "—"} · R ${global.zones.hugRight ? global.zones.hugRight.wPct + "%×" + global.zones.hugRight.hPct + "%@x" + global.zones.hugRight.xPct + "%" + (global.zones.hugRight.bright ? "⚠bright" : "") : "—"}`,
+        `[safe-zones] hugging zones (narration belongs HERE, abutting the silhouette): L ${global.zones.hugLeft ? global.zones.hugLeft.wPct + "%×" + global.zones.hugLeft.hPct + "%@x" + global.zones.hugLeft.xPct + "%" + (global.zones.hugLeft.bright ? "⚠bright" : "") : " - "} · R ${global.zones.hugRight ? global.zones.hugRight.wPct + "%×" + global.zones.hugRight.hPct + "%@x" + global.zones.hugRight.xPct + "%" + (global.zones.hugRight.bright ? "⚠bright" : "") : " - "}`,
       );
   } else {
     console.log(
-      `[safe-zones] ⚠ FG — subject fills the frame; use caption_layer:"fg" (no clean region to embed behind).`,
+      `[safe-zones] ⚠ FG - subject fills the frame; use caption_layer:"fg" (no clean region to embed behind).`,
     );
   }
   if (palette)
     console.log(
-      `[safe-zones] 🎨 palette: dominant ${palette.dominant.map((d) => d.hex).join(" ")} · accent suggestion ${palette.accentSuggestion || "— (no chromatic anchor; use the DNA default)"} · ${palette.temperature}`,
+      `[safe-zones] 🎨 palette: dominant ${palette.dominant.map((d) => d.hex).join(" ")} · accent suggestion ${palette.accentSuggestion || " - (no chromatic anchor; use the DNA default)"} · ${palette.temperature}`,
     );
   if (optics && optics.sharpnessRatio != null)
     console.log(
@@ -808,6 +808,6 @@ async function main() {
   console.log(`[safe-zones] → ${path.join(project, "safe-zones.json")}`);
 }
 main().catch((e) => {
-  console.error(`[safe-zones] (skipped — ${e.message})`);
+  console.error(`[safe-zones] (skipped - ${e.message})`);
   process.exit(0);
 });
