@@ -50,8 +50,8 @@ Reserve `xhigh` for the final Codex review, not ordinary fixes.
 
 Run the enabled stages in this order:
 
-1. **Z.ai GLM 5.2 main loop:** request an evidence-backed review using the provider prompt. When it reports actionable findings, normalize and deduplicate them, run one fresh Codex fix pass, verify locally, and have GLM review the changed code again.
-2. **Grok 4.5 final review:** start only after GLM and local verification are clean.
+1. **Z.ai GLM 5.3 main loop:** request an evidence-backed review using the provider prompt. When it reports actionable findings, normalize and deduplicate them, run one fresh Codex fix pass, verify locally, and have GLM review the changed code again.
+2. **Grok 4.6 final review:** start only after GLM and local verification are clean.
 3. **Claude Opus final review:** start only after Grok is clean.
 4. **Codex xhigh final review:** start only after Opus is clean.
 
