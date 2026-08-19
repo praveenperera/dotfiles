@@ -1,6 +1,10 @@
 # Workflow
 
 - Ship production-quality changes. Model the domain first, make impossible states impossible with typed domain models, and prefer the proper owner or abstraction over caller-specific conditionals. Repeated fixes in one area signal that the model may be wrong; revisit it and remove shortcuts or resulting tech debt before finishing.
+- Parse and validate external input at system boundaries, then pass typed domain values through internal code.
+- Make commands, retries, and resumable operations converge on the same end state after partial failure.
+- When concurrent actors can write shared state, first give each actor an independent target. Use structural serialization only when one shared writer is a real invariant.
+- Encode recurring corrections as types, tests, lints, scripts, or runtime checks instead of repeating instructions.
 
 # General
 
