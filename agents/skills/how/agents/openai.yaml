@@ -1,0 +1,4 @@
+interface:
+  display_name: "How"
+  short_description: "Trace and explain how a subsystem works"
+  default_prompt: "Use $how to trace how this subsystem works from entry point to observable result."

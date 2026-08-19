@@ -1,0 +1,4 @@
+interface:
+  display_name: "Show Me Your Work"
+  short_description: "Keep an evidence-linked decision log for long work"
+  default_prompt: "Use $show-me-your-work to keep a reviewable decision log for this long-running task."
