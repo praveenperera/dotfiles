@@ -1,11 +1,17 @@
 ---
 name: create-verification-skill
-description: Create a project-local skill that launches and drives a real application, captures evidence, and maps its user-visible features. Use when a repository lacks a repeatable way for agents to verify UI, CLI, desktop, mobile, or service behavior. Do not use for a library whose existing tests already exercise its public behavior.
+description: Create a durable project-local skill that drives a real application and captures evidence. Use when the user asks for a reusable verification workflow, or the same missing harness blocks repeated tasks and its creation is in scope. Do not use for one failed tool, ordinary tests, one-off verification, or libraries covered by tests.
 ---
 
 # Create a verification skill
 
 Create `.agents/skills/verify-<app>/` as the maintained way to prove real application behavior. Use `skill-creator` to build and validate it.
+
+## Confirm the need
+
+Do not start this workflow in the middle of an implementation only because one verification tool is temporarily unavailable. First use the repository's existing harness or report the specific live-evidence gap.
+
+Proceed only when the user requested a reusable verification skill, or when the same missing verification path has blocked at least two separate tasks and the current task permits adding maintained project tooling. If neither condition is true, keep verification within the active task.
 
 ## Learn the application from the repository
 

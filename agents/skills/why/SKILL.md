@@ -9,7 +9,7 @@ Recover rationale from evidence. Do not turn the current code shape into a story
 
 ## Anchor the question
 
-Identify the exact files, symbols, behavior, change, or decision in question. Use `how` first when the mechanics are unclear.
+Identify the exact files, symbols, behavior, change, or decision in question. Establish the mechanics with a focused code trace when they are unclear. Do not invoke `how` only because this skill is active.
 
 ## Search the sources that can answer
 

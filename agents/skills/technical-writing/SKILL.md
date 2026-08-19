@@ -1,6 +1,6 @@
 ---
 name: technical-writing
-description: Draft or revise technical documentation, RFCs, ADRs, READMEs, runbooks, pull request descriptions, and similar engineering prose. Use when document purpose, reader tasks, precise terminology, or information structure matter. Do not use for product marketing or general creative writing.
+description: Draft or materially restructure RFCs, ADRs, READMEs, runbooks, pull request descriptions, or similar technical documents when reader tasks or structure need deliberate design. Do not use for small factual, typo, label, or isolated paragraph edits, product marketing, or creative writing.
 ---
 
 # Technical writing
@@ -11,7 +11,7 @@ Write for the engineer who must understand or act without asking the author for 
 
 Identify the reader, the decision or task, the required facts, the intended action, and the source of truth. Preserve exact symbols, commands, paths, numbers, constraints, and uncertainty.
 
-Read [document-modes.md](references/document-modes.md) before choosing structure. Use one primary mode per document. Split and link when the material serves different modes.
+For a new document or material restructure, read [document-modes.md](references/document-modes.md) before choosing structure. For a focused revision, keep the existing mode and structure without loading that reference. Use one primary mode per document. Split and link when the material serves different modes.
 
 ## Draft from evidence
 
@@ -19,7 +19,9 @@ Inspect the relevant code, configuration, tests, and existing documents. Do not 
 
 Use the codebase's exact terms. Keep one name for each thing. Put conditions before instructions. State the actor when it matters. Use numbered lists for sequences and bullets for unordered sets.
 
-Apply repository writing rules, including ASD-STE100 when required. Apply `deslop-writing` after the content is correct when that skill is available. Keep necessary technical terms even when a general prose rule would replace them.
+Apply repository writing rules, including ASD-STE100 when required. Keep necessary technical terms even when a general prose rule would replace them.
+
+Use `deslop-writing` only when the user asks for voice or AI-pattern cleanup, or when a material prose problem remains after the technical content is correct. Do not load it for routine technical documents or factual updates.
 
 ## Verify the artifact
 

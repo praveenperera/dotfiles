@@ -1,15 +1,21 @@
 ---
 name: architect
-description: Settle the domain model, ownership, caller usage, public interfaces, and module boundaries before a non-trivial implementation. Use when a change crosses boundaries, introduces state, exposes repeated conditionals, or risks locking in the wrong abstraction. Do not use for a small mechanical edit with an established shape.
+description: Design durable domain state, ownership, interfaces, or module boundaries before a non-trivial change. Use for API or schema changes, migrations, competing designs, or repeated caller patches. Do not use for local UI state, sorting, styling, one-component work, or established patterns.
 ---
 
 # Architect
 
 Design the shape that makes the implementation direct. Keep architecture and integration with the primary agent.
 
+## Confirm the need
+
+Use this workflow only when the decision affects a durable domain boundary or when choosing the wrong owner would create migration or compatibility cost. Ordinary feature work can still use good types and ownership without invoking this skill.
+
+Do not invoke `how` only because this skill is active. Use `how` separately only when the user asks for a system explanation or the execution path is independently complex enough to need a full trace.
+
 ## Ground the design
 
-Trace the existing system with `how`. Use `why` when the current ownership or constraint may be intentional. Inspect callers, tests, schemas, wire formats, persistence, and error boundaries that constrain the design.
+Trace only the callers and boundaries that constrain the decision. Inspect relevant history when the current ownership or constraint may be intentional. Check the applicable tests, schemas, wire formats, persistence, and error boundaries.
 
 State the user-visible behavior and the invariants before choosing types.
 
