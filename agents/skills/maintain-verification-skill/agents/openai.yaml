@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Verification Skill"
+  short_description: "Audit and repair an app verification skill"
+  default_prompt: "Use $maintain-verification-skill to audit this project's verification skill against the source and live app."

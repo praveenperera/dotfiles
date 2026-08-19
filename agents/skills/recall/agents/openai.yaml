@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recall"
+  short_description: "Rebuild recent work context from local history"
+  default_prompt: "Use $recall to reconstruct my recent work on this topic and identify the next action."

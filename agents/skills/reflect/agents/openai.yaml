@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reflect"
+  short_description: "Extract durable lessons from completed work"
+  default_prompt: "Use $reflect to find durable lessons from this work and propose where to encode them."

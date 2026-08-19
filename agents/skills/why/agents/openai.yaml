@@ -1,0 +1,4 @@
+interface:
+  display_name: "Why"
+  short_description: "Find evidence for why code has its current shape"
+  default_prompt: "Use $why to find the evidence for why this code or decision has its current shape."

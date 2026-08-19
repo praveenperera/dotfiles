@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architect"
+  short_description: "Settle domain types, ownership, and interfaces first"
+  default_prompt: "Use $architect to settle the domain model, ownership, and interfaces before implementation."
