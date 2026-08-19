@@ -40,6 +40,16 @@ Set one `max_total_fix_passes` during preflight; default to 3 unless the user su
 
 Default every reviewer effort to `high`. Run every fix pass with GPT-5.6 Luna at `max` reasoning. Use `xhigh` only on Sol (Codex review) when the user explicitly requests it; never select Sol `xhigh` by default, and do not use Sol for ordinary fix passes.
 
+## Review Discipline
+
+For security, persistence, migration, or concurrency changes, record the invariants and a compact state or migration matrix before the first fix. Use the matrix to identify failure modes, rollback behavior, compatibility paths, and required tests.
+
+Run a broad review of the shared architecture, domain owner, and state transitions before platform-specific callers. If two repair passes touch the same subsystem, stop adding caller-level conditions. Recheck the model and move the invariant to its proper owner before another repair.
+
+Choose tests by risk. Cover the user-visible failure mode and any security, data-loss, rollback, migration, compatibility, or concurrency invariant that the change can affect. Do not add tests that only repeat edited literals or implementation details.
+
+After a broad review, allow at most one targeted follow-up for the same concern. If that follow-up cannot settle the concern, stop the narrow loop and escalate the unresolved design, evidence gap, or verification risk to the user.
+
 ## Canonical Review Sequence
 
 Run the enabled stages in this order:
@@ -55,10 +65,10 @@ A user may explicitly disable a provider. Remove only that stage and preserve th
 
 ## Workflow
 
-1. **Preflight.** Read applicable `AGENTS.md` files and project, test, and CI configuration. Record the review target and base, branch, PR, worktree status, authorization matrix, enabled providers, fix budget, and expected verification. Create the scratch directory. Load `references/providers.md` and preflight every enabled provider before reviewing.
-2. **Review.** Save each raw result before interpretation. Normalize only actionable findings using the provider reference. Preserve the actual provider/model and concrete evidence source; discard approvals, progress events, broad style preferences, duplicates, stale comments, and unsupported speculation.
-3. **Fix.** Load `references/fresh-luna-fix.md` and start a fresh GPT-5.6 Luna Max fix agent through the bundled helper or an equivalent internal Luna Max worker. Give it only the repository context and normalized actionable findings. The agent must inspect the current diff, preserve unrelated changes, implement the requested repairs, verify its work, and avoid all publication and PR mutations.
-4. **Verify.** Inspect status, diff statistics, and whitespace errors after each pass. Run the repository-required formatter, linter, tests, build, migrations, or generated-file checks. A mechanical verification repair still consumes a fix pass; a product or design ambiguity stops the loop for user direction.
+1. **Preflight.** Read applicable `AGENTS.md` files and project, test, and CI configuration. Record the review target and base, branch, PR, worktree status, authorization matrix, enabled providers, fix budget, and expected verification. For security, persistence, migration, or concurrency work, also record the governing invariants and state or migration matrix. Create the scratch directory. Load `references/providers.md` and preflight every enabled provider before reviewing.
+2. **Review.** Review shared architecture and ownership before platform-specific behavior. Save each raw result before interpretation. Normalize only actionable findings using the provider reference. Preserve the actual provider/model and concrete evidence source; discard approvals, progress events, broad style preferences, duplicates, stale comments, and unsupported speculation.
+3. **Fix.** Load `references/fresh-luna-fix.md` and start a fresh GPT-5.6 Luna Max fix agent through the bundled helper or an equivalent internal Luna Max worker. Give it the repository context, applicable invariants and matrix, and normalized actionable findings. The agent must inspect the current diff, preserve unrelated changes, implement the requested repairs, verify its work, and avoid all publication and PR mutations.
+4. **Verify.** Inspect status, diff statistics, and whitespace errors after each pass. Run the repository-required formatter, linter, tests, build, migrations, or generated-file checks, including the risk-based cases from preflight. A mechanical verification repair still consumes a fix pass; a product or design ambiguity stops the loop for user direction.
 5. **Apply optional review gates.** Run an additional provider such as CodeRabbit or Greptile only when the user requests it or trusted repository policy requires it. Confirm that it can see the exact code state. Findings that require changes consume the same fix budget and invalidate prior final reviews.
 6. **Establish local outcome.** Confirm that every enabled provider reviewed the final code, normalized findings are empty, local verification passed, and no unreviewed code change followed the last gate.
 7. **Perform authorized writes.** Create a commit, push, comment, label, or resolve threads only for actions individually recorded as authorized. Follow repository commit instructions. A push requires an existing authorized commit containing the intended changes; otherwise ask for commit authorization. For a pushed result, poll required CI with a finite timeout. Resolve only threads whose findings are demonstrably addressed and only when thread resolution was authorized.
