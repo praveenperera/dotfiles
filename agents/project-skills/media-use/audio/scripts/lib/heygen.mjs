@@ -1,6 +1,6 @@
-// heygen.mjs — vendored HeyGen REST helpers (auth + transport) for the audio
+// heygen.mjs - vendored HeyGen REST helpers (auth + transport) for the audio
 // pipeline. The credential resolver matches the hyperframes CLI auth: first
-// usable source wins — $HEYGEN_API_KEY / $HYPERFRAMES_API_KEY → a nearby .env → ~/.heygen/
+// usable source wins - $HEYGEN_API_KEY / $HYPERFRAMES_API_KEY → a nearby .env → ~/.heygen/
 // credentials (oauth → Bearer, else api_key → X-Api-Key; $HEYGEN_CONFIG_DIR
 // overrides the dir). Vendored so the skill ships standalone. Pure node.
 
@@ -52,7 +52,7 @@ export function heygenCredential() {
   if (!raw.startsWith("{")) return { headers: { "X-Api-Key": raw } };
 
   // A malformed credentials file (partial write / wrong shape) must degrade to
-  // "no credential", not crash the engine at startup — this function never throws.
+  // "no credential", not crash the engine at startup - this function never throws.
   let cred;
   try {
     cred = JSON.parse(raw);
@@ -73,7 +73,7 @@ export function heygenCredential() {
 export function heygenAuthHeaders() {
   const cred = heygenCredential();
   if (cred?.headers) {
-    // Only tag OAuth (Bearer) traffic as cli-source — the backend uses it to
+    // Only tag OAuth (Bearer) traffic as cli-source - the backend uses it to
     // grant the free allowance for OAuth requests and ignores it for API-key
     // (X-Api-Key) traffic, where it's dead metadata.
     const isOauth = "Authorization" in cred.headers;
@@ -81,10 +81,10 @@ export function heygenAuthHeaders() {
   }
   if (cred?.expired)
     throw new Error(
-      "HeyGen OAuth token expired — run `npx hyperframes auth refresh` (or `npx hyperframes auth login`)",
+      "HeyGen OAuth token expired - run `npx hyperframes auth refresh` (or `npx hyperframes auth login`)",
     );
   throw new Error(
-    "no HeyGen credentials — set $HEYGEN_API_KEY, or run `npx hyperframes auth login` (writes ~/.heygen/credentials)",
+    "no HeyGen credentials - set $HEYGEN_API_KEY, or run `npx hyperframes auth login` (writes ~/.heygen/credentials)",
   );
 }
 
@@ -120,7 +120,7 @@ export async function downloadTo(url, destPath) {
 // item has a presigned `audio_url` (+ `duration`, `description`, `name`, `score`).
 // `query` is required (≥1 char, empty → HTTP 400) and `limit` is capped at 50.
 // `minScore`: omit to use the server default (0.7). That default is TOO HIGH for
-// sound_effects — good SFX hits score ~0.5–0.67, so callers wanting SFX should
+// sound_effects - good SFX hits score ~0.5–0.67, so callers wanting SFX should
 // pass a lower floor (~0.4); music scores high and is fine at the default.
 export async function searchSounds(query, type, headers, { limit = 5, minScore } = {}) {
   const params = new URLSearchParams({ query, type, limit: String(limit) });
@@ -132,6 +132,6 @@ export async function searchSounds(query, type, headers, { limit = 5, minScore }
   if (Array.isArray(data)) return data;
   if (data && typeof data === "object") return Object.values(data);
   throw new Error(
-    `unexpected /audio/sounds shape — top keys: ${Object.keys(payload ?? {}).join(", ")}`,
+    `unexpected /audio/sounds shape - top keys: ${Object.keys(payload ?? {}).join(", ")}`,
   );
 }

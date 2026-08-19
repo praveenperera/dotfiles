@@ -129,7 +129,7 @@ test("anonymous id adopts a legacy ~/.media/anon-id on upgrade (persona continui
     withoutTelemetryOptOut();
     mkdirSync(join(home, ".media"), { recursive: true });
     writeFileSync(join(home, ".media/anon-id"), "legacy-media-id");
-    // no ~/.hyperframes/config.json yet — the old media-use-only id must carry over
+    // no ~/.hyperframes/config.json yet - the old media-use-only id must carry over
     assert.equal(__anonymousIdForTest(), "legacy-media-id");
     // and it is persisted into the shared config so CLI/studio see the same id
     assert.equal(
@@ -236,7 +236,7 @@ test("first run notice prints to stderr once and never stdout", async () => {
     assert.match(stderr[0], /media-use sends usage telemetry/);
     assert.equal(stdout.length, 0);
     // notice-shown lives in the shared config (config.telemetryNoticeShown), so
-    // the CLI and media-use show it once per person — not a media-use-only marker.
+    // the CLI and media-use show it once per person - not a media-use-only marker.
     assert.equal(
       JSON.parse(readFileSync(join(home, ".hyperframes/config.json"), "utf8")).telemetryNoticeShown,
       true,

@@ -11,7 +11,7 @@ description: |
   with no build).
 ---
 
-# rb — Remote BuildKit (default Docker builds)
+# rb - Remote BuildKit (default Docker builds)
 
 **Default:** build images with `rb build`, not local `docker build` or
 `docker buildx build`.
@@ -165,7 +165,7 @@ rb cache delete   # destructive; confirm intent first
 
 ## Agent workflow
 
-1. On any image-build request, plan `rb build` first — not local Docker.
+1. On any image-build request, plan `rb build` first - not local Docker.
 2. Pass `--project` only when the user names one; otherwise rely on rb's
    resolution.
 3. Map the user's intended Buildx flags after `--` (`-t`, `--load`, `--push`,

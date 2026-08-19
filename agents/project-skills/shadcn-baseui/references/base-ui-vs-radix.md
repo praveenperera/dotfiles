@@ -65,7 +65,7 @@ Event handlers merge automatically.
 [data-closed] { opacity: 0; }
 ```
 
-Boolean attributes — no string matching needed.
+Boolean attributes - no string matching needed.
 
 ## Animation Pattern
 

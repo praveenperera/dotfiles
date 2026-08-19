@@ -19,7 +19,7 @@ turns into a parameterized HF composition.
 ```
 
 When `calculateMetadata` is synchronous and only uses `props`, **resolve
-it at translation time** — call it with `defaultProps` (or whatever the
+it at translation time** - call it with `defaultProps` (or whatever the
 caller specifies) and write the concrete result into the HTML:
 
 ```html
@@ -84,7 +84,7 @@ defaultProps={{
 }}
 ```
 
-Don't try to encode the array as a JSON `data-` attribute — HF's runtime
+Don't try to encode the array as a JSON `data-` attribute - HF's runtime
 doesn't parse those. Materialize the array as **repeated HTML markup**:
 
 ```html
@@ -104,7 +104,7 @@ The component template (`StatCard.tsx`) becomes the markup template;
 each instance gets its scalar props rendered as `data-*` and CSS
 custom properties.
 
-Validated in T3 — three StatCards reused with different props,
+Validated in T3 - three StatCards reused with different props,
 mean SSIM 0.953.
 
 ## Numeric props that need typed parsing
@@ -127,8 +127,8 @@ defaultProps={{ darkMode: true }}
 
 Two conventions:
 
-- `data-dark-mode="true"` — read as string, compare `=== "true"`
-- `data-dark-mode` (presence/absence) — `<div data-dark-mode>` for true, omit for false
+- `data-dark-mode="true"` - read as string, compare `=== "true"`
+- `data-dark-mode` (presence/absence) - `<div data-dark-mode>` for true, omit for false
 
 Pick one and be consistent. The presence/absence form is HTML-idiomatic
 and pairs well with CSS attribute selectors:
@@ -142,7 +142,7 @@ and pairs well with CSS attribute selectors:
 ## Zod runtime validation
 
 Remotion's `schema` validates props at composition load. HF doesn't have
-an equivalent — by the time the HTML is in the renderer, the schema is
+an equivalent - by the time the HTML is in the renderer, the schema is
 already gone.
 
 Validate at translation time instead. If the user passes invalid data,
@@ -160,7 +160,7 @@ const Composition: React.FC<Props> = ({ stats }) => {
 
 Compute the derived value at translation time and bake it into the HTML
 or a `data-` attribute. Don't try to express the computation in JS in the
-HF composition — that adds runtime overhead and makes the HTML stateful
+HF composition - that adds runtime overhead and makes the HTML stateful
 in ways that complicate human editing.
 
 If the derivation is non-trivial (involves the array itself, not just

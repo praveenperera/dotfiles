@@ -1,6 +1,6 @@
 # text module · motion vocabulary (primitive → GSAP)
 
-Named primitives the Director references in `motion` strings and the Builder implements. `code_hint`s are framework-neutral physics; the GSAP recipe is the HF implementation. Prefer an HF **registry component** (bottom) when one fits — don't reinvent.
+Named primitives the Director references in `motion` strings and the Builder implements. `code_hint`s are framework-neutral physics; the GSAP recipe is the HF implementation. Prefer an HF **registry component** (bottom) when one fits - don't reinvent.
 
 ## Entry
 
@@ -40,4 +40,4 @@ Named primitives the Director references in `motion` strings and the Builder imp
 
 ## Prefer HF registry components when they fit
 
-`caption-kinetic-slam` · `caption-editorial-emphasis` · `caption-neon-glow` · `caption-glitch-rgb` · `caption-particle-burst` · `caption-weight-shift` · `caption-matrix-decode` · `caption-pill-karaoke` · `shimmer-sweep`. These are pre-built, in-ecosystem, and already render-tested — the Builder should reach for them before hand-rolling an equivalent.
+`caption-kinetic-slam` · `caption-editorial-emphasis` · `caption-neon-glow` · `caption-glitch-rgb` · `caption-particle-burst` · `caption-weight-shift` · `caption-matrix-decode` · `caption-pill-karaoke` · `shimmer-sweep`. These are pre-built, in-ecosystem, and already render-tested - the Builder should reach for them before hand-rolling an equivalent.

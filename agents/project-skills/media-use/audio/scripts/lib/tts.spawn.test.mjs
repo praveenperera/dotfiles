@@ -9,7 +9,7 @@ import {
 } from "./tts.mjs";
 
 // Regression: on Windows, npx resolves to npx.cmd, which spawn() cannot exec
-// without shell:true — it fails ENOENT, silently swallowed as ok:false by the
+// without shell:true - it fails ENOENT, silently swallowed as ok:false by the
 // caller. spawnP takes injectable platform/spawnFn params so this doesn't
 // need to touch the real process.platform or mock node:child_process (whose
 // ESM exports are non-configurable).
@@ -103,7 +103,7 @@ test("spawnP does not enable shell for non-npx commands even on win32", async ()
 
 // Regression: win32 + npx with npm_execpath unset can't locate the npx JS CLI,
 // so resolveSpawnCommand returns null and spawnP short-circuits. Previously it
-// returned {status:-1} silently — every TTS line just dropped as "TTS failed -
+// returned {status:-1} silently - every TTS line just dropped as "TTS failed -
 // omitted" with no hint. Now it must surface a clear one-time diagnostic naming
 // npm_execpath, while still returning {status:-1} without spawning anything.
 test("spawnP surfaces a clear diagnostic (once) when npx can't be resolved on win32", async () => {

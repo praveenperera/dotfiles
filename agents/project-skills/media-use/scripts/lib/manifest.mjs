@@ -125,7 +125,7 @@ function sleepMs(ms) {
 
 // Coarse per-project lock so concurrent resolves don't race on id allocation.
 // ponytail: one lock file with a 15s stale-steal (a crashed holder can't wedge
-// the project); fine for agent-scale concurrency — revisit if throughput needs
+// the project); fine for agent-scale concurrency - revisit if throughput needs
 // finer locking. Date.now() is available here (a normal Node CLI, not a
 // workflow DSL), so mtime-based staleness is safe.
 const LOCK_STALE_MS = 15000;
@@ -146,7 +146,7 @@ function withLock(dir, fn) {
           continue;
         }
       } catch {
-        continue; // lock vanished between check and stat — retry the acquire
+        continue; // lock vanished between check and stat - retry the acquire
       }
       if (Date.now() - start > LOCK_TIMEOUT_MS) {
         throw new Error("media-use: timed out acquiring .media/.lock");

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /*
- * matte.cjs — subject matting via hyperframes' built-in `remove-background`
+ * matte.cjs - subject matting via hyperframes' built-in `remove-background`
  * (rembg-equivalent u2net_human_seg, Apache-2.0, 320×320 input, ~9 fps on
  * CoreML). Replaces the previous bundled PP-MattingV2 ONNX (34 MB asset +
  * an onnxruntime inference loop in this script): one engine, zero bundled
- * weights — the model auto-downloads once (~168 MB) to ~/.cache/hyperframes/.
+ * weights - the model auto-downloads once (~168 MB) to ~/.cache/hyperframes/.
  *
  * Semantics note (validated 2026-06-12 on 6 scenes + a cold-start E2E): a
  * HUMAN segmenter by intent, not surgically. Thin offset furniture (mic boom
- * arms) is usually excluded — captions render over it, behind the person —
+ * arms) is usually excluded - captions render over it, behind the person -
  * but large salient objects near the subject (a telescope rig) can still
  * leak into the matte and occlude captions. Objects HELD by the subject
  * (products, phones) may drop out intermittently, letting captions pass in
@@ -23,7 +23,7 @@
  * Reads:  <project>/source.mp4 (any video in the project dir is adopted)
  * Writes: <project>/frames_fg/f_%04d.png (RGBA, subject opaque),
  *         <project>/frames_bg/f_%04d.png, <project>/matte.fps
- * Env:    HYPERFRAMES_ROOT — hyperframes checkout (default ~/Downloads/hyperframes)
+ * Env:    HYPERFRAMES_ROOT - hyperframes checkout (default ~/Downloads/hyperframes)
  */
 const path = require("path");
 const fs = require("fs");
@@ -40,7 +40,7 @@ function hfCli() {
     const cli = path.join(root, "packages", "cli", "dist", "cli.js");
     if (fs.existsSync(cli)) return cli;
   }
-  console.error("[matte] cannot find hyperframes cli — set HYPERFRAMES_ROOT to a built checkout");
+  console.error("[matte] cannot find hyperframes cli - set HYPERFRAMES_ROOT to a built checkout");
   process.exit(3);
 }
 
@@ -68,7 +68,7 @@ function rateOf(expr) {
   return Number.isFinite(f) && f > 0 ? f : 0;
 }
 
-// Prefer avg_frame_rate (frames/duration — the truth) over r_frame_rate (the
+// Prefer avg_frame_rate (frames/duration - the truth) over r_frame_rate (the
 // container's nominal tick rate, which lies on VFR sources: a 24fps screen
 // recording can carry r_frame_rate=60 and would 2.5x-desync the matte).
 function probeRates(src) {
@@ -100,7 +100,7 @@ function probeFps(src) {
   return f > 0 ? Math.max(1, Math.round(f)) : 24;
 }
 
-// VFR when nominal and actual disagree by >5% — the remove-background engine
+// VFR when nominal and actual disagree by >5% - the remove-background engine
 // mishandles VFR timestamps (observed: 2251 fg frames vs 902 bg on one clip),
 // so VFR sources get normalized to CFR before matting.
 function isVfr(src) {
@@ -146,7 +146,7 @@ async function main() {
   try {
     fps = parseInt(fs.readFileSync(fpsFile, "utf8").replace(/\D/g, ""), 10) || 0;
   } catch {
-    /* no cached fps — probe below */
+    /* no cached fps - probe below */
   }
   if (!fps) fps = probeFps(src);
   fs.writeFileSync(fpsFile, String(fps));
@@ -158,12 +158,12 @@ async function main() {
 
   const want = countPngs(framesBg);
   if (want > 0 && countPngs(framesFg) >= want) {
-    console.log(`[matte] frames_fg already complete (${want} frames) — nothing to do`);
+    console.log(`[matte] frames_fg already complete (${want} frames) - nothing to do`);
     return;
   }
 
   // 1) subject matte via hyperframes (ProRes 4444 keeps the alpha lossless).
-  //    VFR sources are normalized to CFR first — remove-background trusts
+  //    VFR sources are normalized to CFR first - remove-background trusts
   //    timestamps and emits a desynced frame count on VFR input (the ghost
   //    double-subject bug: the pasted matte runs at the wrong speed).
   let matteSrc = src;
@@ -210,7 +210,7 @@ async function main() {
     ),
   );
   console.log(
-    `[matte] hyperframes remove-background (u2net_human_seg${cached ? "" : "; first run downloads ~168 MB"})… model load takes ~1-2 min with no output — not hung`,
+    `[matte] hyperframes remove-background (u2net_human_seg${cached ? "" : "; first run downloads ~168 MB"})… model load takes ~1-2 min with no output - not hung`,
   );
   const r = cp.spawnSync("node", [hfCli(), "remove-background", matteSrc, "-o", mov], {
     stdio: ["ignore", "pipe", "pipe"],
@@ -233,14 +233,14 @@ async function main() {
 
   // 3) count parity with frames_bg. Composite overlays fg by INDEX at matte.fps,
   //    so any fg/bg count mismatch is a time desync (subject ghosting). Handle
-  //    BOTH directions: pad when short, linearly remap when long — and shout
+  //    BOTH directions: pad when short, linearly remap when long - and shout
   //    when the mismatch is big enough to mean broken timestamps upstream.
   let got = countPngs(framesFg);
   const tol = Math.max(2, Math.round(want * 0.01));
   if (Math.abs(got - want) > tol) {
     console.error(
       `[matte] WARN frame-count desync: fg=${got} vs bg=${want} (tolerance ${tol}). ` +
-        `Reconciling by remap — if the source is VFR this run predates the CFR fix; ` +
+        `Reconciling by remap - if the source is VFR this run predates the CFR fix; ` +
         `delete frames_fg/ frames_bg/ matte.fps and re-run matte.cjs.`,
     );
   }

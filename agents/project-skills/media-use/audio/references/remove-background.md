@@ -24,13 +24,13 @@ npx hyperframes remove-background --info                                   # det
 
 ## Output Format
 
-- **`.webm` (VP9 alpha)** — default. Plug straight into `<video>` for Chrome-native transparent playback (~1 MB / 4s @ 1080p).
-- **`.mov` (ProRes 4444)** — round-trip in editors (Premiere / Resolve / DaVinci). ~50 MB / 4s.
-- **`.png`** — single-image cutout.
+- **`.webm` (VP9 alpha)** - default. Plug straight into `<video>` for Chrome-native transparent playback (~1 MB / 4s @ 1080p).
+- **`.mov` (ProRes 4444)** - round-trip in editors (Premiere / Resolve / DaVinci). ~50 MB / 4s.
+- **`.png`** - single-image cutout.
 
 ## Quality (`--quality`)
 
-Controls VP9 encoder CRF only — segmentation quality is fixed. Higher quality keeps the cutout's RGB closer to the source MP4 (important when overlaying the cutout on its own source).
+Controls VP9 encoder CRF only - segmentation quality is fixed. Higher quality keeps the cutout's RGB closer to the source MP4 (important when overlaying the cutout on its own source).
 
 | Preset     | CRF | When                                          |
 | ---------- | --- | --------------------------------------------- |
@@ -42,7 +42,7 @@ Controls VP9 encoder CRF only — segmentation quality is fixed. Higher quality 
 
 `auto` (default) picks CoreML on Apple Silicon, CUDA when available, otherwise CPU. Force with `--device cpu | coreml | cuda`. CUDA requires `HYPERFRAMES_CUDA=1` plus a GPU-enabled `onnxruntime-node` build. Use `--info` to inspect detected providers without rendering.
 
-## Compositing patterns — pick the right one
+## Compositing patterns - pick the right one
 
 The cutout WebM is a **re-encoded copy** of the source MP4's RGB. What sits behind it matters.
 
@@ -89,7 +89,7 @@ tl.set(".cutout-wrap", { opacity: 1 }, 3.3);
 Two rules that are easy to miss:
 
 1. **Wrap the cutout `<video>` in a non-timed `<div>` and animate the wrapper's opacity, not the video element's.** The framework forces `opacity: 1` on active clips (any element with `data-start` / `data-duration`), so animating the video's opacity directly is silently overridden. The wrapper has no `data-*` attributes, so it's owned by your CSS / GSAP.
-2. **Both videos use `data-start="0"` and `data-media-start="0"`** so the framework decodes them in sync from t=0. Late-mounting the cutout (`data-start=3.3`) introduces a seek + warm-up that lands a frame off the base mp4 — visible as one frame of misalignment at the cut.
+2. **Both videos use `data-start="0"` and `data-media-start="0"`** so the framework decodes them in sync from t=0. Late-mounting the cutout (`data-start=3.3`) introduces a seek + warm-up that lands a frame off the base mp4 - visible as one frame of misalignment at the cut.
 
 ## Layer separation (`--background-output`)
 
@@ -97,14 +97,14 @@ Emits a **second** transparent video alongside the cutout: same source RGB, alph
 
 | File                             | Alpha is…                                               | Use it for                                                       |
 | -------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
-| `-o subject.webm`                | mask — subject opaque, background transparent           | Foreground layer (top)                                           |
-| `--background-output plate.webm` | inverse mask — surroundings opaque, subject transparent | Bottom layer; place text / graphics between this and the subject |
+| `-o subject.webm`                | mask - subject opaque, background transparent           | Foreground layer (top)                                           |
+| `--background-output plate.webm` | inverse mask - surroundings opaque, subject transparent | Bottom layer; place text / graphics between this and the subject |
 
-Both share the same `--quality` and run from a single inference pass — only encode cost roughly doubles. Only valid for video inputs with `.webm` / `.mov` outputs.
+Both share the same `--quality` and run from a single inference pass - only encode cost roughly doubles. Only valid for video inputs with `.webm` / `.mov` outputs.
 
-**Hole-cut, not inpainted.** The subject region in `plate.webm` is fully transparent — composite something opaque under it to fill the hole.
+**Hole-cut, not inpainted.** The subject region in `plate.webm` is fully transparent - composite something opaque under it to fill the hole.
 
-**Single test for whether `--background-output` is the right tool:** _will anything ever be visible through the subject's silhouette where the subject used to be?_ If no, you don't need the plate — `subject.webm` alone over a different background is enough.
+**Single test for whether `--background-output` is the right tool:** _will anything ever be visible through the subject's silhouette where the subject used to be?_ If no, you don't need the plate - `subject.webm` alone over a different background is enough.
 
 ### Use case → right tool
 
@@ -112,12 +112,12 @@ Both share the same `--quality` and run from a single inference pass — only en
 | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | Text/graphics between the cutout and the plate (this command's reason for existing) | **Hole-cut** (`--background-output`)                                               |
 | Subject onto an unrelated scene                                                     | Just `subject.webm`; ignore the plate                                              |
-| Show the room _without_ the person, alone over no other content                     | **Clean plate** — needs an inpainter (LaMa, ProPainter, E2FGVI). Not this command. |
-| Replace the subject with a different subject                                        | **Clean plate** — same as above                                                    |
+| Show the room _without_ the person, alone over no other content                     | **Clean plate** - needs an inpainter (LaMa, ProPainter, E2FGVI). Not this command. |
+| Replace the subject with a different subject                                        | **Clean plate** - same as above                                                    |
 
 ### Canonical 3-layer template (plate + content + cutout)
 
-Ship just the two transparent layers and let arbitrary content live between them — no original mp4 needed:
+Ship just the two transparent layers and let arbitrary content live between them - no original mp4 needed:
 
 ```html
 <!-- z=1 plate: surroundings opaque, subject silhouette transparent -->
@@ -146,8 +146,8 @@ Ship just the two transparent layers and let arbitrary content live between them
 </div>
 ```
 
-Functionally equivalent to the text-behind-subject pattern above, but doesn't require shipping the original mp4 — the plate replaces it. Use this when delivering just the two transparent layers as a reusable asset.
+Functionally equivalent to the text-behind-subject pattern above, but doesn't require shipping the original mp4 - the plate replaces it. Use this when delivering just the two transparent layers as a reusable asset.
 
 ## When `remove-background` is NOT the right tool
 
-If a user asks for "the room **without** the person, displayed standalone" (no subject anywhere, no compositing on top), `--background-output` is wrong — its plate has a transparent hole, not a filled-in clean plate. They need an **inpainter**: LaMa, ProPainter, or E2FGVI. Tell them this command can't do it.
+If a user asks for "the room **without** the person, displayed standalone" (no subject anywhere, no compositing on top), `--background-output` is wrong - its plate has a transparent hole, not a filled-in clean plate. They need an **inpainter**: LaMa, ProPainter, or E2FGVI. Tell them this command can't do it.

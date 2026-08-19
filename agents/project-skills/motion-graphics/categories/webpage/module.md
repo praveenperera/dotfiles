@@ -1,4 +1,4 @@
-# webpage — category module (search-driven)
+# webpage - category module (search-driven)
 
 **Animate a webpage / link** (the "website animation" use case). Search-driven: the user gives or names a URL → fetch/capture it → animate it (scroll-through, UI reveal, cursor demo, region callouts). Distinct from captioning an existing _video file_ (that's `/embedded-captions`) and from a narrated video _of_ a site (that's `/website-to-video`); here the source is a _web page_ and the output is a short, unnarrated highlight shot.
 
@@ -17,5 +17,5 @@ Place the captured page as the base layer; animate a **scroll-through** (transla
 
 **Two rules that match the news article-highlight (see `../news/module.md`):**
 
-- **Highlights are swept/animated ON, never pre-applied** — a spotlight box wipes in (`scaleX 0→1`), a marker sweeps a region, a callout pops _after_ the zoom lands; the page never starts pre-annotated.
-- **Anchor to REAL element positions** — `hyperframes capture` gives the page HTML/DOM, so measure the target element (`getBoundingClientRect` → stage-local) and zoom/highlight it exactly, step-by-step (the "highlight a real element" technique). Don't eyeball coords.
+- **Highlights are swept/animated ON, never pre-applied** - a spotlight box wipes in (`scaleX 0→1`), a marker sweeps a region, a callout pops _after_ the zoom lands; the page never starts pre-annotated.
+- **Anchor to REAL element positions** - `hyperframes capture` gives the page HTML/DOM, so measure the target element (`getBoundingClientRect` → stage-local) and zoom/highlight it exactly, step-by-step (the "highlight a real element" technique). Don't eyeball coords.

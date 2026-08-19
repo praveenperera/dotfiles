@@ -1,6 +1,6 @@
-# Story design — faceless explainer video
+# Story design - faceless explainer video
 
-Use this reference in Step 3 to write `STORYBOARD.md` and `SCRIPT.md` for a faceless explainer — a topic, concept, how-to, listicle, or narrative explainer built from text, with **no product, no website, and no captured assets**.
+Use this reference in Step 3 to write `STORYBOARD.md` and `SCRIPT.md` for a faceless explainer - a topic, concept, how-to, listicle, or narrative explainer built from text, with **no product, no website, and no captured assets**.
 
 This file defines the story: what the video teaches, in what order, and why each frame exists. It does not define layout, visual effects, animation, or final markdown schemas. For exact file syntax, follow `../hyperframes-core/references/storyboard-format.md` and `../hyperframes-core/references/script-format.md`.
 
@@ -8,19 +8,19 @@ This file defines the story: what the video teaches, in what order, and why each
 
 Read these inputs before writing:
 
-1. `hyperframes.json` — locked brief: angle, length, aspect ratio, language.
-2. `frame.md` — tone, mood, design system, and register.
-3. `capture/extracted/visible-text.txt` — the article / notes / topic / brief (the source of **information**).
+1. `hyperframes.json` - locked brief: angle, length, aspect ratio, language.
+2. `frame.md` - tone, mood, design system, and register.
+3. `capture/extracted/visible-text.txt` - the article / notes / topic / brief (the source of **information**).
 4. `user_script.txt` and `VO_MODE`, when the user pasted a script.
 
-There is no `asset-descriptions.md` and no `capture/assets/` to inspect — this is faceless. Every visual is invented downstream (Steps 4-5); your job here is the **narrative**, not a visual asset list.
+There is no `asset-descriptions.md` and no `capture/assets/` to inspect - this is faceless. Every visual is invented downstream (Steps 4-5); your job here is the **narrative**, not a visual asset list.
 
 ## Output
 
 Create two files:
 
-- `STORYBOARD.md` — the teaching plan, one frame per beat.
-- `SCRIPT.md` — the locked narration, only for spoken frames.
+- `STORYBOARD.md` - the teaching plan, one frame per beat.
+- `SCRIPT.md` - the locked narration, only for spoken frames.
 
 Every storyboard frame must include the required fields from the storyboard format reference, plus the narrative metadata below.
 
@@ -28,7 +28,7 @@ Every storyboard frame must include the required fields from the storyboard form
 
 An article is an information dump. A video is a guided act of understanding.
 
-Do not follow paragraph order. Reorder, merge, omit, and compress the source text into a clear teaching sequence. Strip the asides; surface the spine. **The single most common failure is paraphrasing the article in order — do not do that.** The input text is the source of information, not a story template.
+Do not follow paragraph order. Reorder, merge, omit, and compress the source text into a clear teaching sequence. Strip the asides; surface the spine. **The single most common failure is paraphrasing the article in order - do not do that.** The input text is the source of information, not a story template.
 
 ## Step 3 method
 
@@ -36,18 +36,18 @@ Do not follow paragraph order. Reorder, merge, omit, and compress the source tex
 
 From the brief and text, identify:
 
-- Audience — who the video is speaking to, and what they already (don't) know.
-- Gap or stakes — the confusion, question, or "why care" the explanation resolves.
-- Thesis — the one-line idea the viewer should walk away with.
-- Spine — the 3-6 ideas (mechanisms / steps / items / beats) that build to the thesis.
-- Evidence — the concrete numbers, examples, comparisons, or worked cases that ground it.
-- Landing — the takeaway or the call to think / try / act.
+- Audience - who the video is speaking to, and what they already (don't) know.
+- Gap or stakes - the confusion, question, or "why care" the explanation resolves.
+- Thesis - the one-line idea the viewer should walk away with.
+- Spine - the 3-6 ideas (mechanisms / steps / items / beats) that build to the thesis.
+- Evidence - the concrete numbers, examples, comparisons, or worked cases that ground it.
+- Landing - the takeaway or the call to think / try / act.
 
 Write the storyboard around the thesis, not around the article's sections.
 
 ### 2. Match the register to `frame.md`
 
-Use `frame.md` as a soft guide — the visual system tunes the **voice**, not the structure:
+Use `frame.md` as a soft guide - the visual system tunes the **voice**, not the structure:
 
 | `frame.md` signal              | Story effect                           |
 | ------------------------------ | -------------------------------------- |
@@ -60,7 +60,7 @@ The teaching truth decides the arc. The visual system tunes the voice.
 
 ### 3. Choose one explainer structure
 
-Pick **one** structure (or explicitly name a compound). Do not splice phases from different structures — each is a complete path through understanding.
+Pick **one** structure (or explicitly name a compound). Do not splice phases from different structures - each is a complete path through understanding.
 
 | Structure           | "It is…"                                         | Use when the payload is…                                    | Body shape                                                           |
 | ------------------- | ------------------------------------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -71,7 +71,7 @@ Pick **one** structure (or explicitly name a compound). Do not splice phases fro
 
 **Choosing:** one idea to understand → concept; an ordered procedure → how-to; parallel co-equal items → listicle; a concrete narrative/case → story.
 
-**Compounds** layer an outer arc with an inner rhythm — e.g. `concept-explainer with process` (ordered steps inside the mechanism phase), `story-explainer with how-to`. Set `arc` in the frontmatter to the chosen structure (or `<outer> with <inner>`). The downstream visual phase reads it for pacing: a process inner rhythm means tighter seams on a consistent stage and shorter frames.
+**Compounds** layer an outer arc with an inner rhythm - e.g. `concept-explainer with process` (ordered steps inside the mechanism phase), `story-explainer with how-to`. Set `arc` in the frontmatter to the chosen structure (or `<outer> with <inner>`). The downstream visual phase reads it for pacing: a process inner rhythm means tighter seams on a consistent stage and shorter frames.
 
 ### 4. Build the frame sequence
 
@@ -79,18 +79,18 @@ Each frame needs one clear job. Avoid frames that only say "more detail" or "ano
 
 For every frame, define (use the storyboard format's fields, with these narrative additions in the frame's metadata + prose):
 
-- `type` — one of `hook | pain_point | product_intro | feature_showcase | benefit_highlight | social_proof | branding | cta`. This enum is shared with the downstream visual layer for pacing; **repurpose** it for teaching per the mapping below.
-- `persuasion` — a **named** rhetorical / clarity technique (see catalog), not "explain the idea."
-- `beat` — the target feeling (see vocabulary).
-- `scene` — a one-line visual idea, not detailed composition.
-- `voiceover` — spoken guide text, or empty for silent frames.
-- `transition_in` — a registry transition name (see Transitions).
-- `blueprint` _(optional candidate)_ — consult the role→blueprint menu in `../hyperframes-animation/blueprints-index.md`; when a proven shape fits this beat, tag its id (a tag, not a commitment — Step 4 confirms or overrides). Then **write the `voiceover` in the shape that blueprint implies**, so the line is reveal-ready before Step 4 ever runs. Teaching truth still decides which beats exist — never invent, drop, or bend a beat just to fit a shape; omit `blueprint` and write the line plainly when none fits.
+- `type` - one of `hook | pain_point | product_intro | feature_showcase | benefit_highlight | social_proof | branding | cta`. This enum is shared with the downstream visual layer for pacing; **repurpose** it for teaching per the mapping below.
+- `persuasion` - a **named** rhetorical / clarity technique (see catalog), not "explain the idea."
+- `beat` - the target feeling (see vocabulary).
+- `scene` - a one-line visual idea, not detailed composition.
+- `voiceover` - spoken guide text, or empty for silent frames.
+- `transition_in` - a registry transition name (see Transitions).
+- `blueprint` _(optional candidate)_ - consult the role→blueprint menu in `../hyperframes-animation/blueprints-index.md`; when a proven shape fits this beat, tag its id (a tag, not a commitment - Step 4 confirms or overrides). Then **write the `voiceover` in the shape that blueprint implies**, so the line is reveal-ready before Step 4 ever runs. Teaching truth still decides which beats exist - never invent, drop, or bend a beat just to fit a shape; omit `blueprint` and write the line plainly when none fits.
 
 In the prose under each frame, state:
 
-- `narrativeRole` — the scene's **job** in the explanation (e.g. "Concretizes compound interest as a snowball," not "Shows a chart").
-- `keyMessage` — the one thing the viewer should understand after this frame (one sentence).
+- `narrativeRole` - the scene's **job** in the explanation (e.g. "Concretizes compound interest as a snowball," not "Shows a chart").
+- `keyMessage` - the one thing the viewer should understand after this frame (one sentence).
 
 ### Type-enum repurposing (shared enum → explainer roles)
 
@@ -100,12 +100,12 @@ The enum is shared with the downstream visual layer; map your explainer roles on
 | -------------------------------- | ------------------- | -------------------------------------------------------------------- |
 | Hook / curiosity gap             | `hook`              | The high-leverage opening 3-5s.                                      |
 | Pain / problem / why-care        | `pain_point`        | The friction or gap the explanation resolves.                        |
-| Name the core concept            | `product_intro`     | "Introduce the protagonist" — here the protagonist is the **idea**.  |
-| Mechanism / step / item          | `feature_showcase`  | A unit of the body — one move of a process, one mechanism, one item. |
+| Name the core concept            | `product_intro`     | "Introduce the protagonist" - here the protagonist is the **idea**.  |
+| Mechanism / step / item          | `feature_showcase`  | A unit of the body - one move of a process, one mechanism, one item. |
 | Implication / payoff / "so what" | `benefit_highlight` | The consequence or value of understanding.                           |
 | Evidence / example / data point  | `social_proof`      | A concrete grounding: a number, a worked example, a comparison.      |
-| Thesis / takeaway / principle    | `branding`          | The philosophical landing — the generalizable idea, the one line.    |
-| Call to think / try / act        | `cta`               | The closing ask — try it, watch for it, question it.                 |
+| Thesis / takeaway / principle    | `branding`          | The philosophical landing - the generalizable idea, the one line.    |
+| Call to think / try / act        | `cta`               | The closing ask - try it, watch for it, question it.                 |
 
 The body is usually a run of `feature_showcase` (steps/mechanisms/items), interleaved with `benefit_highlight` (implications) and `social_proof` (examples/data). At least one `feature_showcase` or `product_intro` should exist (every explainer has a body and a named idea).
 
@@ -118,18 +118,18 @@ Pick one opening strategy for the first 3-5 seconds. For explainers the hook ope
 | Shocking statistic     | A credible number quantifies the stakes.           | "90% of plastic ever made has never been recycled."              |
 | Rhetorical question    | Create an immediate cognitive gap.                 | "Why does time seem to speed up as you get older?"               |
 | Counterintuitive claim | The truth contradicts common belief.               | "Adding more lanes to a highway makes traffic worse."            |
-| Pain validation        | The audience already feels the confusion.          | "Everyone says 'just diversify' — nobody says what that means."  |
+| Pain validation        | The audience already feels the confusion.          | "Everyone says 'just diversify' - nobody says what that means."  |
 | Visceral metaphor      | The idea is abstract and needs to become concrete. | "Your attention is a spotlight, and apps fight over the switch." |
 | Concept announcement   | The term itself is the subject; make it memorable. | "There's a word for this: the bystander effect."                 |
-| Direct address         | The audience is clearly defined.                   | "If you've ever rage-quit a recipe halfway — this is for you."   |
+| Direct address         | The audience is clearly defined.                   | "If you've ever rage-quit a recipe halfway - this is for you."   |
 | Imagine / scenario     | A thought experiment frames the whole piece.       | "Imagine money that loses value if you don't spend it."          |
 | Stakes / consequence   | The "why care now" is a real cost or risk.         | "Get this one step wrong and the whole batch is ruined."         |
 
-The hook must create curiosity, tension, or stakes. Do not open with a generic definition. Per `../hyperframes-creative/references/story-spine.md`: the hook speaks the viewer's language (the payoff of understanding, never the source text's section headings), and the thesis (`message`) lands by beat 2 — the explanation after that is its evidence.
+The hook must create curiosity, tension, or stakes. Do not open with a generic definition. Per `../hyperframes-creative/references/story-spine.md`: the hook speaks the viewer's language (the payoff of understanding, never the source text's section headings), and the thesis (`message`) lands by beat 2 - the explanation after that is its evidence.
 
 ## Clarity / rhetoric technique catalog
 
-`persuasion` is a **named technique** — how this frame makes the idea land or clear — not a vague intent. Combine when several are active (e.g. "Analogy + progressive disclosure").
+`persuasion` is a **named technique** - how this frame makes the idea land or clear - not a vague intent. Combine when several are active (e.g. "Analogy + progressive disclosure").
 
 | Family               | Techniques                                                                                                                                   |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -146,10 +146,10 @@ When no catalog technique fits, name a new one inline and explain its mechanism 
 
 `beat` is one word or a short compound phrase (e.g. "Curiosity and clarity"). Avoid generic "positive" / "interested." Explainers ride a comprehension arc:
 
-- **Negative valley** — _open the gap_ (hook / pain_point): curiosity · puzzlement · surprise · tension · concern · skepticism · recognition · intrigue
-- **Pivot** — _orient_ (product_intro / concept-naming): clarity · orientation · anticipation · focus
-- **Build** — _build understanding_ (feature_showcase / benefit_highlight / social_proof): comprehension · "aha" · confidence · fascination · foresight · momentum · conviction · delight · unease (for a caveat) · mastery
-- **Resolution** — _land_ (branding / cta / final): clarity · satisfaction · resolve · inspiration · inevitability · "now I get it"
+- **Negative valley** - _open the gap_ (hook / pain_point): curiosity · puzzlement · surprise · tension · concern · skepticism · recognition · intrigue
+- **Pivot** - _orient_ (product_intro / concept-naming): clarity · orientation · anticipation · focus
+- **Build** - _build understanding_ (feature_showcase / benefit_highlight / social_proof): comprehension · "aha" · confidence · fascination · foresight · momentum · conviction · delight · unease (for a caveat) · mastery
+- **Resolution** - _land_ (branding / cta / final): clarity · satisfaction · resolve · inspiration · inevitability · "now I get it"
 
 Compound beats are often strongest, e.g. "Surprise + recognition", "Comprehension + delight."
 
@@ -164,12 +164,12 @@ An explainer's core is almost always **3-6 body frames on a consistent visual st
 
 ## Continuity across frames (no worker grouping)
 
-This framework builds **one frame per worker** — there is no "continue run" that hands several frames to one worker. A sequence of frames reads as one continuous shot through two storyboard-level levers, both yours:
+This framework builds **one frame per worker** - there is no "continue run" that hands several frames to one worker. A sequence of frames reads as one continuous shot through two storyboard-level levers, both yours:
 
-1. **A consistent stage** — consecutive body frames share the same composition idea (same diagram growing, same number line, same desk), stated in each frame's `scene` so Step 4 and the workers keep the stage stable.
-2. **A consistent transition** — pick one seam type for a sequence (usually `push-slide <DIR>` for ordered steps, `crossfade` for a soft layer reveal) and repeat it across the run, so the frames feel like one flow rather than separate slides.
+1. **A consistent stage** - consecutive body frames share the same composition idea (same diagram growing, same number line, same desk), stated in each frame's `scene` so Step 4 and the workers keep the stage stable.
+2. **A consistent transition** - pick one seam type for a sequence (usually `push-slide <DIR>` for ordered steps, `crossfade` for a soft layer reveal) and repeat it across the run, so the frames feel like one flow rather than separate slides.
 
-When a single element genuinely _transforms_ between two ideas (a diagram node becomes a chart bar, a formula becomes its result), keep it within **one frame** as a development beat (entrance → the transform → settle) rather than splitting it across a seam — the worker owns that motion. Note the intent in the frame's `scene` / narrative; Step 4 turns it into a time-coded shot sequence (instantiating the candidate `blueprint`).
+When a single element genuinely _transforms_ between two ideas (a diagram node becomes a chart bar, a formula becomes its result), keep it within **one frame** as a development beat (entrance → the transform → settle) rather than splitting it across a seam - the worker owns that motion. Note the intent in the frame's `scene` / narrative; Step 4 turns it into a time-coded shot sequence (instantiating the candidate `blueprint`).
 
 ## Transitions
 
@@ -179,12 +179,12 @@ Use only registry transition names in `transition_in`:
 
 Pick 2-3 transition types for the whole video and repeat them. Frame 1 uses `cut` as a placeholder (there is no previous frame). Match the seam to the narrative: ordered steps → a consistent `push-slide`; a soft layer reveal or atmosphere shift → `crossfade` / `blur-crossfade`; zooming into a detail or pulling back → `zoom-through`; a clean topic switch or new list item → `cut`.
 
-## Faceless visuals — no asset inventory
+## Faceless visuals - no asset inventory
 
-Every visual is invented downstream from each frame's `narrativeRole` / `keyMessage` / `scene` — typography, abstract graphics, diagrams, data-viz are all first-class. Therefore:
+Every visual is invented downstream from each frame's `narrativeRole` / `keyMessage` / `scene` - typography, abstract graphics, diagrams, data-viz are all first-class. Therefore:
 
 - Do **not** write an `asset_candidates` line describing intended diagrams or typography as if they were files. Visual intent belongs in `scene` + `narrativeRole`; the visual phase reads those.
-- The **only** real asset is a user-supplied image already placed at `public/<basename>`. Then add one line `asset_candidates: public/<basename> — <≤25 words: what it is>`. Never invent paths or reference `capture/`.
+- The **only** real asset is a user-supplied image already placed at `public/<basename>`. Then add one line `asset_candidates: public/<basename> - <≤25 words: what it is>`. Never invent paths or reference `capture/`.
 
 ## Script rules
 
@@ -194,13 +194,13 @@ Write tight per-frame narration:
 
 - 1-2 sentences per spoken frame; usually 6-20 words.
 - Concrete and human; teach, don't read the article aloud.
-- **Write each line as discrete cues, not one run-on breath.** Step 5 reveals each on-screen piece _when the voiceover names it_ (the anti-PowerPoint mechanism). A line with clear phrase boundaries — "First the snowball — then the hill — then the speed" — hands the shot its reveal cadence for free; a single long clause leaves the frame nothing to pace to.
-- **Strong** (concretization): "Compound interest isn't addition, it's a snowball — every turn picks up the snow from the last, then more."
-- **Weak** (article-paraphrase): "The study, published in 2019, examined three cohorts and found that…" — that is reading, not explaining.
+- **Write each line as discrete cues, not one run-on breath.** Step 5 reveals each on-screen piece _when the voiceover names it_ (the anti-PowerPoint mechanism). A line with clear phrase boundaries - "First the snowball - then the hill - then the speed" - hands the shot its reveal cadence for free; a single long clause leaves the frame nothing to pace to.
+- **Strong** (concretization): "Compound interest isn't addition, it's a snowball - every turn picks up the snow from the last, then more."
+- **Weak** (article-paraphrase): "The study, published in 2019, examined three cohorts and found that…" - that is reading, not explaining.
 
 Avoid: "Unlock the power of…", "Seamless experience", long noun-phrase lists, a frame that is only a filler bridge ("Or…").
 
-**Silent frames are allowed and common in explainers** — a diagram assembling itself, a worked example animating, a beat of held tension before a turn. Set `voiceover` empty and leave the frame out of `SCRIPT.md`; then `narrativeRole` + `persuasion` must carry what the script doesn't say.
+**Silent frames are allowed and common in explainers** - a diagram assembling itself, a worked example animating, a beat of held tension before a turn. Set `voiceover` empty and leave the frame out of `SCRIPT.md`; then `narrativeRole` + `persuasion` must carry what the script doesn't say.
 
 ### If `VO_MODE = restructure`
 
@@ -215,7 +215,7 @@ Do not rewrite the user's words. Segment the script into frame-sized chunks at s
 Use the exact fields required by the core storyboard format. This is the narrative shape each frame should satisfy:
 
 ```md
-## Frame N — Short name
+## Frame N - Short name
 
 - scene: one clear visual idea
 - voiceover: "spoken guide text, or empty"
@@ -226,7 +226,7 @@ Use the exact fields required by the core storyboard format. This is the narrati
 - type: feature_showcase
 - persuasion: Progressive disclosure
 - beat: comprehension
-- blueprint: messaging-multi-phase — candidate shape from the role→blueprint menu; omit when none fits
+- blueprint: messaging-multi-phase - candidate shape from the role→blueprint menu; omit when none fits
 
 narrativeRole: What this frame does in the viewer's understanding.
 keyMessage: The one idea the viewer should remember.

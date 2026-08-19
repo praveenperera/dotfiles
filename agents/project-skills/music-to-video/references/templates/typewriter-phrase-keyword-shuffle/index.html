@@ -15,7 +15,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Typewriter Phrase / Keyword Font-Shuffle — group_2 reference impl</title>
+    <title>Typewriter Phrase / Keyword Font-Shuffle - group_2 reference impl</title>
     <script src="../../motion-primitives/assets/gsap.min.js"></script>
     <style>
       *,
@@ -120,10 +120,10 @@
             : {},
         );
 
-        // ── 2. FONT PRESET LIBRARY (preset many — the keyword cycles these) ─
+        // ── 2. FONT PRESET LIBRARY (preset many - the keyword cycles these) ─
         // FONTS[0] is the BASE face, shared with the lead words. The keyword flips
         // to FONTS[i] on each SHUFFLE step. Offline-safe generic stacks only (no
-        // remote fonts). Extend this list freely — more beats → more presets to
+        // remote fonts). Extend this list freely - more beats → more presets to
         // cycle through. Each entry: { family, weight, style }.
         var FONTS = [
           {
@@ -144,15 +144,15 @@
           return { fontFamily: f.family, fontWeight: f.weight, fontStyle: f.style };
         }
 
-        // ── 3. BEAT MAP (filled from <group>.audiomap.json — see README) ────
+        // ── 3. BEAT MAP (filled from <group>.audiomap.json - see README) ────
         // group_2.audiomap.json: BPM 129.2, hi-hat onsets drive every move.
         //   one ENTRY onset per lead word (in order), then KEYWORD, then PERIOD.
-        var LEAD_ONSETS = [0.557, 0.906]; // grid.events[].t — one per non-empty lead word
+        var LEAD_ONSETS = [0.557, 0.906]; // grid.events[].t - one per non-empty lead word
         var KEY_ONSET = 1.231; // keyword types in here
         var PERIOD_ONSET = 1.44; // accent char punches in here
         // keyword font-shuffle: each {t,font} flips the keyword on a beat/onset.
         // t  = a grid.beats_sec[] / events[].t after the phrase is set.
-        // font = index into FONTS[]. Add as many rows as the beat has flips — and
+        // font = index into FONTS[]. Add as many rows as the beat has flips - and
         // re-use indices to repeat faces, or walk new ones for a longer shuffle.
         var SHUFFLE = [
           { t: 1.904, font: 1 }, // → upright serif
@@ -196,7 +196,7 @@
         }
         line.appendChild(cword);
 
-        // ── 5. Timeline — one paused GSAP timeline, absolute audio seconds ──
+        // ── 5. Timeline - one paused GSAP timeline, absolute audio seconds ──
         window.__timelines = window.__timelines || {};
         var tl = gsap.timeline({ paused: true });
 
@@ -208,7 +208,7 @@
         var POP_IN = { autoAlpha: 0, scale: 0.92, y: 5 };
         var POP_OUT = { autoAlpha: 1, scale: 1, y: 0, duration: 0.1, ease: "back.out(2)" };
 
-        // typewriter accumulation — each lead word pops on its onset (words stay)
+        // typewriter accumulation - each lead word pops on its onset (words stay)
         leadEls.forEach(function (el, i) {
           var t = i < LEAD_ONSETS.length ? LEAD_ONSETS[i] : KEY_ONSET;
           tl.fromTo(el, POP_IN, POP_OUT, t);
@@ -225,7 +225,7 @@
           );
         }
 
-        // keyword font-shuffle — 0ms hard sets on the beat (the percussion IS the swap)
+        // keyword font-shuffle - 0ms hard sets on the beat (the percussion IS the swap)
         SHUFFLE.forEach(function (s) {
           tl.set(keyEl, fontProps(s.font), s.t);
         });

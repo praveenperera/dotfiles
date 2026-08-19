@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// contrast-report.mjs — HyperFrames contrast audit
+// contrast-report.mjs - HyperFrames contrast audit
 //
 // Reads a composition, seeks to N sample timestamps, walks the DOM for text
 // elements, measures the WCAG 2.1 contrast ratio between each element's
@@ -13,21 +13,21 @@
 //     [--samples N] [--out <dir>] [--width W] [--height H] [--fps N]
 //
 // Env:
-//   HYPERFRAMES_SKILL_PKG_VERSION — pin the @hyperframes/producer version used
+//   HYPERFRAMES_SKILL_PKG_VERSION - pin the @hyperframes/producer version used
 //     when bootstrapping (global skill installs cannot infer it; falls back to
 //     @latest with a warning otherwise)
 //
 // The composition directory must contain an index.html. Raw authoring HTML
-// works — the producer's file server auto-injects the runtime at serve time
+// works - the producer's file server auto-injects the runtime at serve time
 // Exits 1 if any text element fails WCAG AA
 //
-// Background sampling: each sample time is captured TWICE — once via the
+// Background sampling: each sample time is captured TWICE - once via the
 // producer's normal (video-accurate) captureFrameToBuffer for the overlay
 // image, and once via a plain page.screenshot() taken right after hiding
 // every candidate element's own glyph paint (fills/strokes/shadows → transparent,
 // layout-neutral). The second capture reveals the REAL composited pixels
 // that were directly behind the glyphs, which this script then samples
-// straight from each element's own bbox — no proximity heuristic needed
+// straight from each element's own bbox - no proximity heuristic needed
 // This is deliberately NOT routed through captureFrameToBuffer: that
 // pipeline has a static-frame dedup cache keyed by frame index/time that
 // knows nothing about our DOM mutation and would happily hand back a
@@ -47,7 +47,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { hyperframesPackageSpec, importPackagesOrBootstrap } from "./package-loader.mjs";
 
-// Use the producer's file server — it auto-injects the HyperFrames runtime
+// Use the producer's file server - it auto-injects the HyperFrames runtime
 // and render-seek bridge, so raw authoring HTML works without a build step
 const packages = await importPackagesOrBootstrap(["@hyperframes/producer", "sharp"], {
   npmPackages: [hyperframesPackageSpec("@hyperframes/producer"), "sharp@0.34.5"],
@@ -99,7 +99,7 @@ try {
 
   for (let i = 0; i < times.length; i++) {
     const t = times[i];
-    // visible frame — used only for the human-facing overlay image
+    // visible frame - used only for the human-facing overlay image
     const { buffer: pngBuf } = await captureFrameToBuffer(session, i, t);
 
     // hide each candidate's own glyph paint and return its selector/fg/bbox
@@ -164,7 +164,7 @@ async function prepareTextElements(session) {
       return [parts[0], parts[1], parts[2], parts[3] ?? 1];
     };
     // like parseColor, but returns null instead of defaulting to black when
-    // the value isn't a solid rgb()/rgba() color — e.g. SVG paint keywords
+    // the value isn't a solid rgb()/rgba() color - e.g. SVG paint keywords
     // such as "none"/"context-fill", or a gradient/pattern reference like
     // 'url("#grad")'. Callers should fall back to another source of truth
     // rather than trust a fabricated black
@@ -204,7 +204,7 @@ async function prepareTextElements(session) {
       if (fg[3] <= 0.01) continue;
 
       // a transition would otherwise animate the temporary paint overrides
-      // instead of applying it instantly — the screenshot taken right after
+      // instead of applying it instantly - the screenshot taken right after
       // can catch a partially-transparent glyph mid-transition instead of a
       // fully hidden one, contaminating the background sample
       const overrides = [
@@ -263,11 +263,11 @@ async function restoreTextElements(session) {
 // ─── Pixel sampling + WCAG math ──────────────────────────────────────────────
 
 // Samples the REAL composited background directly inside each candidate's
-// own bbox, from a screenshot taken with every candidate's text hidden —
+// own bbox, from a screenshot taken with every candidate's text hidden -
 // robust to panel edges, backdrop-filter blur, and translucent decoration
 // in ways a proximity-based ring outside the bbox isn't. Mirrors
 // packages/cli/src/commands/contrast-sample.ts's computeSampleRect /
-// sampleGridPoints (kept in sync, not imported — this script bootstraps
+// sampleGridPoints (kept in sync, not imported - this script bootstraps
 // npm-published packages and can't reach into the cli package's sources)
 async function measureAgainstHiddenTextFrame(hiddenImgBase64, candidates) {
   const raw = Buffer.from(hiddenImgBase64, "base64");

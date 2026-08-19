@@ -6,11 +6,11 @@ Clips are timed children of the composition root. Tracks are a temporal-overlap 
 
 A clip is any DOM element with `data-start`, `data-duration` (where required), and `data-track-index`. Common kinds:
 
-- **Visual `<div>` clips** — scenes, cards, overlays. Always require `data-duration`.
-- **Sub-composition hosts** — `<div>` with `data-composition-src`. Always require `data-duration`.
-- **Video clips** — `<video>` with `muted` and `playsinline`. Duration can default to media length.
-- **Audio clips** — `<audio>`. Duration can default to media length.
-- **Image clips** — `<img>`. Always require `data-duration`.
+- **Visual `<div>` clips** - scenes, cards, overlays. Always require `data-duration`.
+- **Sub-composition hosts** - `<div>` with `data-composition-src`. Always require `data-duration`.
+- **Video clips** - `<video>` with `muted` and `playsinline`. Duration can default to media length.
+- **Audio clips** - `<audio>`. Duration can default to media length.
+- **Image clips** - `<img>`. Always require `data-duration`.
 
 Add `class="clip"` to authored visual clips so tooling and examples can find them.
 
@@ -21,21 +21,21 @@ Add `class="clip"` to authored visual clips so tooling and examples can find the
 - **Two clips on the same `data-track-index`** must NOT overlap in time. `hyperframes lint` flags this.
 - **Visual layering (front/back)** is controlled by CSS `z-index`, not by track index.
 
-A clip on track `5` is not "above" a clip on track `1` — it's just on a different audio/visual lane in time. Use CSS for layering, tracks for sequencing.
+A clip on track `5` is not "above" a clip on track `1` - it's just on a different audio/visual lane in time. Use CSS for layering, tracks for sequencing.
 
 ## Picking a Track Index
 
 There's no fixed convention, but common patterns:
 
-- **Track 0** — base video (e.g. an A-roll).
-- **Track 1+** — visual scenes, overlays, captions.
-- **Higher tracks (e.g. 10+)** — audio clips, separated from visual tracks to keep linting clear.
+- **Track 0** - base video (e.g. an A-roll).
+- **Track 1+** - visual scenes, overlays, captions.
+- **Higher tracks (e.g. 10+)** - audio clips, separated from visual tracks to keep linting clear.
 
 When adding a new clip to an existing composition:
 
 1. Find an existing track that has no overlap with your new clip's `[data-start, data-start + data-duration)` range.
 2. Or pick a fresh track index.
-3. Never overlap two clips on the same track — the linter will fail and the render is undefined.
+3. Never overlap two clips on the same track - the linter will fail and the render is undefined.
 
 ## Clip Time Inside the Composition
 
@@ -68,9 +68,9 @@ When adding a new clip to an existing composition:
 
 Rules:
 
-- References resolve **inside the same composition only** — cannot reach into a parent or sibling sub-composition.
+- References resolve **inside the same composition only** - cannot reach into a parent or sibling sub-composition.
 - The referenced clip must have a **known duration** (explicit `data-duration` or inferred from media). Otherwise the reference cannot resolve.
-- **No circular references** — `A → B → A` is rejected. Cycles are detected and error out.
+- **No circular references** - `A → B → A` is rejected. Cycles are detected and error out.
 - A value that parses as a number is always treated as absolute seconds. Otherwise the resolver expects `<id>`, `<id> + <number>`, or `<id> - <number>` (whitespace optional).
 - References can chain (`A → B → C`). Keep chains under 3-4 levels for readability.
 - Negative offsets create overlap; overlapping clips must be on **different tracks**, same-track overlap is rejected.

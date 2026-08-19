@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene 01 — Counting Icon Burst</title>
+    <title>Scene 01 - Counting Icon Burst</title>
 
     <!--
       HyperFrames composition.tsx.
@@ -90,7 +90,7 @@
       }
 
       /* ============================================================
-         ICONS — two nested wrappers per icon.
+         ICONS - two nested wrappers per icon.
          .icon-pos is positioned at TARGET; GSAP x/y shifts toward center.
          .icon-entry tweens scale/opacity/rotation.
          ============================================================ */
@@ -119,7 +119,7 @@
         display: block;
       }
 
-      /* SVG inner elements — class hooks for GSAP tweens */
+      /* SVG inner elements - class hooks for GSAP tweens */
       .clock-hand-min {
         transform-box: view-box;
       }
@@ -159,7 +159,7 @@
         opacity: 0; /* GSAP entry fades in */
       }
       .counter-number {
-        font-size: 806px; /* W × 0.42 — final size, GSAP scales from 0.20W */
+        font-size: 806px; /* W × 0.42 - final size, GSAP scales from 0.20W */
         font-weight: 900;
         letter-spacing: -0.04em;
         line-height: 0.9;
@@ -379,14 +379,14 @@
       const CENTER_Y = H / 2 - ICON_SIZE / 2; // 450
 
       const TIMING = {
-        // Phase 2 — icon entries (staggered)
+        // Phase 2 - icon entries (staggered)
         clockEntryAt: 0.17,
         scissorsEntryAt: 0.3,
         videoEntryAt: 0.43,
         playEntryAt: 0.57,
         entryDur: 0.55,
 
-        // Phase 3 — count + expansion (shared start, dur, ease)
+        // Phase 3 - count + expansion (shared start, dur, ease)
         countAt: 0.47,
         countDur: 1.0,
         startOffset: 0.4,
@@ -399,7 +399,7 @@
         percentEntryAt: 1.27,
         percentEntryDur: 0.55,
 
-        // Phase 4 — camera
+        // Phase 4 - camera
         cameraFocusAt: 0.5,
         cameraFocusDur: 1.83,
         cameraPushAt: 2.33,
@@ -545,7 +545,7 @@
       /* ----------------------------------------------------------------
          PHASE 3: Counter (with 3D entry) + expansion
          ---------------------------------------------------------------- */
-      // Counter 3D entry — translateZ + rotateY + scale + opacity, in parallel.
+      // Counter 3D entry - translateZ + rotateY + scale + opacity, in parallel.
       tl.fromTo(
         "#counter-3d",
         { rotationY: 10, scale: 0.7, z: -300, opacity: 0 },
@@ -597,7 +597,7 @@
         TIMING.percentEntryAt,
       );
 
-      // Icon expansion — per-icon, same start/dur/ease as counter for lock-step sync.
+      // Icon expansion - per-icon, same start/dur/ease as counter for lock-step sync.
       ICONS.forEach(({ sel }) => {
         tl.to(
           sel,
@@ -678,13 +678,13 @@
           onUpdate: function () {
             const t = tl.time();
 
-            // Scissors — symmetric oscillation, anchored to scissors delay
+            // Scissors - symmetric oscillation, anchored to scissors delay
             const sciT = t - TIMING.scissorsEntryAt;
             const sciAngle = sciT > 0 ? Math.sin(sciT * SCISSOR_SPEED) * SCISSOR_AMP : 0;
             gsap.set(scissorUpper, { rotation: sciAngle });
             gsap.set(scissorLower, { rotation: -sciAngle });
 
-            // Cutting line — linear dash flow (negative = leftward drift)
+            // Cutting line - linear dash flow (negative = leftward drift)
             const cutT = t - TIMING.scissorsEntryAt;
             if (cutT > 0) {
               gsap.set(cuttingLine, {
@@ -692,7 +692,7 @@
               });
             }
 
-            // Record dot — phase-offset opacity and scale
+            // Record dot - phase-offset opacity and scale
             const recT = t - TIMING.videoEntryAt;
             if (recT > 0) {
               const recOpacity =
@@ -701,7 +701,7 @@
               gsap.set(recordDot, { opacity: recOpacity, scale: recScale });
             }
 
-            // Play triangle — gentle scale pulse
+            // Play triangle - gentle scale pulse
             const playT = t - TIMING.playEntryAt;
             if (playT > 0) {
               const playScale = 1 + Math.sin(playT * PLAY_PULSE_SPEED) * PLAY_PULSE_AMP;
@@ -712,7 +712,7 @@
         0,
       );
 
-      /* Clock minute hand — linear rotation, anchored to clock entry */
+      /* Clock minute hand - linear rotation, anchored to clock entry */
       tl.fromTo(
         ".clock-hand-min",
         { rotation: 0, svgOrigin: "12 12" },

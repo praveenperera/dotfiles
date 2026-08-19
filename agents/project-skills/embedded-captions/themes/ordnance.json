@@ -1,6 +1,6 @@
 {
   "name": "ordnance",
-  "voice": "military marking system — everything has mass. Body words STAMP in and cool from hot amber to bone; the apex is a sliced stencil stamp that detonates: sheared slices snap into register, paint cools, positioning bars + designation tag deploy, the room reacts.",
+  "voice": "military marking system - everything has mass. Body words STAMP in and cool from hot amber to bone; the apex is a sliced stencil stamp that detonates: sheared slices snap into register, paint cools, positioning bars + designation tag deploy, the room reacts.",
   "when": "punchy announcements, hype, product drops, sports, anything that should hit. Loud register. Needs a scene that tolerates a charge-dim (any luma).",
   "register": "loud",
   "fonts": { "body": "Anton", "hero": "Anton", "tag": "Space Grotesk" },

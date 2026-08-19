@@ -1,10 +1,10 @@
-# Motion Vocabulary — named word-entry moves
+# Motion Vocabulary - named word-entry moves
 
 10 motion primitives the skill uses. Each has a specific timing + easing + situational fit. Agent picks by **content tone**, not default to one.
 
-**Easing philosophy:** `cubic-bezier(.2,.7,.2,1)` is the "considered confident" default. `linear` is almost always wrong. Back-easing (elastic) is for playful content only — never documentary.
+**Easing philosophy:** `cubic-bezier(.2,.7,.2,1)` is the "considered confident" default. `linear` is almost always wrong. Back-easing (elastic) is for playful content only - never documentary.
 
-**Exit rules:** Default exit is the same tween reversed at 60% duration. Never exit with a different motion than entry unless doing a rhetorical pivot. Never fade out during speech — only during the gap between phrases.
+**Exit rules:** Default exit is the same tween reversed at 60% duration. Never exit with a different motion than entry unless doing a rhetorical pivot. Never fade out during speech - only during the gap between phrases.
 
 ---
 
@@ -75,7 +75,7 @@ Per-word, 200ms total: two 1px lines converge on word center (linear 150ms), the
 
 ### 9. cascade
 
-Each word from alternating direction: L, R, L, R. `translateX: ±40→0`, ease-out 300ms. **Rhythm-break move** — use sparingly, once per 30s max.
+Each word from alternating direction: L, R, L, R. `translateX: ±40→0`, ease-out 300ms. **Rhythm-break move** - use sparingly, once per 30s max.
 
 ### 10. burn-in
 

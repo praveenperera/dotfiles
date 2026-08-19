@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// validate-plan.mjs — machine-check STORYBOARD.md against the audiomap + template
+// validate-plan.mjs - machine-check STORYBOARD.md against the audiomap + template
 // catalog at Step 3, before any frame is built. Runs on the PLAN (frame files do
 // not exist yet), so it checks fields, not on-disk html.
 //
 // HARD (exit 1): frontmatter duration_s == audiomap duration; >=1 frame; each frame
 //   has src + positive duration; frames tile the track gap-free (sum == duration_s);
 //   every frame has >=1 filled group (a frame whose `### Groups` is still
-//   `TBD (Step 3)`/empty is a Step-2 skeleton, not an approved plan — fail it so a
+//   `TBD (Step 3)`/empty is a Step-2 skeleton, not an approved plan - fail it so a
 //   skipped Step 3 can never reach the build step).
-// WARN (exit 0): best-effort group checks — each group exactly one of
+// WARN (exit 0): best-effort group checks - each group exactly one of
 //   template/free_design/asset; a template id exists under the --templates dir;
 //   phrase_flow frame has no beat_cut asset treatment.
 //
@@ -52,7 +52,7 @@ if (existsSync(audiomapPath)) {
     warns.push(`audiomap parse failed: ${e.message}`);
   }
 } else {
-  warns.push(`audiomap not found at ${audiomapPath} — skipping duration cross-check`);
+  warns.push(`audiomap not found at ${audiomapPath} - skipping duration cross-check`);
 }
 
 // ---------- frontmatter duration_s ----------
@@ -63,7 +63,7 @@ else if (audioDur != null && Math.abs(declaredDur - audioDur) > 0.05)
 
 // ---------- frames (hard) ----------
 const frames = manifest.frames;
-if (frames.length === 0) errors.push(`no frames (no \`## Frame N — <id>\` headings found)`);
+if (frames.length === 0) errors.push(`no frames (no \`## Frame N - <id>\` headings found)`);
 
 let sum = 0;
 for (const f of frames) {
@@ -77,12 +77,12 @@ sum = r3(sum);
 const tileTarget = Number.isFinite(declaredDur) ? declaredDur : audioDur;
 if (tileTarget != null && Math.abs(sum - tileTarget) > 0.1)
   errors.push(
-    `frame durations sum to ${sum}s but the track is ${tileTarget}s — frames must tile it gap-free`,
+    `frame durations sum to ${sum}s but the track is ${tileTarget}s - frames must tile it gap-free`,
   );
 
-// ---------- group checks (warns) — parse RAW text ----------
+// ---------- group checks (warns) - parse RAW text ----------
 const FRAME_HEAD = /^##\s+(?:frame|scene|section)\b/i;
-const GROUP_HEAD = /^\s*[-*]\s*\*\*\s*(\w+)\s*\*\*\s*[—:-]\s*(template|free_design|asset)\b(.*)$/i;
+const GROUP_HEAD = /^\s*[-*]\s*\*\*\s*(\w+)\s*\*\*\s*[ - :-]\s*(template|free_design|asset)\b(.*)$/i;
 const templateExistsCache = new Map();
 function templateExists(id) {
   if (templateExistsCache.has(id)) return templateExistsCache.get(id);
@@ -118,17 +118,17 @@ for (const ln of raw.split(/\r?\n/)) {
 }
 
 // HARD: every frame needs >=1 filled group. A frame with no parseable group head
-// is still a Step-2 skeleton (`### Groups` = `TBD (Step 3)`/empty) — erroring here
+// is still a Step-2 skeleton (`### Groups` = `TBD (Step 3)`/empty) - erroring here
 // is what stops a skipped Step 3 from reaching the build step.
 const framesWithGroups = new Set(blocks.map((b) => b.frameLabel));
 for (const f of frames) {
   const title = String(f.title ?? "").trim();
-  const lbl = `Frame ${f.number ?? ""} — ${f.title ?? f.index}`.replace(/\s+—\s+$/, "");
+  const lbl = `Frame ${f.number ?? ""} - ${f.title ?? f.index}`.replace(/\s+ - \s+$/, "");
   const hasGroup = title !== "" && [...framesWithGroups].some((s) => s.includes(title));
   if (!hasGroup) {
     errors.push(
-      `${lbl}: no filled groups — still a Step-2 skeleton (\`### Groups\` is TBD/empty). ` +
-        `Run Step 3: fill its groups (\`- **gN** — template|free_design|asset …\`) before building.`,
+      `${lbl}: no filled groups - still a Step-2 skeleton (\`### Groups\` is TBD/empty). ` +
+        `Run Step 3: fill its groups (\`- **gN** - template|free_design|asset …\`) before building.`,
     );
   }
 }
@@ -145,7 +145,7 @@ for (const b of blocks) {
   }
   if (b.kind === "asset" && b.pacing === "phrase_flow" && /beat_cut/.test(blockText))
     warns.push(
-      `${gid}: beat_cut asset treatment on a phrase_flow frame — use ken_burns/crossfade instead`,
+      `${gid}: beat_cut asset treatment on a phrase_flow frame - use ken_burns/crossfade instead`,
     );
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * preview-frames.cjs — APPROXIMATE final frames in seconds, without rendering.
+ * preview-frames.cjs - APPROXIMATE final frames in seconds, without rendering.
  *
  *   node preview-frames.cjs <project-dir> [t1 t2 ...]
  *
@@ -12,7 +12,7 @@
  * a multi-minute render. Writes <project>/preview/t<t>.png + a contact sheet
  * preview/sheet.png.
  *
- * Use it BEFORE rendering: eyeball placement, occlusion, washout, text-on-text —
+ * Use it BEFORE rendering: eyeball placement, occlusion, washout, text-on-text -
  * the failure classes the geometric gates can't judge. The QA checklist lives in
  * SKILL.md § Visual QA. (Video elements show poster/first-frame in the screenshot;
  * the REAL a-roll pixels come from frames_bg, so previews stay accurate.)
@@ -67,7 +67,7 @@ for (const r of HF_ROOTS) {
   }
 }
 if (!puppeteer || !sharp) {
-  console.error("[preview] need puppeteer+sharp — set HYPERFRAMES_ROOT");
+  console.error("[preview] need puppeteer+sharp - set HYPERFRAMES_ROOT");
   process.exit(0);
 }
 
@@ -78,14 +78,14 @@ async function shotAt(browser, file, W, H, t) {
     // Serve the page's own CDN <script src=gsap> request from the local bundle
     // (offline-safe) instead of injecting gsap at document-start: a document-start
     // evaluation runs while document.head is still null, and gsap's init then
-    // throws "appendChild of null" — which killed previews for theme projects.
+    // throws "appendChild of null" - which killed previews for theme projects.
     await page.setRequestInterception(true);
     page.on("request", (req) => {
       const u = req.url();
       if (req.resourceType() === "script" && /gsap/i.test(u) && /^https?:/i.test(u)) {
         if (gsapSource)
           req.respond({ status: 200, contentType: "application/javascript", body: gsapSource });
-        else req.continue(); // no local bundle — let the CDN load (online machines)
+        else req.continue(); // no local bundle - let the CDN load (online machines)
       } else if (req.resourceType() === "media")
         req.abort(); // a-roll pixels come from frames_bg
       else req.continue();
@@ -133,7 +133,7 @@ async function main() {
   }
   const idx = path.join(project, "index.html");
   if (!fs.existsSync(idx)) {
-    console.error("[preview] no index.html — compile first");
+    console.error("[preview] no index.html - compile first");
     process.exit(1);
   }
   const railP = path.join(project, "rail.html");
@@ -160,7 +160,7 @@ async function main() {
     try {
       const plan = JSON.parse(fs.readFileSync(path.join(project, "plan.json"), "utf8"));
       // heroes get 2 samples each (entrance + hold); every OTHER group gets at least
-      // a shot at one midpoint — the old 2-per-group list truncated at 12 and silently
+      // a shot at one midpoint - the old 2-per-group list truncated at 12 and silently
       // dropped whole narration blocks from the sheet (cold-start agents missed bugs there)
       const gs = plan.groups || [];
       const heroes = gs.filter((g) => g.hero === true),

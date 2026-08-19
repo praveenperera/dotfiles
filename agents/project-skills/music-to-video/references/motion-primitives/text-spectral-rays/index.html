@@ -107,7 +107,7 @@
           preserveDrawingBuffer: true,
         });
 
-        // animated state — GSAP tweens these; mouse (the light cursor) is derived
+        // animated state - GSAP tweens these; mouse (the light cursor) is derived
         const state = { progress: 0, effectMix: 0 };
         const mouse = { x: 0, y: H * 0.5 };
         const speed = Number(vars.sweepSpeed) || 1;
@@ -158,7 +158,7 @@
         ].join("\n");
 
         // Volumetric spectral light-rays cast by the text mask toward a moving
-        // light cursor — ported from the vfx-text-cursor golden sample, made
+        // light cursor - ported from the vfx-text-cursor golden sample, made
         // generic (reads any text mask/colour). All state from uniforms.
         const FRAG = [
           "precision highp float;",
@@ -296,7 +296,7 @@
         }
         render(); // initial frame (seek-to-0 correctness)
 
-        // All repaint via the timeline's onUpdate — fully seek-safe, no rAF.
+        // All repaint via the timeline's onUpdate - fully seek-safe, no rAF.
         tl.eventCallback("onUpdate", render);
 
         // effect punches in, the light cursor sweeps L→R across the wordmark,

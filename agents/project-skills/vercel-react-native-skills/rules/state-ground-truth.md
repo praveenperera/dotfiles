@@ -7,7 +7,7 @@ tags: state, derived-state, reanimated, hooks
 
 ## State Must Represent Ground Truth
 
-State variables—both React `useState` and Reanimated shared values—should
+State variables - both React `useState` and Reanimated shared values - should
 represent the actual state of something (e.g., `pressed`, `progress`, `isOpen`),
 not derived visual values (e.g., `scale`, `opacity`, `translateY`). Derive
 visual values from state using computation or interpolation.
@@ -53,12 +53,12 @@ const animatedStyle = useAnimatedStyle(() => ({
 State variables should represent real "state", not necessarily a desired end
 result.
 
-1. **Single source of truth** — The state (`pressed`) describes what's
+1. **Single source of truth** - The state (`pressed`) describes what's
    happening; visuals are derived
-2. **Easier to extend** — Adding opacity, rotation, or other effects just
+2. **Easier to extend** - Adding opacity, rotation, or other effects just
    requires more interpolations from the same state
-3. **Debugging** — Inspecting `pressed = 1` is clearer than `scale = 0.95`
-4. **Reusable logic** — The same `pressed` value can drive multiple visual
+3. **Debugging** - Inspecting `pressed = 1` is clearer than `scale = 0.95`
+4. **Reusable logic** - The same `pressed` value can drive multiple visual
    properties
 
 **Same principle for React state:**

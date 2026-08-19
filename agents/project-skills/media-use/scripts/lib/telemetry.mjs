@@ -1,10 +1,10 @@
 // Opt-out usage tracking for media-use, sharing the hyperframes CLI/studio
 // identity (packages/cli/src/telemetry): the same install id from
 // ~/.hyperframes/config.json, plus a $identify to the HeyGen account on sign-in,
-// so a person is one PostHog profile across surfaces — not a fresh id per tool.
+// so a person is one PostHog profile across surfaces - not a fresh id per tool.
 // Not fully anonymous by design (it must dedupe): pseudonymous before sign-in,
-// account-linked after. Event PROPERTIES stay coarse — media TYPE, resolution
-// SOURCE, winning PROVIDER — never the intent text, file names, or paths.
+// account-linked after. Event PROPERTIES stay coarse - media TYPE, resolution
+// SOURCE, winning PROVIDER - never the intent text, file names, or paths.
 //
 // Same public PostHog project key as the CLI (a write-only ingestion key, safe
 // to ship), same opt-outs (DO_NOT_TRACK / HYPERFRAMES_NO_TELEMETRY / CI / dev),
@@ -33,10 +33,10 @@ export function optedOut() {
 }
 
 // CLI + studio share one install identity in ~/.hyperframes/config.json
-// (packages/cli/src/telemetry/config.ts — same path, same `anonymousId` /
+// (packages/cli/src/telemetry/config.ts - same path, same `anonymousId` /
 // `telemetryNoticeShown` fields). Read and write that same file so media-use is
 // the same PostHog person and shows the notice once per person, not per tool.
-// Computed per call (not a module const) so it honors HOME at runtime — tests
+// Computed per call (not a module const) so it honors HOME at runtime - tests
 // sandbox HOME, and os.homedir() re-reads it each call.
 function sharedConfigPath() {
   return join(homedir(), ".hyperframes", "config.json");
@@ -63,7 +63,7 @@ function writeSharedConfig(config) {
 
 // Adopt a pre-existing media-use-only id (~/.media/anon-id from before this
 // change) so upgraders keep their PostHog persona instead of resetting to a new
-// one — otherwise cross-surface continuity would start over on upgrade.
+// one - otherwise cross-surface continuity would start over on upgrade.
 function legacyMediaAnonId() {
   try {
     const file = join(homedir(), ".media", "anon-id");

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// build-frame.mjs — Step 2 design system in ONE command. The LLM only chooses a
+// build-frame.mjs - Step 2 design system in ONE command. The LLM only chooses a
 // preset; this does the deterministic rest: copy the preset's FRAME.md → frame.md,
 // remix its colors/typography onto the project's brand tokens, copy the preset's
 // caption-skin.html, and self-validate. "Strict on brand" is deterministic, so it's
@@ -8,15 +8,15 @@
 //   node build-frame.mjs --preset capsule --hyperframes .
 //     [--tokens capture/extracted/tokens.json]  [--preset-dir <abs path to frame-presets>]
 //
-// Remix rule — ONLY `colors:` values and `typography:` fontFamily change; keys,
+// Remix rule - ONLY `colors:` values and `typography:` fontFamily change; keys,
 // structure, geometry, and components are untouched:
-//   colors — map brand tokens onto the preset's keys BY ROLE: the ink-role key takes
+//   colors - map brand tokens onto the preset's keys BY ROLE: the ink-role key takes
 //            the brand ink (darkest/ink-named), the canvas-role key takes the brand
 //            canvas (lightest), and every other color is repainted with the nearest
 //            brand accent's hue+saturation while KEEPING its own lightness, so tint
 //            families (sun / sun-soft / haze) stay a family. Empty brand colors → the
 //            preset palette is kept (it is already a complete, good design).
-//   fonts  — the preset's display family → the brand display font, its body family →
+//   fonts - the preset's display family → the brand display font, its body family →
 //            the brand body font, wherever they appear. Empty brand fonts → kept.
 
 import {
@@ -141,7 +141,7 @@ function remapRgbaToAccent(val, brAccent, brAccent2, prAccentHsl, prAccent2Hsl) 
     g = +m[2],
     b = +m[3],
     a = m[4];
-  if (Math.max(r, g, b) - Math.min(r, g, b) < 16) return null; // neutral overlay — keep as-is
+  if (Math.max(r, g, b) - Math.min(r, g, b) < 16) return null; // neutral overlay - keep as-is
   const src = rgbToHsl(r, g, b);
   const useSecond =
     brAccent2 &&
@@ -161,7 +161,7 @@ let brandColors = [];
 let brandFonts = [];
 let brandFontWeights = []; // weights the brand text font actually ships (tokens fonts[].weights)
 let brandColorStats = []; // rich per-color usage stats (areaBg / interactiveBg / textCount …)
-// Icon/glyph fonts capture surfaces as "fonts" — they are never the brand text face
+// Icon/glyph fonts capture surfaces as "fonts" - they are never the brand text face
 // (webflow-icons, Font Awesome, icomoon …) and must not become display/body or contribute weights.
 const isIconFont = (name) =>
   /(?:^|[\s_-])icons?(?:[\s_-]|$)|icomoon|font\s*-?awesome|glyphicons?|material\s*icons|feather\s*icons/i.test(
@@ -180,7 +180,7 @@ if (existsSync(tokensPath)) {
       .map((f) => String(f).split(",")[0].replace(/['"]/g, "").trim())
       .filter(Boolean)
       .filter((f) => !isIconFont(f));
-    // Union of the (non-icon) brand fonts' available weights — used to clamp the preset's
+    // Union of the (non-icon) brand fonts' available weights - used to clamp the preset's
     // type ramp so a font shipping only 400/500 never faux-bolds a 600/700 heading.
     brandFontWeights = [
       ...new Set(
@@ -206,7 +206,7 @@ if (brandColors.length && presetColors.length) {
   const pr = semanticColors(presetColors);
   // Brand roles: prefer the function-based reading of capture colorStats (canvas =
   // largest background, accent = top interactive bg, ink = dominant contrasting text).
-  // Fall back to the legacy luminance/chroma heuristic only when stats are absent —
+  // Fall back to the legacy luminance/chroma heuristic only when stats are absent -
   // but pick the accent via pickAccent either way so a UA-default link color never wins.
   const br =
     brandRolesFromStats(brandColorStats, brandColors) ??
@@ -224,11 +224,11 @@ if (brandColors.length && presetColors.length) {
   if (!br.accent) die("accent 选取失败：品牌色里没有可用的强调色");
   if (chroma(br.accent) <= 40) {
     console.warn(
-      `  ⚠ accent ${br.accent} 彩度很低 (${chroma(br.accent)}) — 确认这是品牌色而非中性/默认色`,
+      `  ⚠ accent ${br.accent} 彩度很低 (${chroma(br.accent)}) - 确认这是品牌色而非中性/默认色`,
     );
   }
   // Map by LUMINANCE POLARITY. The preset's darker value takes the brand's darker value and
-  // the lighter takes the lighter — UNLESS the brand's GROUND polarity differs from the
+  // the lighter takes the lighter - UNLESS the brand's GROUND polarity differs from the
   // preset's. Every shipped preset is light-ground; a dark-mode brand (Linear, Vercel,
   // Raycast…) has its canvas darker than its ink (colorStats already resolved the real
   // ground as the largest-area background). On a polarity MISMATCH we INVERT the mapping so a
@@ -255,7 +255,7 @@ if (brandColors.length && presetColors.length) {
     if (val === prDark) next = mapDark;
     else if (val === prLight) next = mapLight;
     else if (STATUS_ROLE_KEY.test(key))
-      // semantic status colors (green/red …) — the HUE carries the meaning; never repaint.
+      // semantic status colors (green/red …) - the HUE carries the meaning; never repaint.
       // MUST precede the accent checks: a preset's red "negative" is often its 2nd-most-chromatic
       // color and would otherwise be claimed as accent2 and recolored to the brand hue.
       next = val;
@@ -269,7 +269,7 @@ if (brandColors.length && presetColors.length) {
       next = remapRgbaToAccent(val, br.accent, br.accent2, prAccentHsl, prAccent2Hsl) ?? val;
     } else if (chroma(val) < 16) {
       // NEUTRAL source (grey text-ladder, hairline borders) → keep it NEUTRAL. Apply at most a
-      // whisper of the brand hue (sat ≤ 0.06); never the accent's full saturation — that is what
+      // whisper of the brand hue (sat ≤ 0.06); never the accent's full saturation - that is what
       // turned the grey ladder into saturated blue.
       const bh = hexToHsl(br.accent);
       next = bh ? hslToHex(bh.h, Math.min(ph.s, 0.06), flipL(ph.l)) : val;
@@ -311,8 +311,8 @@ if (brandColors.length && presetColors.length) {
 } else {
   summary.push(
     brandColors.length
-      ? "colors: preset has no parseable colors — kept"
-      : "colors: no brand colors — preset palette kept",
+      ? "colors: preset has no parseable colors - kept"
+      : "colors: no brand colors - preset palette kept",
   );
 }
 
@@ -323,7 +323,7 @@ if (brandFonts.length) {
   const pDisplay = strip(pf.display);
   const pBody = strip(pf.body);
   const pMono = strip(pf.mono);
-  // A monospace brand face is for code / labels / chrome — never the reading display or body.
+  // A monospace brand face is for code / labels / chrome - never the reading display or body.
   // Split the brand fonts: the primary NON-mono family carries display AND body (the common
   // single-sans case, e.g. Inter for everything), and a captured mono (Berkeley Mono,
   // JetBrains Mono…) is routed onto the preset's mono role instead of turning the body
@@ -339,8 +339,8 @@ if (brandFonts.length) {
   const bBody = nonMono[0] ?? brandFonts[0];
   const bMono = monoFonts[0] ?? null;
   const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // Replace the preset family as a WHOLE WORD/PHRASE everywhere — frontmatter values,
-  // component strings like "Space Grotesk 600", AND prose — case-sensitive with word
+  // Replace the preset family as a WHOLE WORD/PHRASE everywhere - frontmatter values,
+  // component strings like "Space Grotesk 600", AND prose - case-sensitive with word
   // boundaries so a single-word family ("Inter") can never corrupt a substring
   // ("interactive"). Quote-exact replace alone missed names baked into longer strings + prose.
   const swapFamily = (from, to) => {
@@ -349,14 +349,14 @@ if (brandFonts.length) {
   swapFamily(pDisplay, bDisplay);
   if (pBody !== pDisplay) swapFamily(pBody, bBody);
   // route the brand mono onto the preset's mono role (only if the preset has a DISTINCT mono
-  // family — never collapse body/display into mono)
+  // family - never collapse body/display into mono)
   if (bMono && pMono && pMono !== pBody && pMono !== pDisplay) swapFamily(pMono, bMono);
   summary.push(
     `fonts: display ${pDisplay}→${bDisplay}, body ${pBody}→${bBody}` +
       (bMono && pMono && pMono !== pBody && pMono !== pDisplay ? `, mono ${pMono}→${bMono}` : ""),
   );
 } else {
-  summary.push("fonts: no brand fonts — preset fonts kept");
+  summary.push("fonts: no brand fonts - preset fonts kept");
 }
 
 // ── cap type weights to the brand font's available faces ──────────────────────
@@ -407,23 +407,23 @@ if (brandFonts.length && brandFontWeights.length) {
 // ── brand-adaptation note ─────────────────────────────────────────────────────
 // The remix fixes the NORMATIVE frontmatter, but the preset's PROSE still carries its
 // original weight ranges / color-names. Prepend a short "frontmatter is truth" header so a
-// reader (or frame worker) interprets any lingering preset prose THROUGH the brand values —
+// reader (or frame worker) interprets any lingering preset prose THROUGH the brand values -
 // instead of fragile per-sentence prose surgery.
 if (brandFonts.length || (brandColors.length && presetColors.length)) {
   const bD = brandFonts[0];
   const bB = brandFonts[1] ?? brandFonts[0];
   const note =
-    `## Brand adaptation (READ FIRST — the frontmatter is the source of truth)\n\n` +
+    `## Brand adaptation (READ FIRST - the frontmatter is the source of truth)\n\n` +
     `This is the **${presetName}** preset remixed onto the captured brand. The YAML frontmatter above ` +
-    `(colors · typography · components) is **normative and already correct — use it verbatim.** The prose ` +
+    `(colors · typography · components) is **normative and already correct - use it verbatim.** The prose ` +
     `below is the ORIGINAL preset's intent; read it THROUGH the frontmatter:\n\n` +
     (brandFonts.length
-      ? `- **Fonts** — already set to **${bD}** (display) / **${bB}** (body); ignore any preset font name lingering in prose.\n`
+      ? `- **Fonts** - already set to **${bD}** (display) / **${bB}** (body); ignore any preset font name lingering in prose.\n`
       : "") +
     (brandFontWeights.length
-      ? `- **Weights** — the brand font ships \`{${brandFontWeights.join(", ")}}\` only; every weight is clamped to these — ignore higher preset weights (e.g. 600/700) in prose.\n`
+      ? `- **Weights** - the brand font ships \`{${brandFontWeights.join(", ")}}\` only; every weight is clamped to these - ignore higher preset weights (e.g. 600/700) in prose.\n`
       : "") +
-    `- **Colors** — use the frontmatter hex; preset color NAMES in prose (e.g. "cobalt", "cream") mean the remapped brand values.\n`;
+    `- **Colors** - use the frontmatter hex; preset color NAMES in prose (e.g. "cobalt", "cream") mean the remapped brand values.\n`;
   if (/^# .*$/m.test(md)) md = md.replace(/^# .*$/m, (m) => `${m}\n\n${note}`);
   else md = `${note}\n${md}`;
   summary.push("brand-adaptation note prepended");
@@ -482,7 +482,7 @@ if (brandFonts.length) {
   if (faces.length) {
     md +=
       `\n\n## Font loading (auto-generated)\n\n` +
-      `The brand font ships as local files in \`assets/fonts/\` — do NOT link Google Fonts for it. ` +
+      `The brand font ships as local files in \`assets/fonts/\` - do NOT link Google Fonts for it. ` +
       `Paste this \`<style>\` into every frame's \`<head>\`/\`<template>\` (captions use the same files) ` +
       `so \`font-family\` resolves in preview, snapshot, and render alike:\n\n` +
       "```html\n<style>\n" +
@@ -511,23 +511,23 @@ if (existsSync(presetSkin)) {
 // ── self-validate ─────────────────────────────────────────────────────────────
 const outColors = parseColors(md);
 if (outColors.length !== presetColors.length) {
-  die(`color keys changed (${presetColors.length}→${outColors.length}) — keys must be preserved`);
+  die(`color keys changed (${presetColors.length}→${outColors.length}) - keys must be preserved`);
 }
 const outRoles = semanticColors(outColors);
 const li = lum(outRoles.ink),
   lc = lum(outRoles.canvas);
-// ink (type) and canvas (ground) must differ enough to READ — in EITHER direction. A
+// ink (type) and canvas (ground) must differ enough to READ - in EITHER direction. A
 // light-mode spec has ink darker than canvas; a dark-mode spec (the polarity flip above)
 // the reverse. Assert luminance SEPARATION, not a fixed polarity.
 if (li != null && lc != null && Math.abs(li - lc) < 40) {
   die(
-    `ink (${outRoles.ink}, lum ${li.toFixed(0)}) and canvas (${outRoles.canvas}, lum ${lc.toFixed(0)}) lack contrast — bad brand mapping`,
+    `ink (${outRoles.ink}, lum ${li.toFixed(0)}) and canvas (${outRoles.canvas}, lum ${lc.toFixed(0)}) lack contrast - bad brand mapping`,
   );
 }
 
 console.log(`✓ build-frame: ${presetName} → ${framePath}`);
 for (const s of summary) console.log(`  ${s}`);
 console.log(
-  `  .hyperframes/caption-skin.html: ${skinCopied ? "copied" : "preset ships none — captions will use the default pill"}`,
+  `  .hyperframes/caption-skin.html: ${skinCopied ? "copied" : "preset ships none - captions will use the default pill"}`,
 );
 console.log(`  self-check: keys preserved, ink/canvas contrast ok ✓`);

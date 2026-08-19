@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene — HyperFrames Workflow Approve & Press</title>
+    <title>Scene - HyperFrames Workflow Approve & Press</title>
 
     <!--
       Blueprint: workflow-approve-press
@@ -24,7 +24,7 @@
         4.72 – 5.22s   Render confirmed: step 3 completes, color shifts to success green + checkmark pop
 
       Asset placeholders:
-        ./assets/editor-demo.mp4  — center product demo video. Replace with a
+        ./assets/editor-demo.mp4 - center product demo video. Replace with a
                                     real export of the AI-editor flow. The
                                     composition falls back to a CSS-mockup of
                                     an editor timeline so it renders without
@@ -35,7 +35,7 @@
 
     <style>
       :root {
-        /* Palette — port of the the source COLORS / TYPOGRAPHY constants */
+        /* Palette - port of the the source COLORS / TYPOGRAPHY constants */
         --text-primary: #ffffff;
         --text-secondary: #cbd5e1;
         --text-muted: #94a3b8;
@@ -67,7 +67,7 @@
       }
 
       /* ============================================================
-         BACKGROUND — port of <FrostedGlassBackground />
+         BACKGROUND - port of <FrostedGlassBackground />
          ============================================================ */
       .bg {
         position: absolute;
@@ -100,7 +100,7 @@
       }
 
       /* ============================================================
-         PHASE 1 — HEADLINE
+         PHASE 1 - HEADLINE
          ============================================================ */
       .headline-wrap {
         position: absolute;
@@ -124,9 +124,9 @@
       }
 
       /* ============================================================
-         PHASE 2 — CENTER DEMO
+         PHASE 2 - CENTER DEMO
          (Falls back to a CSS-mockup editor when ./assets/editor-demo.mp4
-          is missing. The mockup is purely decorative — no animation
+          is missing. The mockup is purely decorative - no animation
           inside it; the eye reads it as a paused product screenshot.)
          ============================================================ */
       .demo-wrap {
@@ -263,7 +263,7 @@
       }
 
       /* ============================================================
-         PHASE 3 — LEFT FLANK: STEP INDICATORS (3D-TILTED)
+         PHASE 3 - LEFT FLANK: STEP INDICATORS (3D-TILTED)
          ============================================================ */
       .steps-flank {
         position: absolute;
@@ -307,7 +307,7 @@
         color: var(--text-secondary);
       }
 
-      /* State machine — toggled via tl.set({ attr: data-state }) */
+      /* State machine - toggled via tl.set({ attr: data-state }) */
       .step[data-state="active"] .step-circle {
         border-color: var(--brand-purple);
         box-shadow: 0 0 15px var(--brand-purple-glow);
@@ -332,7 +332,7 @@
       }
 
       /* ============================================================
-         PHASE 4 — RIGHT FLANK: CONFIRM BUTTON (3D-TILTED)
+         PHASE 4 - RIGHT FLANK: CONFIRM BUTTON (3D-TILTED)
          ============================================================ */
       .button-flank {
         position: absolute;
@@ -395,11 +395,11 @@
             If missing, the CSS mockup below shows through the transparent
             poster region. The video stays muted per HyperFrames rules.
           -->
-          <!-- Decorative CSS-mockup of an editor — paused screenshot feel. -->
+          <!-- Decorative CSS-mockup of an editor - paused screenshot feel. -->
           <div class="demo-mockup">
             <div class="mockup-toolbar">
               <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-              <span class="title">HyperFrames — Project: Launch Promo</span>
+              <span class="title">HyperFrames - Project: Launch Promo</span>
             </div>
             <div class="mockup-canvas">
               <div class="preview-box">Preview · 1920 × 1080</div>
@@ -482,7 +482,7 @@
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
 
-      // ── Phase boundaries (seconds) — match the blueprint ────────────
+      // ── Phase boundaries (seconds) - match the blueprint ────────────
       const HEADLINE_START = 0.17;
       const HEADLINE_END = 0.72;
       const VIDEO_START = 0.5;
@@ -516,7 +516,7 @@
 
       // ── Phase 2: Center demo scales in ─────────────────────────────
       // HyperFrames syncs the <video> element's currentTime to the seek
-      // position automatically — no .play() call needed (and one here
+      // position automatically - no .play() call needed (and one here
       // would break deterministic rendering).
       tl.to(".demo-wrap", { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }, VIDEO_START);
 
@@ -537,11 +537,11 @@
       // Step 1 enters in the "active" state because narration starts on it.
       tl.set(".step-1", { attr: { "data-state": "active" } }, STEPS_START);
 
-      // First transition — step 1 finishes, step 2 takes over.
+      // First transition - step 1 finishes, step 2 takes over.
       tl.set(".step-1", { attr: { "data-state": "complete" } }, STEP_ACTIVE_T2);
       tl.set(".step-2", { attr: { "data-state": "active" } }, STEP_ACTIVE_T2);
 
-      // Second transition — step 2 finishes, step 3 takes over.
+      // Second transition - step 2 finishes, step 3 takes over.
       tl.set(".step-2", { attr: { "data-state": "complete" } }, STEP_ACTIVE_T3);
       tl.set(".step-3", { attr: { "data-state": "active" } }, STEP_ACTIVE_T3);
 
@@ -553,7 +553,7 @@
       );
 
       // ── Phase 4b: Press (linear depression → linear return) ────────
-      // Two adjacent tweens on .btn-press — end value of (1) = start value of (2).
+      // Two adjacent tweens on .btn-press - end value of (1) = start value of (2).
       tl.to(".btn-press", { scale: 0.95, duration: 0.1, ease: "power1.out" }, PRESS_FRAME);
       tl.to(
         ".btn-press",
@@ -580,7 +580,7 @@
       tl.to(".btn-check", { scale: 1, duration: 0.5, ease: "back.out(1.6)" }, CHECK_POP);
 
       // ── Ambient pulsing glow on the button (Math.sin) ──
-      // Source: `glowIntensity = 20 + Math.sin(frame * 0.1) * 10` — i.e. blur
+      // Source: `glowIntensity = 20 + Math.sin(frame * 0.1) * 10` - i.e. blur
       // oscillates 10 ↔ 30 around 20, with angular freq 0.1 rad/frame.
       // At 60fps that's 6 rad/s, so full period ≈ 2π / 6 ≈ 1.05s.
       // Finite yoyo replaces the continuous sine; `box-shadow` reads the

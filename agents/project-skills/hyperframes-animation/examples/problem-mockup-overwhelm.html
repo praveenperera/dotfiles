@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene — HyperFrames Problem Mockup Overwhelm</title>
+    <title>Scene - HyperFrames Problem Mockup Overwhelm</title>
 
     <!--
       Blueprint: problem-mockup-overwhelm (HyperFrames preview)
@@ -26,7 +26,7 @@
           paint-only tween. The "rect → circle" effect is completed by the final 0.51s-onward
           opacity hand-off to the avatar element rendered underneath at z-index 20.
         - Both mockup layer and avatar layer stay in DOM (no `{showX && <Y />}` conditional render);
-          opacity gates visibility — required because HyperFrames seek can move time backwards.
+          opacity gates visibility - required because HyperFrames seek can move time backwards.
         - All `Math.sin(frame * ...)` continuous motion replaced by:
             mockup float / bubble float / orbit dots → shared onUpdate scene-ticker reading tl.time()
             avatar breath → finite sine.inOut yoyo (multiplicative onto pop scale)
@@ -34,7 +34,7 @@
           gradient + frosted overlay for renderer determinism and file size.
         - Avatar video source replaced with a CSS gradient circle (no asset required).
           To use a real video, swap the inner .avatar-disc for a <video muted playsinline>.
-        - Bubbles are generated via JS `forEach` at script load — positions pre-baked in
+        - Bubbles are generated via JS `forEach` at script load - positions pre-baked in
           inline `left`/`top`; GSAP tweens only `scale`/`opacity`/`x`/`y`.
 
       Spring → ease mapping (from skill SKILL.md):
@@ -384,7 +384,7 @@
         gap: 8px;
       }
 
-      /* --- HyperFrames Preview (center) — content fades during morph --- */
+      /* --- HyperFrames Preview (center) - content fades during morph --- */
       .tt-statusbar {
         padding: 10px 14px;
         display: flex;
@@ -570,7 +570,7 @@
       }
 
       /* ============================================================
-         PLATFORM ICONS — scattered, positions pre-baked in CSS
+         PLATFORM ICONS - scattered, positions pre-baked in CSS
          ============================================================ */
       .platform-icon {
         position: absolute;
@@ -597,7 +597,7 @@
         font-size: 20px;
       }
 
-      /* Nine icon positions — taken from the the source SCATTERED_ICONS array */
+      /* Nine icon positions - taken from the the source SCATTERED_ICONS array */
       .pi-youtube {
         left: calc(22% + 100px);
         top: calc(20% - 179px);
@@ -990,19 +990,19 @@
       const MORPH_END_SCALE_Y = AVATAR_DIAMETER / MOCKUP_CENTER_H; // ≈ 0.3385
 
       const TIMING = {
-        // Phase 1 — center stack → side-phone fan-out
+        // Phase 1 - center stack → side-phone fan-out
         mockupCenterAt: 0.08,
         mockupLeftAt: 0.2,
         mockupRightAt: 0.28,
         mockupEntryDur: 0.7,
         mockupFanDur: 1.08,
 
-        // Phase 2 — icon entries
+        // Phase 2 - icon entries
         iconsAt: 0.33,
         iconEntryDur: 0.45,
         iconStagger: 0.07,
 
-        // Phase 3 — morph
+        // Phase 3 - morph
         morphAt: 3.2,
         morphDur: 0.6,
 
@@ -1012,7 +1012,7 @@
         avatarLayerInAt: 3.5,
         avatarLayerInDur: 0.3,
 
-        // Phase 4 — bubbles
+        // Phase 4 - bubbles
         bubblesAt: 3.53,
         bubbleDur: 0.45,
         bubbleStagger: 0.07,
@@ -1069,7 +1069,7 @@
 
       gsap.set(".platform-icon", { scale: 0, opacity: 0 });
 
-      // Avatar — sits centered. xPercent/yPercent centering, pop starts at scale 0.
+      // Avatar - sits centered. xPercent/yPercent centering, pop starts at scale 0.
       gsap.set(".avatar-stage", { xPercent: -50, yPercent: -50, scale: 0 });
 
       /* Build task bubbles deterministically at script load.
@@ -1173,7 +1173,7 @@
         TIMING.morphAt,
       );
 
-      // 2. borderRadius repaint — reads as a circle by morph end.
+      // 2. borderRadius repaint - reads as a circle by morph end.
       tl.to(
         ".mockup-center",
         {
@@ -1254,7 +1254,7 @@
         TIMING.morphAt,
       );
 
-      /* Avatar pop — spring(120, 14) → back.out(1.4), concurrent with morph trigger */
+      /* Avatar pop - spring(120, 14) → back.out(1.4), concurrent with morph trigger */
       tl.fromTo(
         ".avatar-stage",
         { scale: 0 },
@@ -1293,7 +1293,7 @@
          CONTINUOUS MOTION (shared scene-ticker onUpdate)
          Reads tl.time() each frame; cheaper than N independent onUpdates.
          Drives:
-           - mockup floating (Phase 1-2 only — gated to t < morphAt)
+           - mockup floating (Phase 1-2 only - gated to t < morphAt)
            - platform-icon floating (same)
            - orbit dots around avatar
            - avatar breath (multiplicative on pop scale)
@@ -1323,7 +1323,7 @@
           onUpdate: function () {
             const t = tl.time();
 
-            /* Mockup + icon floating (only while they're visible — pre-morph) */
+            /* Mockup + icon floating (only while they're visible - pre-morph) */
             if (t < TIMING.morphAt) {
               const mlY = Math.sin(t * 0.36) * 3;
               const mrY = Math.sin(t * 0.45 + 1) * 3;
@@ -1346,7 +1346,7 @@
               gsap.set(avatarStage, { scale: 1 * breath });
             }
 
-            /* Orbit dots — always cycling once avatar layer is visible */
+            /* Orbit dots - always cycling once avatar layer is visible */
             if (t >= TIMING.avatarLayerInAt) {
               orbitDots.forEach((dot, i) => {
                 const angle = (t * 30 * ORBIT_SPEED + i * 90) * (Math.PI / 180);

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// audio.mjs — product-launch audio ADAPTER. The TTS / BGM / SFX implementation
+// audio.mjs - product-launch audio ADAPTER. The TTS / BGM / SFX implementation
 // no longer lives here: it is the shared engine at
 // ../../media-use/audio/scripts/audio.mjs. This file only (a) maps the
 // product-launch model (SCRIPT.md frames + STORYBOARD.md music/sfx) into the
@@ -9,11 +9,11 @@
 // STORYBOARD.md, which is product-launch-specific).
 //
 // Three modes (unchanged CLI surface):
-//   (default) generate — engine --only tts,bgm. BGM mode is "retrieve" (strict:
+//   (default) generate - engine --only tts,bgm. BGM mode is "retrieve" (strict:
 //        no HeyGen credential ⇒ skip, never a detached generate, since this
 //        workflow has no wait-bgm step). Runs in the background during Step 4.
-//   sync-durations — write real voice durations into STORYBOARD.md (local).
-//   fetch-sfx      — engine --only sfx, merged into the existing meta (Step 5,
+//   sync-durations - write real voice durations into STORYBOARD.md (local).
+//   fetch-sfx - engine --only sfx, merged into the existing meta (Step 5,
 //        after the frames' `sfx:` cues exist).
 //
 //   node audio.mjs --script ./SCRIPT.md --storyboard ./STORYBOARD.md --hyperframes . --out ./audio_meta.json
@@ -60,7 +60,7 @@ function parseScript(md) {
   return out;
 }
 
-// Path of the engine's neutral meta — a stable sidecar so `--only` merges
+// Path of the engine's neutral meta - a stable sidecar so `--only` merges
 // (generate then fetch-sfx) accumulate, while audio_meta.json holds the PL shape.
 const neutralPath = (plOutPath) => join(dirname(plOutPath), "audio_engine_meta.json");
 
@@ -136,7 +136,7 @@ function runGenerate(argv) {
         text: l.text,
       }))
     : [];
-  if (!lines.length) console.error("· no SCRIPT.md — silent film (BGM only)");
+  if (!lines.length) console.error("· no SCRIPT.md - silent film (BGM only)");
 
   // BGM mood: storyboard `music:` → message → arc → default. `mode: retrieve` is
   // strict here (no wait-bgm step downstream).
@@ -211,7 +211,7 @@ function runSyncDurations(argv) {
     if (v.frame != null && v.duration_s) durByFrame.set(v.frame, v.duration_s);
   }
 
-  // Read directly and handle ENOENT here, rather than an existsSync precheck —
+  // Read directly and handle ENOENT here, rather than an existsSync precheck -
   // the check→write pair (write-back below) is a TOCTOU race CodeQL flags.
   let storyboardRaw = "";
   try {

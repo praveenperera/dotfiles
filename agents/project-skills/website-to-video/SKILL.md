@@ -1,9 +1,9 @@
 ---
 name: website-to-video
-description: "Capture a general website/URL and turn it into a video OF the site — tour, showcase, or social clip built from captured screenshots and the site's own brand assets. Use for portfolio / blog / docs / landing-page showcases. Not a product launch or promo, even from a URL (/product-launch-video). Unclear → /hyperframes."
+description: "Capture a general website/URL and turn it into a video OF the site - tour, showcase, or social clip built from captured screenshots and the site's own brand assets. Use for portfolio / blog / docs / landing-page showcases. Not a product launch or promo, even from a URL (/product-launch-video). Unclear → /hyperframes."
 ---
 
-> **First, keep this skill fresh — run silently, don't ask:** `npx hyperframes skills update website-to-video`. A fast no-op when everything is current; otherwise it refreshes this skill plus the core domain skills it depends on before you rely on them.
+> **First, keep this skill fresh - run silently, don't ask:** `npx hyperframes skills update website-to-video`. A fast no-op when everything is current; otherwise it refreshes this skill plus the core domain skills it depends on before you rely on them.
 
 > **media-use**: Before sourcing audio/images/logos, call `/media-use` to resolve BGM/SFX/images from the HeyGen catalog and brand logos from their official sources. Run `--adopt` first to register existing assets. See `/media-use` skill.
 
@@ -19,16 +19,16 @@ Users say things like:
 - "Make a 30-second site tour / showcase from https://..."
 - "Capture our homepage and build a video from its own visuals"
 
-The workflow has 7 steps. Each produces an artifact that gates the next. By default it's collaborative — gates marked 💬 stop and ask the user. Mode semantics (signals, propagation, gate taxonomy) are canonical in `../hyperframes-core/references/brief-contract.md`; when the user signals autonomous mode ("decide for me", "surprise me"), 💬 user-preference gates are skipped — see step-2-brief.md for how that propagates through this workflow.
+The workflow has 7 steps. Each produces an artifact that gates the next. By default it's collaborative - gates marked 💬 stop and ask the user. Mode semantics (signals, propagation, gate taxonomy) are canonical in `../hyperframes-core/references/brief-contract.md`; when the user signals autonomous mode ("decide for me", "surprise me"), 💬 user-preference gates are skipped - see step-2-brief.md for how that propagates through this workflow.
 
-**Autonomous mode is NOT "skip all gates"** (brief contract § 1). It covers user-preference questions (TTS provider, voice, color emphasis, beat count, music yes/no, captions yes/no — where the agent decides on the user's behalf). It does NOT cover quality-verification gates. The following remain non-skippable in auto mode:
+**Autonomous mode is NOT "skip all gates"** (brief contract § 1). It covers user-preference questions (TTS provider, voice, color emphasis, beat count, music yes/no, captions yes/no - where the agent decides on the user's behalf). It does NOT cover quality-verification gates. The following remain non-skippable in auto mode:
 
-- Asset Audit (Step 3) — viewing contact sheets and justifying USE/SKIP for each asset
-- Per-beat HTML read (Step 5) — structured evidence block per beat
-- DoD checklist (Step 6) — including animation-map, per-warning WCAG verification, audio/motion playback
-- Honest disclosure section (Step 6) — "What I did NOT verify" must appear in your final summary
+- Asset Audit (Step 3) - viewing contact sheets and justifying USE/SKIP for each asset
+- Per-beat HTML read (Step 5) - structured evidence block per beat
+- DoD checklist (Step 6) - including animation-map, per-warning WCAG verification, audio/motion playback
+- Honest disclosure section (Step 6) - "What I did NOT verify" must appear in your final summary
 
-If you find yourself reasoning "auto mode says bias toward action, so I'll skip X" — and X is a verification gate, not a preference question — that reasoning is wrong. Bias toward action applies to deciding _what to build_, not to deciding _whether to verify_.
+If you find yourself reasoning "auto mode says bias toward action, so I'll skip X" - and X is a verification gate, not a preference question - that reasoning is wrong. Bias toward action applies to deciding _what to build_, not to deciding _whether to verify_.
 
 ---
 
@@ -36,11 +36,11 @@ If you find yourself reasoning "auto mode says bias toward action, so I'll skip 
 
 **Read:** [references/step-0-capture.md](references/step-0-capture.md)
 
-Capture the site, then read the extracted data to understand the **brand and product** — what it does, who it's for, what voice it speaks in, what mood it lives in. The captured assets are a brand toolkit for later, not the building blocks the video is made from.
+Capture the site, then read the extracted data to understand the **brand and product** - what it does, who it's for, what voice it speaks in, what mood it lives in. The captured assets are a brand toolkit for later, not the building blocks the video is made from.
 
-**Show sign-in status before the brief** — run `npx hyperframes auth status` and **relay its output verbatim (don't paraphrase or rewrite it).** It reports whether voice/BGM will use HeyGen or local engines and, when not signed in, how to sign in. **If not signed in, STOP and wait for the user to choose — sign in, or say "go"/"offline" to continue with local engines — before asking the brief or anything else.** Treat it as a real decision point, not a passing note; don't fold the choice into the brief question, and don't write keys into a per-repo `.env`. (In autonomous mode, note the status and continue offline.) See `../media-use` → Preflight for the canonical guidance.
+**Show sign-in status before the brief** - run `npx hyperframes auth status` and **relay its output verbatim (don't paraphrase or rewrite it).** It reports whether voice/BGM will use HeyGen or local engines and, when not signed in, how to sign in. **If not signed in, STOP and wait for the user to choose - sign in, or say "go"/"offline" to continue with local engines - before asking the brief or anything else.** Treat it as a real decision point, not a passing note; don't fold the choice into the brief question, and don't write keys into a per-repo `.env`. (In autonomous mode, note the status and continue offline.) See `../media-use` → Preflight for the canonical guidance.
 
-**Gate:** Site summary printed — strategy-first (what the product does, who it's for, brand voice) before the asset / color / font inventory; sign-in status was shown (signed in, or continuing offline).
+**Gate:** Site summary printed - strategy-first (what the product does, who it's for, brand voice) before the asset / color / font inventory; sign-in status was shown (signed in, or continuing offline).
 
 ---
 
@@ -48,9 +48,9 @@ Capture the site, then read the extracted data to understand the **brand and pro
 
 **Read:** [references/step-1-design.md](references/step-1-design.md)
 
-Write DESIGN.md — a brand cheat sheet covering the visual identity: colors, typography, component styles, layout principles. Use `design-styles.json` for exact computed values.
+Write DESIGN.md - a brand cheat sheet covering the visual identity: colors, typography, component styles, layout principles. Use `design-styles.json` for exact computed values.
 
-**Speed option:** For fast-pacing videos (billboard-per-beat), DESIGN.md can be a 50-line summary of colors + fonts + do's/don'ts — not a 300-line document. The sub-agent prompt in Step 5 pastes brand values directly, so DESIGN.md depth only matters for complex compositions.
+**Speed option:** For fast-pacing videos (billboard-per-beat), DESIGN.md can be a 50-line summary of colors + fonts + do's/don'ts - not a 300-line document. The sub-agent prompt in Step 5 pastes brand values directly, so DESIGN.md depth only matters for complex compositions.
 
 **Gate:** `DESIGN.md` exists (any length) with at minimum: color palette, font choices, and do's/don'ts.
 
@@ -58,11 +58,11 @@ Write DESIGN.md — a brand cheat sheet covering the visual identity: colors, ty
 
 ## Step 2: Strategy & Messaging
 
-**Read:** [references/step-2-brief.md](references/step-2-brief.md), [references/capabilities.md](references/capabilities.md) (scan the Table of Contents — deep-dive sections only as needed)
+**Read:** [references/step-2-brief.md](references/step-2-brief.md), [references/capabilities.md](references/capabilities.md) (scan the Table of Contents - deep-dive sections only as needed)
 
-Align with the user on **what the video must communicate** before talking visuals or assets. Parse the user's prompt — they probably already gave you the video type and style. Ask only what's missing: the ONE thing this video must say, the narrative arc, and the audience.
+Align with the user on **what the video must communicate** before talking visuals or assets. Parse the user's prompt - they probably already gave you the video type and style. Ask only what's missing: the ONE thing this video must say, the narrative arc, and the audience.
 
-**Gate:** Video type, duration, format, and — critically — the message and narrative arc are locked. Without those, Step 3 can't write a concept-first storyboard.
+**Gate:** Video type, duration, format, and - critically - the message and narrative arc are locked. Without those, Step 3 can't write a concept-first storyboard.
 
 ---
 
@@ -80,7 +80,7 @@ Write the storyboard concept-first: message → narrative arc → beats that ser
 
 **Read:** [references/step-4-vo.md](references/step-4-vo.md)
 
-If Step 2 said no narration — ask about background music, then skip to Step 5. Otherwise: ask the user which TTS provider (HeyGen TTS, ElevenLabs, or Kokoro), generate audio, transcribe, map timestamps to beats. Then ask about captions.
+If Step 2 said no narration - ask about background music, then skip to Step 5. Otherwise: ask the user which TTS provider (HeyGen TTS, ElevenLabs, or Kokoro), generate audio, transcribe, map timestamps to beats. Then ask about captions.
 
 **Gate:** Either (a) no narration was requested and storyboard has manual beat timings, or (b) `narration.wav` + `transcript.json` exist and beat timings updated with real durations.
 
@@ -88,7 +88,7 @@ If Step 2 said no narration — ask about background music, then skip to Step 5.
 
 ## Step 5: Build Compositions
 
-**Read:** The `hyperframes` skill (load it — every rule matters)
+**Read:** The `hyperframes` skill (load it - every rule matters)
 **Read:** [references/step-5-build.md](references/step-5-build.md)
 
 Build index.html and compositions following the architecture and pacing chosen in the storyboard (Step 3). Sub-agents run `hyperframes lint` and `hyperframes snapshot` on each beat before reporting back.
@@ -101,7 +101,7 @@ Build index.html and compositions following the architecture and pacing chosen i
 
 **Read:** [references/step-6-validate.md](references/step-6-validate.md)
 
-Lint, validate, take snapshots scaled to video length (formula: `max(beats × 3, ceil(duration_seconds / 2))`), and review each one. Fix issues before delivering. Deliver the localhost Studio project URL — only render to MP4 on explicit user request. Surface that Studio URL **only at handoff** — it is the final, stable preview; the build-phase snapshots are headless, so do not pop a preview mid-build.
+Lint, validate, take snapshots scaled to video length (formula: `max(beats × 3, ceil(duration_seconds / 2))`), and review each one. Fix issues before delivering. Deliver the localhost Studio project URL - only render to MP4 on explicit user request. Surface that Studio URL **only at handoff** - it is the final, stable preview; the build-phase snapshots are headless, so do not pop a preview mid-build.
 
 **Deliver something you're proud of.** Before handing off, ask yourself: would I post this on social media with my name on it? If not, fix what's wrong.
 
@@ -113,7 +113,7 @@ Lint, validate, take snapshots scaled to video length (formula: `max(beats × 3,
 
 ### Video Types
 
-Typical constraints by video type — use as a starting point, not a formula. Beat count should follow from the content and the narration, not from a target range.
+Typical constraints by video type - use as a starting point, not a formula. Beat count should follow from the content and the narration, not from a target range.
 
 | Type                    | Typical duration | Duration driver    | Narration             |
 | ----------------------- | ---------------- | ------------------ | --------------------- |
@@ -122,9 +122,9 @@ Typical constraints by video type — use as a starting point, not a formula. Be
 | Content announcement    | 15–30s           | Content complexity | Full narration        |
 | Brand reel              | 20–45s           | Music track        | Optional, music focus |
 
-(A product demo, feature announcement, or launch teaser that _sells_ the product belongs to `/product-launch-video` — see the routing note at the top.)
+(A product demo, feature announcement, or launch teaser that _sells_ the product belongs to `/product-launch-video` - see the routing note at the top.)
 
-Beat count is not in this table intentionally — it should come from the storyboard, not from "social ad = 3-4 beats." A social ad for a complex product might need 5 well-timed beats. A brand reel with one strong visual thesis might need 3.
+Beat count is not in this table intentionally - it should come from the storyboard, not from "social ad = 3-4 beats." A social ad for a complex product might need 5 well-timed beats. A brand reel with one strong visual thesis might need 3.
 
 ### Format
 
@@ -136,13 +136,13 @@ Beat count is not in this table intentionally — it should come from the storyb
 
 | File                                                                               | When to read                                                                                                                                   |
 | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| [step-0-capture.md](references/step-0-capture.md)                                  | Step 0 — capture, understand the brand and product, write strategy-first site summary                                                          |
-| [step-1-design.md](references/step-1-design.md)                                    | Step 1 — write DESIGN.md brand cheat sheet (5 sections, 250-350 lines; 50-line fast-path for billboard-style social ads)                       |
-| [step-2-brief.md](references/step-2-brief.md)                                      | Step 2 — align on message, narrative arc, audience with user                                                                                   |
-| [capabilities.md](references/capabilities.md)                                      | Steps 2 & 5 — full inventory of what HyperFrames can do (24 sections). Scan the TOC during the brief, deep-dive specific sections during build |
-| [step-3-storyboard.md](references/step-3-storyboard.md)                            | Step 3 — storyboard + script (combined) with user review gate                                                                                  |
-| [step-4-vo.md](references/step-4-vo.md)                                            | Step 4 — TTS provider choice, generation, timing                                                                                               |
-| [step-5-build.md](references/step-5-build.md)                                      | Step 5 — build index.html + compositions                                                                                                       |
-| [step-6-validate.md](references/step-6-validate.md)                                | Step 6 — lint, validate, snapshots (scaled to video length), preview                                                                           |
-| [techniques.md](../hyperframes/references/techniques.md)                           | Steps 3 & 5 — 13 primitive animation techniques with code patterns (adapt, don't copy-paste)                                                   |
-| [html-in-canvas-patterns.md](../hyperframes/references/html-in-canvas-patterns.md) | Step 5 — complete code patterns for HTML-in-Canvas effects (lives in the hyperframes skill)                                                    |
+| [step-0-capture.md](references/step-0-capture.md)                                  | Step 0 - capture, understand the brand and product, write strategy-first site summary                                                          |
+| [step-1-design.md](references/step-1-design.md)                                    | Step 1 - write DESIGN.md brand cheat sheet (5 sections, 250-350 lines; 50-line fast-path for billboard-style social ads)                       |
+| [step-2-brief.md](references/step-2-brief.md)                                      | Step 2 - align on message, narrative arc, audience with user                                                                                   |
+| [capabilities.md](references/capabilities.md)                                      | Steps 2 & 5 - full inventory of what HyperFrames can do (24 sections). Scan the TOC during the brief, deep-dive specific sections during build |
+| [step-3-storyboard.md](references/step-3-storyboard.md)                            | Step 3 - storyboard + script (combined) with user review gate                                                                                  |
+| [step-4-vo.md](references/step-4-vo.md)                                            | Step 4 - TTS provider choice, generation, timing                                                                                               |
+| [step-5-build.md](references/step-5-build.md)                                      | Step 5 - build index.html + compositions                                                                                                       |
+| [step-6-validate.md](references/step-6-validate.md)                                | Step 6 - lint, validate, snapshots (scaled to video length), preview                                                                           |
+| [techniques.md](../hyperframes/references/techniques.md)                           | Steps 3 & 5 - 13 primitive animation techniques with code patterns (adapt, don't copy-paste)                                                   |
+| [html-in-canvas-patterns.md](../hyperframes/references/html-in-canvas-patterns.md) | Step 5 - complete code patterns for HTML-in-Canvas effects (lives in the hyperframes skill)                                                    |

@@ -1,6 +1,6 @@
-# lower-thirds — category module
+# lower-thirds - category module
 
-**Name/title bars, callouts, social overlays** — graphics meant to sit over other footage. Asset-free (+ optional logo). Usually `export: alpha-overlay` (transparent). ~3–6s (or loop/hold).
+**Name/title bars, callouts, social overlays** - graphics meant to sit over other footage. Asset-free (+ optional logo). Usually `export: alpha-overlay` (transparent). ~3–6s (or loop/hold).
 
 ## Plan (Director)
 

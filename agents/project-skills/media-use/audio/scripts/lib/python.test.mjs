@@ -43,7 +43,7 @@ test("py launcher is probed as `py -3 --version`, not bare `py`", () => {
 });
 
 test("falls back to the canonical name (loud failure, unchanged) when nothing runs", () => {
-  // No interpreter anywhere — must not throw, and must return python3 so the
+  // No interpreter anywhere - must not throw, and must return python3 so the
   // eventual spawn fails exactly as it did before this fix, never worse.
   assert.deepEqual(
     resolvePythonCommand("win32", () => false),

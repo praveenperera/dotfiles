@@ -1,7 +1,7 @@
 {
   "name": "scoreboard",
-  "voice": "stadium split-flap departures board — every body word is a mechanical flap tile on a chyron bar that flip-cycles two seeded wrong words before clacking onto the real one (hot amber flash, cools to bone); a ROW counter flips at each line change and an odometer chip rolls beside the first emphasis line. The apex is a board takeover behind the subject: floodlights swing on, a giant departures housing clacks down, one huge flap tile per letter flip-cycles wrong glyphs then locks the word left→right under a crowd-flash, the status ticker types on, one tile re-flutters during the hold.",
-  "when": "sports, transit/travel, scores, countdowns, announcements and reveals — anything that should read as DEPARTURES-board mechanical. Loud register; needs a lower third that tolerates a dark chyron bar.",
+  "voice": "stadium split-flap departures board - every body word is a mechanical flap tile on a chyron bar that flip-cycles two seeded wrong words before clacking onto the real one (hot amber flash, cools to bone); a ROW counter flips at each line change and an odometer chip rolls beside the first emphasis line. The apex is a board takeover behind the subject: floodlights swing on, a giant departures housing clacks down, one huge flap tile per letter flip-cycles wrong glyphs then locks the word left→right under a crowd-flash, the status ticker types on, one tile re-flutters during the hold.",
+  "when": "sports, transit/travel, scores, countdowns, announcements and reveals - anything that should read as DEPARTURES-board mechanical. Loud register; needs a lower third that tolerates a dark chyron bar.",
   "register": "loud",
   "fonts": { "body": "Teko", "hero": "Anton", "tag": "Teko" },
   "palette": {

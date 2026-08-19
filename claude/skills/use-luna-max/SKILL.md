@@ -10,7 +10,7 @@ Delegate to the Codex CLI with model `gpt-5.6-luna` and reasoning effort `max`.
 
 ## Invocation gate
 
-Use this skill only when the user explicitly names Luna: "use Luna", "use Luna sub-agents", "use Luna Max", or `/use-luna-max`. Do not use it for any other request. A task that looks like a good fit — tests, a rename, a bulk edit, a delegation — is not sufficient. Without the explicit words, do the work in the root thread.
+Use this skill only when the user explicitly names Luna: "use Luna", "use Luna sub-agents", "use Luna Max", or `/use-luna-max`. Do not use it for any other request. A task that looks like a good fit - tests, a rename, a bulk edit, a delegation - is not sufficient. Without the explicit words, do the work in the root thread.
 
 ## What Luna gets
 

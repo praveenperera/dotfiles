@@ -15,7 +15,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Held Text / Strobe Burst (Texture Flip) — Template</title>
+    <title>Held Text / Strobe Burst (Texture Flip) - Template</title>
     <script src="../../motion-primitives/assets/gsap.min.js"></script>
     <style>
       *,
@@ -52,7 +52,7 @@
         background: var(--idle-bg, #000);
       }
 
-      /* One full-frame layer per texture frame. Only opacity is toggled — a
+      /* One full-frame layer per texture frame. Only opacity is toggled - a
          seek-safe flip-book (deterministic under frame-by-frame render). */
       .look {
         position: absolute;
@@ -94,7 +94,7 @@
         filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.28));
       }
 
-      /* THE technique: the word's letterforms are a window — a solid tint
+      /* THE technique: the word's letterforms are a window - a solid tint
          (multiply-blended) over a texture image, clipped to the text. */
       .word {
         color: transparent;
@@ -166,7 +166,7 @@
           '{"texture":"bricks-075-a","bg":"#ff9000","fill":"#7fb0c0","ink":"#241400"}]';
 
         // Built-in plan: as a BASE template the default is one continuous burst
-        // across the whole composition — flips every 0.125s (≈3f@24fps), never
+        // across the whole composition - flips every 0.125s (≈3f@24fps), never
         // stops, never cuts to idle. (For the gruop_4-faithful two-burst look,
         // pass strobePlan = [{start:1.125,end:1.542,step:.125},{start:2.042,end:2.708,step:.125}].)
         var BUILTIN_PLAN = '[{"start":0,"end":3,"step":0.125}]';
@@ -283,7 +283,7 @@
             prev = cur;
             step += 1;
           });
-          // clean cut back to idle base (held word on black) at burst end —
+          // clean cut back to idle base (held word on black) at burst end -
           // but NOT when the burst runs to the composition end, so the strobe
           // never blacks out / stops on the last frame.
           if (prev && burst.end < compDur - 1e-6) {

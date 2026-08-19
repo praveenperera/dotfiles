@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// animation-map.mjs — HyperFrames animation map for agents
+// animation-map.mjs - HyperFrames animation map for agents
 //
 // Reads every GSAP timeline registered in window.__timelines, enumerates
 // tweens, samples bboxes at N points per tween, computes flags and
@@ -10,7 +10,7 @@
 //     [--frames N] [--out <dir>] [--min-duration S] [--width W] [--height H] [--fps N]
 //
 // Env:
-//   HYPERFRAMES_SKILL_PKG_VERSION — pin the @hyperframes/producer version used
+//   HYPERFRAMES_SKILL_PKG_VERSION - pin the @hyperframes/producer version used
 //     when bootstrapping (global skill installs cannot infer it; falls back to
 //     @latest with a warning otherwise).
 

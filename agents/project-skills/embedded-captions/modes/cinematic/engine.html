@@ -1,12 +1,12 @@
 <!doctype html>
 <!--
-  ENGINE — the one Cinematic-mode shell, parameterized by a DNA (dna/<name>.json).
+  ENGINE - the one Cinematic-mode shell, parameterized by a DNA (dna/<name>.json).
   Replaces per-template HTML files: the DNA supplies type / palette / blend / motion
   grammar / hero orchestration; safe-zones v2 supplies scene tokens (accent sampling,
   contact-shadow direction, depth-match blur); the plan supplies layout + per-group
   typography. Compiled by make-composition.cjs.
 
-  Contract (unchanged from cinematic-cream — gates depend on it):
+  Contract (unchanged from cinematic-cream - gates depend on it):
     #root[data-composition-id="main"] · #a-roll · #stage · #a-roll-audio
     .plane > .cap > .w spans · paused seek-safe GSAP on window.__timelines["main"]
     container fade via tl.set at g.in−0.01 · exit fade + display:none at g.out
@@ -15,10 +15,10 @@
   New in the engine:
     - MOTION grammar from the DNA: soft / present / impact tones (+ "burn" reveal)
     - HERO three-act orchestration:
-        act 1 SETUP   — co-visible groups dim 0.35s before the hero lands
-        act 2 IMPACT  — entrance (emergence | settle | slam | rise) with per-letter
+        act 1 SETUP - co-visible groups dim 0.35s before the hero lands
+        act 2 IMPACT - entrance (emergence | settle | slam | rise) with per-letter
                         stagger; amplitude coupled to the spoken word's RMS loudness
-        act 3 AFTERGLOW — slow breathe scale + glow layer (DNA-gated) until exit
+        act 3 AFTERGLOW - slow breathe scale + glow layer (DNA-gated) until exit
     - depth-match blur on embed (bg) captions only; fg stays sharp
     - scene-sampled --accent custom property available to per-group CSS
 -->
@@ -51,7 +51,7 @@
         z-index: 2;
       }
 
-      /* BASE — DNA tokens. bg (embed) captions get the depth-match filter; fg stays sharp. */
+      /* BASE - DNA tokens. bg (embed) captions get the depth-match filter; fg stays sharp. */
       .cap {
         display: block;
         position: absolute;
@@ -60,7 +60,7 @@
         color: {{CAP_COLOR}};
         text-shadow: {{TEXT_SHADOW}};
         filter: {{TEXT_FILTER_BG}};
-        line-height: 1.12; /* contains ink + internal leading — wrapped rows breathe (was 1.0: rows touched) */
+        line-height: 1.12; /* contains ink + internal leading - wrapped rows breathe (was 1.0: rows touched) */
         will-change: transform, opacity;
         top: 50%; left: 0; right: 0; text-align: center;
       }
@@ -68,11 +68,11 @@
       .cap .w { display: inline-block; opacity: 0; will-change: opacity, transform; }
       .cap .w .l { display: inline-block; will-change: opacity, transform; }
 
-      /* hero glow — same glyphs duplicated UNDER the hero, blurred; opacity driven by GSAP.
+      /* hero glow - same glyphs duplicated UNDER the hero, blurred; opacity driven by GSAP.
          em-based blur scales with the hero's font size. Not part of plan.groups → gates skip it.
-         MUST be out of flow (absolute) — as a flow sibling inside a plane it displaces the hero. */
+         MUST be out of flow (absolute) - as a flow sibling inside a plane it displaces the hero. */
       .hero-glow, .plane > .cap.hero-glow { position: absolute; left: 0; right: 0; top: 0; filter: blur(0.06em); }
-      /* hero echoes — colored duplicates (RGB fringe / speed trails); position mirrors the
+      /* hero echoes - colored duplicates (RGB fringe / speed trails); position mirrors the
          hero via its #id rule, color comes from each echo's own rule */
       .hero-echo, .plane > .cap.hero-echo { position: absolute; left: 0; right: 0; top: 0; }
 
@@ -135,11 +135,11 @@
          Each tone = {y, x, blur, scale, rot, dur, ease} or {reveal:"burn"}.
          rot alternates sign by word index (deterministic percussion); blur is a
          filter tween on the word span only (the container's depth-match filter
-         is a separate element — no conflict, no reflow). */
+         is a separate element - no conflict, no reflow). */
       function wordReveal(wsel, m, at, idx) {
         if (m.reveal === "burn") { tl.set(wsel, { opacity: 1 }, at); return; }
         if (m.reveal === "flicker") {
-          /* neon tube igniting — deterministic on/off pattern, phase-shifted by word
+          /* neon tube igniting - deterministic on/off pattern, phase-shifted by word
              index so a line of words doesn't strobe in unison */
           var o = (idx % 3) * 0.018;
           tl.set(wsel, { opacity: 1 }, at);
@@ -181,9 +181,9 @@
 
         tl.set(sel, { opacity: 1 }, Math.max(0, g.in - 0.01));
 
-        /* line container reveal (keynote's surgical wipe) — clip-path, not transform.
+        /* line container reveal (keynote's surgical wipe) - clip-path, not transform.
            PHRASE mode: the whole line is set visible up front and the WIPE is the
-           reveal (slide-title idiom) — wiping an empty container reads as nothing. */
+           reveal (slide-title idiom) - wiping an empty container reads as nothing. */
         if (LINE_REVEAL && LINE_REVEAL.type === "wipe-x") {
           tl.set(sel + " .w", { opacity: 1 }, Math.max(0, g.in - 0.01));
           tl.fromTo(sel, { clipPath: "inset(0% 100% 0% 0%)" },
@@ -196,7 +196,7 @@
           });
         }
 
-        /* exit: DNA grammar — direction + speed + optional per-line cascade */
+        /* exit: DNA grammar - direction + speed + optional per-line cascade */
         var mates = pageMates[(g.plane || "free") + "@" + g.out];
         var rank = mates.indexOf(g.id);
         var lead = (EXIT.stagger || 0) * (mates.length - 1 - rank);
@@ -216,8 +216,8 @@
         var hg = GROUPS.filter(function (g) { return g.id === HERO.id; })[0];
         var amp = HERO.amp || 1;
 
-        /* act 1 — SETUP: co-visible groups yield (dim) just before the hero lands.
-           Minor heroes are emphasis-plus: no dim, no ripple, no breathe — the apex
+        /* act 1 - SETUP: co-visible groups yield (dim) just before the hero lands.
+           Minor heroes are emphasis-plus: no dim, no ripple, no breathe - the apex
            keeps those privileges (that's what makes it the apex). */
         if (!HERO.minor && HERO.dimOthers < 1) {
           GROUPS.forEach(function (g) {
@@ -231,24 +231,24 @@
 
         tl.set(hsel, { opacity: 1 }, Math.max(0, HERO.in - 0.01));
 
-        /* act 2 — IMPACT: container entrance (amplitude ∝ spoken loudness) */
+        /* act 2 - IMPACT: container entrance (amplitude ∝ spoken loudness) */
         if (HERO.entrance === "settle") {
           tl.fromTo(hsel, { scale: 1 + 0.10 * amp },
             { scale: 1, duration: 0.50, ease: "expo.out", transformOrigin: "50% 60%", overwrite: "auto" }, HERO.in);
         } else if (HERO.entrance === "slam") {
-          /* percussion: ONE unit, violent snap — geometry locks in 0.16s; heat comes after */
+          /* percussion: ONE unit, violent snap - geometry locks in 0.16s; heat comes after */
           tl.fromTo(hsel, { scale: 1 + 0.22 * amp },
             { scale: 1, duration: 0.16, ease: "back.out(2.2)", transformOrigin: "50% 55%", overwrite: "auto" }, HERO.in);
         } else if (HERO.entrance === "rise") {
           tl.fromTo(hsel, { y: 22 * amp },
             { y: 0, duration: 0.60, ease: "power2.out", overwrite: "auto" }, HERO.in);
         } else if (HERO.entrance === "wipe-up") {
-          /* surgical slide-title reveal — clip-path only (not a transform: can't
+          /* surgical slide-title reveal - clip-path only (not a transform: can't
              collide with the afterglow scale channel), bottom-up behind the subject */
           tl.fromTo(hsel, { clipPath: "inset(100% 0% 0% 0%)" },
             { clipPath: "inset(0% 0% 0% 0%)", duration: 0.45, ease: "expo.out", overwrite: "auto" }, HERO.in);
         } else if (HERO.entrance === "flicker-on") {
-          /* neon sign powering up — deterministic strobe, then steady */
+          /* neon sign powering up - deterministic strobe, then steady */
           tl.set(hsel, { opacity: 1 }, HERO.in);
           tl.set(hsel, { opacity: 0.15 }, HERO.in + 0.05);
           tl.set(hsel, { opacity: 1 }, HERO.in + 0.095);
@@ -256,15 +256,15 @@
           tl.set(hsel, { opacity: 1 }, HERO.in + 0.19);
           tl.fromTo(hsel, { scale: 1.03 }, { scale: 1, duration: 0.4, ease: "power2.out", overwrite: "auto", transformOrigin: "50% 55%" }, HERO.in + 0.19);
         } else if (HERO.entrance === "streak") {
-          /* speed pass — slides in along its own motion blur (skew rides the velocity) */
+          /* speed pass - slides in along its own motion blur (skew rides the velocity) */
           tl.fromTo(hsel, { x: -90 * amp, skewX: -12, opacity: 0 },
             { x: 0, skewX: 0, opacity: 1, duration: 0.28, ease: "expo.out", overwrite: "auto", transformOrigin: "50% 80%" }, HERO.in);
-        } else { /* emergence — grows out from behind the subject */
+        } else { /* emergence - grows out from behind the subject */
           tl.fromTo(hsel, { scale: Math.max(0.74, 1 - 0.18 * amp) },
             { scale: 1, duration: 0.55, ease: "expo.out", transformOrigin: "50% 62%", overwrite: "auto" }, HERO.in);
         }
 
-        /* impact ripple (loud): the hero's landing bumps every co-visible caption —
+        /* impact ripple (loud): the hero's landing bumps every co-visible caption -
            captions only, the footage itself NEVER moves */
         if (!HERO.minor && HERO.ripple > 0) {
           GROUPS.forEach(function (g) {
@@ -306,7 +306,7 @@
           tl.set(gsel, { opacity: 0, display: "none" }, HERO.out);
         }
 
-        /* fx: ECHO layers (RGB-split fringe / speed trails) — colored duplicates that
+        /* fx: ECHO layers (RGB-split fringe / speed trails) - colored duplicates that
            CONVERGE as the word lands, then rest at a small offset until exit */
         if (HERO.echoes && HERO.echoes.length) {
           HERO.echoes.forEach(function (ec, k) {
@@ -321,8 +321,8 @@
           });
         }
 
-        /* fx: SHEEN — one gradient sweep across the hero during the hold (chrome).
-           Targets the .w spans (the gradient lives there — see wordCss). Starts as the
+        /* fx: SHEEN - one gradient sweep across the hero during the hold (chrome).
+           Targets the .w spans (the gradient lives there - see wordCss). Starts as the
            entrance settles so the specular hit is visible early in the hold. */
         if (HERO.sheen && HERO.out - HERO.in > 0.9) {
           tl.fromTo(hsel + " .w", { backgroundPosition: "0% 50%" },
@@ -330,8 +330,8 @@
               ease: "power1.inOut", overwrite: "auto" }, HERO.in + 0.22);
         }
 
-        /* act 3 — AFTERGLOW: ONE slow scale tween (no loops — deterministic).
-           loom (slow growth, loud) subsumes breathe — never two transform tweens
+        /* act 3 - AFTERGLOW: ONE slow scale tween (no loops - deterministic).
+           loom (slow growth, loud) subsumes breathe - never two transform tweens
            on the same element in the same window. wipe-up entrances are clip-path,
            so the afterglow scale channel is always free by now. */
         var after = HERO.loom > 0 ? HERO.loom : HERO.breathe;

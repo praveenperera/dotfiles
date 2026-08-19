@@ -9,15 +9,15 @@ description: LLM-friendly CLI design guide - 15 rules for building CLIs that AI 
 
 ## Why CLIs Beat curl for LLMs
 
-- "Let Me Speak Freely?" showed **10-15% reasoning degradation** when forcing structured output (JSON) vs free-form generation — curl requires simultaneous URL/header/JSON/auth management
+- "Let Me Speak Freely?" showed **10-15% reasoning degradation** when forcing structured output (JSON) vs free-form generation - curl requires simultaneous URL/header/JSON/auth management
 - 900-trace failure analysis found curl top failures: JSON escaping disasters, URL encoding errors, hallucinated endpoints, body/query param confusion
 - CLIs are **20-50 tokens** per command vs **100-300 for equivalent curl** (up to 160x token reduction)
-- "Human users adapt to CLI changes; AI agents fail catastrophically" — every output field, exit code, and flag is an API contract
+- "Human users adapt to CLI changes; AI agents fail catastrophically" - every output field, exit code, and flag is an API contract
 
 ## The 15 Rules
 
 ### 1. Noun-verb subcommand structure
-`myctl resource action` — turns discovery into deterministic tree search via `--help`. Follow `gh pr list`, `kubectl get pods`, `aws s3 ls`. Avoid flat verb-only (`create-user`, `list-users`) or mixed patterns.
+`myctl resource action` - turns discovery into deterministic tree search via `--help`. Follow `gh pr list`, `kubectl get pods`, `aws s3 ls`. Avoid flat verb-only (`create-user`, `list-users`) or mixed patterns.
 
 ### 2. `--json` flag on every data-producing command
 JSON to stdout, all noise (progress, warnings, logs) to stderr. Keep JSON flat, consistent types. JSONL for streaming. `--json field1,field2` with `--jq` for inline filtering (like `gh`).
@@ -81,8 +81,8 @@ Strip formatting when not a TTY. Support `NO_COLOR=1` env var.
 
 ## Sources
 
-- [Let Me Speak Freely?](https://arxiv.org/abs/2408.02442) — structured output degrades reasoning
-- [How Do LLMs Fail In Agentic Scenarios?](https://arxiv.org/abs/2512.07497) — 900-trace failure analysis
+- [Let Me Speak Freely?](https://arxiv.org/abs/2408.02442) - structured output degrades reasoning
+- [How Do LLMs Fail In Agentic Scenarios?](https://arxiv.org/abs/2512.07497) - 900-trace failure analysis
 - [Command Line Interface Guidelines](https://clig.dev/)
 - [Writing CLI Tools That AI Agents Actually Want to Use](https://dev.to/uenyioha/writing-cli-tools-that-ai-agents-actually-want-to-use-39no)
 - [Keep the Terminal Relevant: Patterns for AI Agent Driven CLIs](https://www.infoq.com/articles/ai-agent-cli/)

@@ -1,8 +1,8 @@
-# Frame worker — per-frame composition author (music-to-video)
+# Frame worker - per-frame composition author (music-to-video)
 
 You build one frame's composition file: `compositions/frames/<frame_id>.html`. Siblings build
-the other frames in parallel. The generic HyperFrames law — sub-composition shape, timeline
-registration, determinism, layout — lives in `hyperframes-core` (`references/sub-compositions.md`
+the other frames in parallel. The generic HyperFrames law - sub-composition shape, timeline
+registration, determinism, layout - lives in `hyperframes-core` (`references/sub-compositions.md`
 
 - `determinism-rules.md` + `data-attributes.md`); read it first. This file covers the
   music-specific part.
@@ -14,30 +14,30 @@ micro-timing, layout, namespacing).
 
 ## Inputs (your dispatch context)
 
-- `PROJECT_DIR` — project root; all paths relative to it.
-- `frame_id` — the frame file's stem, e.g. `02-f2`. Use it verbatim as the composition id, the
+- `PROJECT_DIR` - project root; all paths relative to it.
+- `frame_id` - the frame file's stem, e.g. `02-f2`. Use it verbatim as the composition id, the
   `window.__timelines` key, and the filename `compositions/frames/<frame_id>.html` (the
   assembler matches on it).
-- Your **`## Frame N` block** in `STORYBOARD.md` — its `span_sec`, `pacing`, `mood`, `feel`, and
+- Your **`## Frame N` block** in `STORYBOARD.md` - its `span_sec`, `pacing`, `mood`, `feel`, and
   its **`### Groups`** list. Each group is one of:
-  - **template** — `template:<id>` + `params` + `role_bindings` (real audiomap anchor seconds) + `copy`.
-  - **free_design** — `free_design:{dominant_system, primitives, density_topology}` + `anchors[]` + `copy`.
-  - **asset** — `asset:{treatment, clips, anchors?, overlay_copy?}` (see `montage.md`).
-- `audiomap.json` — timing truth; use the seconds you're given.
-- `frame.md` — the brand (palette + type). Pull every visual token from here.
-- **Materials** — `references/templates/<id>/index.html` (its `data-composition-variables` give
+  - **template** - `template:<id>` + `params` + `role_bindings` (real audiomap anchor seconds) + `copy`.
+  - **free_design** - `free_design:{dominant_system, primitives, density_topology}` + `anchors[]` + `copy`.
+  - **asset** - `asset:{treatment, clips, anchors?, overlay_copy?}` (see `montage.md`).
+- `audiomap.json` - timing truth; use the seconds you're given.
+- `frame.md` - the brand (palette + type). Pull every visual token from here.
+- **Materials** - `references/templates/<id>/index.html` (its `data-composition-variables` give
   the param semantics) for template groups; `references/motion-primitives/<id>/index.html` for
   free groups; staged `assets/…` for asset groups.
 - Canvas `<width>×<height>` and the frame's `pacing`.
 
 If your dispatch carries lint / validate feedback from a prior pass, address each finding.
 
-## What comes fixed — realize it as given
+## What comes fixed - realize it as given
 
-- **No plan = stop.** If your `### Groups` is `TBD`/empty (Step 3 was skipped), report back and write nothing — never invent groups, templates, or copy.
+- **No plan = stop.** If your `### Groups` is `TBD`/empty (Step 3 was skipped), report back and write nothing - never invent groups, templates, or copy.
 - **The plan** is set in your `## Frame` block: the groups, templates / primitives, copy, brand,
   and anchors. Build it as written. If a plan is genuinely wrong (wrong template or copy), stop
-  and report — the orchestrator re-plans at Step 3.
+  and report - the orchestrator re-plans at Step 3.
 - **Transitions** are the assembler's: it hard-cuts between frames. You author the frame's
   **internal** group→group cuts only.
 - **Audio** lives on the root `index.html`; your frame is silent.

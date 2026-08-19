@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# render_diff.sh — compute per-frame SSIM between two video files.
+# render_diff.sh - compute per-frame SSIM between two video files.
 #
 # The eval primitive for the remotion-to-hyperframes skill: given a Remotion
 # render and a HyperFrames render of the same composition, report whether the
@@ -9,13 +9,13 @@
 #   render_diff.sh <baseline.mp4> <translated.mp4> [output-dir]
 #
 # Output (in output-dir, defaults to ./diff-out):
-#   ssim.log          — per-frame SSIM lines from ffmpeg
-#   summary.json      — { mean, min, p05, p95, frame_count, pass, threshold }
+#   ssim.log - per-frame SSIM lines from ffmpeg
+#   summary.json - { mean, min, p05, p95, frame_count, pass, threshold }
 #
 # Exit codes:
-#   0  — pass (mean SSIM >= threshold)
-#   1  — fail (mean SSIM <  threshold)
-#   2  — usage / setup error
+#   0 - pass (mean SSIM >= threshold)
+#   1 - fail (mean SSIM <  threshold)
+#   2 - usage / setup error
 #
 # Threshold defaults to 0.85 (loose; tier-specific thresholds are applied by
 # the orchestrator). Override with R2HF_SSIM_THRESHOLD=0.95 in the environment.
@@ -51,7 +51,7 @@ SSIM_LOG="$OUTDIR/ssim.log"
 SUMMARY="$OUTDIR/summary.json"
 
 # ffmpeg's ssim filter writes one line per frame to stats_file and a single
-# Mean SSIM line to stderr. We capture both — per-frame for distribution
+# Mean SSIM line to stderr. We capture both - per-frame for distribution
 # stats, and the mean for the headline number.
 ffmpeg -hide_banner -nostats -loglevel info \
   -i "$BASELINE" -i "$TRANSLATED" \

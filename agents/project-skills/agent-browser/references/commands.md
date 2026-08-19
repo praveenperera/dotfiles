@@ -192,7 +192,7 @@ agent-browser snapshot -i
 #   @e4 [input] "Card number"
 #   @e5 [button] "Pay"
 
-# Interact directly — refs inside iframes already work
+# Interact directly - refs inside iframes already work
 agent-browser fill @e4 "4111111111111111"
 agent-browser click @e5
 
@@ -203,9 +203,9 @@ agent-browser frame main              # Return to main frame
 ```
 
 The `frame` command accepts:
-- **Element refs** — `frame @e3` resolves the ref to an iframe element
-- **CSS selectors** — `frame "#payment-iframe"` finds the iframe by selector
-- **Frame name/URL** — matches against the browser's frame tree
+- **Element refs** - `frame @e3` resolves the ref to an iframe element
+- **CSS selectors** - `frame "#payment-iframe"` finds the iframe by selector
+- **Frame name/URL** - matches against the browser's frame tree
 
 ## Dialogs
 

@@ -1,6 +1,6 @@
 {
   "name": "spectrum",
-  "voice": "an oscilloscope is listening — a dark scope band hosts an always-alive waveform (speech grows it, silence flattens it, every word kicks a local burst) and body words are traced on in phosphor mono with a just-traced flash; the apex is the trace itself LEAPING off the scope to hand-write the hero word in a thin phosphor stroke, fill flicker, hum, then collapse to a flatline — and on the final word the whole trace explodes, flatlines to a single dot and stamps SIGNAL LOST.",
+  "voice": "an oscilloscope is listening - a dark scope band hosts an always-alive waveform (speech grows it, silence flattens it, every word kicks a local burst) and body words are traced on in phosphor mono with a just-traced flash; the apex is the trace itself LEAPING off the scope to hand-write the hero word in a thin phosphor stroke, fill flicker, hum, then collapse to a flatline - and on the final word the whole trace explodes, flatlines to a single dot and stamps SIGNAL LOST.",
   "when": "science / signal / audio / measurement / astronomy explainers, data-nerd content, retro-lab or synth aesthetics, \"示波器/波形/信号字幕\" asks. The band brings its own dark glass; bright scenes fine.",
   "register": "tech-retro",
   "fonts": { "body": "VT323", "tag": "VT323", "strokeFont": "HersheyScript1.svg" },
@@ -22,7 +22,7 @@
     "waveH": 84,
     "lineDy": 34,
     "hudL": "SPECTRUM // CH1",
-    "siglost": "— SIGNAL LOST —",
+    "siglost": " - SIGNAL LOST - ",
     "waveSeed": 7,
     "chipSeed": 11,
     "yield": { "dim": 0.52, "pre": 0.13, "post": 0.97 }

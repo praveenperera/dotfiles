@@ -1,6 +1,6 @@
 # Motion-Graphics Builder
 
-Turn `shot-plan.json` into one renderable HyperFrames composition (`compositions/index.html`). Everything stays in the HF ecosystem — HTML is the source of truth; a single **paused** GSAP timeline carries all motion; the engine seeks it. Category-specific build rules live in `categories/<id>/module.md`; this file is the shared contract.
+Turn `shot-plan.json` into one renderable HyperFrames composition (`compositions/index.html`). Everything stays in the HF ecosystem - HTML is the source of truth; a single **paused** GSAP timeline carries all motion; the engine seeks it. Category-specific build rules live in `categories/<id>/module.md`; this file is the shared contract.
 
 ## Reuse-first (the default)
 
@@ -17,7 +17,7 @@ Hand-author only (a) gaps no block/rule covers, (b) the `asset-fusion` affordanc
 - Exactly ONE `gsap.timeline({ paused:true })`; register `window.__timelines["<id>"] = tl;`; end with `tl.seek(0)`. **Never `tl.play()`** for render-critical motion. No timers / async / event-driven timeline build. Finite repeats only.
 - **Timed clips** need `class="clip"` + a stable `id`. Timeline-driven groups inside one full-duration clip don't each need timing attrs.
 - **Fonts**: prefer local `@font-face` (.woff2) for deterministic / offline render; CDN Google Fonts do render (compiler caches + injects `@font-face`) but warn + need network.
-- **Deterministic only** — no `Date.now()` / `Math.random()` / network.
+- **Deterministic only** - no `Date.now()` / `Math.random()` / network.
 
 ## Layout before animation
 

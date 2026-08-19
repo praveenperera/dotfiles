@@ -12,7 +12,7 @@ import { probeSpecs } from "./specs.mjs";
 //
 // ponytail: "installed" = the invoke's first token is on PATH (e.g. `whisperx`,
 // `realesrgan-ncnn-vulkan`). For `python -m kokoro` this only proves python
-// exists; good enough to gate — the recommend.command names the real package.
+// exists; good enough to gate - the recommend.command names the real package.
 // Upgrade to a per-tool probe if a "python present but package missing" run ever
 // produces a confusing error instead of a clean recommend.
 

@@ -142,7 +142,7 @@ test("runProviders returns null when no provider yields a result", async () => {
   assert.equal(await runProviders(providers, "search", "x", {}), null);
 });
 
-test("runCapability('bgm','process') is null — process slot is graceful when unfilled", async () => {
+test("runCapability('bgm','process') is null - process slot is graceful when unfilled", async () => {
   assert.equal(await runCapability("bgm", "process", "x", {}), null);
 });
 

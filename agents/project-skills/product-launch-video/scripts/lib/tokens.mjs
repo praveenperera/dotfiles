@@ -1,4 +1,4 @@
-// tokens.mjs — shared brand-token parsing + semantic role mapping for frame.md /
+// tokens.mjs - shared brand-token parsing + semantic role mapping for frame.md /
 // FRAME.md. Used by build-frame.mjs (remix a preset onto brand tokens) and
 // captions.mjs (derive caption colors from frame.md). One mapping → frames and
 // captions stay consistent. Pure node.
@@ -30,7 +30,7 @@ export function lum(v) {
   return 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
 }
 
-// chroma (max−min channel) of a #rrggbb — a cheap "how colorful" proxy; −1 for non-hex.
+// chroma (max−min channel) of a #rrggbb - a cheap "how colorful" proxy; −1 for non-hex.
 export function chroma(v) {
   const m = /^#?([0-9a-fA-F]{6})$/.exec(String(v).trim());
   if (!m) return -1;
@@ -42,7 +42,7 @@ export function chroma(v) {
 }
 
 // Browser user-agent default colors for links / visited links. These leak into a
-// capture from any UNSTYLED <a> and are NOT brand colors — but being pure & saturated
+// capture from any UNSTYLED <a> and are NOT brand colors - but being pure & saturated
 // they beat a real accent on chroma alone. Never let one become the accent.
 export const UA_DEFAULT_COLORS = new Set(
   ["#0000EE", "#0000FF", "#0000CC", "#1A0DAB", "#551A8B", "#EE0000"].map((c) => c.toUpperCase()),
@@ -52,14 +52,14 @@ export const UA_DEFAULT_COLORS = new Set(
 export const STATUS_ROLE_KEY =
   /(?:^|[-_])(?:positive|negative|success|error|warning|danger|good|bad|up|down|info|neutral|alert|caution|critical)(?:[-_]|$)/i;
 
-// Pick the brand ACCENT — never by raw chroma alone, never a UA-default link color.
+// Pick the brand ACCENT - never by raw chroma alone, never a UA-default link color.
 // Priority:
 //   1) with capture colorStats → the colorful color that RECURS across the UI. The brand
 //      accent shows up in MANY roles (link text + icon + button + badge), whereas a one-off
 //      CTA fill appears in just one. So rank chromatic (chroma>40) candidates by role
 //      diversity first, then total prevalence, then interactive use, then chroma. This keeps
 //      a pervasive brand color (e.g. an indigo used everywhere) ahead of a single bright
-//      button fill (e.g. a lime used once) — the old "top interactiveBg" rule picked the
+//      button fill (e.g. a lime used once) - the old "top interactiveBg" rule picked the
 //      latter. Requiring interactiveBg>0 is dropped so a text/icon-only accent can still win.
 //   2) no stats → most chromatic color AFTER removing UA defaults + `exclude`.
 // A stray default link color (e.g. #0000EE) can win under neither path.
@@ -68,7 +68,7 @@ export function pickAccent(stats, colors, exclude = []) {
   const ok = (h) => /^#[0-9a-fA-F]{6}$/.test(String(h)) && !ban.has(String(h).toUpperCase());
   // Prominence rank from the (frequency-ordered) `colors` palette: index 0 = most used.
   // A saturated color sitting at the TAIL is almost always a one-off (a single CTA fill),
-  // not the brand accent — capture colorStats counts are too sparse to tell these apart
+  // not the brand accent - capture colorStats counts are too sparse to tell these apart
   // (e.g. Linear's indigo and a lime CTA both register count≈1), but palette ORDER does.
   const rank = new Map((colors ?? []).map((h, i) => [String(h).toUpperCase(), i]));
   const prom = (h) => (rank.has(String(h).toUpperCase()) ? rank.get(String(h).toUpperCase()) : 1e9);
@@ -97,7 +97,7 @@ export function pickAccent(stats, colors, exclude = []) {
 }
 
 // Derive brand roles from rich capture colorStats (areaBg / interactiveBg / textCount /
-// maxArea) — by semantic FUNCTION, not luminance/chroma proxies. Returns null when stats
+// maxArea) - by semantic FUNCTION, not luminance/chroma proxies. Returns null when stats
 // are unusable, so the caller can fall back. canvas = the color painting the most real
 // background area (the page ground, dark or light); ink = the dominant text color that
 // actually contrasts with the canvas; accent via pickAccent.
@@ -112,7 +112,7 @@ export function brandRolesFromStats(stats, colorsInOrder) {
       (b.bgCount || 0) - (a.bgCount || 0),
   )[0]?.hex;
   // pass the frequency-ordered palette (tokens.colors) so pickAccent can use palette
-  // PROMINENCE — colorStats counts alone are too sparse to rank rare accents.
+  // PROMINENCE - colorStats counts alone are too sparse to rank rare accents.
   const accent = pickAccent(v, colorsInOrder ?? v.map((s) => s.hex), [canvas]);
   if (!canvas || !accent) return null;
   const cl = lum(canvas) ?? 0;
@@ -138,10 +138,10 @@ export function brandRolesFromStats(stats, colorsInOrder) {
 // Map a list of [key, value] colors to semantic roles. ink = a dark/ink-named
 // color (else darkest); canvas = a paper/cream/white-named color (else lightest);
 // accents = whatever's left, ranked by chroma (the loudest color is almost always
-// the brand accent) — UA-default link colors and status colors excluded so neither wins.
-// For an unkeyed brand list, pass synthetic keys — name matching simply no-ops and it
+// the brand accent) - UA-default link colors and status colors excluded so neither wins.
+// For an unkeyed brand list, pass synthetic keys - name matching simply no-ops and it
 // falls back to luminance/chroma, which is what we want. NOTE: when capture colorStats
-// exist, prefer brandRolesFromStats() — it picks by function, not these proxies.
+// exist, prefer brandRolesFromStats() - it picks by function, not these proxies.
 export function semanticColors(colors) {
   if (!colors.length) return {};
   const named = (re) => colors.find(([k]) => re.test(k));
@@ -198,7 +198,7 @@ export function parseFonts(md) {
     roles.title ??
     roles.hero ??
     body;
-  // the monospace / chrome family (code, tags, ticks, page numbers) — so the remix can
+  // the monospace / chrome family (code, tags, ticks, page numbers) - so the remix can
   // route a captured brand mono (Berkeley Mono, JetBrains Mono…) onto this role instead
   // of the reading body. null when the preset has no distinct mono role.
   const mono =

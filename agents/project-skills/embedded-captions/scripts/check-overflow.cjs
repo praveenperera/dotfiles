@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * check-overflow.cjs — mode-agnostic frame-overflow WARNING for custom mode.
+ * check-overflow.cjs - mode-agnostic frame-overflow WARNING for custom mode.
  *
  * Template mode has check-occlusion.cjs (which also flags frame-edge overflow),
  * but custom mode runs no gates. This is the cheap safety net: it loads the
  * rendered index.html, seeks the GSAP timeline across the clip, and flags ANY
- * visible text element (regardless of class) whose box leaves the canvas — i.e.
+ * visible text element (regardless of class) whose box leaves the canvas - i.e.
  * captions that fall off-frame (the bug we otherwise only catch by eye).
  *
- * WARNING ONLY — never fails the build (custom designs may bleed intentionally).
+ * WARNING ONLY - never fails the build (custom designs may bleed intentionally).
  * Exit 0 if it ran (with or without findings); exit 3 if it couldn't run.
  *
  * Usage: node check-overflow.cjs <project-dir>
@@ -97,14 +97,14 @@ async function main() {
     await page.goto(`file://${indexPath}`, { waitUntil: "load", timeout: 20000 });
     let hasTL = await waitTL();
     if (!hasTL) {
-      // GSAP loads from CDN — a blip leaves no timeline; retry once
+      // GSAP loads from CDN - a blip leaves no timeline; retry once
       await page.reload({ waitUntil: "load", timeout: 20000 }).catch(() => {});
       hasTL = await waitTL();
     }
     if (!hasTL) {
       // NEVER claim "ok" when we couldn't actually evaluate the animated layout.
       console.error(
-        "[overflow] ⚠ timeline did not register (GSAP CDN blocked?) — overflow check " +
+        "[overflow] ⚠ timeline did not register (GSAP CDN blocked?) - overflow check " +
           "INCONCLUSIVE; eyeball the render for off-frame captions.",
       );
       await browser.close();
@@ -173,10 +173,10 @@ async function main() {
     }
 
     if (found.size === 0) {
-      console.log(`[overflow] ok — no caption text leaves the ${W}x${H} frame`);
+      console.log(`[overflow] ok - no caption text leaves the ${W}x${H} frame`);
     } else {
       console.error(
-        `[overflow] ⚠ ${found.size} caption(s) leave the frame (custom mode — WARNING only, not blocking):`,
+        `[overflow] ⚠ ${found.size} caption(s) leave the frame (custom mode - WARNING only, not blocking):`,
       );
       for (const [text, info] of found)
         console.error(`           "${text}"  → off-frame: ${info.sides}  (@${info.t}s)`);

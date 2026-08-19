@@ -55,7 +55,7 @@ function makeRecord(overrides = {}) {
 
 // Run resolve.mjs with argv passed as a literal array (no shell). Each token is
 // a separate argv entry, so a value with spaces or shell metacharacters can't
-// break out — never build a command string and hand it to a shell.
+// break out - never build a command string and hand it to a shell.
 function runResolve(args, opts = {}) {
   const { env, ...rest } = opts;
   return execFileSync(process.execPath, [RESOLVE_CLI, ...args], {

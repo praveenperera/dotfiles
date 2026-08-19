@@ -29,7 +29,7 @@
       }
 
       /*
-        This scene has no flat wall — subject is center with a busy
+        This scene has no flat wall - subject is center with a busy
         bookshelf backdrop. So instead of a wall-plane, we place a
         HEADER band across the top of the frame with subtle perspective
         (slight rotateX so it lies on the bookshelf rather than floats).
@@ -77,7 +77,7 @@
       }
 
       /* A single "crown" caption placed center-stage for the payoff
-         ("A WIMBLEDON CHAMPION") — deliberately crosses the head to
+         ("A WIMBLEDON CHAMPION") - deliberately crosses the head to
          deliver the emphasis via cinematic occlusion. */
       .crown-plane {
         position: absolute;
@@ -206,7 +206,7 @@
           </div>
         </div>
         <!-- Center-stage crown: the payoff. Sits where the subject is,
-             matte layering makes it *behind* him — the occlusion is the moment. -->
+             matte layering makes it *behind* him - the occlusion is the moment. -->
         <div class="crown-plane">
           <div id="cg-5" class="cap cap-crown">
             <span class="w" data-i="0">Wimbledon</span>
@@ -230,7 +230,7 @@
       const tl = gsap.timeline({ paused: true });
       const DUR = 12.08;
 
-      /* Word-level transcript — ElevenLabs scribe_v2 */
+      /* Word-level transcript - ElevenLabs scribe_v2 */
       const GROUPS = [
         {
           id: "cg-0",
@@ -342,7 +342,7 @@
           }
         });
 
-        /* Group exit — each group fades out before the next enters. */
+        /* Group exit - each group fades out before the next enters. */
         if (g.out < DUR) {
           tl.to(
             sel,

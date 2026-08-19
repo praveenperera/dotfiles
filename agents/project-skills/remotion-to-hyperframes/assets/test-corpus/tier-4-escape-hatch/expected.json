@@ -1,7 +1,7 @@
 {
   "tier": 4,
   "name": "escape-hatch",
-  "description": "Lint-only fixture set. Each case demonstrates a Remotion pattern the skill cannot or should not translate cleanly. The skill is graded on whether lint_source.py emits the right finding for each case — there are no renders to compare. T4 passes when every case triggers its expected rule and no others.",
+  "description": "Lint-only fixture set. Each case demonstrates a Remotion pattern the skill cannot or should not translate cleanly. The skill is graded on whether lint_source.py emits the right finding for each case - there are no renders to compare. T4 passes when every case triggers its expected rule and no others.",
   "cases": [
     {
       "file": "01-use-state.tsx",

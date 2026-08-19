@@ -1,6 +1,6 @@
 // v0.3.0 is the first CLI that can use an OAuth session; v0.1.x/0.2.x reject it
 // ("heygen-cli can't use OAuth yet"), and OAuth is what the free-usage path
-// needs — so anything below this can't authenticate for free usage at all.
+// needs - so anything below this can't authenticate for free usage at all.
 export const HEYGEN_MIN_VERSION = "0.3.0";
 // Free-usage path is OAuth (`--oauth` → subscription/free credits); `--api-key`
 // bills API credits, so the onboarding steers to OAuth.
@@ -9,9 +9,9 @@ export const HEYGEN_INSTALL_COMMAND =
 export const HEYGEN_AUTH_COMMAND = "heygen auth login --oauth";
 export const HEYGEN_UPDATE_COMMAND = "heygen update";
 
-export const HEYGEN_NOT_FOUND_MESSAGE = `media-use: heygen CLI not found — it's the free path for bgm/image/voice/avatar-video. Install: ${HEYGEN_INSTALL_COMMAND}`;
-export const HEYGEN_NOT_AUTHENTICATED_MESSAGE = `media-use: heygen CLI not authenticated (free usage) — run: ${HEYGEN_AUTH_COMMAND}`;
-export const HEYGEN_OUTDATED_MESSAGE = `media-use: heygen CLI is outdated — run: ${HEYGEN_UPDATE_COMMAND}  (need >= v${HEYGEN_MIN_VERSION})`;
+export const HEYGEN_NOT_FOUND_MESSAGE = `media-use: heygen CLI not found - it's the free path for bgm/image/voice/avatar-video. Install: ${HEYGEN_INSTALL_COMMAND}`;
+export const HEYGEN_NOT_AUTHENTICATED_MESSAGE = `media-use: heygen CLI not authenticated (free usage) - run: ${HEYGEN_AUTH_COMMAND}`;
+export const HEYGEN_OUTDATED_MESSAGE = `media-use: heygen CLI is outdated - run: ${HEYGEN_UPDATE_COMMAND}  (need >= v${HEYGEN_MIN_VERSION})`;
 
 const ACTIONABLE_MESSAGES = new Set([
   HEYGEN_NOT_FOUND_MESSAGE,
@@ -30,7 +30,7 @@ export function classifyHeygenError(err) {
   // Only ENOENT (spawn of a missing binary) or a shell's "command not found"
   // mean the CLI itself is absent. A bare "not found" would misfire on the CLI's
   // own resource errors (e.g. a stale voiceId → "voice not found"), whose message
-  // embeds the `heygen ...` command line — sending users to reinstall a CLI they
+  // embeds the `heygen ...` command line - sending users to reinstall a CLI they
   // just ran successfully. Keep this narrow.
   if (err?.code === "ENOENT" || lower.includes("command not found")) {
     return HEYGEN_NOT_FOUND_MESSAGE;
@@ -39,7 +39,7 @@ export function classifyHeygenError(err) {
   if (
     lower.includes("unauthorized") ||
     lower.includes("unauthenticated") ||
-    // \b401\b, not a bare "401" substring — otherwise request IDs (req-401abc),
+    // \b401\b, not a bare "401" substring - otherwise request IDs (req-401abc),
     // URLs, and retry-after headers would misclassify as an auth failure.
     /\b401\b/.test(lower) ||
     lower.includes("not logged in") ||

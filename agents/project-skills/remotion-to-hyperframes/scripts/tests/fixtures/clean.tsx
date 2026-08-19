@@ -12,7 +12,7 @@ import {
 } from "remotion";
 
 // Mount-only useEffect with empty deps + a later expression containing a
-// non-empty array — regression coverage for the over-match Miguel reported:
+// non-empty array - regression coverage for the over-match Miguel reported:
 // the earlier regex spanned past `[]` and matched `[frame]` from `pick(...)`,
 // falsely flagging this clean fixture as having a blocker.
 function pick<T>(_key: string, items: T[]): T {

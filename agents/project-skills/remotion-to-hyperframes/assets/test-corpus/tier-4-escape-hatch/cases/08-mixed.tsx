@@ -1,4 +1,4 @@
-// T4 case 08 — Multiple blockers + multiple warnings in one file.
+// T4 case 08 - Multiple blockers + multiple warnings in one file.
 //
 // Should report:
 //   blockers: r2hf/use-state, r2hf/use-effect-deps, r2hf/third-party-react-ui

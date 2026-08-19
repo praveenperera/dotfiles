@@ -1,4 +1,4 @@
-// T4 case 04 — Imports from a third-party React UI library.
+// T4 case 04 - Imports from a third-party React UI library.
 //
 // Should be detected by lint_source.py as blocker r2hf/third-party-react-ui.
 // The skill should refuse to translate.

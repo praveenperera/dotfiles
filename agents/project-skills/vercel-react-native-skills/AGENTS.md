@@ -20,10 +20,10 @@ Comprehensive performance optimization guide for React Native applications, desi
 
 ## Table of Contents
 
-1. [Core Rendering](#1-core-rendering) — **CRITICAL**
+1. [Core Rendering](#1-core-rendering) - **CRITICAL**
    - 1.1 [Never Use && with Potentially Falsy Values](#11-never-use--with-potentially-falsy-values)
    - 1.2 [Wrap Strings in Text Components](#12-wrap-strings-in-text-components)
-2. [List Performance](#2-list-performance) — **HIGH**
+2. [List Performance](#2-list-performance) - **HIGH**
    - 2.1 [Avoid Inline Objects in renderItem](#21-avoid-inline-objects-in-renderitem)
    - 2.2 [Hoist callbacks to the root of lists](#22-hoist-callbacks-to-the-root-of-lists)
    - 2.3 [Keep List Items Lightweight](#23-keep-list-items-lightweight)
@@ -32,24 +32,24 @@ Comprehensive performance optimization guide for React Native applications, desi
    - 2.6 [Use a List Virtualizer for Any List](#26-use-a-list-virtualizer-for-any-list)
    - 2.7 [Use Compressed Images in Lists](#27-use-compressed-images-in-lists)
    - 2.8 [Use Item Types for Heterogeneous Lists](#28-use-item-types-for-heterogeneous-lists)
-3. [Animation](#3-animation) — **HIGH**
+3. [Animation](#3-animation) - **HIGH**
    - 3.1 [Animate Transform and Opacity Instead of Layout Properties](#31-animate-transform-and-opacity-instead-of-layout-properties)
    - 3.2 [Prefer useDerivedValue Over useAnimatedReaction](#32-prefer-usederivedvalue-over-useanimatedreaction)
    - 3.3 [Use GestureDetector for Animated Press States](#33-use-gesturedetector-for-animated-press-states)
-4. [Scroll Performance](#4-scroll-performance) — **HIGH**
+4. [Scroll Performance](#4-scroll-performance) - **HIGH**
    - 4.1 [Never Track Scroll Position in useState](#41-never-track-scroll-position-in-usestate)
-5. [Navigation](#5-navigation) — **HIGH**
+5. [Navigation](#5-navigation) - **HIGH**
    - 5.1 [Use Native Navigators for Navigation](#51-use-native-navigators-for-navigation)
-6. [React State](#6-react-state) — **MEDIUM**
+6. [React State](#6-react-state) - **MEDIUM**
    - 6.1 [Minimize State Variables and Derive Values](#61-minimize-state-variables-and-derive-values)
    - 6.2 [Use fallback state instead of initialState](#62-use-fallback-state-instead-of-initialstate)
    - 6.3 [useState Dispatch updaters for State That Depends on Current Value](#63-usestate-dispatch-updaters-for-state-that-depends-on-current-value)
-7. [State Architecture](#7-state-architecture) — **MEDIUM**
+7. [State Architecture](#7-state-architecture) - **MEDIUM**
    - 7.1 [State Must Represent Ground Truth](#71-state-must-represent-ground-truth)
-8. [React Compiler](#8-react-compiler) — **MEDIUM**
+8. [React Compiler](#8-react-compiler) - **MEDIUM**
    - 8.1 [Destructure Functions Early in Render (React Compiler)](#81-destructure-functions-early-in-render-react-compiler)
    - 8.2 [Use .get() and .set() for Reanimated Shared Values (not .value)](#82-use-get-and-set-for-reanimated-shared-values-not-value)
-9. [User Interface](#9-user-interface) — **MEDIUM**
+9. [User Interface](#9-user-interface) - **MEDIUM**
    - 9.1 [Measuring View Dimensions](#91-measuring-view-dimensions)
    - 9.2 [Modern React Native Styling Patterns](#92-modern-react-native-styling-patterns)
    - 9.3 [Use contentInset for Dynamic ScrollView Spacing](#93-use-contentinset-for-dynamic-scrollview-spacing)
@@ -59,16 +59,16 @@ Comprehensive performance optimization guide for React Native applications, desi
    - 9.7 [Use Native Menus for Dropdowns and Context Menus](#97-use-native-menus-for-dropdowns-and-context-menus)
    - 9.8 [Use Native Modals Over JS-Based Bottom Sheets](#98-use-native-modals-over-js-based-bottom-sheets)
    - 9.9 [Use Pressable Instead of Touchable Components](#99-use-pressable-instead-of-touchable-components)
-10. [Design System](#10-design-system) — **MEDIUM**
+10. [Design System](#10-design-system) - **MEDIUM**
    - 10.1 [Use Compound Components Over Polymorphic Children](#101-use-compound-components-over-polymorphic-children)
-11. [Monorepo](#11-monorepo) — **LOW**
+11. [Monorepo](#11-monorepo) - **LOW**
    - 11.1 [Install Native Dependencies in App Directory](#111-install-native-dependencies-in-app-directory)
    - 11.2 [Use Single Dependency Versions Across Monorepo](#112-use-single-dependency-versions-across-monorepo)
-12. [Third-Party Dependencies](#12-third-party-dependencies) — **LOW**
+12. [Third-Party Dependencies](#12-third-party-dependencies) - **LOW**
    - 12.1 [Import from Design System Folder](#121-import-from-design-system-folder)
-13. [JavaScript](#13-javascript) — **LOW**
+13. [JavaScript](#13-javascript) - **LOW**
    - 13.1 [Hoist Intl Formatter Creation](#131-hoist-intl-formatter-creation)
-14. [Fonts](#14-fonts) — **LOW**
+14. [Fonts](#14-fonts) - **LOW**
    - 14.1 [Load fonts natively at build time](#141-load-fonts-natively-at-build-time)
 
 ---
@@ -86,7 +86,7 @@ runtime crashes or broken UI.
 
 Never use `{value && <Component />}` when `value` could be an empty string or
 
-`0`. These are falsy but JSX-renderable—React Native will try to render them as
+`0`. These are falsy but JSX-renderable - React Native will try to render them as
 
 text outside a `<Text>` component, causing a hard crash in production.
 
@@ -342,7 +342,7 @@ List items should be as inexpensive as possible to render. Minimize hooks, avoid
 
 queries, and limit React Context access. Virtualized lists render many items
 
-during scroll—expensive items cause jank.
+during scroll - expensive items cause jank.
 
 **Incorrect: heavy list item**
 
@@ -437,7 +437,7 @@ return JSX.
 
 Don't map or filter data before passing to virtualized lists. Virtualization
 
-relies on object reference stability to know what changed—new references cause
+relies on object reference stability to know what changed - new references cause
 
 full re-renders of all visible items. Attempt to prevent frequent renders at the
 
@@ -632,7 +632,7 @@ Primitive props make memoization predictable and effective.
 
 Use a list virtualizer like LegendList or FlashList instead of ScrollView with
 
-mapped children—even for short lists. Virtualizers only render visible items,
+mapped children - even for short lists. Virtualizers only render visible items,
 
 reducing memory usage and mount time. ScrollView renders all children upfront,
 
@@ -689,7 +689,7 @@ function Feed({ items }: { items: Item[] }) {
 }
 ```
 
-Benefits apply to any screen with scrollable content—profiles, settings, feeds,
+Benefits apply to any screen with scrollable content - profiles, settings, feeds,
 
 search results. Default to virtualization.
 
@@ -982,7 +982,7 @@ For animated press states (scale, opacity on press), use `GestureDetector` with
 
 `Gesture.Tap()` and shared values instead of Pressable's
 
-`onPressIn`/`onPressOut`. Gesture callbacks run on the UI thread as worklets—no
+`onPressIn`/`onPressOut`. Gesture callbacks run on the UI thread as worklets - no
 
 JS thread round-trip for press animations.
 
@@ -1081,7 +1081,7 @@ Tracking scroll position without causing render thrashing.
 
 **Impact: HIGH (prevents render thrashing during scroll)**
 
-Never store scroll position in `useState`. Scroll events fire rapidly—state
+Never store scroll position in `useState`. Scroll events fire rapidly - state
 
 updates cause render thrashing and dropped frames. Use a Reanimated shared value
 
@@ -1431,7 +1431,7 @@ Reference: [https://react.dev/learn/choosing-the-state-structure](https://react.
 
 Use `undefined` as initial state and nullish coalescing (`??`) to fall back to
 
-parent or server values. State represents user intent only—`undefined` means
+parent or server values. State represents user intent only - `undefined` means
 
 "user hasn't chosen yet." This enables reactive fallbacks that update when the
 
@@ -1584,7 +1584,7 @@ Ground truth principles for state variables and derived values.
 
 **Impact: HIGH (cleaner logic, easier debugging, single source of truth)**
 
-State variables—both React `useState` and Reanimated shared values—should
+State variables - both React `useState` and Reanimated shared values - should
 
 represent the actual state of something (e.g., `pressed`, `progress`, `isOpen`),
 
@@ -1634,17 +1634,17 @@ State variables should represent real "state", not necessarily a desired end
 
 result.
 
-1. **Single source of truth** — The state (`pressed`) describes what's
+1. **Single source of truth** - The state (`pressed`) describes what's
 
    happening; visuals are derived
 
-2. **Easier to extend** — Adding opacity, rotation, or other effects just
+2. **Easier to extend** - Adding opacity, rotation, or other effects just
 
    requires more interpolations from the same state
 
-3. **Debugging** — Inspecting `pressed = 1` is clearer than `scale = 0.95`
+3. **Debugging** - Inspecting `pressed = 1` is clearer than `scale = 0.95`
 
-4. **Reusable logic** — The same `pressed` value can drive multiple visual
+4. **Reusable logic** - The same `pressed` value can drive multiple visual
 
    properties
 
@@ -1731,7 +1731,7 @@ With React Compiler enabled, use `.get()` and `.set()` instead of reading or
 
 writing `.value` directly on Reanimated shared values. The compiler can't track
 
-property access—explicit methods ensure correct behavior.
+property access - explicit methods ensure correct behavior.
 
 **Incorrect: breaks with React Compiler**
 
@@ -1855,7 +1855,7 @@ function MeasuredBox({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Use functional setState to compare—don't read state directly in the callback.
+Use functional setState to compare - don't read state directly in the callback.
 
 ### 9.2 Modern React Native Styling Patterns
 
@@ -1941,7 +1941,7 @@ When adding space to the top or bottom of a ScrollView that may change
 
 (keyboard, toolbars, dynamic content), use `contentInset` instead of padding.
 
-Changing `contentInset` doesn't trigger layout recalculation—it adjusts the
+Changing `contentInset` doesn't trigger layout recalculation - it adjusts the
 
 scroll area without re-rendering content.
 
@@ -2090,17 +2090,17 @@ function Avatar({ url }: { url: string }) {
 
 **Key props:**
 
-- `placeholder` — Blurhash or thumbnail while loading
+- `placeholder` - Blurhash or thumbnail while loading
 
-- `contentFit` — `cover`, `contain`, `fill`, `scale-down`
+- `contentFit` - `cover`, `contain`, `fill`, `scale-down`
 
-- `transition` — Fade-in duration (ms)
+- `transition` - Fade-in duration (ms)
 
-- `priority` — `low`, `normal`, `high`
+- `priority` - `low`, `normal`, `high`
 
-- `cachePolicy` — `memory`, `disk`, `memory-disk`, `none`
+- `cachePolicy` - `memory`, `disk`, `memory-disk`, `none`
 
-- `recyclingKey` — Unique key for list recycling
+- `recyclingKey` - Unique key for list recycling
 
 For cross-platform (web + native), use `SolitoImage` from `solito/image` which uses `expo-image` under the hood.
 
@@ -2609,7 +2609,7 @@ monorepos.
 
 In a monorepo, packages with native code must be installed in the native app's
 
-directory directly. Autolinking only scans the app's `node_modules`—it won't
+directory directly. Autolinking only scans the app's `node_modules` - it won't
 
 find native dependencies installed in other packages.
 
@@ -2623,7 +2623,7 @@ packages/
     package.json  # missing react-native-reanimated
 ```
 
-Autolinking fails—native code not linked.
+Autolinking fails - native code not linked.
 
 **Correct: native dep in app directory**
 
@@ -2821,7 +2821,7 @@ const relativeFormatter = new Intl.RelativeTimeFormat('en-US', {
 
 Creating `Intl` objects is significantly more expensive than `RegExp` or plain
 
-objects—each instantiation parses locale data and builds internal lookup tables.
+objects - each instantiation parses locale data and builds internal lookup tables.
 
 ---
 
@@ -2870,7 +2870,7 @@ function App() {
 import { Text, View } from 'react-native'
 
 function App() {
-  // No loading state needed—font is already available
+  // No loading state needed - font is already available
   return (
     <View>
       <Text style={{ fontFamily: 'Geist-Bold' }}>Hello</Text>

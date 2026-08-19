@@ -54,12 +54,12 @@ function Avatar({ url }: { url: string }) {
 
 **Key props:**
 
-- `placeholder` — Blurhash or thumbnail while loading
-- `contentFit` — `cover`, `contain`, `fill`, `scale-down`
-- `transition` — Fade-in duration (ms)
-- `priority` — `low`, `normal`, `high`
-- `cachePolicy` — `memory`, `disk`, `memory-disk`, `none`
-- `recyclingKey` — Unique key for list recycling
+- `placeholder` - Blurhash or thumbnail while loading
+- `contentFit` - `cover`, `contain`, `fill`, `scale-down`
+- `transition` - Fade-in duration (ms)
+- `priority` - `low`, `normal`, `high`
+- `cachePolicy` - `memory`, `disk`, `memory-disk`, `none`
+- `recyclingKey` - Unique key for list recycling
 
 For cross-platform (web + native), use `SolitoImage` from `solito/image` which uses `expo-image` under the hood.
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// audio.mjs — the shared HyperFrames audio engine. ONE implementation of TTS +
+// audio.mjs - the shared HyperFrames audio engine. ONE implementation of TTS +
 // BGM + SFX for every video workflow (product-launch, general-video, pr-to-video,
 // …). Workflows do NOT vendor a copy: they write a neutral `audio_request.json`
 // (a tiny per-workflow adapter maps their storyboard/scenes into it) and call:
 //
 //   node <MEDIA_DIR>/scripts/audio.mjs --request ./audio_request.json --hyperframes . --out ./audio_meta.json
 //
-// The three capabilities degrade on ONE switch — whether HeyGen is configured
+// The three capabilities degrade on ONE switch - whether HeyGen is configured
 // (credential present, NOT the CLI). This mirrors the table in ../SKILL.md:
 //
 //   TTS : HeyGen REST → ElevenLabs → Kokoro (CLI)
@@ -36,7 +36,7 @@
 //
 // --only tts,bgm,sfx  runs a subset and MERGES into an existing --out (so a
 // workflow can do TTS+BGM early, then SFX later once cues exist). When BGM uses
-// the generate path it is spawned detached (bgm_pending:true) — run wait-bgm.mjs
+// the generate path it is spawned detached (bgm_pending:true) - run wait-bgm.mjs
 // before assembling.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -74,7 +74,7 @@ const r3 = (x) => Number(x.toFixed(3));
 // 7/8 lines fail on first run (concurrent cold-start model loads) and pass on
 // retry once the model was cached. Kokoro/Whisper each load their own local
 // model per subprocess, so firing every line at once multiplies that cost by
-// the line count. mapWithConcurrency caps how many run at once — still
+// the line count. mapWithConcurrency caps how many run at once - still
 // parallel, just bounded.
 const ttsConcurrency = Math.max(1, Number(process.env.HYPERFRAMES_TTS_CONCURRENCY) || 4);
 
@@ -140,7 +140,7 @@ if (only.has("tts") && lines.length) {
     const id = String(line.id);
     const text = String(line.text ?? "").trim();
     if (!text) {
-      anomalies.push(`line ${id}: empty text — skipped`);
+      anomalies.push(`line ${id}: empty text - skipped`);
       return null;
     }
     const rel = `assets/voice/${id}.wav`;
@@ -155,14 +155,14 @@ if (only.has("tts") && lines.length) {
       hyperframesDir,
     });
     if (!ok) {
-      anomalies.push(`line ${id}: TTS failed — omitted`);
+      anomalies.push(`line ${id}: TTS failed - omitted`);
       return null;
     }
     let wordArr = words; // heygen: native; else transcribe
     if (!wordArr) wordArr = await transcribeWav({ wavRel: rel, lang, hyperframesDir });
     const dur = ffprobeDuration(abs);
     if (!isFinite(dur) || dur <= 0) {
-      anomalies.push(`line ${id}: bad voice duration — omitted`);
+      anomalies.push(`line ${id}: bad voice duration - omitted`);
       return null;
     }
     return { id, path: rel, duration_s: r3(dur), words: withWordIds(wordArr) };
@@ -191,7 +191,7 @@ if (only.has("bgm")) {
   bgm = null;
   Object.keys(bgmFields).forEach((k) => (bgmFields[k] = k === "bgm_pending" ? false : null));
   // Mode resolution. An EXPLICIT mode (flag or request.bgm.mode) is strict:
-  // "retrieve" means retrieve-or-nothing — it never silently starts a detached
+  // "retrieve" means retrieve-or-nothing - it never silently starts a detached
   // generate (a caller with no wait-bgm step, e.g. product-launch, must not get
   // a pending job it can't await). Only the UNSET/auto default picks generate
   // when HeyGen is absent.
@@ -199,7 +199,7 @@ if (only.has("bgm")) {
   let mode = noBgm ? "none" : explicitMode || (heygenOK ? "retrieve" : "generate");
   if (mode === "retrieve" && !heygenOK) {
     anomalies.push(
-      "bgm: retrieve requires a HeyGen credential — skipped (no generate fallback for an explicit retrieve)",
+      "bgm: retrieve requires a HeyGen credential - skipped (no generate fallback for an explicit retrieve)",
     );
     mode = "none";
   }
@@ -214,10 +214,10 @@ if (only.has("bgm")) {
         bgmFields.bgm_mode = "retrieve";
         console.error(`  bgm: ${bgm.path} (retrieve "${bgm.query}")`);
       } else {
-        anomalies.push(`bgm: no music match for "${request.bgm?.query ?? ""}" — skipped`);
+        anomalies.push(`bgm: no music match for "${request.bgm?.query ?? ""}" - skipped`);
       }
     } catch (e) {
-      anomalies.push(`bgm retrieve failed: ${e.message} — skipped`);
+      anomalies.push(`bgm retrieve failed: ${e.message} - skipped`);
     }
   } else {
     // generate

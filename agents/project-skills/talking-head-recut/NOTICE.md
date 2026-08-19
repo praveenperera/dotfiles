@@ -1,6 +1,6 @@
 # Attribution
 
-The `talking-head-recut` skill (its card-based design system — styles, layouts, frames,
+The `talking-head-recut` skill (its card-based design system - styles, layouts, frames,
 fonts, and the GSAP-driven composition workflow) is **adapted from** the open-source
 **vtake-skills** project (`vtake-cut`):
 

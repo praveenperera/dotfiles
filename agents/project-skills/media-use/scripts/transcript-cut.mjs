@@ -27,7 +27,7 @@ const { values: args } = parseArgs({
 });
 
 if (args.help) {
-  console.log(`media-use transcript-cut — compile transcript edits into video cuts
+  console.log(`media-use transcript-cut - compile transcript edits into video cuts
 
 Usage:
   node transcript-cut.mjs --input in.mp4 --transcript transcript.json --remove "12-15" --out out.mp4

@@ -1,5 +1,5 @@
 <!--
-  Blue Professional — caption skin (preset-local source).
+  Blue Professional - caption skin (preset-local source).
 
   This is the preset's own lower-third karaoke caption look. product-launch-video's
   Step 2 copies it into the project as caption-skin.html; captions.mjs then fills the
@@ -9,7 +9,7 @@
     · the 0 duration + 0 width/height   → real total + canvas size
     · the empty data-brand-tokens style → :root tokens derived from the project's frame.md
 
-  Token contract — reference ONLY this fixed vocab (captions.mjs injects it from
+  Token contract - reference ONLY this fixed vocab (captions.mjs injects it from
   frame.md, so the Step-2 brand overlay flows through; each var has a blue-professional
   literal fallback for standalone preview):
     --cap-ink · --cap-canvas · --cap-accent · --cap-accent-2 · --font-display ·
@@ -19,11 +19,11 @@
   State changes use gsap.set({className}) (applied on the engine's frame-by-frame seek);
   never tl.call() callbacks (seek does not fire them → wrong state on render).
 
-  Visual: a soft cobalt-tinted card on warm cream — a 4% cobalt fill inside a 1.5px
+  Visual: a soft cobalt-tinted card on warm cream - a 4% cobalt fill inside a 1.5px
   20%-cobalt border, soft 14px rounded corners, NO shadow (the system's premium signal
   is the absence of cast depth; the tinted card does the lift). Space Grotesk, sentence
   case, near-black glyphs. Upcoming words sit in muted gray; the current word becomes a
-  solid cobalt chip — the brand's signature single-accent gesture, a pill-rounded fill
+  solid cobalt chip - the brand's signature single-accent gesture, a pill-rounded fill
   with cream reading on top; spoken words settle to near-black ink, chip cleared.
 -->
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
@@ -43,7 +43,7 @@
     z-index: 20;
     pointer-events: none;
   }
-  /* the keep-out band, from captionBand(H) — frame content stays above it */
+  /* the keep-out band, from captionBand(H) - frame content stays above it */
   .caption-stage {
     position: absolute;
     left: 0;
@@ -55,7 +55,7 @@
     justify-content: center;
   }
   .caption-group {
-    /* every group is absolutely stacked over the SAME band — exactly one shown at a
+    /* every group is absolutely stacked over the SAME band - exactly one shown at a
        time via opacity. Must be absolute: in-flow groups would lay out side-by-side. */
     position: absolute;
     inset: 0;
@@ -65,7 +65,7 @@
     opacity: 0;
   }
 
-  /* THE tinted card — 4% cobalt fill, 1.5px 20%-cobalt border, soft 14px corners,
+  /* THE tinted card - 4% cobalt fill, 1.5px 20%-cobalt border, soft 14px corners,
      NO shadow (the tinted card does the lift; cast depth is forbidden) */
   .caption-pill {
     max-width: 78%;
@@ -86,21 +86,21 @@
     letter-spacing: -0.02em;
   }
 
-  /* upcoming — muted gray, no chip */
+  /* upcoming - muted gray, no chip */
   .caption-word {
     display: inline-block;
     padding: 0 0.18em;
     border-radius: 0.32em;
     color: color-mix(in srgb, var(--cap-ink, #111111) 52%, var(--cap-canvas, #fdfae7));
   }
-  /* current word — THE solid cobalt chip (the single-accent gesture; pill-rounded
+  /* current word - THE solid cobalt chip (the single-accent gesture; pill-rounded
      fill, NO shadow), cream reading on top */
   .caption-word.is-active {
     color: var(--cap-canvas, #fdfae7);
     background: var(--cap-accent, #1e2bfa);
     box-shadow: none;
   }
-  /* already spoken — solid near-black ink, chip cleared */
+  /* already spoken - solid near-black ink, chip cleared */
   .caption-word.is-spoken {
     color: var(--cap-ink, #111111);
     background: transparent;
@@ -108,17 +108,17 @@
   }
 
   /* optional per-word accents (dormant until a word-classer tags them) */
-  /* brand / key term — cobalt, the system's one accent on a key word */
+  /* brand / key term - cobalt, the system's one accent on a key word */
   .caption-word.cap-brand {
     color: var(--cap-accent, #1e2bfa);
   }
-  /* numerals / data — cobalt 700, the figure voice */
+  /* numerals / data - cobalt 700, the figure voice */
   .caption-word.cap-num {
     font-family: var(--font-display, "Space Grotesk"), system-ui, sans-serif;
     font-weight: 700;
     color: var(--cap-accent, #1e2bfa);
   }
-  /* emphasis — a directional-red hairline underline (inline only, never a fill) */
+  /* emphasis - a directional-red hairline underline (inline only, never a fill) */
   .caption-word.cap-cta {
     text-decoration: underline;
     text-decoration-thickness: 2px;
@@ -192,11 +192,11 @@
       var end = isLast ? DURATION : Math.min(Number(next.start), Number(group.end) + 0.3);
       if (end <= start) end = start + 0.01;
 
-      // group on/off — exactly one group visible at a time
+      // group on/off - exactly one group visible at a time
       tl.set(groupEl, { opacity: 1 }, start);
       tl.set(groupEl, { opacity: 0 }, end);
 
-      // 3-state karaoke via className SETS — seek-safe (gsap.set applies on the
+      // 3-state karaoke via className SETS - seek-safe (gsap.set applies on the
       // engine's frame-by-frame seek; .call callbacks would NOT fire).
       words.forEach(function (w, i) {
         var el = document.getElementById("caption-word-" + g + "-" + i);

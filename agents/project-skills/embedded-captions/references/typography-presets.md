@@ -8,14 +8,14 @@ Five named styles corresponding to the `cap-*` CSS classes. Pick one per caption
 | `phrase` | 78px upright 600            | Main statement clauses. Default for most lines.                                                                           |
 | `emph`   | 92px upright 800            | Lines with emotional peak or key achievement ("I've achieved incredible things").                                         |
 | `dream`  | 82px italic 700             | Aspirational / "was dreaming of…" style lines. Italic signals memory/imagination.                                         |
-| `crown`  | 140px upright 900 uppercase | **Only for the climax line.** Used in center-stage `crown-plane`. Maximum one per composition — ideally the last caption. |
+| `crown`  | 140px upright 900 uppercase | **Only for the climax line.** Used in center-stage `crown-plane`. Maximum one per composition - ideally the last caption. |
 
 ## Tone field
 
 Independent of style, each group has `tone`: `soft` or `present`.
 
-- **soft** — gentle fade + 8px y-drift entrance, `power2.out` ease. Feels floaty, nostalgic. Use for memory, intro, dream.
-- **present** — snappy 6px y + 1.04 scale pop, `power3.out`, transformOrigin center. Feels assertive, in-the-moment. Use for emphasis and crown.
+- **soft** - gentle fade + 8px y-drift entrance, `power2.out` ease. Feels floaty, nostalgic. Use for memory, intro, dream.
+- **present** - snappy 6px y + 1.04 scale pop, `power3.out`, transformOrigin center. Feels assertive, in-the-moment. Use for emphasis and crown.
 
 ## Picking automatically
 
@@ -29,7 +29,7 @@ Scan each group's words:
 
 ## Font-size scales with column width
 
-The `.cap-*` defaults in each template are tuned for a **~560px column** (the original champion composition). When the caption plane is wider than that, the fonts feel underweight — too much negative space around text. Scale up accordingly.
+The `.cap-*` defaults in each template are tuned for a **~560px column** (the original champion composition). When the caption plane is wider than that, the fonts feel underweight - too much negative space around text. Scale up accordingly.
 
 | Plane width         | intro | phrase | emph | dream | crown (centered, full-frame) | crown (clean-zone only) |
 | ------------------- | ----- | ------ | ---- | ----- | ---------------------------- | ----------------------- |

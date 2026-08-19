@@ -1,4 +1,4 @@
-# Bespoke design vs. presets — when to override, when to clone
+# Bespoke design vs. presets - when to override, when to clone
 
 The 5 preset styles (`intro / phrase / emph / dream / crown`) and the 3 templates (`wall-embed`, `corner-column-crown`, `portrait-header`) are **scaffolds**, not rules. The best renders we've shipped all override presets for specific groups because **typography is a per-scene decision**, not a general rule.
 
@@ -19,7 +19,7 @@ Full HTML for two validated renders is in `references/example-renders/`:
 | `memory-wall.html` | Introspective monologue, right-side foam wall, mid-tone | Right-aligned cascade, per-group bespoke sizes (`cap-1` 78 italic / `cap-2` 66 italic + right hanging-indent / `cap-3` 72 upright / `cap-4` 90 uppercase). `mix-blend-mode: screen` for the dark-ish foam. |
 | `champion.html`    | Podcast interview, cluttered bookshelf, 1920×1080       | Upper-left column + center-stage crown. Tuned preset class sizes (`cap-intro` 52 / `cap-phrase` 60 / `cap-emph` 70 / `cap-crown` 140). `screen` blend reads the shelves through text.                      |
 
-**When a new scene matches one of these closely** (similar framing, similar subject-center, similar backdrop type): clone the HTML and only replace the GROUPS array + word timings. Don't re-derive the design from presets — you'll lose the specific choices that took many iterations to validate.
+**When a new scene matches one of these closely** (similar framing, similar subject-center, similar backdrop type): clone the HTML and only replace the GROUPS array + word timings. Don't re-derive the design from presets - you'll lose the specific choices that took many iterations to validate.
 
 ---
 
@@ -29,12 +29,12 @@ You'll reach for presets like `"style": "emph"` when what the scene really needs
 
 ### "This cap is at position N and deserves its own treatment"
 
-`memory-wall.html` uses `cap-1 / cap-2 / cap-3 / cap-4` — **position-indexed**, not role-indexed. Each one is a bespoke design for a specific phrase at a specific point in the arc:
+`memory-wall.html` uses `cap-1 / cap-2 / cap-3 / cap-4` - **position-indexed**, not role-indexed. Each one is a bespoke design for a specific phrase at a specific point in the arc:
 
-- cap-1 (soft opener, 4 words): 78px italic 600 — feels like a whisper
-- cap-2 (dreamy modifier, 3 words): 66px italic 500 + `padding-right: 44px` — hanging indent creates ragged right-edge stagger
-- cap-3 (turn, 2 words): 72px upright 700 — the syntactic pivot, no italic
-- cap-4 (climax, 4 words): 90px uppercase 900 — three lines cascade right-aligned
+- cap-1 (soft opener, 4 words): 78px italic 600 - feels like a whisper
+- cap-2 (dreamy modifier, 3 words): 66px italic 500 + `padding-right: 44px` - hanging indent creates ragged right-edge stagger
+- cap-3 (turn, 2 words): 72px upright 700 - the syntactic pivot, no italic
+- cap-4 (climax, 4 words): 90px uppercase 900 - three lines cascade right-aligned
 
 `phrase/emph/intro` can't express "this cap has a hanging indent" or "this cap is the syntactic pivot". When that matters, invent your own class names:
 
@@ -58,19 +58,19 @@ You'll reach for presets like `"style": "emph"` when what the scene really needs
 }
 ```
 
-The `"style": "1"` field becomes `class="cap-1"` on the element — any string works, no validation.
+The `"style": "1"` field becomes `class="cap-1"` on the element - any string works, no validation.
 
 ### "The template's blend doesn't suit this backdrop" → pick a different template, do NOT override
 
-**Cinematic mode does not override colour or blend.** A template's `mix-blend-mode` + fill are **locked DNA** — `make-composition.cjs` ignores `plan.cap_color` / `blend_mode` / `text_shadow` / `text_filter`. Selecting a template commits to its look; the only agent-authored things are layout (planes/positions) and per-group typography.
+**Cinematic mode does not override colour or blend.** A template's `mix-blend-mode` + fill are **locked DNA** - `make-composition.cjs` ignores `plan.cap_color` / `blend_mode` / `text_shadow` / `text_filter`. Selecting a template commits to its look; the only agent-authored things are layout (planes/positions) and per-group typography.
 
-So use the caption-region luminance to **choose** a template that already fits — never to recolour one:
+So use the caption-region luminance to **choose** a template that already fits - never to recolour one:
 
 | Region luminance                  | What fits                                                                                     | Why                                                                        |
 | --------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | < 60 (dark / low-key)             | a cream + `screen` template (`cinematic-cream`, `memory-wall`, `champion`, `portrait-header`) | light text glows, picks up the scene                                       |
 | 60–180 (mid-tone)                 | a cream + `screen` template still reads (add a scrim via Standard if marginal)                | text picks up texture                                                      |
-| > 180 (bright: window, pale wall) | **none of the cream/`screen` Cinematic templates — they wash out**                            | → use **Standard mode** (opaque rail, set per the chosen template) instead |
+| > 180 (bright: window, pale wall) | **none of the cream/`screen` Cinematic templates - they wash out**                            | → use **Standard mode** (opaque rail, set per the chosen template) instead |
 
 If the scene is bright and the cream/`screen` look washes out, that's the signal to switch to **Standard mode** (which sets opaque colour in the HTML), not to recolour a Cinematic template into something it isn't.
 
@@ -94,9 +94,9 @@ The `#cg-N` selector always works because `make-composition.cjs` writes `<div id
 
 ### "Caps should accumulate (flex stack) instead of swap"
 
-All three templates default to `position: absolute` on `.cap` inside their plane — caps stack at one spot and only the active one shows (single-caption swap). This is correct for `portrait-header` and `corner-column-crown`, where each caption replaces the last.
+All three templates default to `position: absolute` on `.cap` inside their plane - caps stack at one spot and only the active one shows (single-caption swap). This is correct for `portrait-header` and `corner-column-crown`, where each caption replaces the last.
 
-`memory-wall` uses **flex column accumulation** — captions pile up like a poem. The template doesn't default to this, so override via custom_css:
+`memory-wall` uses **flex column accumulation** - captions pile up like a poem. The template doesn't default to this, so override via custom_css:
 
 ```css
 .wall-plane {
@@ -115,11 +115,11 @@ All three templates default to `position: absolute` on `.cap` inside their plane
 }
 ```
 
-With this + staggered `in` / `out` times, cap-0 fades in at t=0.2, cap-1 at t=2.55 (below cap-0 in flex order), cap-2 at t=4.90 (replaces both as they fade out together at t=4.85) — this is how the memory-wall poem pages work.
+With this + staggered `in` / `out` times, cap-0 fades in at t=0.2, cap-1 at t=2.55 (below cap-0 in flex order), cap-2 at t=4.90 (replaces both as they fade out together at t=4.85) - this is how the memory-wall poem pages work.
 
 ### "Font size doesn't match the scene"
 
-Template preset sizes are tuned for a specific column width + frame size. Don't fight them — override:
+Template preset sizes are tuned for a specific column width + frame size. Don't fight them - override:
 
 ```json
 "custom_css": ".cap-intro { font-size: 52px; } .cap-phrase { font-size: 60px; }"

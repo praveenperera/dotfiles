@@ -63,14 +63,14 @@ Copy the font file into `hf-src/assets/` next to the HTML.
 <div style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>...</div>
 ```
 
-Same string in HF — but be aware: on Linux without a real Helvetica
+Same string in HF - but be aware: on Linux without a real Helvetica
 installed (typical CI environment), Remotion and HF fall back to
 _different_ sans-serif system fonts because they bundle different
 Chromium versions. This is the noise floor: ~0.025 mean SSIM cost,
 visible as different stroke widths at large font weights (800+).
 
 If matching the Remotion render exactly matters for a specific
-fixture, load the same font explicitly — don't rely on system
+fixture, load the same font explicitly - don't rely on system
 fallback.
 
 ## When in doubt: use Inter
@@ -83,7 +83,7 @@ need to minimize font drift in the validation harness.
 
 Remotion uses `delayRender()` to defer the first frame until fonts
 load. HF's compiler inlines Google Fonts at compile time and waits
-on `@font-face` readiness via the Frame Adapter pattern — the
+on `@font-face` readiness via the Frame Adapter pattern - the
 `delayRender` call drops in translation. See [media.md](media.md).
 
 ## Multi-weight loading
@@ -108,5 +108,5 @@ that aren't actually used, drop them.
 ## Font subsetting
 
 Remotion's `loadFont` doesn't subset; HF's compiler doesn't either
-(yet). Don't try to optimize this in translation — it's lossless to
+(yet). Don't try to optimize this in translation - it's lossless to
 keep the same weight set as the Remotion source.

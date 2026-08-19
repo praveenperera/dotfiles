@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase 4c pre-assemble helper — wait for detached BGM, then write status.
+// Phase 4c pre-assemble helper - wait for detached BGM, then write status.
 //
 // audio.mjs may launch Lyria / MusicGen in a detached process so voice work can
 // keep moving. Before assemble-index.mjs decides whether to emit the BGM audio

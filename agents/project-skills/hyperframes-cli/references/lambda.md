@@ -1,4 +1,4 @@
-# lambda — Cloud Rendering on AWS Lambda
+# lambda - Cloud Rendering on AWS Lambda
 
 Deploy HyperFrames distributed rendering to AWS Lambda and drive renders from your laptop or CI. Wraps `@hyperframes/aws-lambda` SDK plus AWS SAM. End-to-end is three commands:
 
@@ -18,8 +18,8 @@ npx hyperframes lambda destroy
 
 ## When to Use Lambda vs Local Render
 
-- **Local `render`** — dev-loop iteration, single host, anything under a few minutes at 1080p.
-- **`lambda render`** — long videos, 4K, large parallel batches, or anything where local Chrome would time out / exhaust RAM. Pay-per-invocation, no idle cost.
+- **Local `render`** - dev-loop iteration, single host, anything under a few minutes at 1080p.
+- **`lambda render`** - long videos, 4K, large parallel batches, or anything where local Chrome would time out / exhaust RAM. Pay-per-invocation, no idle cost.
 
 For one-off short renders Lambda is not worth the deploy overhead.
 
@@ -41,7 +41,7 @@ npx hyperframes lambda deploy \
   --memory=10240
 ```
 
-Builds `packages/aws-lambda/dist/handler.zip` and SAM-deploys the stack (Lambda + Step Functions + S3 + IAM). Idempotent — re-running on the same `--stack-name` is a no-op when nothing changed. Writes `<cwd>/.hyperframes/lambda-stack-<name>.json` so later subcommands don't need to call `describe-stacks`.
+Builds `packages/aws-lambda/dist/handler.zip` and SAM-deploys the stack (Lambda + Step Functions + S3 + IAM). Idempotent - re-running on the same `--stack-name` is a no-op when nothing changed. Writes `<cwd>/.hyperframes/lambda-stack-<name>.json` so later subcommands don't need to call `describe-stacks`.
 
 | Flag            | Default                         | Description                   |
 | --------------- | ------------------------------- | ----------------------------- |
@@ -61,7 +61,7 @@ npx hyperframes lambda sites create ./my-project
 npx hyperframes lambda render ./my-project --site-id=abc1234deadbeef0 ...
 ```
 
-Tars + uploads `<projectDir>` to S3 with a content-addressed key. Returns a stable `siteId` you can reuse — re-renders of the same tree skip the upload.
+Tars + uploads `<projectDir>` to S3 with a content-addressed key. Returns a stable `siteId` you can reuse - re-renders of the same tree skip the upload.
 
 ### render
 
@@ -77,7 +77,7 @@ Starts a Step Functions execution. Returns immediately with a `renderId` unless 
 | Flag                    | Description                                                                                                                                                                                                                                                                                                                                                   |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--width` / `--height`  | Output dimensions in pixels                                                                                                                                                                                                                                                                                                                                   |
-| `--output-resolution`   | Supersampling preset (engages Chrome `deviceScaleFactor`) — `landscape` / `landscape-4k` / `portrait` / `portrait-4k` / `square` / `square-4k`, plus aliases (`1080p`, `4k`, `uhd`, `hd`, `1080p-portrait`, `4k-portrait`, `1080p-square`, `4k-square`). Use this to render an authored-at-1080p composition at 4K without re-laying-out — see footgun below. |
+| `--output-resolution`   | Supersampling preset (engages Chrome `deviceScaleFactor`) - `landscape` / `landscape-4k` / `portrait` / `portrait-4k` / `square` / `square-4k`, plus aliases (`1080p`, `4k`, `uhd`, `hd`, `1080p-portrait`, `4k-portrait`, `1080p-square`, `4k-square`). Use this to render an authored-at-1080p composition at 4K without re-laying-out - see footgun below. |
 | `--fps`                 | `24` / `30` / `60`                                                                                                                                                                                                                                                                                                                                            |
 | `--format`              | `mp4` / `mov` / `png-sequence` / `webm` (default `mp4`)                                                                                                                                                                                                                                                                                                       |
 | `--codec`               | `h264` / `h265` (mp4 only)                                                                                                                                                                                                                                                                                                                                    |
@@ -88,7 +88,7 @@ Starts a Step Functions execution. Returns immediately with a `renderId` unless 
 | `--wait`                | Block until completion, stream progress                                                                                                                                                                                                                                                                                                                       |
 | `--json`                | Machine-parseable progress snapshot                                                                                                                                                                                                                                                                                                                           |
 
-**`--width` / `--height` footgun.** Setting `--width 3840 --height 2160` against a composition whose `data-width="1920"` silently produces 1080p — the runtime lays out the page at the composition's authored dimensions and the CLI flags are ignored for layout. To actually output at 4K, use `--output-resolution 4k` (supersamples via `deviceScaleFactor`). The CLI now prints a warning when CLI dimensions disagree with the composition's `data-width` / `data-height` and `--output-resolution` is not set; the warning is suppressed when `--json` is on or `index.html` isn't on disk (`--site-id` flows).
+**`--width` / `--height` footgun.** Setting `--width 3840 --height 2160` against a composition whose `data-width="1920"` silently produces 1080p - the runtime lays out the page at the composition's authored dimensions and the CLI flags are ignored for layout. To actually output at 4K, use `--output-resolution 4k` (supersamples via `deviceScaleFactor`). The CLI now prints a warning when CLI dimensions disagree with the composition's `data-width` / `data-height` and `--output-resolution` is not set; the warning is suppressed when `--json` is on or `index.html` isn't on disk (`--site-id` flows).
 
 ### progress
 
@@ -97,7 +97,7 @@ npx hyperframes lambda progress hf-render-abcd1234
 npx hyperframes lambda progress arn:aws:states:us-east-1:...:execution:...
 ```
 
-Prints one snapshot — overall percent, frames rendered, Lambda invocations, accrued cost, and any errors. Accepts a bare `renderId` (resolved against the stack's state-machine ARN) or a full SFN execution ARN.
+Prints one snapshot - overall percent, frames rendered, Lambda invocations, accrued cost, and any errors. Accepts a bare `renderId` (resolved against the stack's state-machine ARN) or a full SFN execution ARN.
 
 ### destroy
 
@@ -105,14 +105,14 @@ Prints one snapshot — overall percent, frames rendered, Lambda invocations, ac
 npx hyperframes lambda destroy
 ```
 
-Calls `sam delete --no-prompts` and drops the local state file. **The render S3 bucket is configured `Retain`** so it survives stack destruction — empty + delete it via the AWS console / CLI if you want the storage back.
+Calls `sam delete --no-prompts` and drops the local state file. **The render S3 bucket is configured `Retain`** so it survives stack destruction - empty + delete it via the AWS console / CLI if you want the storage back.
 
 ### Non-retryable errors
 
 A subset of failures the Step Functions state machine short-circuits instead of running through its 4× 15-min retry budget. `progress` surfaces these immediately with the error class name; do not re-issue `lambda render` blindly when you see one.
 
-- **`ChromeBinaryUnavailableError`** — `@sparticuz/chromium` returned an empty/missing executable path. A prior chunk hit `Sandbox.Timedout` mid-extraction and the warm instance is wedged until the execution environment recycles. Remedy: bump a Lambda env var (forces a new exec env) or `lambda deploy` again. Not a transient render failure; retries will burn budget on the same wedged instance.
-- **`FFMPEG_VERSION_MISMATCH`** / **`PLAN_HASH_MISMATCH`** — planner / executor version drift. Re-deploy.
+- **`ChromeBinaryUnavailableError`** - `@sparticuz/chromium` returned an empty/missing executable path. A prior chunk hit `Sandbox.Timedout` mid-extraction and the warm instance is wedged until the execution environment recycles. Remedy: bump a Lambda env var (forces a new exec env) or `lambda deploy` again. Not a transient render failure; retries will burn budget on the same wedged instance.
+- **`FFMPEG_VERSION_MISMATCH`** / **`PLAN_HASH_MISMATCH`** - planner / executor version drift. Re-deploy.
 
 ### policies
 
@@ -136,5 +136,5 @@ The default action set is deliberately broad (`Resource: "*"`) because CloudForm
 
 - `lambda destroy` removes the SAM stack but **leaves the S3 bucket** (`Retain`). Delete it manually if you want the storage back.
 - Lambda billing is per-invocation + duration. `progress` reports the accrued cost.
-- `--concurrency` caps parallel Lambda invocations — keep it aligned with your account quota.
+- `--concurrency` caps parallel Lambda invocations - keep it aligned with your account quota.
 - `--chunk-size` and `--max-parallel-chunks` trade off per-chunk overhead against parallelism; larger chunks reduce coordinator overhead, smaller chunks parallelize more aggressively.

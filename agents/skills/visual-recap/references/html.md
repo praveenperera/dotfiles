@@ -32,7 +32,7 @@ Do not load icon fonts, component libraries, or other CDNs.
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Recap — <short title></title>
+  <title>Recap - <short title></title>
   <style>/* inlined recap.css */</style>
 </head>
 <body>
@@ -135,7 +135,7 @@ Split before/after:
 
 ```html
 <figure class="diff">
-  <figcaption>src/lib.rs — reject empty slugs</figcaption>
+  <figcaption>src/lib.rs - reject empty slugs</figcaption>
   <div class="split">
     <pre><code>...</code></pre>
     <pre><code>...</code></pre>
@@ -159,7 +159,7 @@ New file or large addition:
 
 ```html
 <figure class="code">
-  <figcaption>src/parse.rs — new parser</figcaption>
+  <figcaption>src/parse.rs - new parser</figcaption>
   <pre><code>...</code></pre>
 </figure>
 ```
@@ -198,7 +198,7 @@ chrome restyled as an app.
 
 ```html
 <figure class="mockup" id="share" data-surface="panel">
-  <figcaption>Viewer — share dialog</figcaption>
+  <figcaption>Viewer - share dialog</figcaption>
   <style>
     #share .product { background: light-dark(#fff, #1b1b1b); color: light-dark(#111, #f3f3f3); }
   </style>

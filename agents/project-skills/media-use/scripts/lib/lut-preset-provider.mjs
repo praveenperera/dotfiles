@@ -189,7 +189,7 @@ export async function freezeLibraryLut(match, { projectDir, type, localOnly = fa
     try {
       // Download + validate at a .tmp path, then atomically rename. A crash
       // (SIGKILL/OOM) between write and validate can't orphan an invalid .cube
-      // at the final path — only a validated cube is ever renamed into place.
+      // at the final path - only a validated cube is ever renamed into place.
       await freezeUrl(match.url, tmpPath);
       assertValidCubeFile(tmpPath, `downloaded library LUT ${match.id} failed validation`);
       renameSync(tmpPath, fullPath);
@@ -210,7 +210,7 @@ export async function freezeLibraryLut(match, { projectDir, type, localOnly = fa
     try {
       const cube = buildCube(match.params);
       assertValidCubeText(cube, `invalid library LUT ${match.id}`);
-      // Write + validate at .tmp, then atomic rename — same no-orphan guarantee
+      // Write + validate at .tmp, then atomic rename - same no-orphan guarantee
       // as the url path above.
       writeFileSync(tmpPath, cube);
       assertValidCubeFile(tmpPath, `invalid frozen LUT ${localPath}`);

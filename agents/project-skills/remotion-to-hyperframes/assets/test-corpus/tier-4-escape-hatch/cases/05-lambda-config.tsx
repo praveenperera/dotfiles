@@ -1,11 +1,11 @@
-// T4 case 05 — Imports @remotion/lambda for distributed rendering config.
+// T4 case 05 - Imports @remotion/lambda for distributed rendering config.
 //
 // Should be detected by lint_source.py as warning r2hf/lambda-import.
 // The skill drops the Lambda code with a note (HF runs single-machine
 // today) and translates the rest of the composition.
 //
 // Why this is a warning, not a blocker: @remotion/lambda config is
-// orthogonal to the rendered composition — it's deployment configuration,
+// orthogonal to the rendered composition - it's deployment configuration,
 // not animation logic. Treating it as a hard blocker would refuse
 // translation for compositions that are otherwise clean. The skill drops
 // the Lambda calls in step 3 (Generate) and writes a TRANSLATION_NOTES.md
@@ -25,7 +25,7 @@ export const LambdaConfigured: React.FC = () => {
   );
 };
 
-// Rendered at scale via Lambda — no HF equivalent.
+// Rendered at scale via Lambda - no HF equivalent.
 export async function renderViaLambda() {
   return renderMediaOnLambda({
     region: "us-east-1",

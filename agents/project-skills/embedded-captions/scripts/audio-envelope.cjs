@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * audio-envelope.cjs — extract a per-50ms RMS loudness envelope from the source audio.
+ * audio-envelope.cjs - extract a per-50ms RMS loudness envelope from the source audio.
  *
  *   node audio-envelope.cjs <project-dir>     → <project>/envelope.json
  *
@@ -8,7 +8,7 @@
  *
  * Used by lib-dna.cjs to couple the hero's entrance amplitude to how hard the word was
  * actually SPOKEN (percentile of the hero window's loudness within the clip). ffmpeg
- * astats over fixed windows — deterministic, no network, no Python.
+ * astats over fixed windows - deterministic, no network, no Python.
  */
 const path = require("path");
 const fs = require("fs");
@@ -49,7 +49,7 @@ function main() {
     n = Math.round(sr * HOP);
   let out;
   try {
-    // resample INSIDE the filter chain — an output-option -ar applies after the
+    // resample INSIDE the filter chain - an output-option -ar applies after the
     // filtergraph, which would make each window n/<input-rate> seconds instead of HOP
     out = cp.execFileSync(
       "ffmpeg",
@@ -69,7 +69,7 @@ function main() {
       { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] },
     );
   } catch (e) {
-    // ffmpeg writes the metadata to stdout before exiting; some containers still exit 0 — re-throw only if nothing parsed
+    // ffmpeg writes the metadata to stdout before exiting; some containers still exit 0 - re-throw only if nothing parsed
     out = (e.stdout || "") + "";
     if (!out.includes("RMS_level")) {
       console.error(`[envelope] ffmpeg failed: ${e.message}`);

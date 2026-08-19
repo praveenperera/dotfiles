@@ -25,7 +25,7 @@ const { values: args } = parseArgs({
 });
 
 if (args.help) {
-  console.log(`media-use audio-duck — generate GSAP volume ducking keyframes
+  console.log(`media-use audio-duck - generate GSAP volume ducking keyframes
 
 Usage:
   node audio-duck.mjs --meta audio_meta.json --target "#bgm"

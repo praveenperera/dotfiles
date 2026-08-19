@@ -1,4 +1,4 @@
-# stat — category module
+# stat - category module
 
 A single **hero number** reveal. Asset-free (the "input" is the number). ~4–6s.
 
@@ -16,6 +16,6 @@ A single **hero number** reveal. Asset-free (the "input" is the number). ~4–6s
 
 Reuse `apple-money-count` + set target / prefix / suffix / label / palette; **or** hand-author per the proven prototype `v0-stat-motion-demo`:
 
-- **count-up is timeline-driven** — tween a proxy `{v:0}→target` with `onUpdate` writing the formatted number (seek-safe; never setInterval/wall-clock).
+- **count-up is timeline-driven** - tween a proxy `{v:0}→target` with `onUpdate` writing the formatted number (seek-safe; never setInterval/wall-clock).
 - `font-variant-numeric: tabular-nums`; decelerating ease; ~1.2–1.6s then **hold** the final value.
 - ring/arc via `stroke-dashoffset`, finishing in sync with the count-up; label fades in **after** the number lands (value → meaning).

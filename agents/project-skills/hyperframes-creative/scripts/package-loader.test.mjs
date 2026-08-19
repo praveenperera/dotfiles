@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ENV = "HYPERFRAMES_SKILL_PKG_VERSION";
 
-// (a) env override wins — no ancestor lookup, exact version echoed back.
+// (a) env override wins - no ancestor lookup, exact version echoed back.
 test("hyperframesPackageSpec: env override wins", async () => {
   const prev = process.env[ENV];
   process.env[ENV] = "9.9.9";

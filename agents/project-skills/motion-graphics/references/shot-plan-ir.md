@@ -15,7 +15,7 @@ The single contract between Director and Builder. One file: `PROJECT_DIR/shot-pl
   "beats": [12, 37], // optional accent frames/seconds
   "export": "mp4", // or "alpha-overlay" (transparent webm/mov)
 
-  // ── sourcing seam (Director Part 1) — [] means skip the source phase ──
+  // ── sourcing seam (Director Part 1) - [] means skip the source phase ──
   "asset_needs": [
     {
       "role": "hero",
@@ -47,7 +47,7 @@ The single contract between Director and Builder. One file: `PROJECT_DIR/shot-pl
 - `logo-reveal` → `{ logo: <asset path>, tagline, url }`
 - `lower-thirds` → `{ name, role, position, brand_colors[] }`
 - `webpage` → `{ url, capture, highlights: [ { selector|region, label } ] }` (step-highlight a real captured page)
-- `news` → `{ outlet, headline, body, keyword, layout: A|B, logo?, date?, subject? }` (article-highlight: lay text out readable — **no zoom** — then sweep a marker band over the keyword in place. Layout **A** = centered-emphasis 9:16 text-only; **B** = full article 16:9 with `logo` + `date` + `subject` (a person photo → `remove-background` cutout))
+- `news` → `{ outlet, headline, body, keyword, layout: A|B, logo?, date?, subject? }` (article-highlight: lay text out readable - **no zoom** - then sweep a marker band over the keyword in place. Layout **A** = centered-emphasis 9:16 text-only; **B** = full article 16:9 with `logo` + `date` + `subject` (a person photo → `remove-background` cutout))
 - `tweet` → `{ author, handle, avatar, text, metrics }`
 - `asset-fusion` → `{ data_type, asset: <path>, affordance, element_positions: {center, extent, safe[], avoid[]}, derived_palette[], connectors[] }`
 

@@ -7,29 +7,29 @@ description: Refactor Rust code for clarity, structure, and maintainability. Spl
 
 ## Goal
 
-Code should be easy to read, easy to follow, easy to review, and easy to change. But "no refactor needed" is a valid and good outcome. Don't refactor for refactoring's sake — only change code that has real readability, maintainability, or correctness pain.
+Code should be easy to read, easy to follow, easy to review, and easy to change. But "no refactor needed" is a valid and good outcome. Don't refactor for refactoring's sake - only change code that has real readability, maintainability, or correctness pain.
 
 ## Setup
 
 Read the project's CLAUDE.md for project-specific rules before starting.
 
-Preserve behavior by default. If a refactor exposes a correctness bug, isolate it, write a reproducing test, and report it to the user — don't fix it in the same pass. Ask the user before major module splits.
+Preserve behavior by default. If a refactor exposes a correctness bug, isolate it, write a reproducing test, and report it to the user - don't fix it in the same pass. Ask the user before major module splits.
 
 Discover repo-specific verification first: check for a justfile, then fall back to `cargo fmt` / `cargo clippy` / `cargo test`. Run tests before and after.
 
 ## Scope
 
-- **Recent changes (default)**: Only refactor recently touched code — could mean uncommitted changes, commits on this branch, or the last day or two of work. Ask the user to confirm scope before starting
+- **Recent changes (default)**: Only refactor recently touched code - could mean uncommitted changes, commits on this branch, or the last day or two of work. Ask the user to confirm scope before starting
 - **Full sweep**: When the user explicitly asks to refactor a whole module, crate, or codebase
 
 Infer from context: bare `/refactor-rust` or "clean up my changes" = recent. "Refactor this codebase" or "refactor this module" = full sweep. When unsure, ask.
 
 ## Findings First
 
-Before any refactoring, produce a findings report. Start skeptical — do not assume a refactor is justified.
+Before any refactoring, produce a findings report. Start skeptical - do not assume a refactor is justified.
 
 - Review the code in scope and list concrete problems: maintainability issues, correctness risks, testing gaps, unclear control flow
-- Every finding must point to specific code with a concrete reason — not "this file is large" or "this could be cleaner"
+- Every finding must point to specific code with a concrete reason - not "this file is large" or "this could be cleaner"
 - Separate actionable problems from code smells. Code smells alone don't justify a refactor
 - If the code is already in good shape, say so explicitly and stop
 - Order findings by severity. Only proceed to Pass 1/2 for findings that warrant action
@@ -38,7 +38,7 @@ Before any refactoring, produce a findings report. Start skeptical — do not as
 
 Only proceed if Findings First identified structural issues that warrant action.
 
-Spawn an agent focused exclusively on structural refactoring. Do not touch style in this pass. Clarity over brevity — explicit code is often better than overly compact.
+Spawn an agent focused exclusively on structural refactoring. Do not touch style in this pass. Clarity over brevity - explicit code is often better than overly compact.
 
 ### Data-first domain modeling
 
@@ -70,7 +70,7 @@ Refactoring heuristic:
 Avoid turning every rule into type-level machinery. If the state depends on persisted/runtime data or would make ordinary code much harder to read, use a runtime enum plus focused constructors and transition methods.
 
 ### Module splitting
-- Use line count as a heuristic, not a trigger — large modules may warrant splitting by concern, but too many tiny files can make code harder to follow
+- Use line count as a heuristic, not a trigger - large modules may warrant splitting by concern, but too many tiny files can make code harder to follow
 - Use Rust 2018+ layout: `module_name.rs` + `module_name/nested.rs`, never `mod.rs`
 
 ### Function extraction
@@ -84,17 +84,17 @@ Avoid turning every rule into type-level machinery. If the state depends on pers
 - Collapse nested if-lets into chains with `&&`
 - Flatten deeply nested control flow
 - Prefer pattern matching over nested conditionals
-- Sometimes an imperative loop is easier to reason about than a complex iterator chain — prefer clarity
+- Sometimes an imperative loop is easier to reason about than a complex iterator chain - prefer clarity
 
 ### Type design
-- Make impossible states impossible — encode logic and system state in the type system when it makes things clearer, so the compiler rejects invalid states rather than relying on runtime checks
-- Reduce booleans — use enums and state machines instead
+- Make impossible states impossible - encode logic and system state in the type system when it makes things clearer, so the compiler rejects invalid states rather than relying on runtime checks
+- Reduce booleans - use enums and state machines instead
 - Prefer structs with methods over freestanding functions
 - Methods on structs with state, not passing state as function arguments
 - Tuple structs for simple wrappers (e.g., `struct Foo(Arc<Inner>)`)
 - Newtypes over primitives for domain concepts (e.g., `UserId(u64)` not `u64`)
 - Avoid gratuitous `.clone()` where a borrow works just as well (it's noise), but don't contort ownership to avoid a clone when cloning is the clearest option
-- If the project already uses actors (`ractor` or `act_zero` for async; crossbeam channels with small actor structs for sync), `Arc<Mutex<T>>` patterns are likely actor candidates — refactor to match, but consider that some one-off Mutex usage may be intentional. If the project doesn't use actors, mention it once as an option but don't repeat if already discussed
+- If the project already uses actors (`ractor` or `act_zero` for async; crossbeam channels with small actor structs for sync), `Arc<Mutex<T>>` patterns are likely actor candidates - refactor to match, but consider that some one-off Mutex usage may be intentional. If the project doesn't use actors, mention it once as an option but don't repeat if already discussed
 
 ### Error handling
 - `.unwrap()` only in tests; `.expect()` sparse in prod, mostly for early error-out
@@ -102,8 +102,8 @@ Avoid turning every rule into type-level machinery. If the state depends on pers
 - `.context()` / `.wrap_err()` to add meaning at each error layer
 
 ### Dead code and suppression audit
-- Review `#[allow(dead_code)]` and unused code — remove if genuinely dead, don't leave deprecated code in place
-- Review other `#[allow(...)]` attributes — sometimes needed, but often a smell hiding something that needs a restructure rather than a suppression
+- Review `#[allow(dead_code)]` and unused code - remove if genuinely dead, don't leave deprecated code in place
+- Review other `#[allow(...)]` attributes - sometimes needed, but often a smell hiding something that needs a restructure rather than a suppression
 
 ### Verify
 - Run repo-specific lint and test commands discovered during setup
@@ -137,7 +137,7 @@ Spawn a separate agent focused on style and conventions. Always runs if Pass 1 r
 
 ## Refactoring Discipline
 
-- When refactoring code that calls external crates, read the dependency source to verify behavior — use `/rust-crate-source` or `/btx`, or check `~/.cargo/registry/src/`
+- When refactoring code that calls external crates, read the dependency source to verify behavior - use `/rust-crate-source` or `/btx`, or check `~/.cargo/registry/src/`
 - When code has documented assumptions, trace the data flow backwards to verify callers satisfy them
-- Refactoring is an opportunity to catch correctness bugs — question the logic, not just the structure
+- Refactoring is an opportunity to catch correctness bugs - question the logic, not just the structure
 - Avoid bandaid refactors that preserve a known-wrong model. Churn is acceptable only inside confirmed scope, with preserved external behavior, when it consolidates the domain model, removes competing representations, and leaves the code simpler, more correct, and easier to trace

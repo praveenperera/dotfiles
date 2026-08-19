@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene 5 — HyperFrames Displace Reveal</title>
+    <title>Scene 5 - HyperFrames Displace Reveal</title>
 
     <!--
       HyperFrames composition.tsx.
@@ -67,7 +67,7 @@
         overflow: hidden;
       }
 
-      /* Text group — typewriter + ticker side by side, displaced as a unit */
+      /* Text group - typewriter + ticker side by side, displaced as a unit */
       .text-group {
         position: absolute;
         display: flex;
@@ -117,7 +117,7 @@
         white-space: pre;
       }
 
-      /* Hero logo — enters from offscreen right */
+      /* Hero logo - enters from offscreen right */
       .hero {
         position: absolute;
         width: 440px;
@@ -171,7 +171,7 @@
 
         <!-- Hero logo asset -->
         <div class="hero" id="hero-logo">
-          <!-- Inline-SVG placeholder mark — swap for your logo image -->
+          <!-- Inline-SVG placeholder mark - swap for your logo image -->
           <svg class="logo-mark" viewBox="0 0 100 100" role="img" aria-label="HyperFrames">
             <defs>
               <linearGradient id="hfMark" x1="0" y1="0" x2="1" y2="1">
@@ -279,7 +279,7 @@
       );
 
       /* ----------------------------------------------------------------
-         PHASE 3: Reactive displacement — three concurrent tweens.
+         PHASE 3: Reactive displacement - three concurrent tweens.
          ---------------------------------------------------------------- */
       // (1) Hero enters with rotation + scale impact, lands at scale 1.3.
       tl.fromTo(
@@ -311,14 +311,14 @@
       );
 
       /* ----------------------------------------------------------------
-         PHASE 4: Breathing — onUpdate so it MULTIPLIES onto the 1.3 scale.
+         PHASE 4: Breathing - onUpdate so it MULTIPLIES onto the 1.3 scale.
          Dual frequencies (1.0s scale, 1.33s rotation) for organic motion.
          ---------------------------------------------------------------- */
       const heroEl = document.querySelector(".hero");
       const HERO_FINAL_SCALE = 1.3;
       const HERO_FINAL_ROTATION = 0;
       const SCALE_PERIOD = 1.0; // seconds per scale cycle
-      const ROTATE_PERIOD = 1.333; // seconds per rotation cycle — not a simple ratio of SCALE_PERIOD
+      const ROTATE_PERIOD = 1.333; // seconds per rotation cycle - not a simple ratio of SCALE_PERIOD
       const SCALE_AMP = 0.05;
       const ROTATE_AMP = 3;
 

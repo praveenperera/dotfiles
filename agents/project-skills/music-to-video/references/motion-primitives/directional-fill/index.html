@@ -115,15 +115,15 @@
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
 
-      // Bar 1 — sweeps left -> right, landing on the beat at ~0.55s.
+      // Bar 1 - sweeps left -> right, landing on the beat at ~0.55s.
       tl.to(".fill.a", { scaleX: 1, duration: 0.35, ease: "power2.out" }, 0.2);
       tl.set("#l1", { color: "var(--hg-bg)" }, 0.55);
 
-      // Bar 2 — sweeps right -> left, landing at ~0.85s.
+      // Bar 2 - sweeps right -> left, landing at ~0.85s.
       tl.to(".fill.b", { scaleX: 1, duration: 0.35, ease: "power2.out" }, 0.5);
       tl.set("#l2", { color: "var(--hg-bg)" }, 0.85);
 
-      // Bar 3 — sweeps left -> right, landing at ~1.15s.
+      // Bar 3 - sweeps left -> right, landing at ~1.15s.
       tl.to(".fill.c", { scaleX: 1, duration: 0.35, ease: "power2.out" }, 0.8);
       tl.set("#l3", { color: "var(--hg-bg)" }, 1.15);
 

@@ -1,20 +1,20 @@
 #!/usr/bin/env node
-// captions.mjs — build the captions sub-composition from STORYBOARD + audio_meta.
+// captions.mjs - build the captions sub-composition from STORYBOARD + audio_meta.
 //
 // One mode: `build`. Reads STORYBOARD.md (frame order + durations → cumulative
 // frame starts) + audio_meta.json (voices[].words, frame-relative) → absolute-
 // timed caption groups → writes:
-//   compositions/captions.html  — a self-contained sub-composition the index
+//   compositions/captions.html - a self-contained sub-composition the index
 //        assembler mounts on its captions track (data-composition-id="captions").
-//   caption_groups.json         — the computed groups (debug / inspection / --out).
-//   caption-overrides.json      — an empty `[]` shim (silences the captions runtime's
+//   caption_groups.json - the computed groups (debug / inspection / --out).
+//   caption-overrides.json - an empty `[]` shim (silences the captions runtime's
 //        validate-time fetch; only written when captions.html is).
 // No narration / no words → legal skip: nothing written, assemble-index then omits
 // the captions track (it keys off compositions/captions.html existence).
 //
 //   node captions.mjs build --storyboard ./STORYBOARD.md --audio-meta ./audio_meta.json --hyperframes . --out ./caption_groups.json
 //
-// CAPTION LOOK — two sources, picked automatically:
+// CAPTION LOOK - two sources, picked automatically:
 //   1. PRESET SKIN (preferred). If a project-local `.hyperframes/caption-skin.html`
 //      exists (Step 2 copies the chosen frame-preset's skin into the project), it is
 //      the caption look.
@@ -47,7 +47,7 @@ const r3 = (x) => Number(x.toFixed(3));
 // ── grouping params ───────────────────────────────────────────────────────────
 const SILENCE_GAP = 0.18; // s of silence between words → split
 const TAIL_PAD = 0.12; // s the group lingers after its last word
-const SENT_END = /[.?!,;:—]$/;
+const SENT_END = /[.?!,;: - ]$/;
 const DENSITY_WINDOW = 1.0; // s window for words/sec density
 function wordCap(density) {
   return density > 3.5 ? 2 : density > 2.5 ? 3 : 4;
@@ -101,7 +101,7 @@ function runBuild(argv) {
     if (base == null || !Array.isArray(v.words)) continue;
     for (const w of v.words) {
       const text = String(w.text ?? "").trim();
-      if (!text || /^[.?!,;:—–-]+$/.test(text)) continue; // drop empties + bare punctuation
+      if (!text || /^[.?!,;: - –-]+$/.test(text)) continue; // drop empties + bare punctuation
       if (!isFinite(w.start) || !isFinite(w.end)) continue;
       words.push({ text, start: r3(base + w.start), end: r3(base + w.end), frame: v.frame });
     }
@@ -197,7 +197,7 @@ function runBuild(argv) {
 
   // ── write caption-overrides.json shim ──
   // Atomic create-if-absent: `wx` throws if the file already exists (which we
-  // ignore) — no existsSync→writeFileSync TOCTOU gap.
+  // ignore) - no existsSync→writeFileSync TOCTOU gap.
   try {
     writeFileSync(overridesPath, "[]\n", { flag: "wx" });
   } catch {
@@ -212,17 +212,17 @@ function runBuild(argv) {
 // ── preset-skin path ────────────────────────────────────────────────────────
 // Fill the skin's three reserved holes + the root's 0-placeholders, then wrap the
 // fragment in a <template> (the engine clones template contents only). One generic
-// fill works for every preset's skin — no per-skin transform.
+// fill works for every preset's skin - no per-skin transform.
 //
 // Every preset's skin is authored against ITS OWN fonts/metrics (broadside→Barlow @
 // line-height 1.02, capsule→Bodoni, …). When the project's brand font differs (it
 // almost always does), three things must be reconciled so ANY skin renders correctly
-// for ANY brand — done here generically, not per-project:
+// for ANY brand - done here generically, not per-project:
 //   · @font-face for the brand fonts (else the renderer can't supply them → fallback)
 //   · the skin's preset-font FALLBACK literals (var(--font-x, "Barlow")) repointed to
 //     the brand family, so no undeclared font name trips font_family_without_font_face
 //   · a metric safety net: a heavier brand font overflows a tight preset line-height,
-//     so the active-word highlight clips — a line-height floor + word padding fixes it
+//     so the active-word highlight clips - a line-height floor + word padding fixes it
 //   · data-composition-id + dimensions on the <template> root (skins lead with
 //     <script>/<style>, so the root element must carry the id, not the first child)
 function buildFromSkin(skin, groups, total, W, H, tokens, die, faces = "", fonts = {}) {
@@ -238,7 +238,7 @@ function buildFromSkin(skin, groups, total, W, H, tokens, die, faces = "", fonts
   // The comments are preview/authoring docs, not needed in the generated composition.
   // Strip in a fixpoint loop, not a single global pass: removing one comment can
   // re-form a marker from a nested/partial pair (e.g. <!--<!---->-->), which one
-  // pass misses — CodeQL flags the single replace as incomplete sanitization.
+  // pass misses - CodeQL flags the single replace as incomplete sanitization.
   for (let prev = ""; prev !== out; ) {
     prev = out;
     out = out.replace(/<!--[\s\S]*?-->/g, "");
@@ -269,11 +269,11 @@ function buildFromSkin(skin, groups, total, W, H, tokens, die, faces = "", fonts
   out = fillOnce(out, /data-duration="0"/, `data-duration="${total}"`, '`data-duration="0"` hole');
   out = fillOnce(out, /data-width="0"/, `data-width="${W}"`, '`data-width="0"` hole');
   out = fillOnce(out, /data-height="0"/, `data-height="${H}"`, '`data-height="0"` hole');
-  // font-robust safety net — appended last so it wins the cascade over the skin's own
+  // font-robust safety net - appended last so it wins the cascade over the skin's own
   // (preset-font-tuned) line-height. Kept SNUG (1.1) so the plate hugs the text. NO extra
   // word/pill padding: inspect's `text_box_overflow` on the highlight words is a cosmetic
   // false-positive here (heavy-glyph ink slightly exceeds the line box, but there's no
-  // overflow:hidden — nothing is clipped); zeroing it would need an airy line-height that
+  // overflow:hidden - nothing is clipped); zeroing it would need an airy line-height that
   // balloons the pill, which is worse. Override only if a brand font genuinely clips.
   out += "\n<style>\n  .caption-line { line-height: 1.1 !important; }\n</style>";
   // dark-ground caption contrast (auto). The preset caption skins are tuned for a LIGHT
@@ -305,7 +305,7 @@ function brandFontFaces(framePath, hyperframesDir) {
   ];
   if (!families.length) return "";
   const dirs = [
-    // ROOT-RELATIVE — compositions are served with the project root as their base URL, so a
+    // ROOT-RELATIVE - compositions are served with the project root as their base URL, so a
     // "../" prefix escapes the root (lint: invalid_parent_traversal_in_asset_path) and 404s in
     // Studio/preview. Mirror what the frame workers use for images.
     { abs: join(hyperframesDir, "assets/fonts"), rel: "assets/fonts" },
@@ -314,7 +314,7 @@ function brandFontFaces(framePath, hyperframesDir) {
   const weightOf = (n) => {
     const s = n.toLowerCase();
     if (/black|heavy|ultra|extrabold/.test(s)) return 800;
-    if (/semibold|demibold/.test(s)) return 600; // before /bold/ — "demibold" contains "bold"
+    if (/semibold|demibold/.test(s)) return 600; // before /bold/ - "demibold" contains "bold"
     if (/bold/.test(s)) return 700;
     if (/medium/.test(s)) return 500;
     if (/light|thin/.test(s)) return 300;
@@ -330,7 +330,7 @@ function brandFontFaces(framePath, hyperframesDir) {
           : "opentype";
   // Normalize away ALL non-alphanumerics (spaces, underscores, hyphens) on BOTH the
   // family name and the filename. Real font files use "_" / "-" as word separators
-  // ("TT_Norms_Pro_Bold.woff2"), so stripping only whitespace never matched them — the
+  // ("TT_Norms_Pro_Bold.woff2"), so stripping only whitespace never matched them - the
   // family key "ttnormspro" failed `startsWith` against "tt_norms_pro_bold", and the
   // function silently returned "" → captions shipped with NO @font-face for any
   // underscore/hyphen-named brand font (e.g. TT Norms Pro), which is exactly the
@@ -367,7 +367,7 @@ function brandFontFaces(framePath, hyperframesDir) {
     }
   }
   // Loud signal instead of a silent "". If frame.md named a brand font but no file
-  // matched, the caption text WILL fall back to a generic font in the render — surface
+  // matched, the caption text WILL fall back to a generic font in the render - surface
   // the cause here (at build time) rather than letting it surface 2 steps later as a
   // font_family_without_font_face lint error disconnected from its root cause.
   if (!faces.length) {
@@ -376,7 +376,7 @@ function brandFontFaces(framePath, hyperframesDir) {
       : "assets/fonts or capture/assets/fonts (neither exists)";
     console.warn(
       `  ⚠ captions: frame.md names font ${families.map((f) => `"${f}"`).join(", ")} ` +
-        `but no matching .woff2/.woff/.ttf/.otf was found in ${where} — captions will fall back ` +
+        `but no matching .woff2/.woff/.ttf/.otf was found in ${where} - captions will fall back ` +
         `(text may render in the wrong font). Stage a font file whose name starts with the family ` +
         `(e.g. "TT Norms Pro" → TT_Norms_Pro_Bold.woff2) so it ships with the project.`,
     );
@@ -412,10 +412,10 @@ function frameTokensCss(framePath, H) {
 // ── default path (no preset skin) ─────────────────────────────────────────────
 // Self-contained captions sub-composition. The <template> holds the band container
 // + style AND the <script> (the HyperFrames loader only executes scripts INSIDE the
-// cloned template — a sibling <script> after </template> never runs, so the timeline
+// cloned template - a sibling <script> after </template> never runs, so the timeline
 // never registers and captions render blank). The script builds per-word spans and a
 // paused, seek-safe GSAP timeline (opacity for group show/hide, a quick color tween
-// per word for the karaoke highlight — no className flips, no JS state) and ends each
+// per word for the karaoke highlight - no className flips, no JS state) and ends each
 // group with a hard tl.set kill so an exit can't get stuck. gsap is loaded via CDN
 // inside the template (matching the frame compositions). Band = captionBand(H).
 function buildCaptionsHtml(groups, total, W, H) {

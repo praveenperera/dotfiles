@@ -106,7 +106,7 @@ If no public server checkout-read API exists and the user accepts an internal de
 1. inspect `dist/server/route.js` and its declarations in the installed package
 2. verify the accepted handler name/body and response envelope
 3. verify whether a server-to-server secret-header override exists and which environment value
-   it compares—never infer this from old examples
+   it compares - never infer this from old examples
 4. keep the adapter in a server-only module and never expose the secret to the browser
 5. validate returned data at the boundary
 6. add a focused test using the exact installed package

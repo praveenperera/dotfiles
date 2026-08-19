@@ -1,18 +1,18 @@
-// Provider registry — the v2 contract.
+// Provider registry - the v2 contract.
 //
 // Each media type maps to an ORDERED list of provider entries. Providers are
 // tried in order; the first to return a non-null result wins, which keeps
 // resolution deterministic (same request -> same provider -> same file ->
 // reproducible renders). heygen-CLI is always first for the types it serves.
 //
-// An entry exposes any of three capability methods — search / generate /
-// process — plus { name }. media-use holds no keys; each external tool owns its
+// An entry exposes any of three capability methods - search / generate /
+// process - plus { name }. media-use holds no keys; each external tool owns its
 // own auth. Providers, by type:
 //   - heygen CLI: catalog + TTS, first for every type it serves (OAuth free
 //     allowance first, then the user's HeyGen billing path)
 //   - mflux: local FLUX-class image gen, spec-selected to the machine's RAM
 //     (free, private, offline once cached)
-//   - codex CLI: image gen on the user's ChatGPT sub — the better-quality upsell
+//   - codex CLI: image gen on the user's ChatGPT sub - the better-quality upsell
 //     and the fallback when no local model fits
 //   - Kokoro (via the hyperframes CLI): local voiceover, free/private fallback
 //     when HeyGen credentials are absent or --local-only is requested
@@ -60,7 +60,7 @@ const REGISTRY = {
   icon: [N("heygen.asset.search", { search: iconProvider.search })],
   logo: [
     // Official brand marks. Tiers verified by a 54-brand stress test (100%
-    // cascade hit); HeyGen asset search is deliberately absent — it returns
+    // cascade hit); HeyGen asset search is deliberately absent - it returns
     // generic look-alike icons for brand queries. All free, all network →
     // --local-only leaves only the cache rungs.
     N("svgl", { search: svglSearch }),
@@ -80,7 +80,7 @@ const REGISTRY = {
     A("kokoro.local", { generate: localTtsGenerate }),
   ],
   brand: [
-    // Local design spec, not heygen — reads frame.md / design.md tokens.
+    // Local design spec, not heygen - reads frame.md / design.md tokens.
     A("design_spec", { search: brandProvider.search }),
   ],
   grade: [
@@ -127,7 +127,7 @@ export function providerMatches(type, want) {
 /**
  * Back-compat shim for the v1 single-provider API. Returns the first declared
  * provider for the type (tagged with `type`); throws for an unknown type.
- * Kept for v1 callers only — new code should use getProviders/runCapability.
+ * Kept for v1 callers only - new code should use getProviders/runCapability.
  */
 export function getProvider(type) {
   const first = listFor(type)[0] || {};
@@ -137,15 +137,15 @@ export function getProvider(type) {
 /**
  * Run a capability across an explicit ordered provider list. Tries each in
  * order, returns the first non-null result, skips providers that don't expose
- * the capability. Pure over its input — the unit-testable core of the cascade.
+ * the capability. Pure over its input - the unit-testable core of the cascade.
  *
- * Offline guard: a `network` provider is skipped when `ctx.localOnly` is set —
+ * Offline guard: a `network` provider is skipped when `ctx.localOnly` is set -
  * unconditionally, even under a `ctx.provider` override. --local-only is a hard
  * safety flag: it must never make a network call. Forcing a network provider
  * while offline yields a clean miss (the caller explains the conflict), never a
  * silent network request.
  * Provider override: `ctx.provider` (a full name like "codex.image_gen" or a
- * prefix like "codex") pins resolution to matching providers only — this is how
+ * prefix like "codex") pins resolution to matching providers only - this is how
  * a user "make an image WITH codex" forces the upsell instead of taking the
  * free-first default.
  */

@@ -85,9 +85,9 @@ Auth for metadata uses `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` when avail
 
 ## Workflow
 
-1. **Source only** — `btx <repo>`, parse `path`, explore with Glob/Grep/Read
-2. **Metadata only** — `btx info <repo>` (ownership, archived, last push, …)
-3. **Both** — `btx <repo> --info` (one call; no separate curl)
+1. **Source only** - `btx <repo>`, parse `path`, explore with Glob/Grep/Read
+2. **Metadata only** - `btx info <repo>` (ownership, archived, last push, …)
+3. **Both** - `btx <repo> --info` (one call; no separate curl)
 4. Prefer `btx` over `curl`/raw GitHub API for source inspection and for this repository metadata
 
 ## Examples

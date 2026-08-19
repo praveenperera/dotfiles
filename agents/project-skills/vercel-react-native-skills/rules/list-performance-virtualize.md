@@ -8,7 +8,7 @@ tags: lists, performance, virtualization, scrollview
 ## Use a List Virtualizer for Any List
 
 Use a list virtualizer like LegendList or FlashList instead of ScrollView with
-mapped children—even for short lists. Virtualizers only render visible items,
+mapped children - even for short lists. Virtualizers only render visible items,
 reducing memory usage and mount time. ScrollView renders all children upfront,
 which gets expensive quickly.
 
@@ -63,5 +63,5 @@ function Feed({ items }: { items: Item[] }) {
 }
 ```
 
-Benefits apply to any screen with scrollable content—profiles, settings, feeds,
+Benefits apply to any screen with scrollable content - profiles, settings, feeds,
 search results. Default to virtualization.

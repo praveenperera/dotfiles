@@ -83,7 +83,7 @@ copy private route wire shapes into application code without verifying the exact
 package.
 
 A synthetic `Request` sent directly to the exported MDK route, using a secret header to bypass
-CSRF, is an internal compatibility technique—not a default API. Recommend it only after
+CSRF, is an internal compatibility technique - not a default API. Recommend it only after
 confirming the installed implementation accepts the exact handler/body/header combination,
 isolating it behind a server-only adapter, and adding a targeted test. Otherwise use a
 documented/exported server API or ask the user to choose a supported webhook/API strategy.

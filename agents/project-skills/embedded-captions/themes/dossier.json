@@ -1,6 +1,6 @@
 {
   "name": "dossier",
-  "voice": "cold-war case file — the clip is typed onto a manila transcript strip (carbon Special Elite hammered in char by char on seeded baselines, red ink circles around the evidence), and the verdict lands as a RUBBER STAMP behind the subject: the footage goes sepia-archival, the stamp crushes in at -8°, double-strike ghost, thin-ink patches, then holds DEAD STILL — sold only by a breathing paper indent — until the page is filed away with a mechanical yank.",
+  "voice": "cold-war case file - the clip is typed onto a manila transcript strip (carbon Special Elite hammered in char by char on seeded baselines, red ink circles around the evidence), and the verdict lands as a RUBBER STAMP behind the subject: the footage goes sepia-archival, the stamp crushes in at -8°, double-strike ghost, thin-ink patches, then holds DEAD STILL - sold only by a breathing paper indent - until the page is filed away with a mechanical yank.",
   "when": "investigations, exposés, true-crime, document-driven storytelling, 'the record shows' narration, declassified/archival framing. Works on any luma (the manila strip is self-lit; the stamp brings its own sepia charge).",
   "register": "archival-noir",
   "fonts": { "body": "Special Elite", "hero": "Special Elite", "tag": "Special Elite" },
@@ -17,7 +17,7 @@
     "fontPx": 40,
     "strip": { "w": 764, "h": 132, "bottomPx": 4 },
     "rows": [36, 82],
-    "header": "CASE N°018 — TRANSCRIPT OF RECORDING",
+    "header": "CASE N°018 - TRANSCRIPT OF RECORDING",
     "watermark": "CONFIDENTIAL",
     "seed": 180618,
     "yield": { "dim": 0.55, "pre": 0.02, "post": 0.41 }

@@ -30,7 +30,7 @@ export const iconProvider = {
     return {
       url: best.url,
       source: "search",
-      // ext derived from the asset URL by resolve.mjs — catalog icons are .png, not .svg
+      // ext derived from the asset URL by resolve.mjs - catalog icons are .png, not .svg
       metadata: {
         description: intent,
         width: best.width || null,

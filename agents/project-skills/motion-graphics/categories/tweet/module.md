@@ -1,4 +1,4 @@
-# tweet — category module (search-driven)
+# tweet - category module (search-driven)
 
 **Search a tweet → animate the tweet card.** Grounded in a real post (RWA). ~4–8s.
 
@@ -8,7 +8,7 @@ RWA `search_tweets` (specific query, or a given tweet URL/id) → tweet: author,
 
 ## Vocabulary / leans on
 
-- Block: registry **`x-post`** (animated X/Twitter post card overlay with engagement metrics) — reuse it directly.
+- Block: registry **`x-post`** (animated X/Twitter post card overlay with engagement metrics) - reuse it directly.
 - Primitives: card slide/scale-in · text type-on / line reveal · avatar pop · metrics **count-up** · optional emphasis on a keyword.
 
 ## Build (reuse-first)

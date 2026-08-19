@@ -23,16 +23,16 @@ Blockers (skill should refuse to translate):
   - r2hf/async-metadata       calculateMetadata returns a Promise
   - r2hf/third-party-react-ui Imports a React UI library (shadcn, mui, antd, mantine, chakra)
 
-Warnings (translate but flag — drop the construct, keep the rest):
-  - r2hf/lambda-import        @remotion/lambda configuration — drop, HF is single-machine
-  - r2hf/delay-render         delayRender() — HF handles asset loading differently
-  - r2hf/use-callback         useCallback — usually decorative, drop
-  - r2hf/use-memo             useMemo — usually decorative, drop
+Warnings (translate but flag - drop the construct, keep the rest):
+  - r2hf/lambda-import        @remotion/lambda configuration - drop, HF is single-machine
+  - r2hf/delay-render         delayRender() - HF handles asset loading differently
+  - r2hf/use-callback         useCallback - usually decorative, drop
+  - r2hf/use-memo             useMemo - usually decorative, drop
   - r2hf/custom-hook          Custom hook (use*) defined locally; may need manual rewrite
 
 Info (translate and document):
-  - r2hf/static-file          staticFile("x") — convert to relative path
-  - r2hf/interpolate-colors   interpolateColors — translate to GSAP color tween
+  - r2hf/static-file          staticFile("x") - convert to relative path
+  - r2hf/interpolate-colors   interpolateColors - translate to GSAP color tween
 """
 
 from __future__ import annotations
@@ -123,7 +123,7 @@ def _custom_hook(src: str) -> Iterable[tuple[int, str | None]]:
         name = m.group(1)
         if name in _REMOTION_BUILTIN_HOOKS:
             continue
-        yield m.start(), f"Custom hook `{name}` defined locally — may need manual rewrite"
+        yield m.start(), f"Custom hook `{name}` defined locally - may need manual rewrite"
 
 
 _IMPORT_FROM = re.compile(r"from\s+['\"]([^'\"]+)['\"]")
@@ -133,7 +133,7 @@ def _third_party_react_ui(src: str) -> Iterable[tuple[int, str | None]]:
     for m in _IMPORT_FROM.finditer(src):
         pkg = m.group(1)
         if any(pkg.startswith(p) for p in THIRD_PARTY_UI_PACKAGES):
-            yield m.start(), f"Imports `{pkg}` — third-party React UI library has no HF equivalent"
+            yield m.start(), f"Imports `{pkg}` - third-party React UI library has no HF equivalent"
 
 
 RULES: list[Rule] = [
@@ -141,21 +141,21 @@ RULES: list[Rule] = [
         "r2hf/use-state",
         BLOCKER,
         _regex_matcher(re.compile(r"\buseState\s*[(<]")),
-        "useState detected — Remotion compositions that drive animation via React state are not deterministic frame-capture targets in HyperFrames",
+        "useState detected - Remotion compositions that drive animation via React state are not deterministic frame-capture targets in HyperFrames",
         "Use the runtime interop pattern from PR #214 instead of attempting a translation",
     ),
     Rule(
         "r2hf/use-reducer",
         BLOCKER,
         _regex_matcher(re.compile(r"\buseReducer\s*[(<]")),
-        "useReducer detected — same issue as useState",
+        "useReducer detected - same issue as useState",
         "Use the runtime interop pattern from PR #214",
     ),
     Rule(
         "r2hf/use-effect-deps",
         BLOCKER,
         _use_effect_with_deps,
-        "useEffect/useLayoutEffect with non-empty deps — side effects don't translate to HF's seek-driven model",
+        "useEffect/useLayoutEffect with non-empty deps - side effects don't translate to HF's seek-driven model",
         "Move the side-effect work into a build step, or use the runtime interop pattern",
     ),
     Rule(
@@ -166,14 +166,14 @@ RULES: list[Rule] = [
                 r"calculateMetadata[^=]*=\s*async\b|async\s+calculateMetadata\b|calculateMetadata\s*:\s*async"
             )
         ),
-        "calculateMetadata returns a Promise — HF needs composition metadata up front",
+        "calculateMetadata returns a Promise - HF needs composition metadata up front",
         "Resolve metadata at build time and pass concrete values, or use runtime interop",
     ),
     Rule(
         "r2hf/third-party-react-ui",
         BLOCKER,
         _third_party_react_ui,
-        "Imports a third-party React UI library — no HF equivalent",
+        "Imports a third-party React UI library - no HF equivalent",
         "Use runtime interop, or rewrite the affected components as HTML+CSS",
     ),
     # Lambda is a warning, not a blocker: it's deployment config, orthogonal
@@ -183,49 +183,49 @@ RULES: list[Rule] = [
         "r2hf/lambda-import",
         WARNING,
         _regex_matcher(re.compile(r"from\s+['\"]@remotion/lambda['\"]")),
-        "@remotion/lambda is Remotion-specific distributed rendering — no HF equivalent today",
+        "@remotion/lambda is Remotion-specific distributed rendering - no HF equivalent today",
         "Drop the Lambda config; HF runs single-machine. Document the gap in TRANSLATION_NOTES.md.",
     ),
     Rule(
         "r2hf/delay-render",
         WARNING,
         _regex_matcher(re.compile(r"\bdelayRender\s*\(")),
-        "delayRender() — HF waits on asset readiness via the Frame Adapter pattern",
+        "delayRender() - HF waits on asset readiness via the Frame Adapter pattern",
         "Drop the call; HF handles this transparently",
     ),
     Rule(
         "r2hf/use-callback",
         WARNING,
         _regex_matcher(re.compile(r"\buseCallback\s*\(")),
-        "useCallback — typically decorative for render performance, no HF equivalent needed",
+        "useCallback - typically decorative for render performance, no HF equivalent needed",
         "Drop the wrapper, inline the function",
     ),
     Rule(
         "r2hf/use-memo",
         WARNING,
         _regex_matcher(re.compile(r"\buseMemo\s*\(")),
-        "useMemo — typically decorative, no HF equivalent needed",
+        "useMemo - typically decorative, no HF equivalent needed",
         "Drop the wrapper, compute inline",
     ),
     Rule(
         "r2hf/custom-hook",
         WARNING,
         _custom_hook,
-        "Custom hook defined locally — may need manual rewrite",
+        "Custom hook defined locally - may need manual rewrite",
         "Inline the hook body if pure; bow out to runtime interop if it uses useState/useEffect",
     ),
     Rule(
         "r2hf/static-file",
         INFO,
         _regex_matcher(re.compile(r"\bstaticFile\s*\(")),
-        "staticFile() reference — convert to a relative path in the HF composition",
+        "staticFile() reference - convert to a relative path in the HF composition",
         "Replace `staticFile(\"x.png\")` with `\"x.png\"` and copy the asset alongside the HTML",
     ),
     Rule(
         "r2hf/interpolate-colors",
         INFO,
         _regex_matcher(re.compile(r"\binterpolateColors\s*\(")),
-        "interpolateColors() — translate to a GSAP color tween",
+        "interpolateColors() - translate to a GSAP color tween",
         "See references/timing.md for the GSAP equivalent",
     ),
 ]
@@ -238,7 +238,7 @@ def _find_matching_paren(src: str, open_idx: int) -> int | None:
     literals. Returns None if no matching close paren is found.
 
     This is good enough for hand-written Remotion source. It does not handle
-    template-literal interpolations `${...}` recursively or comments — both
+    template-literal interpolations `${...}` recursively or comments - both
     are uncommon in Remotion code we expect to lint and would only matter
     if the unbalanced paren landed inside such a region.
     """

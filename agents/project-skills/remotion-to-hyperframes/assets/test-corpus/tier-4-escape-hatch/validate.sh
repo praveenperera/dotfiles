@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# validate.sh — assert lint_source.py output matches expected.json for every T4 case.
+# validate.sh - assert lint_source.py output matches expected.json for every T4 case.
 #
 # T4 has no renders to diff. The skill is graded on whether it correctly
 # refuses to translate each case (or drops only the lambda config in case 5,

@@ -56,7 +56,7 @@ function codexRun(args) {
 // Fail-fast host check (mirrors illo): don't burn a minutes-long exec when Codex
 // isn't usable. Returns null when ready, else a human reason. imagegenext ships
 // default-disabled ("under development"), so we check the ROW is present (the
-// capability signal) — the exec enables it per-render with --enable.
+// capability signal) - the exec enables it per-render with --enable.
 function codexUnavailableReason() {
   try {
     const which = process.platform === "win32" ? "where" : "which";
@@ -65,11 +65,11 @@ function codexUnavailableReason() {
     // A shell alias (e.g. `codex → /Applications/Codex.app/...`) is NOT enough:
     // aliases live only in the interactive shell, so a spawned subprocess's PATH
     // lookup can't see them. Symlink the real binary onto PATH.
-    return 'codex CLI not reachable on PATH (a shell alias won\'t work — spawned processes can\'t see aliases; symlink the real binary onto PATH, e.g. ln -s "$(readlink -f "$(command -v codex)")" ~/.local/bin/codex)';
+    return 'codex CLI not reachable on PATH (a shell alias won\'t work - spawned processes can\'t see aliases; symlink the real binary onto PATH, e.g. ln -s "$(readlink -f "$(command -v codex)")" ~/.local/bin/codex)';
   }
   // Auth marker: presence of the credentials file, NOT `codex login status`.
   // That command prints "Logged in using ChatGPT" only to a human stream
-  // (stderr / TTY) and exits 0, so its piped stdout — how media-use spawns it —
+  // (stderr / TTY) and exits 0, so its piped stdout - how media-use spawns it -
   // is empty, and the gate falsely reported "not logged in", blocking codex
   // image gen in every headless / CI / agent run even when fully authed.
   // auth.json is the durable, TTY-independent signal; token validity is proven

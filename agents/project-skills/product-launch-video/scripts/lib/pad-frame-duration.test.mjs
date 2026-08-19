@@ -8,7 +8,7 @@ import { padFrameInternalDuration } from "./pad-frame-duration.mjs";
 // Regression: an outgoing transition pads the index.html WRAPPER's
 // data-duration to cover the transition tail, but the frame's own internal
 // file kept its shorter content-only duration, so the render engine
-// clip-gated the sub-composition's visible content at the shorter value —
+// clip-gated the sub-composition's visible content at the shorter value -
 // content vanished abruptly instead of fading through the wrapper's
 // extended fade-out tween. A user diagnosed and verified this fix
 // themselves: pad the frame's own #root/clip data-duration to match.

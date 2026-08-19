@@ -1,16 +1,16 @@
 # House Style
 
-Creative direction for compositions when no design spec (`frame.md` or `design.md`) is provided. These are starting points — override anything that doesn't serve the content. When a design spec exists, its brand values take precedence; house-style fills gaps.
+Creative direction for compositions when no design spec (`frame.md` or `design.md`) is provided. These are starting points - override anything that doesn't serve the content. When a design spec exists, its brand values take precedence; house-style fills gaps.
 
 ## Before Writing HTML
 
 1. **Interpret the prompt.** Generate real content. A recipe lists real ingredients. A HUD has real readouts.
 2. **Pick a palette.** Light or dark? Declare bg, fg, accent before writing code.
-3. **Pick typefaces.** Run the font discovery script in [typography.md](typography.md) — or pick a font you already know that fits the theme. The script broadens your options; it's not the only source.
+3. **Pick typefaces.** Run the font discovery script in [typography.md](typography.md) - or pick a font you already know that fits the theme. The script broadens your options; it's not the only source.
 
 ## Lazy Defaults to Question
 
-These patterns are AI design tells — the first thing every LLM reaches for. If you're about to use one, pause and ask: is this a deliberate choice for THIS content, or am I defaulting?
+These patterns are AI design tells - the first thing every LLM reaches for. If you're about to use one, pause and ask: is this a deliberate choice for THIS content, or am I defaulting?
 
 - Gradient text (`background-clip: text` + gradient)
 - Left-edge accent stripes on cards/callouts
@@ -20,7 +20,7 @@ These patterns are AI design tells — the first thing every LLM reaches for. If
 - Everything centered with equal weight (lead the eye somewhere)
 - Banned fonts (see [typography.md](typography.md) for full list)
 
-If the content genuinely calls for one of these — centered layout for a solemn closing, cards for a real product UI mockup, a banned font because it's the perfect thematic match — use it. The goal is intentionality, not avoidance.
+If the content genuinely calls for one of these - centered layout for a solemn closing, cards for a real product UI mockup, a banned font because it's the perfect thematic match - use it. The goal is intentionality, not avoidance.
 
 ## Color
 
@@ -32,7 +32,7 @@ If the content genuinely calls for one of these — centered layout for a solemn
 
 ## Background Layer
 
-Every scene needs visual depth — persistent decorative elements that stay visible while content animates in. Without these, scenes feel empty during entrance staggering.
+Every scene needs visual depth - persistent decorative elements that stay visible while content animates in. Without these, scenes feel empty during entrance staggering.
 
 Ideas (mix and match, 2-5 per scene):
 
@@ -42,9 +42,9 @@ Ideas (mix and match, 2-5 per scene):
 - Grain/noise overlay, geometric shapes, grid patterns
 - Thematic decoratives (orbit rings for space, vinyl grooves for music, grid lines for data)
 
-All decoratives should have slow ambient GSAP animation — breathing, drift, pulse. Static decoratives feel dead.
+All decoratives should have slow ambient GSAP animation - breathing, drift, pulse. Static decoratives feel dead.
 
-**Decorative count vs motion count.** The "2-5 per scene" count refers to decorative _elements_. If a project's design spec says "single ambient motion per scene", it means one looping motion applied to these decoratives (a shared breath/drift/pulse) — not one element total. A scene with 4 decoratives sharing one breathing motion is correct; a scene with 1 decorative is under-dressed.
+**Decorative count vs motion count.** The "2-5 per scene" count refers to decorative _elements_. If a project's design spec says "single ambient motion per scene", it means one looping motion applied to these decoratives (a shared breath/drift/pulse) - not one element total. A scene with 4 decoratives sharing one breathing motion is correct; a scene with 1 decorative is under-dressed.
 
 ## Motion
 
@@ -70,4 +70,4 @@ Declare one background, one foreground, one accent before writing HTML.
 | Jewel / Rich      | Luxury, events, sophisticated                 | [jewel-rich.md](../palettes/jewel-rich.md)               |
 | Monochrome        | Dramatic, typography-focused                  | [monochrome.md](../palettes/monochrome.md)               |
 
-Or derive from OKLCH — pick a hue, build bg/fg/accent at different lightnesses, tint everything toward that hue.
+Or derive from OKLCH - pick a hue, build bg/fg/accent at different lightnesses, tint everything toward that hue.

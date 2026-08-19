@@ -17,7 +17,7 @@ beats building toward a center-stage CROWN that crosses the subject's body.
 ✅ **Good fit:**
 
 - Podcast / interview style with a single seated subject
-- Cluttered backdrop (bookshelf, props, dark) — screen blend reads through
+- Cluttered backdrop (bookshelf, props, dark) - screen blend reads through
 - Subject roughly centered with clear clean zones on one or both sides
 - Speech has a clear payoff line that can become a "crown" (1-3 short words)
 - 16:9 landscape, 1920×1080 ideal
@@ -58,7 +58,7 @@ larger clean zone instead of center. See `references/layout-heuristics.md`.
 | phrase | Main statement clauses                                     |
 | emph   | Key achievement / superlative line                         |
 | dream  | Aspirational lines, past-tense reflection                  |
-| crown  | The single climax line — center-stage payoff               |
+| crown  | The single climax line - center-stage payoff               |
 
 Aim for ≤3 slots per video (excluding crown). Don't use all 4 in a 12s clip.
 
@@ -94,5 +94,5 @@ Aim for ≤3 slots per video (excluding crown). Don't use all 4 in a 12s clip.
 }
 ```
 
-`crown_group` always uses the crown slot — no need to specify `slot`.
+`crown_group` always uses the crown slot - no need to specify `slot`.
 Set `crown_group: null` to disable.

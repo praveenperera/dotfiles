@@ -1,4 +1,4 @@
-# Tier 1 — title-card-fade
+# Tier 1 - title-card-fade
 
 ## What it tests
 
@@ -16,7 +16,7 @@ paused-GSAP driver.
 | Remotion                                                      | HyperFrames                                                                                             |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `<AbsoluteFill style={{ backgroundColor: "#0a0a0a" }}>`       | `<body style="background: #0a0a0a">` + a positioned root div                                            |
-| `useCurrentFrame()`                                           | dropped — HF seeks the timeline                                                                         |
+| `useCurrentFrame()`                                           | dropped - HF seeks the timeline                                                                         |
 | `interpolate(frame, [0, 15, 75, 90], [0, 1, 1, 0])` at fps=30 | `gsap.timeline({ paused: true })` with three `.to()` calls at offsets 0s/0.5s/2.5s, each `ease: "none"` |
 | `<div style={{ opacity }}>HELLO</div>`                        | static markup; opacity is animated by the timeline                                                      |
 

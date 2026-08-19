@@ -1,10 +1,10 @@
-# HyperFrames — Complete Capabilities Inventory
+# HyperFrames - Complete Capabilities Inventory
 
 Everything possible in HyperFrames as of today's workspace, synthesized from direct source reads of all 7 packages, 16 skills, and the full registry.
 
-> **How to read this file.** Scan the **Table of Contents** below first. **Do NOT read this file linearly** — it is a 700+ line inventory; reading top-to-bottom every session wastes context. When the storyboard or a specific beat needs a particular capability (HTML-in-Canvas, shader transitions, audio-reactive, dynamic counters, etc.), jump straight to that section.
+> **How to read this file.** Scan the **Table of Contents** below first. **Do NOT read this file linearly** - it is a 700+ line inventory; reading top-to-bottom every session wastes context. When the storyboard or a specific beat needs a particular capability (HTML-in-Canvas, shader transitions, audio-reactive, dynamic counters, etc.), jump straight to that section.
 
-You are NOT limited to what was captured from the website. You can create shaders from scratch, search for and download registry blocks, build Three.js scenes, write custom WebGL effects, use any web API — anything a browser can render.
+You are NOT limited to what was captured from the website. You can create shaders from scratch, search for and download registry blocks, build Three.js scenes, write custom WebGL effects, use any web API - anything a browser can render.
 
 For implementation patterns (working code), see `techniques.md`. This file is the WHAT; techniques.md is the HOW.
 
@@ -21,18 +21,18 @@ For implementation patterns (working code), see `techniques.md`. This file is th
 | --- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | **Composition fundamentals**                         | Data attributes, timeline contract, resolution presets (1080p, 4K, portrait, square, custom)                                                                                                                                    |
 | 2   | **Animation engines (6 adapters)**                   | GSAP + 15 plugins, Anime.js v4, CSS @keyframes, WAAPI, Lottie (lottie-web + dotlottie), Three.js (hf-seek event)                                                                                                                |
-| 3   | **Shader transitions (14 WebGL)**                    | domain-warp, ridged-burn, whip-pan, sdf-iris, ripple-waves, gravitational-lens, cinematic-zoom, chromatic-split, swirl-vortex, thermal-distortion, flash-through-white, cross-warp-morph, light-leak, glitch — plus custom GLSL |
-| 4   | **CSS scene transitions (30+)**                      | Push/slide, scale/zoom, radial/clip, 3D flip, blur, dissolve, cover/blinds, light leak/burn, distortion/glitch, mechanical/shutter, grid dissolve, destruction/burn, VHS/gravity/morph — 6 timing presets                       |
+| 3   | **Shader transitions (14 WebGL)**                    | domain-warp, ridged-burn, whip-pan, sdf-iris, ripple-waves, gravitational-lens, cinematic-zoom, chromatic-split, swirl-vortex, thermal-distortion, flash-through-white, cross-warp-morph, light-leak, glitch - plus custom GLSL |
+| 4   | **CSS scene transitions (30+)**                      | Push/slide, scale/zoom, radial/clip, 3D flip, blur, dissolve, cover/blinds, light leak/burn, distortion/glitch, mechanical/shutter, grid dissolve, destruction/burn, VHS/gravity/morph - 6 timing presets                       |
 | 5   | **Visual effects + textures**                        | Text markers (highlight, circle, burst, scribble, sketchout), grain/noise, light leaks, film burn, vignette, glow, paper texture, shimmer sweep                                                                                 |
 | 6   | **Caption techniques**                               | Per-word karaoke, intensity tiers, 5 exit styles, 6 tone mappings, per-word styling triggers, 7 audio source formats, positioning helpers                                                                                       |
 | 7   | **Audio-reactive animation**                         | Bass→scale, mid→shape, treble→glow; any GSAP property; band extraction script; banned patterns                                                                                                                                  |
 | 8   | **HTML-in-canvas**                                   | Live DOM as GPU texture (drawElementImage), Three.js planes, WebGL shaders on HTML, 7 VFX blocks (iPhone/MacBook device, liquid, glass, magnetic, portal, shatter, text cursor)                                                 |
-| 9   | **Three.js / WebGL custom scenes**                   | Full 3D: AnimationMixer, custom GLSL, post-processing, GLTF models, lights, cameras, materials — all deterministic via hf-seek                                                                                                  |
+| 9   | **Three.js / WebGL custom scenes**                   | Full 3D: AnimationMixer, custom GLSL, post-processing, GLTF models, lights, cameras, materials - all deterministic via hf-seek                                                                                                  |
 | 10  | **SVG / canvas / variable fonts**                    | SVG path drawing, Canvas 2D procedural art, CSS 3D card, per-word type, variable font axes, character typing, velocity-matched cuts, MotionPath                                                                                 |
 | 11  | **Media: video, audio, TTS**                         | Video compositing + frame injection, audio mixer (multi-track), Kokoro TTS (54 voices, 9 languages), Whisper/Groq/OpenAI transcription, background removal (u2net)                                                              |
 | 12  | **Registry (51 blocks + 4 components + 8 examples)** | Social overlays (8), showcases (5), data viz (2), logo branding (1), 3D/VFX (7), shader transitions (14), transition galleries (13), components (grain, shimmer, pixelate, texture-mask), 8 starter examples                    |
 | 13  | **CLI (25 commands)**                                | init, add, catalog, play, preview, publish, render (MP4/WebM/MOV/PNG, HDR, GPU, parallel), lint, validate, inspect, snapshot, capture, tts, transcribe, remove-background, doctor, and more                                     |
-| 14  | **Linter (60+ rules)**                               | Core, media, GSAP, captions, composition, adapters, textures, fonts — plus async URL checks                                                                                                                                     |
+| 14  | **Linter (60+ rules)**                               | Core, media, GSAP, captions, composition, adapters, textures, fonts - plus async URL checks                                                                                                                                     |
 | 15  | **Player web component**                             | `<hyperframes-player>` with seek/play/pause API, 11 events, media mirror, runtime auto-inject                                                                                                                                   |
 | 16  | **Engine + Producer**                                | MP4/WebM/MOV/PNG output, HDR (PQ/HLG), transparency (ProRes), GPU encoding (NVENC/VideoToolbox/VAAPI/QSV), parallel rendering, video frame injection                                                                            |
 | 17  | **Studio (in-browser NLE)**                          | Timeline editor, drag/resize clips, asset browser, render queue, lint modal, caption editor, element picker                                                                                                                     |
@@ -85,15 +85,15 @@ The runtime registers these adapters in order; each implements `discover()` / `s
 
 ### GSAP plugins (documented patterns)
 
-- **TextPlugin** — text mutation in `tl.call` (skills/gsap/references/effects.md)
-- **MotionPathPlugin** — curve-constrained tweens (skills/hyperframes/references/techniques.md)
-- **CustomEase** — bezier eases imported from Remotion-style timing
-- **ScrollTrigger / Flip / SplitText / Draggable / Inertia / Observer / ScrambleText / CustomWiggle / CustomBounce / ScrollSmoother / GSDevTools** — work natively if loaded and tweens are on the registered paused timeline, but no special HyperFrames adapter
+- **TextPlugin** - text mutation in `tl.call` (skills/gsap/references/effects.md)
+- **MotionPathPlugin** - curve-constrained tweens (skills/hyperframes/references/techniques.md)
+- **CustomEase** - bezier eases imported from Remotion-style timing
+- **ScrollTrigger / Flip / SplitText / Draggable / Inertia / Observer / ScrambleText / CustomWiggle / CustomBounce / ScrollSmoother / GSDevTools** - work natively if loaded and tweens are on the registered paused timeline, but no special HyperFrames adapter
 - Producer injects ScrollTrigger CDN automatically when needed (packages/producer/src/services/htmlCompiler.ts)
 
 ---
 
-## 3. Shader transitions — @hyperframes/shader-transitions
+## 3. Shader transitions - @hyperframes/shader-transitions
 
 14 named WebGL fragment shaders. All share the same uniforms: `u_from`, `u_to`, `u_progress`, `u_resolution`, `u_accent`, `u_accent_dark`, `u_accent_bright`.
 
@@ -104,14 +104,14 @@ The runtime registers these adapters in order; each implements `discover()` / `s
 | domain-warp         | Multi-octave FBM warps both scenes oppositely; organic dissolve edge with accent flash | Uses NQ noise bundle                                                                                                               |
 | ridged-burn         | Ridged multifractal mask reveals B; accent → bright → white burn ramp; sparks          | NQ                                                                                                                                 |
 | whip-pan            | 10-sample horizontal motion blur + lateral crossfade                                   | No noise                                                                                                                           |
-| sdf-iris            | Aspect-corrected circle SDF expansion + accent-tinted glow rings                       | —                                                                                                                                  |
-| ripple-waves        | Radial standing-wave UV displacement + tinted crossfade                                | —                                                                                                                                  |
-| gravitational-lens  | Pinch pull toward center + R/B chromatic separation                                    | —                                                                                                                                  |
-| cinematic-zoom      | 12 RGB-offset radial zoom blur samples (chromatic zoom streak)                         | —                                                                                                                                  |
+| sdf-iris            | Aspect-corrected circle SDF expansion + accent-tinted glow rings                       | - |
+| ripple-waves        | Radial standing-wave UV displacement + tinted crossfade                                | - |
+| gravitational-lens  | Pinch pull toward center + R/B chromatic separation                                    | - |
+| cinematic-zoom      | 12 RGB-offset radial zoom blur samples (chromatic zoom streak)                         | - |
 | chromatic-split     | R/B radial channel shift outward / inward; G fixed                                     | Distinct from CSS chromatic aberration                                                                                             |
 | swirl-vortex        | CCW swirl with FBM noise; reciprocal on incoming                                       | NQ                                                                                                                                 |
 | thermal-distortion  | Vertical sin + FBM horizontal displacement; warm haze                                  | NQ                                                                                                                                 |
-| flash-through-white | Fade through white midpoint — a visible white flash between scenes                     | No accent. Use only when the brand specifically calls for a white-flash beat boundary; this is NOT a neutral "default" transition. |
+| flash-through-white | Fade through white midpoint - a visible white flash between scenes                     | No accent. Use only when the brand specifically calls for a white-flash beat boundary; this is NOT a neutral "default" transition. |
 | cross-warp-morph    | FBM vector field displaces both scenes; third FBM biases irregular wipe                | NQ                                                                                                                                 |
 | light-leak          | Fixed off-frame leak with exponential falloff + accent warmth + ridge flare            | Hard-coded leak anchor                                                                                                             |
 | glitch              | Line displacement + RGB lateral split + scan modulation + posterization + flicker      | Deterministic                                                                                                                      |
@@ -136,7 +136,7 @@ HyperShader.init({
 - Fallback (`applyFallbackTransition`): smoothstep opacity tween when capture / texImage2D fails
 - Engine mode skips GL/capture when `window.__HF_VIRTUAL_TIME__` set (producer uses metadata)
 
-You can also **write custom GLSL shaders from scratch** — any fragment shader works with the standard uniforms.
+You can also **write custom GLSL shaders from scratch** - any fragment shader works with the standard uniforms.
 
 ---
 
@@ -156,12 +156,12 @@ Documented in skills/hyperframes/references/transitions/ across 14 category file
 | Dissolve (css-dissolve.md)       | Color dip (gap-to-black), staggered color blocks (2-block, 5-block)                              |
 | Cover (css-cover.md)             | Horizontal blinds, vertical blinds (variable strip counts: 6 / 12 / 20)                          |
 | Light (css-light.md)             | Light leak overlays, overexposure burn, film burn                                                |
-| Distortion (css-distortion.md)   | Glitch (CSS — RGB layer jitter), chromatic aberration, ripple                                    |
+| Distortion (css-distortion.md)   | Glitch (CSS - RGB layer jitter), chromatic aberration, ripple                                    |
 | Mechanical (css-mechanical.md)   | Shutter (two-half), clock wipe (9-point rotating wedge)                                          |
 | Grid (css-grid.md)               | Grid dissolve (12 or 120 cells), grid pixelate wipe                                              |
 | Destruction (css-destruction.md) | Page burn (SVG clip-path + canvas char rim)                                                      |
 | Other (css-other.md)             | VHS tape (strip-based seeded jitter), gravity drop, morph circle, blur through, directional blur |
-| Rejected                         | Star iris, tilt-shift, lens flare (don't use — non-CSS-realistic)                                |
+| Rejected                         | Star iris, tilt-shift, lens flare (don't use - non-CSS-realistic)                                |
 
 ### Timing presets
 
@@ -196,9 +196,9 @@ Documented in skills/hyperframes/references/transitions/ across 14 category file
 ### Light / film
 
 - Light leak transitions (CSS + shader variants)
-- Overexposure burn — `brightness()` ramp + flash overlay
-- Film burn — multi-layer amber/orange/red radials
-- Vignette — radial-gradient overlay
+- Overexposure burn - `brightness()` ramp + flash overlay
+- Film burn - multi-layer amber/orange/red radials
+- Vignette - radial-gradient overlay
 - Paper texture (in registry/examples/warm-grain/)
 
 ### Glow
@@ -269,7 +269,7 @@ Index 0 = bass, higher = treble. Bands range 0–1, normalized across full track
 | Treble (bands[12–14]) | textShadow, boxShadow (glow) |
 | Overall amplitude     | opacity, y, backgroundColor  |
 
-Any GSAP-tweenable property is fair game — including clipPath, filter, SVG attrs, CSS variables.
+Any GSAP-tweenable property is fair game - including clipPath, filter, SVG attrs, CSS variables.
 
 ### Extraction
 
@@ -277,7 +277,7 @@ Any GSAP-tweenable property is fair game — including clipPath, filter, SVG att
 python3 .../extract-audio-data.py audio.mp3 --fps 30 --bands 8
 ```
 
-Pre-extracted only — no Web Audio at render time.
+Pre-extracted only - no Web Audio at render time.
 
 ### Banned in audio-reactive
 
@@ -356,7 +356,7 @@ window.addEventListener("hf-seek", (e) => {
 
 - `<video muted playsinline data-start="..." data-duration="..." data-track-index="..." src="...">`
 - HyperFrames extracts frames at render via videoFrameInjector (avoids unreliable headless `<video>` playback)
-- Linter forbids `<video>` with audio at the same time — split into separate `<video muted>` + `<audio>`
+- Linter forbids `<video>` with audio at the same time - split into separate `<video muted>` + `<audio>`
 - Video frame extraction uses FFmpeg
 - HDR videos: PQ or HLG transfer detection + x265 with mastering metadata
 
@@ -394,7 +394,7 @@ window.addEventListener("hf-seek", (e) => {
 
 ---
 
-## 12. Registry — 51 blocks + 4 components + 8 examples
+## 12. Registry - 51 blocks + 4 components + 8 examples
 
 ### Blocks by category
 
@@ -408,16 +408,16 @@ window.addEventListener("hf-seek", (e) => {
 
 **3D / experimental VFX (8):** ui-3d-reveal, vfx-iphone-device (GLTF), vfx-liquid-background, vfx-liquid-glass, vfx-magnetic, vfx-portal, vfx-shatter, vfx-text-cursor
 
-**Single shader transitions (14):** one block per named shader — domain-warp-dissolve, ridged-burn, whip-pan, sdf-iris, ripple-waves, gravitational-lens, cinematic-zoom, chromatic-radial-split, glitch, swirl-vortex, thermal-distortion, flash-through-white, cross-warp-morph, light-leak
+**Single shader transitions (14):** one block per named shader - domain-warp-dissolve, ridged-burn, whip-pan, sdf-iris, ripple-waves, gravitational-lens, cinematic-zoom, chromatic-radial-split, glitch, swirl-vortex, thermal-distortion, flash-through-white, cross-warp-morph, light-leak
 
 **Transition galleries (13 showcase pieces):** transitions-3d, transitions-blur, transitions-cover, transitions-destruction, transitions-dissolve, transitions-distortion, transitions-grid, transitions-light, transitions-mechanical, transitions-other, transitions-push, transitions-radial, transitions-scale
 
 ### Components (4 reusable snippets)
 
-- **grain-overlay** — SVG feTurbulence + CSS keyframes
-- **shimmer-sweep** — Light sweep gradient mask on text
-- **grid-pixelate-wipe** — Grid squares stagger fade scene wipe
-- **texture-mask-text** — Luminance-masked letterforms with 66 mask PNGs (Masonry, Stone, Ground/Road, Wood, Metal, Organic/Soft texture categories)
+- **grain-overlay** - SVG feTurbulence + CSS keyframes
+- **shimmer-sweep** - Light sweep gradient mask on text
+- **grid-pixelate-wipe** - Grid squares stagger fade scene wipe
+- **texture-mask-text** - Luminance-masked letterforms with 66 mask PNGs (Masonry, Stone, Ground/Road, Wood, Metal, Organic/Soft texture categories)
 
 ### Examples (8 starter projects)
 
@@ -427,7 +427,7 @@ Install: `npx hyperframes add <name>` for blocks/components, `hyperframes init <
 
 ---
 
-## 13. CLI — 25 commands
+## 13. CLI - 25 commands
 
 | Command           | Purpose                                                                                                                                                                                                                                                                                                                  |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -437,7 +437,7 @@ Install: `npx hyperframes add <name>` for blocks/components, `hyperframes init <
 | play              | Lightweight browser player (default port 3003)                                                                                                                                                                                                                                                                           |
 | preview           | Studio dev server (port 3002; --force-new, --list, --kill-all)                                                                                                                                                                                                                                                           |
 | publish           | Zip + upload + return hyperframes.dev URL                                                                                                                                                                                                                                                                                |
-| render            | Render to MP4 / WebM / MOV / PNG sequence — flags: --fps 24/30/60, --quality draft/standard/high, --workers, --docker, --hdr/--sdr, --crf, --video-bitrate, --gpu, --browser-gpu auto/software/hardware, --max-concurrent-renders 1-10, --variables JSON, --variables-file PATH, --strict-variables, --resolution preset |
+| render            | Render to MP4 / WebM / MOV / PNG sequence - flags: --fps 24/30/60, --quality draft/standard/high, --workers, --docker, --hdr/--sdr, --crf, --video-bitrate, --gpu, --browser-gpu auto/software/hardware, --max-concurrent-renders 1-10, --variables JSON, --variables-file PATH, --strict-variables, --resolution preset |
 | lint              | Static lint (--json, --verbose)                                                                                                                                                                                                                                                                                          |
 | validate          | Bundle + headless Chrome + console + contrast (--contrast default true, --timeout 3000)                                                                                                                                                                                                                                  |
 | inspect / layout  | Visual layout audit (overflow detection at N timestamps; --samples 9, --at, --tolerance 2, --max-issues 80)                                                                                                                                                                                                              |
@@ -462,7 +462,7 @@ Detects these libraries on captured sites (for context labeling): GSAP / ScrollT
 
 ---
 
-## 14. Linter — 60+ rules
+## 14. Linter - 60+ rules
 
 Across 8 files in packages/core/src/lint/rules/:
 
@@ -477,15 +477,15 @@ Across 8 files in packages/core/src/lint/rules/:
 | textures    | Drop-shadow on text, class missing base, text missing mask, unknown texture class                                                                                                                                                                                  |
 | fonts       | Google Fonts import (use @font-face), font-family without @font-face                                                                                                                                                                                               |
 
-Plus async URL checks (`lintMediaUrls`, `lintScriptUrls` — HEAD probes).
+Plus async URL checks (`lintMediaUrls`, `lintScriptUrls` - HEAD probes).
 
 `validateCompositionGsap` also forbids: `Math.random`, `Date.now`, `new Date`, `setTimeout`, `setInterval`, `requestAnimationFrame`, `repeat: -1`.
 
-**Note:** `onUpdate` callbacks, `tl.call()`, and GSAP event callbacks (`onComplete`, `onStart`, etc.) are NOT banned by the linter — they are required for canvas/WebGL rendering and character-by-character typing patterns. The linter only catches the determinism violations listed above.
+**Note:** `onUpdate` callbacks, `tl.call()`, and GSAP event callbacks (`onComplete`, `onStart`, etc.) are NOT banned by the linter - they are required for canvas/WebGL rendering and character-by-character typing patterns. The linter only catches the determinism violations listed above.
 
 ---
 
-## 15. Player — `<hyperframes-player>` web component
+## 15. Player - `<hyperframes-player>` web component
 
 ### Attributes
 
@@ -493,7 +493,7 @@ Plus async URL checks (`lintMediaUrls`, `lintScriptUrls` — HEAD probes).
 
 ### Public API
 
-`seek(t)` (synchronous when same-origin — uses `iframe.contentWindow.__player.seek` directly), `play()`, `pause()`, `currentTime`, `duration`, `paused`, `ready`, `playbackRate`, `iframeElement`
+`seek(t)` (synchronous when same-origin - uses `iframe.contentWindow.__player.seek` directly), `play()`, `pause()`, `currentTime`, `duration`, `paused`, `ready`, `playbackRate`, `iframeElement`
 
 ### Events
 
@@ -509,11 +509,11 @@ Loads `RUNTIME_CDN_URL` (`@hyperframes/core/dist/hyperframe.runtime.iife.js`) if
 
 ---
 
-## 16. Engine + Producer — rendering pipeline
+## 16. Engine + Producer - rendering pipeline
 
 ### Output formats
 
-mp4, webm, mov, png-sequence — with HDR (PQ / HLG / SDR / auto-detect), transparency (ProRes MOV / WebM / PNG), or standard 8-bit SDR
+mp4, webm, mov, png-sequence - with HDR (PQ / HLG / SDR / auto-detect), transparency (ProRes MOV / WebM / PNG), or standard 8-bit SDR
 
 ### Encoding controls
 
@@ -550,7 +550,7 @@ mp4, webm, mov, png-sequence — with HDR (PQ / HLG / SDR / auto-detect), transp
 
 ---
 
-## 17. Studio — in-browser NLE
+## 17. Studio - in-browser NLE
 
 Full editor in packages/studio/:
 
@@ -576,7 +576,7 @@ Full editor in packages/studio/:
 - No `setTimeout` / `setInterval` in timeline construction
 - No `requestAnimationFrame` (timeline-driven; engine seeks per frame)
 - No `repeat: -1` (calculate exact repeats: `Math.ceil(duration / cycleDuration) - 1`)
-- No `onComplete`/`onStart`/`onRepeat` callbacks (engine doesn't fire them). **Exception:** `onUpdate` and `tl.call()` ARE supported — they're required for canvas/WebGL rendering, character-by-character typing, and counter patterns. See §10 (Canvas 2D procedural art) for the documented pattern.
+- No `onComplete`/`onStart`/`onRepeat` callbacks (engine doesn't fire them). **Exception:** `onUpdate` and `tl.call()` ARE supported - they're required for canvas/WebGL rendering, character-by-character typing, and counter patterns. See §10 (Canvas 2D procedural art) for the documented pattern.
 - No `gsap.set` on clips from later scenes (use `tl.set(selector, vars, position)`)
 - Synchronous timeline construction (no async)
 - Master clock can clamp at composition end
@@ -615,8 +615,8 @@ npx hyperframes render --strict-variables  # error if unused / mismatched
 
 Two loading mechanisms:
 
-- **External file:** `data-composition-src="compositions/act-1.html"` — fetched at runtime
-- **Inline template:** `<template id="<id>-template">` — extracted by `loadInlineTemplateCompositions`
+- **External file:** `data-composition-src="compositions/act-1.html"` - fetched at runtime
+- **Inline template:** `<template id="<id>-template">` - extracted by `loadInlineTemplateCompositions`
 
 Each sub-comp:
 
@@ -661,7 +661,7 @@ Control bridge actions: play, pause, seek, set-muted, set-playback-rate, enable-
 
 ---
 
-## 22. Skills available — 16
+## 22. Skills available - 16
 
 | Skill                     | Purpose                                                                 |
 | ------------------------- | ----------------------------------------------------------------------- |
@@ -688,7 +688,7 @@ Control bridge actions: play, pause, seek, set-muted, set-playback-rate, enable-
 
 16 reference docs covering:
 
-- text-effects.md — 24 named text animation effects (per-character, per-word, per-line, whole) — vocabulary reference for the separate `pixel-point/animate-text` skill (load it via `npx skills add pixel-point/animate-text` or `/animate-text`). Specs live in that upstream skill, not in this repo.
+- text-effects.md - 24 named text animation effects (per-character, per-word, per-line, whole) - vocabulary reference for the separate `pixel-point/animate-text` skill (load it via `npx skills add pixel-point/animate-text` or `/animate-text`). Specs live in that upstream skill, not in this repo.
 - transitions.md + transitions/catalog.md + 14 category subfiles
 - css-patterns.md (marker patterns)
 - dynamic-techniques.md (caption animation)
@@ -698,9 +698,9 @@ Control bridge actions: play, pause, seek, set-muted, set-playback-rate, enable-
 - captions.md (caption authoring contract)
 - audio-reactive.md (band mappings + extraction)
 - transcript-guide.md (whisper, Groq, OpenAI workflows)
-- techniques.md (the big technique catalog — SVG, canvas 2D, 3D, kinetic, lottie, variable fonts, MotionPath, audio-reactive)
+- techniques.md (the big technique catalog - SVG, canvas 2D, 3D, kinetic, lottie, variable fonts, MotionPath, audio-reactive)
 - beat-direction.md, design-picker.md, prompt-expansion.md, video-composition.md
-- visual-styles.md (8 named visual styles: Swiss Pulse, Velvet Standard, Deconstructed, Maximalist Type, Data Drift, Soft Signal, Folk Frequency, Shadow Cut — available via the `visual-style` skill)
+- visual-styles.md (8 named visual styles: Swiss Pulse, Velvet Standard, Deconstructed, Maximalist Type, Data Drift, Soft Signal, Folk Frequency, Shadow Cut - available via the `visual-style` skill)
 
 ---
 

@@ -7,14 +7,14 @@ function pad(str, len) {
 }
 
 function formatDur(record) {
-  if (record.duration == null) return "—";
+  if (record.duration == null) return " - ";
   return `${record.duration}s`;
 }
 
 function formatDims(record) {
   if (record.width && record.height) return `${record.width}×${record.height}`;
   if (record.type === "icon" && record.transparent) return "svg";
-  return "—";
+  return " - ";
 }
 
 export function generateIndexContent(records) {

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Scene 10 — HyperFrames Morph Press Interact</title>
+    <title>Scene 10 - HyperFrames Morph Press Interact</title>
 
     <!--
       HyperFrames composition.tsx.
@@ -75,7 +75,7 @@
       }
 
       /* ============================================================
-         HERO LOCKUP (Phase 1 — exits during morph)
+         HERO LOCKUP (Phase 1 - exits during morph)
          ============================================================ */
       .hero {
         position: absolute;
@@ -125,7 +125,7 @@
       }
 
       /* ============================================================
-         CTA PILL (Phase 2 — pops in during morph)
+         CTA PILL (Phase 2 - pops in during morph)
          ============================================================ */
       .cta {
         background: linear-gradient(
@@ -163,7 +163,7 @@
       }
 
       /* ============================================================
-         CURSOR (Phase 3 — hard-cuts in)
+         CURSOR (Phase 3 - hard-cuts in)
          ============================================================ */
       .cursor {
         position: absolute;
@@ -192,7 +192,7 @@
     >
       <div class="stage clip" data-start="0" data-duration="5.5" data-track-index="1" id="stage">
         <!-- =====================================================
-             HERO LOCKUP — "HyperFrames" + logo
+             HERO LOCKUP - "HyperFrames" + logo
              ===================================================== -->
         <div
           class="hero clip"
@@ -205,7 +205,7 @@
         >
           <h1 class="hero-text">Hyper<span class="brand-accent">Frames</span></h1>
           <div class="hero-logo" id="hero-logo">
-            <!-- Inline-SVG placeholder mark — swap for your logo image -->
+            <!-- Inline-SVG placeholder mark - swap for your logo image -->
             <svg class="logo-mark" viewBox="0 0 100 100" role="img" aria-label="HyperFrames">
               <defs>
                 <linearGradient id="hfMark" x1="0" y1="0" x2="1" y2="1">
@@ -230,14 +230,14 @@
         </div>
 
         <!-- =====================================================
-             CTA PILL — "Build video from HTML"
+             CTA PILL - "Build video from HTML"
              ===================================================== -->
         <div class="cta" id="cta">
           <span class="cta-text">Build video from HTML</span>
         </div>
 
         <!-- =====================================================
-             CURSOR — inline SVG arrow with drop-shadow
+             CURSOR - inline SVG arrow with drop-shadow
              ===================================================== -->
         <div class="cursor" id="cursor">
           <svg
@@ -302,10 +302,10 @@
       // Hero: starts at opacity 0, y +40 (will fade up)
       gsap.set("#hero", { opacity: 0, y: 40 });
 
-      // CTA: starts invisible (scale 0, opacity 0) — morph pops it in
+      // CTA: starts invisible (scale 0, opacity 0) - morph pops it in
       gsap.set("#cta", { scale: 0, opacity: 0 });
 
-      // CTA text: starts at opacity 0 + y 10 — reveals after container is recognizable
+      // CTA text: starts at opacity 0 + y 10 - reveals after container is recognizable
       gsap.set(".cta-text", { opacity: 0, y: 10 });
 
       // Cursor: starts off-screen bottom-right + invisible + scale 1 baseline
@@ -338,7 +338,7 @@
       );
 
       // Continuous breathing rotation on the logo. ±4° over ~6.3 s period.
-      // For a 5.5 s composition this is just under one cycle — subtle but alive.
+      // For a 5.5 s composition this is just under one cycle - subtle but alive.
       // Use Form 2 (onUpdate reading tl.time) per sine-wave-loop rule.
       const logoEl = document.querySelector("#hero-logo");
       tl.to(
@@ -416,7 +416,7 @@
       /* ----------------------------------------------------------------
          PHASE 3: Cursor entry + motion path
          ---------------------------------------------------------------- */
-      // Hard-cut opacity (cursors don't fade in — they appear).
+      // Hard-cut opacity (cursors don't fade in - they appear).
       // 0.001 s tween creates a step change that scrubs correctly.
       tl.fromTo(
         "#cursor",
@@ -426,7 +426,7 @@
       );
 
       // Spring-driven approach to a target slightly offset from center
-      // (where a human would naturally aim — not dead-center).
+      // (where a human would naturally aim - not dead-center).
       tl.to(
         "#cursor",
         {
@@ -440,9 +440,9 @@
 
       /* ----------------------------------------------------------------
          PHASE 4: Physics-based press
-         Both CTA and cursor compress together — single target array.
+         Both CTA and cursor compress together - single target array.
          ---------------------------------------------------------------- */
-      // Press DOWN — both elements compress to (1 - intensity)
+      // Press DOWN - both elements compress to (1 - intensity)
       tl.to(
         ["#cta", "#cursor"],
         {
@@ -453,7 +453,7 @@
         TIMING.clickDownAt,
       );
 
-      // RELEASE — back to scale 1.0
+      // RELEASE - back to scale 1.0
       tl.to(
         ["#cta", "#cursor"],
         {

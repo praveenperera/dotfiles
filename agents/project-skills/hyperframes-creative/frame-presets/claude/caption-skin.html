@@ -1,5 +1,5 @@
 <!--
-  Claude — caption skin (preset-local source).
+  Claude - caption skin (preset-local source).
 
   This is the preset's own lower-third karaoke caption look. product-launch-video's
   (and pr-to-video's) Step 2 copies it into the project as caption-skin.html;
@@ -9,7 +9,7 @@
     · the 0 duration + 0 width/height   → real total + canvas size
     · the empty data-brand-tokens style → :root tokens derived from the project's frame.md
 
-  Token contract — reference ONLY this fixed vocab (captions.mjs injects it from
+  Token contract - reference ONLY this fixed vocab (captions.mjs injects it from
   frame.md, so the Step-2 brand overlay flows through; each var has a claude literal
   fallback for standalone preview):
     --cap-ink · --cap-canvas · --cap-accent · --cap-accent-2 · --font-display ·
@@ -20,7 +20,7 @@
   never tl.call() callbacks (seek does not fire them → wrong state on render).
 
   Visual: a warm cream card lifted off the page on a 1px hairline ink border + one soft
-  warm shadow — claude's only elevation language, no tilt, editorial and precise.
+  warm shadow - claude's only elevation language, no tilt, editorial and precise.
   EB Garamond sentence case, warm-ink glyphs. Upcoming words sit in faint ink; the current
   word reads in full ink under a 3px coral "voltage" underline (the brand's inline-link
   gesture, border-bottom = underline without layout shift); spoken words settle to solid
@@ -43,7 +43,7 @@
     z-index: 20;
     pointer-events: none;
   }
-  /* the keep-out band, from captionBand(H) — frame content stays above it */
+  /* the keep-out band, from captionBand(H) - frame content stays above it */
   .caption-stage {
     position: absolute;
     left: 0;
@@ -55,7 +55,7 @@
     justify-content: center;
   }
   .caption-group {
-    /* every group is absolutely stacked over the SAME band — exactly one shown at a
+    /* every group is absolutely stacked over the SAME band - exactly one shown at a
        time via opacity. Must be absolute: in-flow groups would lay out side-by-side. */
     position: absolute;
     inset: 0;
@@ -65,7 +65,7 @@
     opacity: 0;
   }
 
-  /* THE lifted cream card — warm cream fill, 1px hairline ink border, one soft warm
+  /* THE lifted cream card - warm cream fill, 1px hairline ink border, one soft warm
      shadow (claude's only elevation language), 12px radius, no tilt */
   .caption-pill {
     max-width: 78%;
@@ -89,27 +89,27 @@
     letter-spacing: -0.02em;
   }
 
-  /* upcoming — faint warm ink, no underline */
+  /* upcoming - faint warm ink, no underline */
   .caption-word {
     display: inline-block;
     padding: 0 0.02em 0.06em;
     color: color-mix(in srgb, var(--cap-ink, #141413) 40%, var(--cap-canvas, #faf9f5));
     border-bottom: 3px solid transparent;
   }
-  /* current word — full ink under the coral voltage underline (the brand's signature
+  /* current word - full ink under the coral voltage underline (the brand's signature
      inline-link gesture; border-bottom = underline without layout shift) */
   .caption-word.is-active {
     color: var(--cap-ink, #141413);
     border-bottom: 3px solid var(--cap-accent, #cc785c);
   }
-  /* already spoken — solid warm ink, underline cleared */
+  /* already spoken - solid warm ink, underline cleared */
   .caption-word.is-spoken {
     color: var(--cap-ink, #141413);
     border-bottom: 3px solid transparent;
   }
 
   /* optional per-word accents (dormant until a word-classer tags them) */
-  /* brand / key term — the expressive EB Garamond italic */
+  /* brand / key term - the expressive EB Garamond italic */
   .caption-word.cap-brand {
     font-style: italic;
     color: var(--cap-ink, #141413);
@@ -117,11 +117,11 @@
   .caption-word.cap-brand.is-active {
     border-bottom: 3px solid var(--cap-accent, #cc785c);
   }
-  /* numerals / data — slightly recessed warm ink */
+  /* numerals / data - slightly recessed warm ink */
   .caption-word.cap-num {
     color: color-mix(in srgb, var(--cap-ink, #141413) 72%, var(--cap-canvas, #faf9f5));
   }
-  /* emphasis — a persistent coral voltage underline */
+  /* emphasis - a persistent coral voltage underline */
   .caption-word.cap-cta {
     border-bottom: 3px solid var(--cap-accent-2, #b5654a);
     color: var(--cap-ink, #141413);
@@ -193,11 +193,11 @@
       var end = isLast ? DURATION : Math.min(Number(next.start), Number(group.end) + 0.3);
       if (end <= start) end = start + 0.01;
 
-      // group on/off — exactly one group visible at a time
+      // group on/off - exactly one group visible at a time
       tl.set(groupEl, { opacity: 1 }, start);
       tl.set(groupEl, { opacity: 0 }, end);
 
-      // 3-state karaoke via className SETS — seek-safe (gsap.set applies on the
+      // 3-state karaoke via className SETS - seek-safe (gsap.set applies on the
       // engine's frame-by-frame seek; .call callbacks would NOT fire).
       words.forEach(function (w, i) {
         var el = document.getElementById("caption-word-" + g + "-" + i);

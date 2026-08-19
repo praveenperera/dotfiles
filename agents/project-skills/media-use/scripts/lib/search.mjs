@@ -1,5 +1,5 @@
 // Paginated text search over a manifest (project or global) by id / description
-// / entity. Plain substring match — no vector DB (B4): the agent's own file
+// / entity. Plain substring match - no vector DB (B4): the agent's own file
 // search covers semantics; this just keeps result pages small enough to not
 // blow the context window.
 

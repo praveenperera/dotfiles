@@ -38,7 +38,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--scale",
         default="MAJOR",
-        help="MAJOR / MINOR / PENTATONIC / etc. — see google.genai.types.Scale. Pass empty string for none.",
+        help="MAJOR / MINOR / PENTATONIC / etc. - see google.genai.types.Scale. Pass empty string for none.",
     )
     return p.parse_args()
 

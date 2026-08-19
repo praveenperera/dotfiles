@@ -1,10 +1,10 @@
-# kinetic-type — category module
+# kinetic-type - category module
 
 Text is the hero; typography + motion carry the message. Usually asset-free (`asset_needs: []`).
 
 ## Plan (Director)
 
-- **Style first.** If the project has a **`design.md` / `frame.md`** (precedence: `frame.md` → `design.md` → `DESIGN.md`), READ it and use its **exact palette / fonts / constraints** — do not invent. No spec → pick a named style, or ask: mood + light/dark + any brand color/font. (Style is an input the case must exercise; the same shot in two `design.md`s should look different.)
+- **Style first.** If the project has a **`design.md` / `frame.md`** (precedence: `frame.md` → `design.md` → `DESIGN.md`), READ it and use its **exact palette / fonts / constraints** - do not invent. No spec → pick a named style, or ask: mood + light/dark + any brand color/font. (Style is an input the case must exercise; the same shot in two `design.md`s should look different.)
 - Segment the copy into scenes by meaning / breath (EN ~3–7 words; ZH ~4–12 chars). Tag each scene **Hook → Build → Punch → Resolve**.
 - 1–2 `emphasis_words` per scene. Per scene: `emotion` + `motion` (free-form) + `beats`.
 

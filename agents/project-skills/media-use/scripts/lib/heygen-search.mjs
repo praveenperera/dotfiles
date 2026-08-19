@@ -3,7 +3,7 @@ import { reportHeygenFailure } from "./heygen-cli.mjs";
 
 export function heygenSearch(subcommand, query, { type, limit = 5, minScore } = {}) {
   // execFileSync with an argv array (no shell), so query/type/etc. are passed as
-  // literal arguments — no quoting tricks, no command injection. subcommand is a
+  // literal arguments - no quoting tricks, no command injection. subcommand is a
   // hardcoded multi-word string (e.g. "audio sounds list"), split into tokens.
   // Tag the caller via the CLI's allowlisted attribution header (heygen >= v0.3.0).
   const args = [
@@ -27,7 +27,7 @@ export function heygenSearch(subcommand, query, { type, limit = 5, minScore } = 
       stdio: ["pipe", "pipe", "pipe"],
     });
   } catch (err) {
-    // Don't swallow a broken command / auth failure as "no results" — that turns
+    // Don't swallow a broken command / auth failure as "no results" - that turns
     // a typo or expired key into a silent dead end. Surface it, then give up.
     reportHeygenFailure(err, `heygen ${subcommand}`);
     return null;

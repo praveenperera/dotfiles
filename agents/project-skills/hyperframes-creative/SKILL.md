@@ -7,18 +7,18 @@ description: Non-animation creative direction for HyperFrames videos. Use for de
 
 Brand, pacing, style, narration, and composition direction. Use after the technical contract from `hyperframes-core` is in place.
 
-For motion patterns, scene blueprints, transitions, and CSS marker effects, use `hyperframes-animation` — this skill is intentionally non-animation.
+For motion patterns, scene blueprints, transitions, and CSS marker effects, use `hyperframes-animation` - this skill is intentionally non-animation.
 
-> **Read these two FIRST for any non-trivial composition — they override web instincts:**
+> **Read these two FIRST for any non-trivial composition - they override web instincts:**
 >
-> - `references/house-style.md` — "interpret the prompt, generate real content," the lazy-default list, and the background/foreground layer recipe. This is what turns a literal restyle into a _concept_.
-> - `references/video-composition.md` — video-medium density, scale, foreground metadata (the "produced, not generated" detailing: data bars, registration marks, monospace readouts, 8-10 elements/scene).
+> - `references/house-style.md` - "interpret the prompt, generate real content," the lazy-default list, and the background/foreground layer recipe. This is what turns a literal restyle into a _concept_.
+> - `references/video-composition.md` - video-medium density, scale, foreground metadata (the "produced, not generated" detailing: data bars, registration marks, monospace readouts, 8-10 elements/scene).
 >
-> Skipping these is the single biggest cause of generic, web-page-looking output. They are not optional rows in the routing table below — for anything beyond a one-line edit, open both before you choose colors or write HTML.
+> Skipping these is the single biggest cause of generic, web-page-looking output. They are not optional rows in the routing table below - for anything beyond a one-line edit, open both before you choose colors or write HTML.
 
 ## Workflow
 
-1. If a project has a design spec, **read it first** and treat its frontmatter tokens as brand truth (colors, fonts, spacing, tone, constraints). Which file to read (precedence `frame.md` → `design.md` → `DESIGN.md`) and how to parse it (frontmatter = normative, prose = context) are defined once in [`references/design-spec.md`](references/design-spec.md) — resolve and load per that doc.
+1. If a project has a design spec, **read it first** and treat its frontmatter tokens as brand truth (colors, fonts, spacing, tone, constraints). Which file to read (precedence `frame.md` → `design.md` → `DESIGN.md`) and how to parse it (frontmatter = normative, prose = context) are defined once in [`references/design-spec.md`](references/design-spec.md) - resolve and load per that doc.
 2. If no design spec exists and the user asks for visual direction, choose a route:
    - Ready-made frame-preset (optional) → `frame-presets/` (adopt a `FRAME.md` as `frame.md`; see `references/design-spec.md`)
    - Named style or mood → `references/visual-styles.md`
@@ -35,7 +35,7 @@ For motion patterns, scene blueprints, transitions, and CSS marker effects, use 
 | Default palettes, motion, typography, lazy defaults to question               | `references/house-style.md`                    |
 | Named style presets, mood-to-style routing                                    | `references/visual-styles.md`                  |
 | Palette-specific color tokens                                                 | `palettes/*.md`                                |
-| Composition patterns — PiP, text-behind-subject, title card, slide show       | `references/composition-patterns.md`           |
+| Composition patterns - PiP, text-behind-subject, title card, slide show       | `references/composition-patterns.md`           |
 | Stats / infographic presentation                                              | `references/data-in-motion.md`                 |
 | Structured expansion for open-ended prompts                                   | `references/prompt-expansion.md`               |
 | Video-medium density, scale, color, frame composition                         | `references/video-composition.md`              |
@@ -43,15 +43,15 @@ For motion patterns, scene blueprints, transitions, and CSS marker effects, use 
 | Post-authoring spec verification (colors, type, corners, spacing, depth)      | `references/design-adherence.md`               |
 | High-level motion guardrails and GSAP-quality rules                           | `references/motion-principles.md`              |
 | Font selection, pairings, rendered-video type guardrails                      | `references/typography.md`                     |
-| Story doctrine — hook language, value-before-evidence, storyboard-as-proposal | `references/story-spine.md`                    |
+| Story doctrine - hook language, value-before-evidence, storyboard-as-proposal | `references/story-spine.md`                    |
 | Script pacing, tone, openings, number pronunciation                           | `references/narration.md`                      |
 | Precomputed audio bands mapped to motion                                      | `references/audio-reactive.md`                 |
 
 ## Scripts
 
-- `scripts/contrast-report.mjs` — inspect contrast warnings from rendered frames.
-- `scripts/extract-audio-data.py` — pre-extract audio bands for audio-reactive compositions.
-- `scripts/package-loader.mjs` — support script for bundled creative tooling.
+- `scripts/contrast-report.mjs` - inspect contrast warnings from rendered frames.
+- `scripts/extract-audio-data.py` - pre-extract audio bands for audio-reactive compositions.
+- `scripts/package-loader.mjs` - support script for bundled creative tooling.
 
 `contrast-report.mjs` resolves helper packages from the current project first, then can bootstrap the bundled HyperFrames package version. Set `HYPERFRAMES_SKILL_PKG_VERSION=<version>` only when running the skill outside the bundled CLI/skill install and you need to pin that bootstrap version explicitly.
 

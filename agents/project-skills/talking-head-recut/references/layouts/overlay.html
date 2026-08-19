@@ -1,5 +1,5 @@
 <!--
-  Layout: overlay — video full-bleed, glass card floats on bottom
+  Layout: overlay - video full-bleed, glass card floats on bottom
   ─────────────────────────────────────────────────────────────────────
   Implementation: card.zone = "video-overlay" + leave #video-wrap at
   full-bleed (no tween needed if it starts full-bleed). The "card" is
@@ -15,7 +15,7 @@
       "contentHints": { "kicker": "...", "title": "...", "detail": "..." }
     }
 
-  GSAP target for #video-wrap (full-bleed — usually unchanged):
+  GSAP target for #video-wrap (full-bleed - usually unchanged):
     tl.to('#video-wrap',
       { left: 0, top: 0, width: COMPOSITION_W, height: COMPOSITION_H,
         duration: 0.6, ease: 'power2.inOut' }, START_SEC);
@@ -62,7 +62,7 @@
     }
 
   Notes
-  - Card root MUST be transparent or use rgba/glass background — see
+  - Card root MUST be transparent or use rgba/glass background - see
     Pattern A in SKILL.md "Transparent card backgrounds".
   - Glass without legibility gradient = white-on-white catastrophe over
     bright video. Always pair them.

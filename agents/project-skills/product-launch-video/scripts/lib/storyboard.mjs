@@ -1,4 +1,4 @@
-// storyboard.mjs — vendored lenient parser for STORYBOARD.md.
+// storyboard.mjs - vendored lenient parser for STORYBOARD.md.
 //
 // Faithful plain-JS port of @hyperframes/core/storyboard
 // (packages/core/src/storyboard/parseStoryboard.ts). Vendored because skills
@@ -8,14 +8,14 @@
 // parser + skills/hyperframes-core/references/storyboard-format.md; keep this in
 // lockstep. Behavior: never throws, accepts freeform narrative, recognizes
 // Frame/Beat/Scene headings at H2/H3, preserves unknown keys verbatim under
-// `extra` (keys lowercased). Pure node — no deps.
+// `extra` (keys lowercased). Pure node - no deps.
 
 export const FRAME_STATUSES = ["outline", "built", "animated"];
 export const DEFAULT_FRAME_STATUS = "outline";
 
-// Detection-only frame heading (ends at the keyword); ReDoS-hardened — keep as-is.
+// Detection-only frame heading (ends at the keyword); ReDoS-hardened - keep as-is.
 const FRAME_HEADING_RE = /^(#{2,3})[ \t]+(?:frame|beat|scene)\b/i;
-const FRAME_TITLE_SEP_RE = /^[\s.:—-]+/;
+const FRAME_TITLE_SEP_RE = /^[\s.: - -]+/;
 const HEADING_LEVEL_RE = /^(#{1,6})\s+/;
 const META_RE = /^\s*[-*]\s+([A-Za-z_][\w-]*)\s*:\s*(.+?)\s*$/;
 const LEADING_INT_RE = /^(\d+)/;
@@ -167,7 +167,7 @@ function parseHeading(text) {
   const number = Number.parseInt(intMatch[1] ?? "", 10);
   const rest = text
     .slice((intMatch[0] ?? "").length)
-    .replace(/^[\s.:—-]+/, "")
+    .replace(/^[\s.: - -]+/, "")
     .trim();
   return { number, title: rest || undefined };
 }

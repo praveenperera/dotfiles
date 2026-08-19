@@ -1,6 +1,6 @@
 # Minimal Composition
 
-The smallest renderable HyperFrames composition — a standalone (top-level) root with one clip and one tween:
+The smallest renderable HyperFrames composition - a standalone (top-level) root with one clip and one tween:
 
 ```html
 <!doctype html>
@@ -63,4 +63,4 @@ Required elements:
 - At least one clip (any element with `data-start`, `data-duration`, `data-track-index`)
 - GSAP timeline created paused, registered on `window.__timelines["<composition-id>"]`
 
-This pattern is **standalone** (top-level `index.html`) — no `<template>` wrapper around the root. For sub-compositions (files loaded by `data-composition-src`), see `sub-compositions.md`.
+This pattern is **standalone** (top-level `index.html`) - no `<template>` wrapper around the root. For sub-compositions (files loaded by `data-composition-src`), see `sub-compositions.md`.

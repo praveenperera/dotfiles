@@ -24,13 +24,13 @@ Anthropic's lesson is that stylistic constraints ("never write comments", "alway
 
 Keep the same seven sections as the shared contract, but write them for a model that has good judgment and weak tolerance for instruction bulk:
 
-1. **Objective and success condition** — one concrete outcome and how you will know it is finished. Prefer checkable states over process prose.
-2. **Authority and owned scope** — exact files, directories, or responsibilities. Hard boundary.
-3. **Excluded scope** — what must not change. Hard boundary.
-4. **Evidence and references** — files, diffs, tests, mockups, or rubrics to inspect. Prefer `@` paths and code over re-explaining the repo.
-5. **Constraints** — only non-negotiables that judgment cannot recover from context. Preserve user requirements verbatim.
-6. **Verification** — specific commands or read-only checks. Prefer "run X and report the exact outcome" over a general "make sure it works".
-7. **Stop conditions and final report** — when to stop short, and what the report must contain.
+1. **Objective and success condition** - one concrete outcome and how you will know it is finished. Prefer checkable states over process prose.
+2. **Authority and owned scope** - exact files, directories, or responsibilities. Hard boundary.
+3. **Excluded scope** - what must not change. Hard boundary.
+4. **Evidence and references** - files, diffs, tests, mockups, or rubrics to inspect. Prefer `@` paths and code over re-explaining the repo.
+5. **Constraints** - only non-negotiables that judgment cannot recover from context. Preserve user requirements verbatim.
+6. **Verification** - specific commands or read-only checks. Prefer "run X and report the exact outcome" over a general "make sure it works".
+7. **Stop conditions and final report** - when to stop short, and what the report must contain.
 
 Omit sections that are empty. Do not pad with policy that AGENTS.md or the surrounding code already make obvious.
 
@@ -260,8 +260,8 @@ Keep Fable subagent prompts short. Point at the diff, owned paths, and success c
 
 ## Sources
 
-- [Thariq Shihipar on X](https://x.com/trq212/status/2080710971228918066) — original thread
-- [The new rules of context engineering for Claude 5 generation models](https://claude.com/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models) — full Anthropic post
-- [A field guide to Claude Fable](https://claude.com/blog/a-field-guide-to-claude-fable-finding-your-unknowns) — related prompting guide for advanced Claude models
-- [model-routing.md](model-routing.md) — when to choose Opus 5 and its known failure modes
-- [codex-cli.md](codex-cli.md) — shared delegation contract and artifact capture
+- [Thariq Shihipar on X](https://x.com/trq212/status/2080710971228918066) - original thread
+- [The new rules of context engineering for Claude 5 generation models](https://claude.com/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models) - full Anthropic post
+- [A field guide to Claude Fable](https://claude.com/blog/a-field-guide-to-claude-fable-finding-your-unknowns) - related prompting guide for advanced Claude models
+- [model-routing.md](model-routing.md) - when to choose Opus 5 and its known failure modes
+- [codex-cli.md](codex-cli.md) - shared delegation contract and artifact capture

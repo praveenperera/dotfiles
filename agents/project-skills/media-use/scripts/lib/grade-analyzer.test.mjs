@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { analyzeMediaGrade, formatMeasuredNote, statsToAdjust } from "./grade-analyzer.mjs";
 
 // The "Test: skills" CI job runs bare `node --test` with no ffmpeg on PATH (by
-// design — skills tests are meant to be node-builtin-only). Tests that shell to
+// design - skills tests are meant to be node-builtin-only). Tests that shell to
 // ffmpeg skip there and run wherever ffmpeg is present (locally, dev).
 const FFMPEG_SKIP =
   spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0

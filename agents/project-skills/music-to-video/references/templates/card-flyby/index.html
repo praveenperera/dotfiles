@@ -2,17 +2,17 @@
 <html
   lang="en"
   data-composition-variables='[
-    {"id":"theme",    "type":"string", "label":"Palette theme — aurora | ember | mono | slate",     "default":"aurora"},
+    {"id":"theme",    "type":"string", "label":"Palette theme - aurora | ember | mono | slate",     "default":"aurora"},
     {"id":"bgColor",  "type":"color",  "label":"Stage background override (empty = theme bg)",       "default":""},
-    {"id":"cards",    "type":"string", "label":"Deck JSON — array of {tag,title,meta,color?}",        "default":""},
-    {"id":"landings", "type":"string", "label":"Landing beats JSON — abs seconds, one per card",     "default":""},
+    {"id":"cards",    "type":"string", "label":"Deck JSON - array of {tag,title,meta,color?}",        "default":""},
+    {"id":"landings", "type":"string", "label":"Landing beats JSON - abs seconds, one per card",     "default":""},
     {"id":"yaw",      "type":"number", "label":"Scene yaw (deg, side tilt of the whole deck)",        "default":-12}
   ]'
 >
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Card Flyby · accelerating 3D deck cascade — reference impl</title>
+    <title>Card Flyby · accelerating 3D deck cascade - reference impl</title>
     <script src="../../motion-primitives/assets/gsap.min.js"></script>
     <style>
       *,
@@ -38,7 +38,7 @@
         font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
       }
       /* .stage carries the perspective; .scene carries the static yaw. The cards' own
-         rotateX drives the tumble-forward — the scene only holds the side tilt. */
+         rotateX drives the tumble-forward - the scene only holds the side tilt. */
       .stage {
         position: absolute;
         left: 0;
@@ -106,7 +106,7 @@
         height: 1.5px;
         background: rgba(255, 255, 255, 0.22);
       }
-      /* Solid colored face — revealed via an angled clip-path wipe driven by --wipe.
+      /* Solid colored face - revealed via an angled clip-path wipe driven by --wipe.
          Polygon sweeps upper-left → lower-right at ~72°. wipe=0 collapsed off-element,
          wipe=1 covers the full card. */
       .solid {
@@ -123,7 +123,7 @@
           0 34px 100px rgba(0, 0, 0, 0.55),
           inset 0 1px 0 rgba(255, 255, 255, 0.14);
         overflow: hidden;
-        /* the title is the hero — centered in the card */
+        /* the title is the hero - centered in the card */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -210,13 +210,13 @@
           //  Dwells shrink card-to-card → the deck reads as an accelerating rush into
           //  a held final card. Asset-free: wireframe + solid CSS cards, system fonts.
           //
-          //  COMPOSE BY DATA — `cards` (the deck) and `landings` (one beat per card)
+          //  COMPOSE BY DATA - `cards` (the deck) and `landings` (one beat per card)
           //  are the two data surfaces. Card count is data: 3/6/9 cards all "just
           //  work"; landings default to an accelerating schedule derived from count.
           // ════════════════════════════════════════════════════════════════════
 
           window.__timelines = window.__timelines || {};
-          // force3D is set per card tween/set below (NOT a global default — a global
+          // force3D is set per card tween/set below (NOT a global default - a global
           // would leak onto the plain-object padding tween and warn). It keeps a 3D
           // matrix on every transform so cards never collapse to 2D: a card whose
           // rotX/Y/Z all hit 0 (the front s0 pose) would otherwise drop out of the 3D
@@ -232,7 +232,7 @@
               : {},
           );
 
-          // ── Palette themes — each is a COHESIVE ramp (one temperature/saturation
+          // ── Palette themes - each is a COHESIVE ramp (one temperature/saturation
           //    family) so any card count reads as a designed set. card.color still
           //    overrides per card. White-on-card stays AA at the card type sizes. ──
           var THEMES = {
@@ -254,7 +254,7 @@
               ink: "#ffffff",
               colors: ["#11243f", "#16314f", "#1b3d63", "#214a78", "#27568d", "#2d63a2"],
             },
-            // muted cool slate — understated / editorial
+            // muted cool slate - understated / editorial
             slate: {
               bg: "#0b0e12",
               ink: "#eef2f6",
@@ -263,7 +263,7 @@
           };
           var TH = THEMES[String(vars.theme || "").trim()] || THEMES.aurora;
 
-          // tiny hex helpers (deterministic, no deps) — derive shades + soft ink.
+          // tiny hex helpers (deterministic, no deps) - derive shades + soft ink.
           function parseHex(h) {
             h = String(h || "")
               .trim()
@@ -448,7 +448,7 @@
 
           function poseTween(idx, slot, t, dur, ease) {
             // z-index is set instantly at the swap start so paint order matches the
-            // slot — CSS can't reliably depth-sort non-intersecting planes.
+            // slot - CSS can't reliably depth-sort non-intersecting planes.
             tl.set("#card-" + idx, { zIndex: slot.zi }, t);
             tl.to(
               "#card-" + idx,

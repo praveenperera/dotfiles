@@ -1,5 +1,5 @@
 <!--
-  Layout: stack — video on top, card below
+  Layout: stack - video on top, card below
   ─────────────────────────────────────────────────────────────────────
   Implementation: card.zone = "lower-third" + tween #video-wrap to top band.
 
@@ -14,29 +14,29 @@
     }
 
   GSAP target for #video-wrap (top band):
-    landscape (1920×1080) — video top 52%:
+    landscape (1920×1080) - video top 52%:
       tl.to('#video-wrap',
         { left: 14, top: 14, width: 1892, height: 548,
           duration: 0.6, ease: 'power2.inOut' }, START_SEC);
 
-    portrait (1080×1920) — video top 44%:
+    portrait (1080×1920) - video top 44%:
       tl.to('#video-wrap',
         { left: 0, top: 0, width: 1080, height: 844,
           duration: 0.6, ease: 'power2.inOut' }, START_SEC);
 
-    4:5 (1080×1350) — y/h × 0.703:
+    4:5 (1080×1350) - y/h × 0.703:
       tl.to('#video-wrap',
         { left: 0, top: 0, width: 1080, height: 593,
           duration: 0.6, ease: 'power2.inOut' }, START_SEC);
 
   Notes
   - Sleek vertical: gives the speaker a wider stage on top.
-  - Card below is a full-width statement — great for one big sentence
+  - Card below is a full-width statement - great for one big sentence
     or one big number.
   - The `lower-third` zone resolves to bottom 30% by default
     (`resolveZoneBounds`); for a 48% card adjust the GSAP tween to also
     move card-host height, or use `zone="whiteboard-area"` + custom CSS.
-  - 14px gap between video and card looks clean — set composition bg to
+  - 14px gap between video and card looks clean - set composition bg to
     a deep color (#0a0c12) so the gap reads as a separator.
 -->
 <!doctype html>

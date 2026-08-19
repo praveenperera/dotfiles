@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Step 1 — contributor avatar fetch (NETWORK; orchestrator-invoked).
+// Step 1 - contributor avatar fetch (NETWORK; orchestrator-invoked).
 //
 // The counterpart to ingest.mjs: ingest is a pure offline transform, THIS is the
 // one network step on the people front. It reads the people list ingest produced
@@ -24,7 +24,7 @@
 //
 // Flags: --project-dir .  --timeout 8000 (ms per request)
 //   Avatars are written to <project-dir>/<person.avatarFile>, where avatarFile is
-//   the project-root-relative "assets/<login>.png" — the SAME assets/ dir the frame
+//   the project-root-relative "assets/<login>.png" - the SAME assets/ dir the frame
 //   workers reference and assemble-index stages (lib/assets.mjs). Anchor on the
 //   project root so the path stays under the project's assets/.
 //
@@ -68,23 +68,23 @@ function isUnderProject(p) {
   return r === projectDir || r.startsWith(projectDir + sep);
 }
 
-// Soft-exit helper — avatars are optional, so every early-out is exit 0.
+// Soft-exit helper - avatars are optional, so every early-out is exit 0.
 function softExit(msg) {
   console.log(`• fetch-avatars: ${msg}`);
   process.exit(0);
 }
 
-if (!existsSync(peoplePath)) softExit(`no people.json at ${peoplePath} — skipping (no avatars)`);
+if (!existsSync(peoplePath)) softExit(`no people.json at ${peoplePath} - skipping (no avatars)`);
 
 let doc;
 try {
   doc = JSON.parse(readFileSync(peoplePath, "utf8"));
 } catch (e) {
-  softExit(`people.json unreadable (${e.message}) — skipping`);
+  softExit(`people.json unreadable (${e.message}) - skipping`);
 }
 
 const people = Array.isArray(doc.people) ? doc.people : [];
-if (!people.length) softExit("no contributors in people.json — skipping");
+if (!people.length) softExit("no contributors in people.json - skipping");
 
 async function fetchOne(person) {
   const { login, avatarUrl } = person;

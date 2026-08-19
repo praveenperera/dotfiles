@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * media-use eval — compare baseline (no media-use) vs. with media-use
+ * media-use eval - compare baseline (no media-use) vs. with media-use
  * on real registry blocks. Produces an HTML report.
  */
 
@@ -217,8 +217,8 @@ function generateReport(results) {
     .map((r) => {
       const assetRows = r.manifest
         .map((m) => {
-          const dur = m.duration != null ? `${m.duration}s` : "—";
-          const dims = m.width && m.height ? `${m.width}×${m.height}` : "—";
+          const dur = m.duration != null ? `${m.duration}s` : " - ";
+          const dims = m.width && m.height ? `${m.width}×${m.height}` : " - ";
           return `<tr><td>${m.id}</td><td>${m.type}</td><td>${dur}</td><td>${dims}</td><td class="path">${m.path}</td><td>${m.description || ""}</td></tr>`;
         })
         .join("\n");
@@ -246,7 +246,7 @@ function generateReport(results) {
           </div>
           <div class="col">
             <h4>With media-use (after --adopt)</h4>
-            <p>Agent reads index.md — structured, typed, with metadata:</p>
+            <p>Agent reads index.md - structured, typed, with metadata:</p>
             <pre class="index">${escapeHtml(r.index)}</pre>
           </div>
         </div>
@@ -314,7 +314,7 @@ pre.index { white-space: pre; }
   <div class="stat"><div class="num">${(() => {
     const refs = all.flatMap((r) => r.assetRefs);
     const covered = refs.filter((c) => c.covered).length;
-    return refs.length > 0 ? Math.round((covered / refs.length) * 100) + "%" : "—";
+    return refs.length > 0 ? Math.round((covered / refs.length) * 100) + "%" : " - ";
   })()}</div><div class="label">composition coverage</div></div>
 </div>
 

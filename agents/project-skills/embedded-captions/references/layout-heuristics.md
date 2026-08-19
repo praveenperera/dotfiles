@@ -26,22 +26,22 @@ Annotate approximate ranges:
 
 1. **Corner farthest from head** (usually opposite the gaze direction)
 2. **Upper strip above head_y_min minus 30px margin**
-3. **Lower-third** if upper is occupied (last resort — breaks "embedded" aesthetic)
+3. **Lower-third** if upper is occupied (last resort - breaks "embedded" aesthetic)
 
 ## Step 2.5: Which side of the subject?
 
 Once you know where the subject and baked graphics are, decide which side (left or right of the subject) hosts the caption column. Order of precedence:
 
-### 1. Hard constraints first — baked graphics
+### 1. Hard constraints first - baked graphics
 
 Logos, watermarks, date stamps, "60 Overtime"-style lower-thirds are already in the source. They occupy permanent zones you must avoid. Map them out from frame samples:
 
 - Jobs 60 Minutes: "2003" at upper-left (x=280-460, y=30-90); "60 Overtime" at bottom-left (x=280-770, y=960-1080). Left side partially constrained; still usable above/below these.
-- TikTok re-uploads: username watermark that rotates corners every few seconds — hard to plan around, often a refusal reason.
+- TikTok re-uploads: username watermark that rotates corners every few seconds - hard to plan around, often a refusal reason.
 
 If one side has a hard constraint that eats > 60% of that side's clean zone, default to the other side.
 
-### 2. Subject body bias — pick the bigger clean zone
+### 2. Subject body bias - pick the bigger clean zone
 
 Compute clean-zone widths on both sides:
 
@@ -58,7 +58,7 @@ Worked examples:
 - **Jobs**: body x ≈ 700-1480 (right-of-center). Left clean = 420, right clean = 160. Left wins decisively. Captions went LEFT.
 - **Memory Wall**: surface location dictated the side (see note below about wall-embed).
 
-### 3. Gaze direction — the "looking room" rule (tiebreaker and aesthetic)
+### 3. Gaze direction - the "looking room" rule (tiebreaker and aesthetic)
 
 Classic cinematic framing: leave more empty space on the side the subject is **looking toward**. This preserves their gaze path and feels uncluttered. **Captions go to the OPPOSITE side** (the side the subject is facing away from), so they don't steal looking room.
 
@@ -68,15 +68,15 @@ Quick check: sample 3 frames. Estimate the eye-line vector. Does it point more l
 - Looking screen-left → captions on RIGHT
 - Looking forward at camera → no preference from gaze, use step 2 only
 
-The champion / Djokovic shot has him addressing camera slightly from the left — captions on LEFT actually read like text he's looking toward, which can feel like he's acknowledging them. That's fine here but is a flavor choice; generally prefer gaze-opposite.
+The champion / Djokovic shot has him addressing camera slightly from the left - captions on LEFT actually read like text he's looking toward, which can feel like he's acknowledging them. That's fine here but is a flavor choice; generally prefer gaze-opposite.
 
 ### 4. Narrative emphasis (for optional crown)
 
-If you're using a **center-stage crown**, it sits across the subject — no left/right choice for it. But the other captions (the column) still follow steps 1-3.
+If you're using a **center-stage crown**, it sits across the subject - no left/right choice for it. But the other captions (the column) still follow steps 1-3.
 
-If you're using a **clean-zone crown** (shrunk, placed in one clean zone instead of crossing the body), put it in the **same side as the main column** for visual consistency. Don't split crown and column on opposite sides — it creates ping-pong.
+If you're using a **clean-zone crown** (shrunk, placed in one clean zone instead of crossing the body), put it in the **same side as the main column** for visual consistency. Don't split crown and column on opposite sides - it creates ping-pong.
 
-### Special case — wall-embed
+### Special case - wall-embed
 
 When the template is `wall-embed`, the side is **dictated by where the usable surface is**, not by body bias or gaze. Memory Wall's foam panel was on the right, so captions went right even though the subject was slightly left-of-center. Surface location wins because the whole effect depends on the text sitting ON that specific surface.
 
@@ -86,13 +86,13 @@ When the template is `wall-embed`, the side is **dictated by where the usable su
 Side = f(baked graphics, body bias, gaze, surface)
 
 priority:
-1. Hard constraints (baked logos)    — never place here
-2. Wall-embed surface location       — wins if using wall-embed
-3. Bigger clean zone                 — default for corner-column
-4. Gaze direction (looking room)     — tiebreaker when both sides similar
+1. Hard constraints (baked logos) - never place here
+2. Wall-embed surface location - wins if using wall-embed
+3. Bigger clean zone - default for corner-column
+4. Gaze direction (looking room) - tiebreaker when both sides similar
 ```
 
-If the subject actively swings their gaze across the clip (turning head L→R), pick a side that works for both extremes, not just the most frequent. Or accept that looking room will briefly be violated — it's a 10-second video, nobody cares.
+If the subject actively swings their gaze across the clip (turning head L→R), pick a side that works for both extremes, not just the most frequent. Or accept that looking room will briefly be violated - it's a 10-second video, nobody cares.
 
 ## Step 3: Pick template + position
 
@@ -112,7 +112,7 @@ wall_position: {
 }
 ```
 
-`mix-blend-mode: overlay` in this template — works on mid-tone walls. If wall is near-black (luminance < 60), switch CSS to `screen`.
+`mix-blend-mode: overlay` in this template - works on mid-tone walls. If wall is near-black (luminance < 60), switch CSS to `screen`.
 
 ### If scene has a cluttered but dark backdrop (bookshelf, plants, set dressing)
 
@@ -135,11 +135,11 @@ crown_position: {
 
 ### If subject fills >70% of frame
 
-Template doesn't matter — there's nowhere clean. **Refuse**, suggest classic lower-third.
+Template doesn't matter - there's nowhere clean. **Refuse**, suggest classic lower-third.
 
 ## Step 3.5: Crown placement (when using `corner-column-crown`)
 
-**Default preference: center-stage crown.** A big, centered crown word (think "WIMBLEDON CHAMPION", "BEATLES", "SHARP AGAIN") that crosses the subject is the most powerful embed move — body occludes the middle letters, clean zones on both sides hold the outer letters, and the word reads as a title drop. **Use this whenever conditions allow.**
+**Default preference: center-stage crown.** A big, centered crown word (think "WIMBLEDON CHAMPION", "BEATLES", "SHARP AGAIN") that crosses the subject is the most powerful embed move - body occludes the middle letters, clean zones on both sides hold the outer letters, and the word reads as a title drop. **Use this whenever conditions allow.**
 
 ### Conditions where a centered crown works
 
@@ -149,15 +149,15 @@ A centered crown at font size F (where `crown_width ≈ F × 0.55 × char_count`
 
 1. **Subject is roughly centered**: `|body_center_x − frame_width/2| < frame_width × 0.10`. The body sits in the middle third.
 2. **Clean zones on both sides are non-trivial**: `body_x_min > frame_width × 0.15` AND `body_x_max < frame_width × 0.85`. There's ≥15% of frame width clean on each side.
-3. **The crown word is wide enough to poke out both sides**: `crown_width > body_width + 400px`. If the word ends before reaching the body's right edge, most letters just get swallowed — ugly.
+3. **The crown word is wide enough to poke out both sides**: `crown_width > body_width + 400px`. If the word ends before reaching the body's right edge, most letters just get swallowed - ugly.
 
-If all three hold, centered crown is right. Go big — font sized so the word spans `0.8 × frame_width` or more. "BEATLES" at 140px (~500px wide) fails condition 3 on an 1920 frame with Jobs-sized body (780px wide). "WIMBLEDON CHAMPION" at 140px (~1700px) on the same frame passes easily.
+If all three hold, centered crown is right. Go big - font sized so the word spans `0.8 × frame_width` or more. "BEATLES" at 140px (~500px wide) fails condition 3 on an 1920 frame with Jobs-sized body (780px wide). "WIMBLEDON CHAMPION" at 140px (~1700px) on the same frame passes easily.
 
-### When center fails — move crown to the clean zone
+### When center fails - move crown to the clean zone
 
 If any of the three conditions fails, center-stage eats too much and the word becomes illegible ("THE BEATLES" → "THE" and a sliver of "S"). Two strategies:
 
-**Option A — shrink crown to fit cleanly in the larger clean zone.** Pick the side opposite the subject's bias. Compute `clean_zone_width` on that side. Pick crown font such that the word wraps to 1-2 lines inside it. Tail letters can touch the subject edge for a hint of embed, but the body of the word lives on backdrop.
+**Option A - shrink crown to fit cleanly in the larger clean zone.** Pick the side opposite the subject's bias. Compute `clean_zone_width` on that side. Pick crown font such that the word wraps to 1-2 lines inside it. Tail letters can touch the subject edge for a hint of embed, but the body of the word lives on backdrop.
 
 ```
 // Jobs: subject center ≈ x=1100 (right of frame center 960). Left clean zone is larger.
@@ -166,7 +166,7 @@ font-size: 118px  →  "THE / BEATLES" wraps to 2 lines, fits in x=230-770
                       leaving "S" tail at x~760 lightly touching Jobs's shoulder
 ```
 
-**Option B — drop the crown entirely, promote the word to `emph` in the main column.** Simpler when the phrase doesn't deserve dramatic center-stage treatment. Works fine for 2-word emph like "the Beatles" or "incredible things" — they become large bold text in the left column with body occluding their tails.
+**Option B - drop the crown entirely, promote the word to `emph` in the main column.** Simpler when the phrase doesn't deserve dramatic center-stage treatment. Works fine for 2-word emph like "the Beatles" or "incredible things" - they become large bold text in the left column with body occluding their tails.
 
 ### Rules of thumb for choosing
 
@@ -205,7 +205,7 @@ Before calling `render-and-composite.sh`, sanity check:
 
   **Gotcha from past iteration**: setting `plane_left = 180` with a right-aligned column on a Jobs 60 Minutes clip (pillarbox at 280) looked "inside the plane" but the right-aligned text at font 108px produced `leftmost = plane_right − padding − 468 = 180 + 700 − 36 − 468 = 376` … wait, that IS past pillarbox. The actual bug was different: for a 3-line wrap ("four very / talented / guys") the widest line is "talented" at ~468px, not the whole phrase. Compute against the longest **single line** after wrap, not total phrase width.
 
-  **Re-check after font-size changes** — bumping font 84→104 shifts right-aligned text leftward by ~30px. If the budget was already tight, the bump blows through the pillarbox.
+  **Re-check after font-size changes** - bumping font 84→104 shifts right-aligned text leftward by ~30px. If the budget was already tight, the bump blows through the pillarbox.
 
   **Empirical target**: leftmost text at pillarbox + 10-20px looks "anchored" to the bar (visually grounded). Pushing it much deeper (50px+) makes captions feel floaty in the middle of the frame.
 

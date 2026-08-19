@@ -13,7 +13,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Roll-Driven Flipbook (Word Cycle → Optional Lock) — gruop_3 reference impl</title>
+    <title>Roll-Driven Flipbook (Word Cycle → Optional Lock) - gruop_3 reference impl</title>
     <script src="../../motion-primitives/assets/gsap.min.js"></script>
     <style>
       *,
@@ -44,7 +44,7 @@
         justify-content: center;
         pointer-events: none;
       }
-      /* grid stack — every layer occupies the same centred cell, so scaling a
+      /* grid stack - every layer occupies the same centred cell, so scaling a
          layer transforms around its own centre (no translate(-50%) to clobber). */
       .g3-stack {
         display: grid;
@@ -81,7 +81,7 @@
   <body>
     <!-- data-duration = the scene span. Set this to YOUR scene length; the script
          reads it back so duration is single-sourced (no hard-coded value in JS).
-         Rebased to scene-relative time — content starts at ~0, no dead pre-roll. -->
+         Rebased to scene-relative time - content starts at ~0, no dead pre-roll. -->
     <div
       data-hf-id="hf-g3rt"
       id="root"
@@ -105,18 +105,18 @@
         //  cycling a word list to FILL the roll. Optionally, when a SURGE/phrase
         //  follows, the flicker resolves (scramble-decode) into a locked phrase.
         //  Background is pure black. Every move is a 0ms autoAlpha set on a pre-built
-        //  node (no GSAP textContent-sets, no onUpdate — both fail under seek render).
+        //  node (no GSAP textContent-sets, no onUpdate - both fail under seek render).
         // ════════════════════════════════════════════════════════════════
 
         var root = document.getElementById("root");
 
-        // ── 1. BEAT MAP — the ONLY block you edit per track ─────────────────
-        // SCENE-RELATIVE time (starts at ~0 — no dead pre-roll). When reusing, map
+        // ── 1. BEAT MAP - the ONLY block you edit per track ─────────────────
+        // SCENE-RELATIVE time (starts at ~0 - no dead pre-roll). When reusing, map
         // your audiomap roll [rollStart,rollEnd] onto [flipStart, flipStart+rollLen],
         // i.e. subtract the roll's start offset. bpm stays your track's tempo.
         var BEAT = {
           bpm: 129.2, // tempo.bpm  →  16th-note flip step = 60/bpm/4
-          flipStart: 0.1, // tiny entrance lead-in — NO dead air before the flicker
+          flipStart: 0.1, // tiny entrance lead-in - NO dead air before the flicker
           flipEnd: 2.19, // flicker length ≈ the source roll (~2.1s); auto-fills with words
           resolveStart: 2.33, // lock phrase enters after a short clear (only if a phrase is set)
           resolveLock: 3.33, // locks ~1s later (place just before a downbeat in your track)
@@ -160,7 +160,7 @@
         var PERIOD =
           vars.periodChar && String(vars.periodChar).trim() !== "" ? vars.periodChar : "";
 
-        // ── 3. Derived timing (auto-fills the roll — adapts to any length / bpm) ─
+        // ── 3. Derived timing (auto-fills the roll - adapts to any length / bpm) ─
         var FLIP_STEP = 60 / BEAT.bpm / 4; // one word per 16th-note
         var N_SWAPS = Math.max(1, Math.round((BEAT.flipEnd - BEAT.flipStart) / FLIP_STEP));
 
@@ -220,11 +220,11 @@
           }
         }
 
-        // ── 5. Timeline — one paused GSAP timeline, absolute audio seconds ──
+        // ── 5. Timeline - one paused GSAP timeline, absolute audio seconds ──
         window.__timelines = window.__timelines || {};
         var tl = gsap.timeline({ paused: true });
 
-        // PHASE A — flipbook word-cycle on the 16th grid, FILLING the roll window
+        // PHASE A - flipbook word-cycle on the 16th grid, FILLING the roll window
         var prev = null;
         for (var i = 0; i < N_SWAPS; i++) {
           var t = BEAT.flipStart + i * FLIP_STEP;
@@ -241,7 +241,7 @@
           BEAT.flipStart,
         );
 
-        // PHASE B — resolve (OPTIONAL). With a lock phrase: clear, then scramble-decode
+        // PHASE B - resolve (OPTIONAL). With a lock phrase: clear, then scramble-decode
         // and lock, holding to the end. Without one: the last word just holds (locks).
         if (HAS_RESOLVE) {
           if (prev) tl.set(prev, { autoAlpha: 0 }, BEAT.flipEnd); // clear the flicker
@@ -252,7 +252,7 @@
             prevR = resolveNodes[r].node;
           }
         }
-        // (if no resolve, `prev` — the last flip word — stays visible to the end)
+        // (if no resolve, `prev` - the last flip word - stays visible to the end)
 
         // Extend the timeline to the full duration with a no-op so the held final
         // state renders on every frame to DUR (a set AT the timeline's last instant

@@ -1,25 +1,25 @@
 #!/usr/bin/env node
-// assemble-index.mjs — deterministic top-level index.html assembly for a
+// assemble-index.mjs - deterministic top-level index.html assembly for a
 // HyperFrames project. No subagent, no judgment: turns STORYBOARD.md + the
 // built frame files (+ optional audio_meta.json) into the standalone index.html
 // the renderer consumes, and stages the frame-named capture assets into assets/.
 //
 // index.html is a *standalone* composition (root <div id="root"> directly in
-// <body>, no <template> wrapper — template is for sub-comps). Structure is
+// <body>, no <template> wrapper - template is for sub-comps). Structure is
 // modeled on the canonical fixture packages/studio/fixtures/storyboard-sample/
 // index.html and the authoritative head/audio template in
 // packages/core/docs/quickstart-template.html. Frame mount order = STORYBOARD
-// document order. Transitions are NOT written here — the transitions injector
+// document order. Transitions are NOT written here - the transitions injector
 // mutates this file afterward (data-start/duration/track-index + GSAP).
 //
-// Track lanes (same-track time-overlap is illegal — lint timeline_track_too_dense):
+// Track lanes (same-track time-overlap is illegal - lint timeline_track_too_dense):
 //   1      frame sub-comp clips (sequential; the injector 0/1-ping-pongs for overlaps)
 //   2      captions sub-comp clip (full-duration overlay, on top of frames)
 //   10     per-frame voice <audio>
 //   11     BGM <audio>
 //   20+i   SFX <audio> (one lane each)
 //
-// audio_meta.json contract (produced by audio.mjs; OPTIONAL — absent ⇒ silent
+// audio_meta.json contract (produced by audio.mjs; OPTIONAL - absent ⇒ silent
 // video, frames only). Durations come from STORYBOARD (audio sync-durations
 // writes them), NOT from here; this file carries only media PATHS, keyed by
 // frame number:
@@ -36,11 +36,11 @@
 //
 // Pre-assembly frame guards (run in the same pass that reads each frame, so common
 // `lint` failures surface HERE instead of after assembly + a wasted render):
-//   ① AUTO-REPAIR — a sub-comp root missing data-width/data-height: inject the canvas
+//   ① AUTO-REPAIR - a sub-comp root missing data-width/data-height: inject the canvas
 //      dims (the renderer needs them on the cloned root; else lint root_missing_dimensions).
-//   ② HARD FAIL  — <video>/<audio> inside a sub-comp: the runtime only drives media that
+//   ② HARD FAIL - <video>/<audio> inside a sub-comp: the runtime only drives media that
 //      is a DIRECT child of the host root, so sub-comp media renders blank/black.
-//   ③ HARD FAIL  — a timed element (data-start+duration+track-index) that is not the root
+//   ③ HARD FAIL - a timed element (data-start+duration+track-index) that is not the root
 //      and lacks class="clip" (shows the whole frame), or two same-track clips that overlap.
 //
 // Exit 0 = index.html written + summary. Exit 1 = fatal contract break (no
@@ -120,7 +120,7 @@ const outPath = resolve(flag("out", join(hyperframesDir, "index.html")));
 
 const r3 = (x) => Math.round(x * 1000) / 1000;
 const anomalies = [];
-const frameErrors = []; // fatal per-frame composition violations (guards ②/③) — reported together
+const frameErrors = []; // fatal per-frame composition violations (guards ②/③) - reported together
 const repairs = []; // auto-repairs applied to frame files in place (guard ①)
 
 // ---------- parse storyboard ----------
@@ -129,7 +129,7 @@ const manifest = parseStoryboard(readFileSync(storyboardPath, "utf8"));
 const { width: WIDTH, height: HEIGHT } = parseFormat(manifest.globals.format);
 
 // ---------- per-frame composition guards (see header ①②③) ----------
-// String-level checks on each frame's HTML — no DOM parse, deterministic, run in
+// String-level checks on each frame's HTML - no DOM parse, deterministic, run in
 // the same pass that already reads the file. OPEN_TAG matches one opening tag while
 // tolerating quoted attribute values that contain ">" (e.g. inline styles).
 const OPEN_TAG = "<([a-zA-Z][a-zA-Z0-9-]*)((?:[^>\"']|\"[^\"]*\"|'[^']*')*)>";
@@ -171,11 +171,11 @@ function guardFrame(html, label) {
     .replace(/<script\b[\s\S]*?<\/script[^>]*>/gi, " ")
     .replace(/<style\b[\s\S]*?<\/style[^>]*>/gi, " ");
 
-  // ② media inside a sub-comp — never driven by the runtime (renders blank/black).
+  // ② media inside a sub-comp - never driven by the runtime (renders blank/black).
   const media = scan.match(/<(video|audio)(?=[\s/>])/i);
   if (media) {
     errors.push(
-      `${label}: has a <${media[1].toLowerCase()}> inside the sub-composition. The runtime only drives media that is a DIRECT child of the host root (index.html) — sub-comp media renders blank/black. Move the clip to index.html as a root-level <video>/<audio> and drive any per-scene motion on the main timeline (composition-patterns.md archetype B).`,
+      `${label}: has a <${media[1].toLowerCase()}> inside the sub-composition. The runtime only drives media that is a DIRECT child of the host root (index.html) - sub-comp media renders blank/black. Move the clip to index.html as a root-level <video>/<audio> and drive any per-scene motion on the main timeline (composition-patterns.md archetype B).`,
     );
   }
 
@@ -194,7 +194,7 @@ function guardFrame(html, label) {
     if (isRootish(attrs)) continue;
     if (!/(?:^|\s)class\s*=\s*["'][^"']*\bclip\b[^"']*["']/.test(attrs)) {
       errors.push(
-        `${label}: a timed <${m[1]}> (data-start/duration/track-index) has no class="clip" — it renders for the whole frame instead of only its window. Add class="clip", or remove the timing attrs if it is a GSAP-animated element meant to be present throughout.`,
+        `${label}: a timed <${m[1]}> (data-start/duration/track-index) has no class="clip" - it renders for the whole frame instead of only its window. Add class="clip", or remove the timing attrs if it is a GSAP-animated element meant to be present throughout.`,
       );
     }
     const track = attrValue(attrs, "data-track-index");
@@ -215,7 +215,7 @@ function guardFrame(html, label) {
     for (let i = 1; i < list.length; i++) {
       if (list[i].start < list[i - 1].end - EPS) {
         errors.push(
-          `${label}: clips on track ${track} overlap (one ends at ${r3(list[i - 1].end)}s, the next starts at ${r3(list[i].start)}s) — same-track time-overlap causes a render conflict. Put them on distinct data-track-index lanes or fix their windows.`,
+          `${label}: clips on track ${track} overlap (one ends at ${r3(list[i - 1].end)}s, the next starts at ${r3(list[i].start)}s) - same-track time-overlap causes a render conflict. Put them on distinct data-track-index lanes or fix their windows.`,
         );
         break; // one report per track is enough
       }
@@ -234,7 +234,7 @@ function guardFrame(html, label) {
         (needW ? ` data-width="${WIDTH}"` : "") + (needH ? ` data-height="${HEIGHT}"` : "");
       const newTag = root.full.replace(/(\/?>)$/, `${inject}$1`);
       repairedHtml = html.slice(0, root.start) + newTag + html.slice(root.end);
-      repairNote = `${label}: injected${needW ? " data-width" : ""}${needH ? " data-height" : ""} (${WIDTH}×${HEIGHT}) on the root — was missing (would lint root_missing_dimensions)`;
+      repairNote = `${label}: injected${needW ? " data-width" : ""}${needH ? " data-height" : ""} (${WIDTH}×${HEIGHT}) on the root - was missing (would lint root_missing_dimensions)`;
     }
   }
 
@@ -250,25 +250,25 @@ for (const f of manifest.frames) {
   const label = `frame ${f.number ?? f.index}${f.title ? ` (${f.title})` : ""}`;
   const built = f.status === "built" || f.status === "animated";
   if (!f.src) {
-    if (built) die(`${label} is ${f.status} but has no \`src\` — the orchestrator must write it`);
-    anomalies.push(`${label}: status ${f.status}, no src — skipped`);
+    if (built) die(`${label} is ${f.status} but has no \`src\` - the orchestrator must write it`);
+    anomalies.push(`${label}: status ${f.status}, no src - skipped`);
     continue;
   }
   const compAbs = join(hyperframesDir, f.src);
-  // Read directly and handle ENOENT here rather than an existsSync precheck — the
+  // Read directly and handle ENOENT here rather than an existsSync precheck - the
   // check→read/write pair is a TOCTOU race CodeQL flags (js/file-system-race).
   let html;
   try {
     html = readFileSync(compAbs, "utf8");
   } catch {
     if (built)
-      die(`${label} is ${f.status} but its src ${f.src} is not on disk — re-dispatch the worker`);
-    anomalies.push(`${label}: src ${f.src} not on disk (status ${f.status}) — skipped`);
+      die(`${label} is ${f.status} but its src ${f.src} is not on disk - re-dispatch the worker`);
+    anomalies.push(`${label}: src ${f.src} not on disk (status ${f.status}) - skipped`);
     continue;
   }
   if (!Number.isFinite(f.durationSeconds) || f.durationSeconds <= 0) {
     die(
-      `${label}: no positive duration (got ${JSON.stringify(f.duration)}) — run audio sync-durations`,
+      `${label}: no positive duration (got ${JSON.stringify(f.duration)}) - run audio sync-durations`,
     );
   }
   // Host data-composition-id MUST equal the inner file's, or the runtime never
@@ -278,10 +278,10 @@ for (const f of manifest.frames) {
   // Guard against blank/partial scene files: a worker that errors or is
   // interrupted mid-write leaves an empty (or markup-less) file that exists but
   // fails at render with "Composition HTML is empty or could not be parsed".
-  // Catch it here — before emitting data-composition-src — and re-dispatch.
+  // Catch it here - before emitting data-composition-src - and re-dispatch.
   if (!html.trim() || !/<\w/.test(html)) {
     die(
-      `${label}: ${f.src} is empty or has no HTML — the worker wrote a blank/partial file. Re-dispatch that worker before assembling.`,
+      `${label}: ${f.src} is empty or has no HTML - the worker wrote a blank/partial file. Re-dispatch that worker before assembling.`,
     );
   }
   // pre-assembly guards: ① repair missing root dims in place, ②/③ collect fatal violations.
@@ -302,13 +302,13 @@ for (const f of manifest.frames) {
 }
 if (frameErrors.length) {
   die(
-    `${frameErrors.length} frame composition violation(s) — fix the worker output and re-assemble:\n` +
+    `${frameErrors.length} frame composition violation(s) - fix the worker output and re-assemble:\n` +
       frameErrors.map((e) => `  • ${e}`).join("\n"),
   );
 }
 if (mounted.length === 0) die("no mountable frames (none built with an on-disk src)");
 
-// cumulative starts — emitted data-start[i] + data-duration[i] == start[i+1] by
+// cumulative starts - emitted data-start[i] + data-duration[i] == start[i+1] by
 // construction (renderer computes end the same way), so adjacent clips touch
 // exactly with no float-overlap.
 let acc = 0;
@@ -338,7 +338,7 @@ const body = [];
 let voiceCount = 0;
 
 for (const m of mounted) {
-  // (track 1) frame sub-comp clip — no class="clip" semantics needed; .scene CSS sizes it.
+  // (track 1) frame sub-comp clip - no class="clip" semantics needed; .scene CSS sizes it.
   body.push(
     `      <div`,
     `        id="el-${m.compId}"`,
@@ -350,7 +350,7 @@ for (const m of mounted) {
     `        data-track-index="1"`,
     `      ></div>`,
   );
-  // (track 10) voice — only when the file is actually on disk.
+  // (track 10) voice - only when the file is actually on disk.
   const v = m.frame.number != null ? voiceByFrame.get(m.frame.number) : undefined;
   if (v?.path) {
     if (existsSync(join(hyperframesDir, v.path))) {
@@ -366,13 +366,13 @@ for (const m of mounted) {
       );
       voiceCount++;
     } else {
-      anomalies.push(`${m.compId}: voice ${v.path} not on disk — skipped`);
+      anomalies.push(`${m.compId}: voice ${v.path} not on disk - skipped`);
     }
   }
   body.push("");
 }
 
-// (track 11) BGM — duck under narration when any voice is present. Loop-extend a short
+// (track 11) BGM - duck under narration when any voice is present. Loop-extend a short
 // track to the full video length so the tail isn't silent (libraries return ~15–30s clips).
 let bgmEmitted = false;
 let bgmNote = "";
@@ -385,7 +385,7 @@ if (audio.bgm?.path) {
       bgmNote = ` (looped ${cov.from.toFixed(1)}s→${TOTAL}s)`;
     } else if (cov.short) {
       anomalies.push(
-        `bgm is ${cov.dur?.toFixed?.(1) ?? "?"}s (< ${TOTAL}s) and could not be extended (${cov.reason}) — the tail will be silent; install ffmpeg`,
+        `bgm is ${cov.dur?.toFixed?.(1) ?? "?"}s (< ${TOTAL}s) and could not be extended (${cov.reason}) - the tail will be silent; install ffmpeg`,
       );
     }
     const vol = audio.bgm.volume != null ? audio.bgm.volume : voiceCount > 0 ? 0.8 : 0.9;
@@ -403,11 +403,11 @@ if (audio.bgm?.path) {
     );
     bgmEmitted = true;
   } else {
-    anomalies.push(`bgm ${audio.bgm.path} not on disk — skipped`);
+    anomalies.push(`bgm ${audio.bgm.path} not on disk - skipped`);
   }
 }
 
-// (track 2) captions — captions.mjs writes this or legally skips; key off existence.
+// (track 2) captions - captions.mjs writes this or legally skips; key off existence.
 let captionsEmitted = false;
 if (existsSync(join(hyperframesDir, "compositions/captions.html"))) {
   body.push(
@@ -426,17 +426,17 @@ if (existsSync(join(hyperframesDir, "compositions/captions.html"))) {
   captionsEmitted = true;
 }
 
-// (track 20+i) SFX — placed at its frame's start + offset.
+// (track 20+i) SFX - placed at its frame's start + offset.
 let sfxEmitted = 0;
 audio.sfx.forEach((cue, i) => {
   const host = cue.frame != null ? startOfFrameNumber.get(cue.frame) : undefined;
   if (!host) {
-    anomalies.push(`sfx ${cue.file}: frame ${cue.frame} not mounted — skipped`);
+    anomalies.push(`sfx ${cue.file}: frame ${cue.frame} not mounted - skipped`);
     return;
   }
   const rel = cue.file;
   if (!existsSync(join(hyperframesDir, rel))) {
-    anomalies.push(`sfx ${rel} not on disk — skipped`);
+    anomalies.push(`sfx ${rel} not on disk - skipped`);
     return;
   }
   const t = r3(host.start + (cue.offset_s ?? 0));
@@ -474,7 +474,7 @@ for (const a of assetAnomalies) anomalies.push(a);
 // ---------- ground color ----------
 // Per-frame roots carry data-start/data-duration and get clip-gated against the
 // global timeline in render (only the first frame's [0,dur] window overlaps global
-// 0), so a frame's own full-bleed background can't be relied on as the video ground —
+// 0), so a frame's own full-bleed background can't be relied on as the video ground -
 // every frame after the first would render on the bare body color (black). Paint the
 // ground on the always-present root composition instead, using the project's frame.md
 // canvas color (the same ground role the caption skin maps to --cap-canvas). Falls
@@ -486,7 +486,7 @@ if (existsSync(framePath)) {
     const roles = semanticColors(parseColors(readFileSync(framePath, "utf8")));
     if (roles && roles.canvas) groundColor = roles.canvas;
   } catch {
-    /* leave groundColor null — #root stays transparent over the body letterbox */
+    /* leave groundColor null - #root stays transparent over the body letterbox */
   }
 }
 

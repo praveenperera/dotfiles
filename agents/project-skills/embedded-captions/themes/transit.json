@@ -1,7 +1,7 @@
 {
   "name": "transit",
-  "voice": "amber LED departure board — the whole video is a station PA system. Body words light column-by-column (L→R LED wipe + 1-frame arrival flicker) on a docked departure strip whose lines page in/out by scroll-snap; furniture: green platform tag, ticking seconds clock, a ⚠ DELAYED → ● ON TIME swap gag after the apex. The apex is a board takeover behind the subject: a big LED panel expands upward inside a chasing marquee border, the word illuminates column-by-column under a PA flash + two brightness 'ding' pulses, glow breathes with LED dropouts, then the word pages up and the panel collapses.",
-  "when": "travel/transit, announcements, schedules, countdowns, retro-terminal or arcade registers — anything that should read as an amber dot-matrix station board. Mid-loud register; needs a lower third that tolerates a dark LED strip.",
+  "voice": "amber LED departure board - the whole video is a station PA system. Body words light column-by-column (L→R LED wipe + 1-frame arrival flicker) on a docked departure strip whose lines page in/out by scroll-snap; furniture: green platform tag, ticking seconds clock, a ⚠ DELAYED → ● ON TIME swap gag after the apex. The apex is a board takeover behind the subject: a big LED panel expands upward inside a chasing marquee border, the word illuminates column-by-column under a PA flash + two brightness 'ding' pulses, glow breathes with LED dropouts, then the word pages up and the panel collapses.",
+  "when": "travel/transit, announcements, schedules, countdowns, retro-terminal or arcade registers - anything that should read as an amber dot-matrix station board. Mid-loud register; needs a lower third that tolerates a dark LED strip.",
   "register": "loud",
   "fonts": { "body": "VT323", "hero": "VT323", "tag": "VT323" },
   "palette": {

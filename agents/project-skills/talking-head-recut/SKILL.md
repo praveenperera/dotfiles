@@ -1,21 +1,21 @@
 ---
 name: talking-head-recut
-description: Package an existing talking-head / interview / podcast video with timed, designed GRAPHIC OVERLAY cards — kinetic titles, lower-thirds, data callouts, quotes, side panels, picture-in-picture — synced to the transcript, on a 16:9 / 9:16 / 4:5 canvas of your choice; the clip plays untouched underneath. Trigger on "graphic overlays", "on-screen graphics", "package / dress up my video". Not plain subtitles (/embedded-captions). Unclear → /hyperframes.
+description: Package an existing talking-head / interview / podcast video with timed, designed GRAPHIC OVERLAY cards - kinetic titles, lower-thirds, data callouts, quotes, side panels, picture-in-picture - synced to the transcript, on a 16:9 / 9:16 / 4:5 canvas of your choice; the clip plays untouched underneath. Trigger on "graphic overlays", "on-screen graphics", "package / dress up my video". Not plain subtitles (/embedded-captions). Unclear → /hyperframes.
 ---
 
-> **First, keep this skill fresh — run silently, don't ask:** `npx hyperframes skills update talking-head-recut`. A fast no-op when everything is current; otherwise it refreshes this skill plus the core domain skills it depends on before you rely on them.
+> **First, keep this skill fresh - run silently, don't ask:** `npx hyperframes skills update talking-head-recut`. A fast no-op when everything is current; otherwise it refreshes this skill plus the core domain skills it depends on before you rely on them.
 
 # Talking Head Recut
 
 Talking Head Recut takes a local video that **plays in full** and layers a sequence of
-timed, designed **graphic cards** onto it — titles, lower-thirds, data callouts,
-quotes, side panels, picture-in-picture — synced to what's being said. The agent
+timed, designed **graphic cards** onto it - titles, lower-thirds, data callouts,
+quotes, side panels, picture-in-picture - synced to what's being said. The agent
 designs the cards (timing + content) and **writes each card's HTML directly in the
 conversation**, then assembles a single composition HTML and renders it to MP4 via
-`hyperframes`. There is no fixed archetype list and no prescribed card structure —
+`hyperframes`. There is no fixed archetype list and no prescribed card structure -
 the overlays emerge from what the transcript actually says.
 
-> **Confirm the route before you build.** This skill packages an **existing talking-head clip** with **designed graphic cards** (titles, lower-thirds, data callouts, quotes, side panels, PiP). If the user wants **plain captions / subtitles** (the spoken words as text) → `/embedded-captions`; a **single short unnarrated** element (one logo sting / lower-third) → `/motion-graphics`. **The clip plays untouched** — re-timing, recoloring, reframing, reordering, or audio is NLE editing and **out of scope**. Building from a URL / topic / PR → the creation workflows. Unsure overlays-vs-captions? **Read `/hyperframes` first.**
+> **Confirm the route before you build.** This skill packages an **existing talking-head clip** with **designed graphic cards** (titles, lower-thirds, data callouts, quotes, side panels, PiP). If the user wants **plain captions / subtitles** (the spoken words as text) → `/embedded-captions`; a **single short unnarrated** element (one logo sting / lower-third) → `/motion-graphics`. **The clip plays untouched** - re-timing, recoloring, reframing, reordering, or audio is NLE editing and **out of scope**. Building from a URL / topic / PR → the creation workflows. Unsure overlays-vs-captions? **Read `/hyperframes` first.**
 
 > **Graphic-packaging sibling of `embedded-captions`.** Captions add the _spoken words_
 > as a readable subtitle; this adds _designed graphics_ on top of the playing video.
@@ -24,23 +24,23 @@ the overlays emerge from what the transcript actually says.
 
 Inspectable intermediate files in the work directory:
 
-- `metadata.json` — duration / width / height / fps
-- `audio.mp3` — extracted audio
-- `transcript.json` — a flat **word array** `[{ text, start, end }, …]` (Whisper; no `segments`, no `words` wrapper)
-- `storyboard.json` — lightweight card outline (the agent's plan)
-- `public/cards/card-XX.html` — one HTML fragment per card
-- `public/index.html` — final assembled composition
-- `output.mp4` — rendered video
+- `metadata.json` - duration / width / height / fps
+- `audio.mp3` - extracted audio
+- `transcript.json` - a flat **word array** `[{ text, start, end }, …]` (Whisper; no `segments`, no `words` wrapper)
+- `storyboard.json` - lightweight card outline (the agent's plan)
+- `public/cards/card-XX.html` - one HTML fragment per card
+- `public/index.html` - final assembled composition
+- `output.mp4` - rendered video
 
 ## CLI Resolution
 
 ```bash
-# hyperframes — transcription (local Whisper) + rendering the assembled HTML to MP4
+# hyperframes - transcription (local Whisper) + rendering the assembled HTML to MP4
 npx hyperframes --help
 ```
 
 This skill runs entirely on the **hyperframes** CLI plus system `ffmpeg` / `ffprobe`.
-Transcription is local **Whisper** via `hyperframes transcribe` — no third-party
+Transcription is local **Whisper** via `hyperframes transcribe` - no third-party
 service, API key, or rate-limited proxy.
 
 ## Workflow
@@ -58,7 +58,7 @@ Required:
 - `ffmpeg` / `ffprobe` (system)
 - `<SKILL_DIR>/assets/fonts/*.woff2`, `<SKILL_DIR>/assets/vendor/gsap.min.js` (bundled inside this skill, staged to work dir in Step 9)
 
-Transcription needs no key — `hyperframes transcribe` runs Whisper locally (Step 4).
+Transcription needs no key - `hyperframes transcribe` runs Whisper locally (Step 4).
 
 Strongly recommended on macOS for `hyperframes render`:
 
@@ -68,7 +68,7 @@ export PRODUCER_BROWSER_GPU_MODE=hardware
 
 ### 2. Create a Work Directory
 
-All artifacts live under `videos/<project-name>/` — the same convention as the other
+All artifacts live under `videos/<project-name>/` - the same convention as the other
 video workflows (`product-launch-video` / `faceless-explainer` / `pr-to-video`). Keep
 the cwd at the workspace root; everything below writes under this one subdirectory.
 
@@ -81,7 +81,7 @@ mkdir -p "$WORK_DIR"
 ### 3. Extract Audio and Metadata
 
 ```bash
-# metadata — duration / width / height / fps
+# metadata - duration / width / height / fps
 ffprobe -v error -select_streams v:0 \
   -show_entries stream=width,height,r_frame_rate \
   -show_entries format=duration -of json "$VIDEO_PATH" > "$WORK_DIR/metadata.json"
@@ -98,29 +98,29 @@ fraction evaluated, e.g. `30000/1001 → 29.97`) + `audio.mp3`.
 npx hyperframes transcribe "$WORK_DIR/audio.mp3" -d "$WORK_DIR" --json --model small.en
 ```
 
-Local **Whisper** — no API key, no proxy, no rate limit. Writes a word-level
+Local **Whisper** - no API key, no proxy, no rate limit. Writes a word-level
 `transcript.json` into the work dir (word `text` + `start` / `end` timestamps).
 Read it for the word / sentence timings that drive card timing in Step 6; group
 words into sentences yourself at punctuation / pauses if you need segment-level
 chunks.
 
 **Clamp to media duration.** Whisper can return the final word's `end` a hair past the
-actual clip length — clamp every card `endSec` and `composition.durationSeconds` to the
+actual clip length - clamp every card `endSec` and `composition.durationSeconds` to the
 `metadata.json` duration, or the render will show a black tail past the video.
 
 ### 5. Correct Transcript
 
-`transcript.json` is a **flat array of word objects** — `[{ "text": "...", "start": s, "end": s }, …]` (no `segments` array, no `words` wrapper; the per-word key is **`text`**). Read it and fix obvious ASR errors:
+`transcript.json` is a **flat array of word objects** - `[{ "text": "...", "start": s, "end": s }, …]` (no `segments` array, no `words` wrapper; the per-word key is **`text`**). Read it and fix obvious ASR errors:
 
 - Homophones, product names, technical terms, punctuation
 - Edit a word's `text` in place; **preserve its `start` / `end`** timestamps
-- There is no pre-grouped `segments` array — **group words into sentences yourself** (split at terminal punctuation / pauses) when you need segment-level chunks for card timing
+- There is no pre-grouped `segments` array - **group words into sentences yourself** (split at terminal punctuation / pauses) when you need segment-level chunks for card timing
 
 ### 6. Draft a Lightweight Storyboard (in chat)
 
 **No CLI involved.** Read `transcript.json` + `metadata.json` and design
 cards directly. `storyboard.json` is an agent-internal planning artifact
-— no CLI command consumes it; it exists so you can think clearly
+ - no CLI command consumes it; it exists so you can think clearly
 about timing and content before writing each card's HTML. Keep the
 shape consistent with the example below so the same outline can drive
 the composition you author in Step 9:
@@ -192,16 +192,16 @@ to make video appear to "move between cards", author GSAP tweens against
 `#video-wrap` in the composition's `<script>` (see Step 9).
 
 **No prescribed card roles, no prescribed narrative arc.** Cards emerge
-from what the video actually says — could be all quotes or all data,
+from what the video actually says - could be all quotes or all data,
 could open with a number or with a story. Let the transcript drive the
 rhythm.
 
-**How many takeaways? — auto-infer from duration + density.** No fixed
+**How many takeaways? - auto-infer from duration + density.** No fixed
 upper limit. Pick a **base pace** from the video duration, then adjust
 by **information density**. Only **floor is fixed: minimum 5 cards** so
 even short videos have rhythm.
 
-**Step 1 — base pace by duration** (the natural sec/card for medium density):
+**Step 1 - base pace by duration** (the natural sec/card for medium density):
 
 | video duration     | base pace (sec per card) | rationale                                   |
 | ------------------ | ------------------------ | ------------------------------------------- |
@@ -211,22 +211,22 @@ even short videos have rhythm.
 | 10 – 30 min        | **20–35s**               | long-form lecture / interview rhythm        |
 | > 30 min           | **30–60s**               | episodic, near-chapter feel                 |
 
-**Step 2 — density multiplier** (multiplies the base pace):
+**Step 2 - density multiplier** (multiplies the base pace):
 
 | signal in the transcript                                                                                                    | multiplier | effect                   |
 | --------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------ |
-| **High density** — many numbers, distinct claims, staccato pacing, list-like enumeration, every 1–2 sentences is a new idea | **× 0.7**  | cuts faster, more cards  |
-| **Medium density** — mixed flow with both data and narrative                                                                | **× 1.0**  | base pace                |
-| **Low density** — one extended story, repeated reframing, slow reflective pacing, single argument unfolding                 | **× 1.5**  | cuts slower, fewer cards |
+| **High density** - many numbers, distinct claims, staccato pacing, list-like enumeration, every 1–2 sentences is a new idea | **× 0.7**  | cuts faster, more cards  |
+| **Medium density** - mixed flow with both data and narrative                                                                | **× 1.0**  | base pace                |
+| **Low density** - one extended story, repeated reframing, slow reflective pacing, single argument unfolding                 | **× 1.5**  | cuts slower, fewer cards |
 
-**Step 3 — compute:**
+**Step 3 - compute:**
 
 ```
 secPerCard = basePace × densityMultiplier
 cardCount  = max(5, round(videoDurationSec / secPerCard))
 ```
 
-Examples (notice — **no upper clamp**; long videos naturally produce more cards):
+Examples (notice - **no upper clamp**; long videos naturally produce more cards):
 
 - **30s reel, single punchline (low density)** → 7 × 1.5 = 10.5s/card → round(30/10.5)=3 → floor to **5** cards
 - **60s reflective monologue (low density)** → 10 × 1.5 = 15s/card → **4** → floor to **5** cards
@@ -238,11 +238,11 @@ Examples (notice — **no upper clamp**; long videos naturally produce more card
 
 When a card holds longer than ~15s, plan for a richer card (data block,
 multi-step reveal, several sub-points unfolding with staggered
-animations) — a static one-liner gets boring past 8s. For long pieces
+animations) - a static one-liner gets boring past 8s. For long pieces
 where many cards exceed 30s, consider **chunking the timeline into
 sub-compositions** (one .html per chapter, mounted with
 `data-composition-src`) so the GSAP timeline per file stays manageable
-— see the `timeline_track_too_dense` HyperFrames lint warning.
+ - see the `timeline_track_too_dense` HyperFrames lint warning.
 
 `content` can be a plain string ("Title: annualized 5.69%\nNotes: ...") or any JSON
 shape that captures the data. The agent decides the shape per card.
@@ -273,17 +273,17 @@ question, **precompute two things**:
 densityMultiplier)))`) so the "auto" option's label can show the
    concrete number.
 
-**Environment compatibility — pick the best available question channel.**
+**Environment compatibility - pick the best available question channel.**
 Not every runtime exposes the same structured-question tool. Apply this
 order:
 
-1. **`AskUserQuestion`** (Claude Code, Anthropic Console) — use the
+1. **`AskUserQuestion`** (Claude Code, Anthropic Console) - use the
    structured 4-question call below.
 2. **Other native clarification tool** (e.g. `ask_question`,
-   `request_user_input`, IDE-specific prompt) — use that tool with the
+   `request_user_input`, IDE-specific prompt) - use that tool with the
    same 4 question texts and option lists. Preserve the recommendation
    markers and the precomputed values.
-3. **No native tool** (Codex CLI, plain text-only runtimes) — **ask
+3. **No native tool** (Codex CLI, plain text-only runtimes) - **ask
    directly in normal conversation**. Use the plain-text template at the
    end of this section. Keep it to **one message, 4 numbered questions**
    (the global cap is 2–5 questions per round; we stay inside it).
@@ -296,14 +296,14 @@ Rules that apply to every channel:
   layout, style, cardCount).
 - If the user has already pre-approved defaults ("just use defaults",
   "no need to ask", "auto-pick everything"), asked you not to ask, or the
-  run carries an ongoing autonomous signal ("surprise me" / "decide for me" —
-  `../hyperframes-core/references/brief-contract.md` § 1) — **skip
+  run carries an ongoing autonomous signal ("surprise me" / "decide for me" -
+  `../hyperframes-core/references/brief-contract.md` § 1) - **skip
   the question entirely** and use: `recommendedRatio`, `layout="stack"`
   (safest cross-ratio default), `style` chosen from transcript tone in
   the most neutral group (editorial/data), `autoCount`. Tell the user
   what you picked in one sentence and continue.
 
-**Channel A — native `AskUserQuestion`:**
+**Channel A - native `AskUserQuestion`:**
 
 ```
 // Precompute before the call:
@@ -354,17 +354,17 @@ AskUserQuestion({
       multiSelect: false,
       options: [
         { label: "Auto (recommended) · approx N cards", description: "Inferred automatically from video duration and information density (see Step 6 rules). This run estimates approx N cards. Substitute the real N (your autoCount) into the label." },
-        { label: "Fewer · approx round(N × 0.6) cards", description: "Sparser cuts, each card holds longer — suits reflective / slow-paced content." },
-        { label: "More · approx round(N × 1.5) cards", description: "Tighter cuts, faster rhythm — suits staccato / data-dense / short-form highlight content." }
+        { label: "Fewer · approx round(N × 0.6) cards", description: "Sparser cuts, each card holds longer - suits reflective / slow-paced content." },
+        { label: "More · approx round(N × 1.5) cards", description: "Tighter cuts, faster rhythm - suits staccato / data-dense / short-form highlight content." }
       ]
     }
   ]
 })
 ```
 
-**About "Other"** — `AskUserQuestion` automatically adds an "Other" option to the card count question. The user can type a number directly (e.g. "8", "20") as the cardCount target. Parse the input as an integer: if parsing succeeds → use that value (minimum 5 as a floor); if parsing fails → fall back to "auto".
+**About "Other"** - `AskUserQuestion` automatically adds an "Other" option to the card count question. The user can type a number directly (e.g. "8", "20") as the cardCount target. Parse the input as an integer: if parsing succeeds → use that value (minimum 5 as a floor); if parsing fails → fall back to "auto".
 
-**Channel B — plain-text fallback** (Codex CLI, runtimes without a
+**Channel B - plain-text fallback** (Codex CLI, runtimes without a
 native question tool). Post this as one normal message, then wait for
 the reply. Bullet-style 1/2/3/4 keeps the reply parseable:
 
@@ -372,9 +372,9 @@ the reply. Bullet-style 1/2/3/4 keeps the reply parseable:
 I need to confirm four visual decisions with you before I start cutting cards:
 
 1) Output aspect ratio (canvas):
-   A. 16:9 landscape (1920×1080) — TV / YouTube / desktop playback
-   B. 9:16 portrait (1080×1920) — TikTok / Reels / short-form mobile
-   C. 4:5 near-portrait (1080×1350) — Instagram feed / works for both platforms
+   A. 16:9 landscape (1920×1080) - TV / YouTube / desktop playback
+   B. 9:16 portrait (1080×1920) - TikTok / Reels / short-form mobile
+   C. 4:5 near-portrait (1080×1350) - Instagram feed / works for both platforms
    ▸ My recommendation:  <recommendedRatio>  (matches source video W×H = <sourceW>×<sourceH>)
 
 2) Overall layout (how video & card coexist):
@@ -389,9 +389,9 @@ I need to confirm four visual decisions with you before I start cutting cards:
    C. experimental (experimental)  (geom / spotlight)
 
 4) Card count (takeaway pacing):
-   A. Auto (recommended) — approx <autoCount> cards
-   B. Fewer — approx round(<autoCount> × 0.6) cards
-   C. More — approx round(<autoCount> × 1.5) cards
+   A. Auto (recommended) - approx <autoCount> cards
+   B. Fewer - approx round(<autoCount> × 0.6) cards
+   C. More - approx round(<autoCount> × 1.5) cards
    D. Give me a specific number (e.g. "8", "20")
 
 Reply format: "1A 2C 3B 4A" or natural language is fine.
@@ -408,16 +408,16 @@ data / auto"`, full sentences, or `default`.
 
 After the user answers (any channel):
 
-1. **Resolve the output canvas** from the ratio answer — these are the
+1. **Resolve the output canvas** from the ratio answer - these are the
    exact `storyboard.composition.width / height` values to write:
 
    | user choice | composition.width × height | storyboard.layout field                                       |
    | ----------- | -------------------------- | ------------------------------------------------------------- |
    | `16:9`      | **1920 × 1080**            | `"landscape"`                                                 |
    | `9:16`      | **1080 × 1920**            | `"portrait"`                                                  |
-   | `4:5`       | **1080 × 1350**            | `"portrait"` (schema treats 4:5 as portrait — height > width) |
+   | `4:5`       | **1080 × 1350**            | `"portrait"` (schema treats 4:5 as portrait - height > width) |
 
-   For **4:5 bounds inside `references/layouts/*.html`** — those files
+   For **4:5 bounds inside `references/layouts/*.html`** - those files
    only document landscape (1920×1080) and portrait (1080×1920). For
    4:5 (1080×1350) derive bounds by **proportional scaling from
    portrait**: keep horizontal values, scale vertical values by
@@ -427,7 +427,7 @@ After the user answers (any channel):
    = `{ x: 24, y: 900, w: 1032, h: 397 }`.
 
 2. **Map the style group to a specific style** by looking at the
-   transcript tone — pick the one that best fits, but stay inside the
+   transcript tone - pick the one that best fits, but stay inside the
    user's chosen group. If you're unsure between two specific styles
    inside the group, send a second `AskUserQuestion` with those 2–4
    specific style options.
@@ -443,7 +443,7 @@ After the user answers (any channel):
    | Other = anything else   | fall back to `autoCount`                  |
 
 4. **Auto-pick the video frame** from this table (frames don't ask the
-   user — they follow from layout × style):
+   user - they follow from layout × style):
 
    | layout    | warm-paper styles (academic / whiteboard / editorial / xhs) | clinical styles (audit / swiss / terminal / minimal) | experimental styles (geom / spotlight) |
    | --------- | ----------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------- |
@@ -452,8 +452,8 @@ After the user answers (any channel):
    | `pip`     | `clean` (pip pill already has chrome)                       | `clean`                                              | `clean`                                |
    | `overlay` | `clean` (full-bleed forbids deco frames)                    | `clean`                                              | `clean`                                |
 
-5. **Tell the user what you chose** in one sentence — ratio (+ canvas
-   size), layout, specific style, frame, and final cardCount — then
+5. **Tell the user what you chose** in one sentence - ratio (+ canvas
+   size), layout, specific style, frame, and final cardCount - then
    proceed with the rest of Step 7 (per-card layouts, motion patterns).
 6. Record the five values (ratio / layout / style / frame / cardCount)
    in working memory (no schema field needed); you'll reference them
@@ -505,7 +505,7 @@ Available fonts (woff2 in `<SKILL_DIR>/assets/fonts/`, staged to work dir in Ste
 For inspiration on visual patterns, `<SKILL_DIR>/references/styles/`
 ships 10 self-contained reference cards (academic / editorial / minimal
 / spotlight / geom / whiteboard / audit / terminal / swiss / xhs) that
-you can copy as starting points — but **do not feel constrained to
+you can copy as starting points - but **do not feel constrained to
 match any of these**. Each card is your own design.
 
 #### Visual Design Library (<SKILL_DIR>/references/)
@@ -521,7 +521,7 @@ Style  ×  Layout  ×  VideoFrame
 
 | dimension  | keys                                                                                              | what it decides                                                          |
 | ---------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| **style**  | `academic` `editorial` `minimal` `spotlight` `geom` `whiteboard` `audit` `terminal` `swiss` `xhs` | the card's visual language — fonts, colors, ornament, layout-within-card |
+| **style**  | `academic` `editorial` `minimal` `spotlight` `geom` `whiteboard` `audit` `terminal` `swiss` `xhs` | the card's visual language - fonts, colors, ornament, layout-within-card |
 | **layout** | `split` `stack` `pip` `overlay`                                                                   | how the source video and the card share the canvas                       |
 | **frame**  | `clean` `hairline` `polaroid`                                                                     | the decorative chrome around the video element                           |
 
@@ -530,23 +530,23 @@ for the full matrix and a loose decision guide (interview / product launch / dat
 social clip / technical tutorial / emotional story …). When you decide to use a specific
 style / layout / frame, Read the corresponding file:
 
-- `references/styles/<key>.html` — self-contained card fragment with that
+- `references/styles/<key>.html` - self-contained card fragment with that
   style's CSS tokens (colors, fonts, padding, ornament) and a placeholder
   takeaway. Copy the `.card[data-card-id="ref-<key>"]` style block, rename
   the data-card-id to your card's id, swap the placeholder content for the
   real takeaway, and you're done.
-- `references/layouts/<key>.html` — exact `videoBounds` + `cardBounds` for
+- `references/layouts/<key>.html` - exact `videoBounds` + `cardBounds` for
   both landscape and portrait, with a copy-paste JSON snippet for
   `storyboard.json`'s per-card `layout` field.
-- `references/frames/<key>.html` — decorative HTML to add as a sibling of
+- `references/frames/<key>.html` - decorative HTML to add as a sibling of
   `#video-wrap`, plus placement instructions for the composition CSS.
 
-Pick `style × layout × frame` **per card** — you can change all three
+Pick `style × layout × frame` **per card** - you can change all three
 between cards as long as the transitions read smoothly. A common rhythm:
 open `editorial × overlay × clean`, switch to `audit × split × hairline`
 for the data card, close on `whiteboard × pip × polaroid`.
 
-The 10 styles are skill-side design tokens, **not composition-level themes** —
+The 10 styles are skill-side design tokens, **not composition-level themes** -
 they don't need to be declared in `storyboard.composition`; they live
 inside each card's HTML. The `themeId` field can still pick a
 composition-level palette (table above) that controls page-body background
@@ -557,20 +557,20 @@ and video border chrome.
 Two coordinated decisions per card define how it shares the canvas with
 the source video:
 
-- **`card.zone`** (declared in `storyboard.json`) — one of the 5 schema
+- **`card.zone`** (declared in `storyboard.json`) - one of the 5 schema
   values; resolve it into pixel bounds (per the table in Step 6) when
   you write the card-host wrapper's inline `style` in Step 9.
 - **`#video-wrap` bounds at this card's time window** (declared
-  imperatively in the composition's GSAP timeline) — the agent tweens
+  imperatively in the composition's GSAP timeline) - the agent tweens
   `#video-wrap` to a target rect for each layout transition.
 
 Schema does NOT store per-card video bounds. `videoTrack.bounds` is
 **one-time** at composition level (defaults to full canvas). Video
 "moving" between cards is purely a GSAP animation authored in
-`index.html`. There is no `card.layout` field — earlier versions of this
+`index.html`. There is no `card.layout` field - earlier versions of this
 doc invented one; the real schema only has `card.zone`.
 
-**4 composition layouts** (from `references/layouts/`) — each is a
+**4 composition layouts** (from `references/layouts/`) - each is a
 recipe pairing a `zone` with a `#video-wrap` tween target:
 
 | composition layout | recommended `card.zone` | GSAP target for `#video-wrap` (landscape 1920×1080)                       | GSAP target for `#video-wrap` (portrait 1080×1920)                | when to use                                     |
@@ -595,12 +595,12 @@ fake "layout" field):
 | `side-panel`      | right 42% (landscape) or bottom 40% (portrait)         | sidebar / "split" recipe              |
 | `video-overlay`   | full canvas; expect transparent card root              | glass overlay on full-bleed video     |
 
-You can mix recipes per card — choose `card.zone` based on what suits
+You can mix recipes per card - choose `card.zone` based on what suits
 the moment, then write the GSAP tween for `#video-wrap` between cards.
 
 #### Storyboard Render Contract
 
-`storyboard.json` is an agent-internal planning artifact — no CLI
+`storyboard.json` is an agent-internal planning artifact - no CLI
 command parses it. It exists to keep your timing and content decisions
 explicit before you write each card's HTML. Stick to the v3-style
 shape below so the same outline drives the composition you assemble in
@@ -609,22 +609,22 @@ Step 9.
 Required structure (see Step 6 for the full example):
 
 - `schemaVersion: 3`
-- `composition: { fps, width, height, durationSeconds, layout, themeId, seed }` — note `durationSeconds`/`fps`/`themeId`/`layout` live **inside** `composition`, NOT at top level
-- `videoTrack: { sourcePath, startSec, endSec, bounds? }` — video bounds default to full canvas
+- `composition: { fps, width, height, durationSeconds, layout, themeId, seed }` - note `durationSeconds`/`fps`/`themeId`/`layout` live **inside** `composition`, NOT at top level
+- `videoTrack: { sourcePath, startSec, endSec, bounds? }` - video bounds default to full canvas
 - `subtitles: { enabled, ... }`
-- `cards[]` — each card has the 6 required fields: `id`, `intent`, `startSec`, `endSec`, `accentIndex`, `zone`, `contentHints`
+- `cards[]` - each card has the 6 required fields: `id`, `intent`, `startSec`, `endSec`, `accentIndex`, `zone`, `contentHints`
 
 Rules:
 
 - Card times stay inside `composition.durationSeconds` and should not overlap unless intentional (use `data-track-index` to control z-order when they do).
 - Visual details live in card HTML fragments (Step 8), NOT in `contentHints`. `contentHints` is your own structured prompt for designing the card; the rendered look is the HTML.
-- Keep the storyboard shape stable — even though nothing parses it, you read it back while authoring Step 8/9, and consistency keeps card IDs and timing in sync.
-- Agent-side decisions like "I picked overlay × geom × clean" do NOT belong in `storyboard.json` — keep them in working memory and use them when authoring card HTML + GSAP tweens.
+- Keep the storyboard shape stable - even though nothing parses it, you read it back while authoring Step 8/9, and consistency keeps card IDs and timing in sync.
+- Agent-side decisions like "I picked overlay × geom × clean" do NOT belong in `storyboard.json` - keep them in working memory and use them when authoring card HTML + GSAP tweens.
 
 **Transparent card backgrounds for cards that share canvas with video.**
 When the GSAP tween leaves video visible behind/beside the card (overlay
 recipe, pip recipe, or any `card.zone = 'lower-third' | 'video-overlay'`
-moment), the card's `.root` MUST NOT paint a full opaque background —
+moment), the card's `.root` MUST NOT paint a full opaque background -
 otherwise it occludes the video. Two patterns:
 
 ```css
@@ -647,7 +647,7 @@ body {
 ```
 
 For `side-panel`-zone cards (split recipe), the card-host is already
-only half the canvas, so an opaque card bg is fine — it only covers its
+only half the canvas, so an opaque card bg is fine - it only covers its
 half.
 
 ### 8. Write Each Card's HTML
@@ -709,11 +709,11 @@ contains a single rooted HTML fragment that follows this contract:
 only; never write `<script>` to animate. You compile every `data-anim-*`
 declaration into the single master GSAP timeline in Step 9.
 
-#### Card Sizing — Mobile-First in Portrait
+#### Card Sizing - Mobile-First in Portrait
 
 The 10 `references/styles/*.html` are sized for a **1920×1080 landscape**
 preview. When `storyboard.layout = "portrait"` (1080×1920, the dominant
-case for social / mobile), **scale every visual size up** — phones hold
+case for social / mobile), **scale every visual size up** - phones hold
 the screen close, and the same pixel count reads smaller than on a
 landscape TV-style canvas.
 
@@ -730,7 +730,7 @@ landscape TV-style canvas.
 to a nearby 4px multiple for visual rhythm. Hero headlines may go up to
 ×1.4; small meta text stays at ×1.2 to avoid crowding.
 
-Padding **shrinks slightly** in portrait — the card is narrower so big
+Padding **shrinks slightly** in portrait - the card is narrower so big
 landscape padding (40–64px) eats too much width. Use 24–36px horizontal
 padding in portrait.
 
@@ -749,7 +749,7 @@ prefer a `@container` query on the card root over hard-coding sizes:
 }
 ```
 
-But for most cards, a single layout choice is fine — just pick the size
+But for most cards, a single layout choice is fine - just pick the size
 table column that matches the storyboard's `layout` field.
 
 #### Available `data-anim` Kinds
@@ -759,18 +759,18 @@ table column that matches the storyboard's `layout` field.
 | `fade-in`       | enter               | `at`, `duration`, `ease?`                                                                       |
 | `fade-out`      | exit                | `at`, `duration`, `ease?`                                                                       |
 | `slide-in`      | slide enter         | `at`, `duration`, `from=left\|right\|top\|bottom`, `distance`                                   |
-| `kinetic-chars` | per-char pop        | `at`, `duration`, `stagger`, `pattern=pop\|fade` — element needs `<span class="char">` children |
+| `kinetic-chars` | per-char pop        | `at`, `duration`, `stagger`, `pattern=pop\|fade` - element needs `<span class="char">` children |
 | `typewriter`    | per-char fade       | same as kinetic-chars but slower default stagger                                                |
 | `count-up`      | animate number      | `at`, `duration`, `from`, `to`, `format=.0f\|.1f\|.2f\|,d`                                      |
-| `draw-path`     | SVG path reveal     | `at`, `duration` — element should be a `<path>`                                                 |
-| `grow-y`        | bar height          | `at`, `duration`, `target-h` (px) — element starts `height:0`                                   |
-| `grow-x`        | bar width           | `at`, `duration`, `target-w` (px) — element starts `width:0`                                    |
+| `draw-path`     | SVG path reveal     | `at`, `duration` - element should be a `<path>`                                                 |
+| `grow-y`        | bar height          | `at`, `duration`, `target-h` (px) - element starts `height:0`                                   |
+| `grow-x`        | bar width           | `at`, `duration`, `target-w` (px) - element starts `width:0`                                    |
 | `scale-pop`     | pop entrance        | `at`, `duration`                                                                                |
 | `blur-in`       | unfocused → focused | `at`, `duration`                                                                                |
 | `mask-reveal`   | clip reveal         | `at`, `duration`, `direction=left\|right\|top\|bottom`                                          |
 | `morph-to`      | tween any CSS       | `at`, `duration`, `props='{...JSON...}'`                                                        |
 
-`data-anim-at` is **seconds relative to the card's startSec** — when you
+`data-anim-at` is **seconds relative to the card's startSec** - when you
 compile each declaration into the GSAP timeline in Step 9, add the
 card's `startSec` to get the absolute time and quantize to 1/fps.
 
@@ -785,10 +785,10 @@ SKILL_DIR="<SKILL_DIR>"
 mkdir -p "$WORK_DIR/public/fonts" "$WORK_DIR/public/vendor" "$WORK_DIR/public/cards"
 cp -n "$SKILL_DIR/assets/fonts/"*            "$WORK_DIR/public/fonts/"
 cp -n "$SKILL_DIR/assets/vendor/gsap.min.js" "$WORK_DIR/public/vendor/"
-# stage the input video — RE-ENCODE with dense keyframes. Sources with a sparse GOP
+# stage the input video - RE-ENCODE with dense keyframes. Sources with a sparse GOP
 # (keyframe interval > ~1s) freeze on seek in the renderer (a frozen frame under the
 # overlays); -g / -keyint_min set to your composition fps make every frame seekable.
-# (Set both to your fps — 30 shown; use 24/25/60 to match.)
+# (Set both to your fps - 30 shown; use 24/25/60 to match.)
 ffmpeg -y -i "$VIDEO_PATH" -c:v libx264 -crf 18 -g 30 -keyint_min 30 \
   -pix_fmt yuv420p -movflags +faststart -c:a aac "$WORK_DIR/public/input-video.mp4"
 ```
@@ -838,7 +838,7 @@ ffmpeg -y -i "$VIDEO_PATH" -c:v libx264 -crf 18 -g 30 -keyint_min 30 \
       }
 
       :root {
-        /* Pick from the themeId palette table in Step 7 — example: classic */
+        /* Pick from the themeId palette table in Step 7 - example: classic */
         --bg: #fff9e3;
         --text: #1e1e1e;
         --accent-0: #1971c2;
@@ -851,7 +851,7 @@ ffmpeg -y -i "$VIDEO_PATH" -c:v libx264 -crf 18 -g 30 -keyint_min 30 \
       * {
         box-sizing: border-box;
       }
-      /* Body font-family MUST list concrete font names (not just var(--font-family)) —
+      /* Body font-family MUST list concrete font names (not just var(--font-family)) -
    the HyperFrames renderer's static analyzer doesn't expand CSS variables when
    resolving fonts, so a var-only chain triggers `font_family_without_font_face`
    lint and falls back to a generic. Use the concrete chain here; cards that
@@ -924,7 +924,7 @@ ffmpeg -y -i "$VIDEO_PATH" -c:v libx264 -crf 18 -g 30 -keyint_min 30 \
       data-width="1920"
       data-height="1080"
     >
-      <!-- Layer 1: source video — initial position matches card-01's layout -->
+      <!-- Layer 1: source video - initial position matches card-01's layout -->
       <div class="video-wrapper" id="video-wrap">
         <video
           id="bg-video"
@@ -1032,7 +1032,7 @@ ffmpeg -y -i "$VIDEO_PATH" -c:v libx264 -crf 18 -g 30 -keyint_min 30 \
             7.5,
           );
 
-          // Card-02 enter — same pattern as card-01
+          // Card-02 enter - same pattern as card-01
           tl.set('.card-host[data-card-id="card-02"]', { visibility: "visible" }, 8.0);
           tl.fromTo(
             '.card-host[data-card-id="card-02"]',
@@ -1095,23 +1095,23 @@ clashes with chrome); PiP layouts already have their own pill treatment
 top of `split` / `stack`.
 
 **GSAP target lookup table** for `#video-wrap` per composition layout
-(landscape 1920×1080 — for portrait & 4:5 see `references/layouts/*.html`
+(landscape 1920×1080 - for portrait & 4:5 see `references/layouts/*.html`
 which list all three ratios):
 
 | composition layout                   | typical card.zone | `#video-wrap` GSAP target                                                 | extra css class                            |
 | ------------------------------------ | ----------------- | ------------------------------------------------------------------------- | ------------------------------------------ |
-| `split`                              | `side-panel`      | `{ left: 960, top: 0, width: 960, height: 1080 }`                         | —                                          |
-| `stack`                              | `lower-third`     | `{ left: 14, top: 14, width: 1892, height: 548 }` (top 52%)               | —                                          |
+| `split`                              | `side-panel`      | `{ left: 960, top: 0, width: 960, height: 1080 }`                         | - |
+| `stack`                              | `lower-third`     | `{ left: 14, top: 14, width: 1892, height: 548 }` (top 52%)               | - |
 | `pip` (bottom-right)                 | `fullscreen`      | `{ left: 1480, top: 760, width: 400, height: 300 }`                       | `pip-pill` (border-radius + ring + shadow) |
 | `pip` (top-left)                     | `fullscreen`      | `{ left: 40, top: 40, width: 400, height: 300 }`                          | `pip-pill`                                 |
-| `overlay` (video full-bleed)         | `video-overlay`   | `{ left: 0, top: 0, width: 1920, height: 1080 }` (no change from default) | —                                          |
-| **hide video** (pure-graphic moment) | `fullscreen`      | `{ opacity: 0 }` (or move off-canvas)                                     | —                                          |
+| `overlay` (video full-bleed)         | `video-overlay`   | `{ left: 0, top: 0, width: 1920, height: 1080 }` (no change from default) | - |
+| **hide video** (pure-graphic moment) | `fullscreen`      | `{ opacity: 0 }` (or move off-canvas)                                     | - |
 
 To toggle the pip-pill chrome (border-radius + white ring + drop shadow)
 when entering or leaving a pip moment:
 
 ```js
-// Enter pip — add chrome
+// Enter pip - add chrome
 tl.set("#video-wrap", { className: "video-wrapper pip-pill" }, T);
 tl.to(
   "#video-wrap",
@@ -1119,7 +1119,7 @@ tl.to(
   T,
 );
 
-// Leave pip — back to clean full-bleed
+// Leave pip - back to clean full-bleed
 tl.set("#video-wrap", { className: "video-wrapper" }, T_NEXT);
 tl.to(
   "#video-wrap",
@@ -1132,7 +1132,7 @@ tl.to(
 pixel bounds using the table at the top of Step 6, then write those
 into the card-host's inline `style="left:Xpx;top:Ypx;width:Wpx;
 height:Hpx;..."`. For `video-overlay` zone (overlay recipe), the
-card-host fills the full canvas — your CSS inside `.card .root`
+card-host fills the full canvas - your CSS inside `.card .root`
 decides where the actual visible card sits.
 
 #### HyperFrames Layout / Animation QA Rules
@@ -1148,8 +1148,8 @@ decides where the actual visible card sits.
 - Animate wrappers such as `#video-wrap`, not the video element dimensions directly.
 - Avoid animating the same property on the same element from multiple timelines at the same time.
 - Use `data-track-index`, not `data-layer`; use `data-duration`, not `data-end`.
-- Every timed element (`card-host`, sub-composition, etc.) MUST include `class="clip"` alongside its own classes — e.g. `class="card-host clip"`. The HyperFrames runtime uses `.clip` to gate visibility to the `data-start … data-start+data-duration` window. Without it the element is visible for the whole video (lint: `timed_element_missing_clip_class`).
-- For body / global `font-family`, list **concrete font names** (`'Inter', 'Caveat', …`) — not a CSS variable like `var(--font-family)`. The HyperFrames font resolver doesn't expand CSS vars during static analysis (lint: `font_family_without_font_face`). Cards may still use `var(--font-family)` internally since their `@font-face` declarations are loaded.
+- Every timed element (`card-host`, sub-composition, etc.) MUST include `class="clip"` alongside its own classes - e.g. `class="card-host clip"`. The HyperFrames runtime uses `.clip` to gate visibility to the `data-start … data-start+data-duration` window. Without it the element is visible for the whole video (lint: `timed_element_missing_clip_class`).
+- For body / global `font-family`, list **concrete font names** (`'Inter', 'Caveat', …`) - not a CSS variable like `var(--font-family)`. The HyperFrames font resolver doesn't expand CSS vars during static analysis (lint: `font_family_without_font_face`). Cards may still use `var(--font-family)` internally since their `@font-face` declarations are loaded.
 
 ### 10. Render to MP4
 
@@ -1163,7 +1163,7 @@ PRODUCER_BROWSER_GPU_MODE=hardware npx hyperframes render public \
 
 `hyperframes render <dir>` reads `<dir>/index.html` and produces the MP4.
 The flag `PRODUCER_BROWSER_GPU_MODE=hardware` (or `--browser-gpu`) is
-strongly recommended on macOS — software-only Chrome rendering times out
+strongly recommended on macOS - software-only Chrome rendering times out
 on most laptops.
 
 For a sanity check before the full render, capture a single frame at a

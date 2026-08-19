@@ -75,4 +75,4 @@ function MeasuredBox({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Use functional setState to compare—don't read state directly in the callback.
+Use functional setState to compare - don't read state directly in the callback.

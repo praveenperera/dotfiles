@@ -72,9 +72,9 @@ document.querySelectorAll(".token").forEach((token, index) => {
 
 ## Composition Duration
 
-The render engine needs the composition's total length to know how many frames to capture. GSAP timelines report duration automatically; a WAAPI-only composition has no timeline object, so the runtime infers duration from every animation's `effect.getComputedTiming().endTime` (offset by when the animation was created relative to composition start). `data-duration` on the root element is optional as long as every `element.animate()` call uses finite `duration` and `iterations` — which the contract above already requires.
+The render engine needs the composition's total length to know how many frames to capture. GSAP timelines report duration automatically; a WAAPI-only composition has no timeline object, so the runtime infers duration from every animation's `effect.getComputedTiming().endTime` (offset by when the animation was created relative to composition start). `data-duration` on the root element is optional as long as every `element.animate()` call uses finite `duration` and `iterations` - which the contract above already requires.
 
-Infinite `iterations` has no finite `endTime`, so it can't be auto-inferred — that's one more reason to avoid it (see Avoid below). If you must use it, add `data-duration="<seconds>"` to the root `[data-composition-id]` element or `npx hyperframes lint` will error (`root_composition_missing_duration_source`).
+Infinite `iterations` has no finite `endTime`, so it can't be auto-inferred - that's one more reason to avoid it (see Avoid below). If you must use it, add `data-duration="<seconds>"` to the root `[data-composition-id]` element or `npx hyperframes lint` will error (`root_composition_missing_duration_source`).
 
 ## Avoid
 

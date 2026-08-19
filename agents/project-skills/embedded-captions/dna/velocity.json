@@ -1,6 +1,6 @@
 {
   "name": "velocity",
-  "title": "Velocity — speed lines",
+  "title": "Velocity - speed lines",
   "register": "loud-sport",
   "when": "sport, automotive, fitness, anything kinetic. Every word arrives ALONG its own motion vector (streak + skew settles upright); the hero passes through with speed trails behind it. Condensed italic forward lean.",
   "font": {
@@ -84,6 +84,6 @@
   "deliveries": {
     "home": "column",
     "rail": "unvalidated",
-    "note": "signature = streak + trail echoes along the speed vector (engine fx) — rail loses all of it"
+    "note": "signature = streak + trail echoes along the speed vector (engine fx) - rail loses all of it"
   }
 }

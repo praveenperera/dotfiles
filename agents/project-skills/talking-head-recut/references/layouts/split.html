@@ -1,7 +1,7 @@
 <!--
-  Layout: split — 50/50 side-by-side
+  Layout: split - 50/50 side-by-side
   ─────────────────────────────────────────────────────────────────────
-  Real schema only has `card.zone` (5 enum values) — there is NO
+  Real schema only has `card.zone` (5 enum values) - there is NO
   `card.layout` field, and video bounds are composition-level
   (`videoTrack.bounds`, one-time). The "split look" is implemented by:
     1. setting card.zone = "side-panel" for each card in this stretch
@@ -23,19 +23,19 @@
         { left: 960, top: 0, width: 960, height: 1080,
           duration: 0.6, ease: 'power2.inOut' }, START_SEC);
 
-    portrait (1080×1920) — flips to top/bottom:
+    portrait (1080×1920) - flips to top/bottom:
       tl.to('#video-wrap',
         { left: 0, top: 960, width: 1080, height: 960,
           duration: 0.6, ease: 'power2.inOut' }, START_SEC);
 
-    4:5 (1080×1350) — derive by ×0.703 on y/h:
+    4:5 (1080×1350) - derive by ×0.703 on y/h:
       tl.to('#video-wrap',
         { left: 0, top: 675, width: 1080, height: 675,
           duration: 0.6, ease: 'power2.inOut' }, START_SEC);
 
   Notes
   - Card-host (from card.zone="side-panel") covers half the canvas;
-    opaque card background is fine — it only paints its own half.
+    opaque card background is fine - it only paints its own half.
   - Flip card/video sides: swap which side gets the speaker tween.
   - With 14–18px page-level gap, set composition bg to deep color
     (e.g. #0a0c12) so the gap reads as a clean separator.
