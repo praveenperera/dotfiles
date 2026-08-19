@@ -88,62 +88,73 @@ Do not use `--permission-mode plan` or re-enable local repo tools to recover fro
 
 ## Claude Opus Review
 
-Preflight Claude and the PR Review Toolkit plugin:
+Preflight the installed Claude CLI:
 
 ```bash
 claude --version
-claude plugin details pr-review-toolkit
 ```
 
-Invoke the plugin with plan permissions and save stdout and stderr separately:
+Create a self-contained prompt that already contains every artifact Claude needs: repository and branch identifiers, base or merge-base, PR URL when known, applicable repository instructions (`AGENTS.md` and related rules), status, diff statistics, and the full relevant diff. Begin the prompt with the same explicit review-only directive used for GLM. Ask for correctness, regression, security, auth, data-loss, concurrency, migration, compatibility, behavioral coverage, and defect-prone maintainability findings. Require `No actionable findings` when clean.
+
+Invoke Claude in print mode with plan permissions and save stdout and stderr separately:
 
 ```bash
+prompt=$(< "$scratch/prompts/claude-opus-review-$iteration.md")
 claude --print \
   --model opus \
   --permission-mode plan \
+  --no-session-persistence \
+  --add-dir "$repo" \
   --output-format json \
-  "/pr-review-toolkit:review-pr $target" \
-  > "$scratch/raw/claude-opus-review.json" \
-  2> "$scratch/raw/claude-opus-review.stderr"
+  "$prompt" \
+  > "$scratch/raw/claude-opus-review-$iteration.json" \
+  2> "$scratch/raw/claude-opus-review-$iteration.stderr"
 ```
 
-Use the PR number or URL for `target` when available. Otherwise append repository and base context to the plugin prompt. Exit `0` permits parsing; any other exit is a failed provider run, with `130` treated as an intentional interruption. Cite the raw artifact and concrete repository evidence in normalized findings.
+Never start `claude --print` before the prompt is available. Keep plan mode so the reviewer cannot edit the repository. Exit `0` permits parsing; any other exit is a failed provider run, with `130` treated as an intentional interruption. Cite the raw artifact and concrete repository evidence in normalized findings. If the CLI or model is unavailable, report the dependency failure to the orchestrator rather than changing provider or permission mode.
 
-## Codex xhigh Review
+## Codex Review
+
+Default Sol (Codex) reasoning effort to `high`. Use `xhigh` only when the user explicitly requests Sol xhigh.
 
 Choose exactly one target mode that represents the code under review:
 
 ```bash
 codex review \
-  --config model_reasoning_effort='"xhigh"' \
+  --config model_reasoning_effort='"high"' \
   --base "$base_branch" \
-  - < "$scratch/prompts/codex-xhigh-review.md" \
-  > "$scratch/raw/codex-xhigh-review.txt"
+  - < "$scratch/prompts/codex-review.md" \
+  > "$scratch/raw/codex-review.txt"
 ```
 
 For a worktree-only target, use the supported uncommitted mode instead:
 
 ```bash
 codex review \
-  --config model_reasoning_effort='"xhigh"' \
+  --config model_reasoning_effort='"high"' \
   --uncommitted \
-  - < "$scratch/prompts/codex-xhigh-review.md" \
-  > "$scratch/raw/codex-xhigh-review-uncommitted.txt"
+  - < "$scratch/prompts/codex-review.md" \
+  > "$scratch/raw/codex-review-uncommitted.txt"
 ```
+
+When the user requests Sol xhigh, substitute `model_reasoning_effort='"xhigh"'` and name the prompt and raw artifacts with `codex-xhigh-review` instead of `codex-review`.
 
 Codex review is a provider input, not a fixing session. Normalize only actionable findings and retain the command target and raw artifact as evidence.
 
-## Fresh Codex Fix Pass
+## Fresh Luna Max Fix Pass
 
-Prefer the bundled helper and pass the orchestrator-selected effort explicitly:
+Run every fix pass with GPT-5.6 Luna at `max` reasoning. Do not use Sol for ordinary fixes.
+
+Prefer the bundled helper:
 
 ```bash
 python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --repo "$repo" \
   --prompt-file "$scratch/prompts/iteration-1.md" \
-  --output-file "$scratch/codex/iteration-1-summary.md" \
+  --output-file "$scratch/luna/iteration-1-summary.md" \
+  --model gpt-5.6-luna \
   --sandbox danger-full-access \
-  --config model_reasoning_effort='"medium"'
+  --config model_reasoning_effort='"max"'
 ```
 
 Use dry-run when checking argument construction:
@@ -152,24 +163,28 @@ Use dry-run when checking argument construction:
 python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --repo "$repo" \
   --prompt-file "$scratch/prompts/iteration-1.md" \
-  --output-file "$scratch/codex/iteration-1-summary.md" \
+  --output-file "$scratch/luna/iteration-1-summary.md" \
+  --model gpt-5.6-luna \
   --sandbox danger-full-access \
-  --config model_reasoning_effort='"medium"' \
+  --config model_reasoning_effort='"max"' \
   --dry-run
 ```
 
-If the helper cannot be used, invoke a fresh session directly:
+If the helper cannot be used, invoke a fresh Luna Max session directly:
 
 ```bash
 codex exec \
   --cd "$repo" \
-  --config model_reasoning_effort='"medium"' \
+  --model gpt-5.6-luna \
+  --config model_reasoning_effort='"max"' \
   --sandbox danger-full-access \
-  --output-last-message "$scratch/codex/iteration-1-summary.md" \
+  --output-last-message "$scratch/luna/iteration-1-summary.md" \
   - < "$scratch/prompts/iteration-1.md"
 ```
 
-Never use the exec resume subcommand. Add dangerous bypass mode only when the user explicitly approved it or the environment is already externally sandboxed. After the pass, inspect repository status, diff statistics, and whitespace errors, then run trusted project verification.
+When the orchestrator is a Codex Sol session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Save its final report to the same scratch path and keep the same no-resume, no-publication constraints.
+
+Never use the exec resume subcommand for CLI fix passes. Add dangerous bypass mode only when the user explicitly approved it or the environment is already externally sandboxed. After the pass, inspect repository status, diff statistics, and whitespace errors, then run trusted project verification.
 
 ## CodeRabbit CLI
 
@@ -206,7 +221,7 @@ greptile review --agent --no-color --layout comments --context 15 > "$scratch/ra
 greptile review --json --no-color > "$scratch/raw/greptile.json"
 ```
 
-Greptile normally reviews committed branch state against a base branch. Do not claim it saw uncommitted fixes unless installed help and a small controlled check establish that behavior. Its `--resume` flag resumes a Greptile review and must never be confused with a Codex fix session.
+Greptile normally reviews committed branch state against a base branch. Do not claim it saw uncommitted fixes unless installed help and a small controlled check establish that behavior. Its `--resume` flag resumes a Greptile review and must never be confused with a Luna Max fix pass.
 
 ## Greptile Hosted Reviews
 
