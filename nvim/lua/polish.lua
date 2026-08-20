@@ -1,19 +1,35 @@
 local cove = require("config.cove_build")
 
--- set filetype for terraform files
-vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
-    pattern = "*.tfvars",
-    callback = function()
-        vim.bo.filetype = "terraform"
-    end,
-})
+vim.filetype.add({
+    extension = {
+        jinja = "jinja",
+    },
+    filename = {
+        Fastfile = "ruby",
+    },
+    pattern = {
+        [".*%.j2"] = function(path, bufnr)
+            local source_path = path:sub(1, -4)
+            local match_args = { filename = source_path }
+            if bufnr >= 0 then
+                match_args.buf = bufnr
+            end
 
--- set filetype for jinja
-vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
-    pattern = { "*.j2", "*.jinja" },
-    callback = function()
-        vim.bo.filetype = "jinja"
-    end,
+            local source_filetype = vim.filetype.match(match_args)
+            if not source_filetype then
+                return "jinja"
+            end
+
+            local parser_language = vim.treesitter.language.get_lang(
+                source_filetype
+            ) or source_filetype
+            local template_filetype = "jinja_"
+                .. source_filetype:gsub("[^%w_]", "_")
+            vim.treesitter.language.register(parser_language, template_filetype)
+
+            return template_filetype
+        end,
+    },
 })
 
 local cove_path = vim.fn.expand("~/code/bitcoinppl/cove/*")
@@ -27,7 +43,6 @@ vim.api.nvim_create_autocmd("BufEnter", {
     end,
 })
 
--- Disable auto indentation for text files
 vim.api.nvim_create_autocmd("FileType", {
     pattern = { "text", "markdown", "xml" },
     callback = function()
@@ -35,27 +50,21 @@ vim.api.nvim_create_autocmd("FileType", {
         vim.opt_local.smartindent = false
         vim.opt_local.cindent = false
         vim.opt_local.indentexpr = ""
-
-        vim.opt_local.expandtab = true -- Use spaces
-        vim.opt_local.tabstop = 2 -- Number of spaces for a tab
-        vim.opt_local.shiftwidth = 2 -- Spaces per indent level
+        vim.opt_local.expandtab = true
+        vim.opt_local.tabstop = 2
+        vim.opt_local.shiftwidth = 2
     end,
 })
 
--- ssh clipboard
-if vim.env.SSH_CONNECTION then -- only when remoted in
+if vim.env.SSH_CONNECTION then
     vim.g.clipboard = "osc52"
 end
 
--- use "+ register by default
 vim.opt.clipboard:append({ "unnamedplus" })
 
--- tell netrw to use /tmp/netrw for its local copy
+-- netrw owns remote URI reads; Neo-tree remains the local explorer
 vim.g.netrw_localcopydir = "/tmp/netrw"
--- don’t recreate the remote directory tree locally
 vim.g.netrw_keepdir = 0
--- turn off backup files (so netrw won’t try to write *.swp next to the remote path)
 vim.g.netrw_backup = 0
--- optional: narrow the netrw split height
 vim.g.netrw_winsize = 20
 vim.cmd.packadd("netrw")
