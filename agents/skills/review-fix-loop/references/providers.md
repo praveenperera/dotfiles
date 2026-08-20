@@ -2,6 +2,14 @@
 
 Load the section for each enabled provider before invoking it. Check the installed CLI's `--help` output first and adjust only when the local interface differs. Save raw output before normalization.
 
+## Neutral Final-Review Packet
+
+Use one neutral packet for every independent final reviewer on a given snapshot. The orchestrator must put the exact `target_fingerprint` in the packet and verify it immediately before invocation. The packet must contain repository rules, applicable invariants and the state or migration matrix (or an explicit not-applicable record), the handwritten source diff, concise relevant generated API signatures, and verification evidence. Include regeneration evidence with generated signatures; omit full generated binding bodies when regeneration and signatures are sufficient. For persistence, security, migration, or concurrency work, include a state-transition trace for the initial stored state, mutation order, failure before commit, failure after commit, each consumer projection, rollback, and recovery.
+
+Build the packet without prior reviewer findings, approvals, repair summaries, expected defects, suggested solutions, or pass counts. A final review is independent only when the provider session is fresh and the prompt is neutral. All final providers must receive the same exact fingerprint and snapshot. Any code, test, configuration, generated-file, or relevant untracked review-content change invalidates prior final reviews and requires new packets and a complete enabled review sequence.
+
+Targeted validation is allowed to include the finding and repair it checks, but it never counts as an independent final review. Store it under separately named `targeted-validation-<provider>-<iteration>` prompt and raw artifacts. After it completes, recompute the fingerprint and run an independent final review with a new provider-specific `final-neutral` packet on the new snapshot. Codex final-review artifact names must also include its target mode.
+
 ## Normalized Findings
 
 Create one Markdown file per provider run:
@@ -38,18 +46,20 @@ Begin the prompt with:
 Review this PR or diff without changing code or external state. Return only actionable, evidence-backed findings in the requested normalized format.
 ```
 
+For each broad GLM final-review stage, create `final-neutral-glm-<iteration>.md` and `final-neutral-glm-<iteration>.jsonl` from the neutral packet above. After a Luna repair, use separately named `targeted-validation-glm-<iteration>` prompt and raw artifacts; they may contain the finding and repair being checked, but the result is targeted validation and not an independent final review. Recompute the fingerprint after targeted validation and run a fresh broad GLM final-review stage on the new neutral packet before any later provider.
+
 Invoke OpenCode with its read-only plan agent:
 
 ```bash
-prompt=$(< "$scratch/prompts/glm-review-$iteration.md")
+prompt=$(< "$scratch/prompts/final-neutral-glm-$iteration.md")
 opencode run \
   --model zai-coding-plan/glm-5.3 \
   --agent plan \
   --format json \
   --dir "$repo" \
-  --title "review-fix-loop glm review $iteration" \
+  --title "review-fix-loop glm final review $iteration" \
   "$prompt" \
-  > "$scratch/raw/opencode-zai-glm-$iteration.jsonl"
+  > "$scratch/raw/final-neutral-glm-$iteration.jsonl"
 ```
 
 Ask for correctness, regression, security, auth, data-loss, concurrency, migration, compatibility, behavioral coverage, and defect-prone maintainability findings. Require `No actionable findings` when clean. Normalize from the saved JSONL and cite that artifact plus repository evidence. If the credential, model, skill, or plan agent is unavailable, report the dependency failure to the orchestrator rather than changing provider or permission mode.
@@ -63,12 +73,12 @@ grok --version
 grok models | rg -i 'grok-4\.6'
 ```
 
-Grok's local tool session, including read-only and plan sandbox modes, can return cancelled. Do not depend on it for this review. Create a self-contained prompt packet that already contains every artifact Grok needs: repository and branch identifiers, base or merge-base, PR URL when known, applicable repository instructions (`AGENTS.md` and related rules), status, diff statistics, and the full relevant diff. Begin the packet with the same explicit review-only directive used for GLM.
+Grok's local tool session, including read-only and plan sandbox modes, can return cancelled. Do not depend on it for this review. Create `final-neutral-grok-<iteration>.md` as the self-contained neutral packet described above. Include repository and branch identifiers, base or merge-base, and the PR URL when known because headless Grok cannot inspect them. Begin the packet with the same explicit review-only directive used for GLM.
 
 Invoke Grok in headless self-contained mode. Disable edit, terminal, web, and subagent tools so the review stays read-only and does not wait on the local tool loop:
 
 ```bash
-prompt_file="$scratch/prompts/grok-review-$iteration.md"
+prompt_file="$scratch/prompts/final-neutral-grok-$iteration.md"
 grok \
   --prompt-file "$prompt_file" \
   --cwd "$repo" \
@@ -81,7 +91,7 @@ grok \
   --no-plan \
   --verbatim \
   --output-format json \
-  > "$scratch/raw/grok-review-$iteration.json"
+  > "$scratch/raw/final-neutral-grok-$iteration.json"
 ```
 
 Do not use `--permission-mode plan` or re-enable local repo tools to recover from cancellation. If the packet is incomplete, enlarge the prompt with the missing rules or diff and rerun. Require review-only behavior and actionable, evidence-backed findings. Parse the JSON `text` field when present. Treat an error object, `stopReason: MaxTurns`, cancellation, or missing final review as a failed run rather than a clean result.
@@ -94,12 +104,12 @@ Preflight the installed Claude CLI:
 claude --version
 ```
 
-Create a self-contained prompt that already contains every artifact Claude needs: repository and branch identifiers, base or merge-base, PR URL when known, applicable repository instructions (`AGENTS.md` and related rules), status, diff statistics, and the full relevant diff. Begin the prompt with the same explicit review-only directive used for GLM. Ask for correctness, regression, security, auth, data-loss, concurrency, migration, compatibility, behavioral coverage, and defect-prone maintainability findings. Require `No actionable findings` when clean.
+Create `final-neutral-opus-<iteration>.md` as the self-contained neutral packet described above. Begin the prompt with the same explicit review-only directive used for GLM. Ask for correctness, regression, security, auth, data-loss, concurrency, migration, compatibility, behavioral coverage, and defect-prone maintainability findings. Require `No actionable findings` when clean.
 
 Invoke Claude in print mode with plan permissions and save stdout and stderr separately:
 
 ```bash
-prompt=$(< "$scratch/prompts/claude-opus-review-$iteration.md")
+prompt=$(< "$scratch/prompts/final-neutral-opus-$iteration.md")
 claude --print \
   --model opus \
   --permission-mode plan \
@@ -107,8 +117,8 @@ claude --print \
   --add-dir "$repo" \
   --output-format json \
   "$prompt" \
-  > "$scratch/raw/claude-opus-review-$iteration.json" \
-  2> "$scratch/raw/claude-opus-review-$iteration.stderr"
+  > "$scratch/raw/final-neutral-opus-$iteration.json" \
+  2> "$scratch/raw/final-neutral-opus-$iteration.stderr"
 ```
 
 Never start `claude --print` before the prompt is available. Keep plan mode so the reviewer cannot edit the repository. Exit `0` permits parsing; any other exit is a failed provider run, with `130` treated as an intentional interruption. Cite the raw artifact and concrete repository evidence in normalized findings. If the CLI or model is unavailable, report the dependency failure to the orchestrator rather than changing provider or permission mode.
@@ -119,12 +129,24 @@ Default Sol (Codex) reasoning effort to `high`. Use `xhigh` only when the user e
 
 Choose exactly one target mode that represents the code under review:
 
+Set `target_mode` to `base` for `--base` or `uncommitted` for `--uncommitted`, and set `iteration` to a unique final-review sequence number for the current snapshot. Increment `iteration` when a code change requires a new review sequence. Create the fresh neutral packet described above with a collision-free name that includes both values:
+
+```text
+final-neutral-codex-review-<target-mode>-<iteration>.md
+final-neutral-codex-review-<target-mode>-<iteration>.txt
+```
+
+The prompt and raw artifact must use the same target mode and iteration. Begin the packet with the same explicit review-only directive used for GLM. A Codex final review on a different fingerprint is invalid, even if the provider session is fresh.
+
 ```bash
+prompt_file="$scratch/prompts/final-neutral-codex-review-$target_mode-$iteration.md"
+raw_file="$scratch/raw/final-neutral-codex-review-$target_mode-$iteration.txt"
+
 codex review \
   --config model_reasoning_effort='"high"' \
   --base "$base_branch" \
-  - < "$scratch/prompts/codex-review.md" \
-  > "$scratch/raw/codex-review.txt"
+  - < "$prompt_file" \
+  > "$raw_file"
 ```
 
 For a worktree-only target, use the supported uncommitted mode instead:
@@ -133,11 +155,16 @@ For a worktree-only target, use the supported uncommitted mode instead:
 codex review \
   --config model_reasoning_effort='"high"' \
   --uncommitted \
-  - < "$scratch/prompts/codex-review.md" \
-  > "$scratch/raw/codex-review-uncommitted.txt"
+  - < "$prompt_file" \
+  > "$raw_file"
 ```
 
-When the user requests Sol xhigh, substitute `model_reasoning_effort='"xhigh"'` and name the prompt and raw artifacts with `codex-xhigh-review` instead of `codex-review`.
+When the user requests Sol xhigh, substitute `model_reasoning_effort='"xhigh"'` and use these mode-and-iteration-specific names for both artifacts:
+
+```bash
+prompt_file="$scratch/prompts/codex-xhigh-final-neutral-review-$target_mode-$iteration.md"
+raw_file="$scratch/raw/codex-xhigh-final-neutral-review-$target_mode-$iteration.txt"
+```
 
 Codex review is a provider input, not a fixing session. Normalize only actionable findings and retain the command target and raw artifact as evidence.
 
