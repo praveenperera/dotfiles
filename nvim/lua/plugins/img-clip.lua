@@ -1,5 +1,5 @@
 return {
-    "HakonHarnes/img-clip.nvim",
+    "hakonharnes/img-clip.nvim",
     event = "VeryLazy",
     opts = {},
     -- keys = { {} },

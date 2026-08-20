@@ -12,3 +12,6 @@ bacon:
 
 update:
     cd cmd && cargo update
+
+nvim-check:
+    ./nvim/scripts/check

@@ -39,4 +39,4 @@ local opts = {
     silent = false,
 }
 
-return { "echasnovski/mini.surround", opts = opts, event = "BufRead" }
+return { "nvim-mini/mini.surround", opts = opts, event = "BufRead" }

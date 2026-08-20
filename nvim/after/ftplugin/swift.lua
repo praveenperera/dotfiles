@@ -1,82 +1,44 @@
 local bufnr = vim.api.nvim_get_current_buf()
 
--- lint
-vim.keymap.set("n", "<leader>ll", function()
+local function map(mode, key, command, description)
+    vim.keymap.set(mode, key, command, {
+        buffer = bufnr,
+        desc = description,
+        silent = true,
+    })
+end
+
+map("n", "<Leader>ll", function()
     require("lint").try_lint()
-end, { desc = "Lint file", silent = true, buffer = bufnr })
+end, "Lint file")
 
--- xcodebuild
-vim.keymap.set(
-    "n",
-    "<leader>X",
-    "<cmd>XcodebuildPicker<cr>",
-    { desc = "Show All Xcodebuild Actions" }
-)
-vim.keymap.set(
-    "n",
-    "<leader>xl",
-    "<cmd>XcodebuildToggleLogs<cr>",
-    { desc = "Toggle Xcodebuild Logs" }
-)
-vim.keymap.set(
-    "n",
-    "<leader>xb",
-    "<cmd>XcodebuildBuild<cr>",
-    { desc = "Build Project" }
-)
-vim.keymap.set(
-    "n",
-    "<leader>xr",
-    "<cmd>XcodebuildBuildRun<cr>",
-    { desc = "Build & Run Project" }
-)
-vim.keymap.set(
-    "n",
-    "<leader>xt",
-    "<cmd>XcodebuildTest<cr>",
-    { desc = "Run Tests" }
-)
-vim.keymap.set(
-    "n",
-    "<leader>xT",
-    "<cmd>XcodebuildTestClass<cr>",
-    { desc = "Run This Test Class" }
-)
-vim.keymap.set(
-    "n",
-    "<leader>xd",
-    "<cmd>XcodebuildSelectDevice<cr>",
-    { desc = "Select Device" }
-)
-vim.keymap.set(
-    "n",
-    "<leader>xp",
-    "<cmd>XcodebuildSelectTestPlan<cr>",
-    { desc = "Select Test Plan" }
-)
-vim.keymap.set(
-    "n",
-    "<leader>xc",
-    "<cmd>XcodebuildToggleCodeCoverage<cr>",
-    { desc = "Toggle Code Coverage" }
-)
-vim.keymap.set(
-    "n",
-    "<leader>xC",
-    "<cmd>XcodebuildShowCodeCoverageReport<cr>",
-    { desc = "Show Code Coverage Report" }
-)
-vim.keymap.set(
-    "n",
-    "<leaer>xq",
-    "<cmd>Telescope quickfix<cr>",
-    { desc = "Show QuickFix List" }
-)
+local xcodebuild_mappings = {
+    ["<Leader>X"] = { "XcodebuildPicker", "Show all Xcodebuild actions" },
+    ["<Leader>xl"] = { "XcodebuildToggleLogs", "Toggle Xcodebuild logs" },
+    ["<Leader>xb"] = { "XcodebuildBuild", "Build project" },
+    ["<Leader>xr"] = { "XcodebuildBuildRun", "Build and run project" },
+    ["<Leader>xt"] = { "XcodebuildTest", "Run tests" },
+    ["<Leader>xT"] = { "XcodebuildTestClass", "Run this test class" },
+    ["<Leader>xd"] = { "XcodebuildSelectDevice", "Select device" },
+    ["<Leader>xp"] = { "XcodebuildSelectTestPlan", "Select test plan" },
+    ["<Leader>xc"] = {
+        "XcodebuildToggleCodeCoverage",
+        "Toggle code coverage",
+    },
+    ["<Leader>xC"] = {
+        "XcodebuildShowCodeCoverageReport",
+        "Show code coverage report",
+    },
+}
 
--- restart lsp
-vim.keymap.set("n", "<leader>lx", function()
-    vim.notify("Restarting LSP...")
-    vim.cmd("LspRestart")
-    local file = vim.fn.expand("%:p")
-    vim.cmd("e " .. file)
-end, { desc = "Restart LSP" })
+for key, mapping in pairs(xcodebuild_mappings) do
+    map("n", key, "<Cmd>" .. mapping[1] .. "<CR>", mapping[2])
+end
+
+map("n", "<Leader>xq", function()
+    require("snacks").picker.qflist()
+end, "Show quickfix list")
+map("n", "<Leader>lx", function()
+    vim.notify("Restarting LSP")
+    vim.cmd("lsp restart")
+end, "Restart LSP")

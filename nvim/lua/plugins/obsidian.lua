@@ -1,67 +1,58 @@
+local vault = vim.fn.expand("~/code/logseq_local/main")
+
+---@type LazySpec
 return {
-    "epwalsh/obsidian.nvim",
+    "obsidian-nvim/obsidian.nvim",
     version = "*",
-    lazy = true,
+    cmd = "Obsidian",
     event = {
-        "BufReadPre " .. vim.fn.expand("~") .. "/code/logseq_local/main/**.md",
-        "BufNewFile " .. vim.fn.expand("~") .. "/code/logseq_local/main/**.md",
+        "BufReadPre " .. vault .. "/**.md",
+        "BufNewFile " .. vault .. "/**.md",
     },
-    dependencies = {
-        "nvim-lua/plenary.nvim",
+    keys = {
+        {
+            "<Leader>od",
+            "<Cmd>Obsidian dailies<CR>",
+            desc = "Obsidian dailies",
+        },
+        {
+            "<Leader>oy",
+            "<Cmd>Obsidian yesterday<CR>",
+            desc = "Obsidian yesterday",
+        },
+        {
+            "<Leader>ot",
+            "<Cmd>Obsidian today<CR>",
+            desc = "Obsidian today",
+        },
+        {
+            "<Leader>os",
+            "<Cmd>Obsidian quick_switch<CR>",
+            desc = "Obsidian quick switch",
+        },
+        {
+            "<Leader>ch",
+            "<Cmd>Obsidian toggle_checkbox<CR>",
+            mode = { "n", "x" },
+            desc = "Toggle checkbox",
+        },
     },
     opts = {
+        legacy_commands = false,
+        picker = { name = "snacks.picker" },
         workspaces = {
             {
                 name = "main",
-                path = "~/code/logseq_local/main",
-                overrides = {
-                    notes_subdir = "pages",
-                },
+                path = vault,
+                overrides = { notes_subdir = "pages" },
             },
         },
-
-        mappings = {
-            -- Toggle check-boxes.
-            ["<leader>ch"] = {
-                action = function()
-                    return require("obsidian").util.toggle_checkbox()
-                end,
-                opts = { buffer = true },
-            },
-        },
-
         daily_notes = {
             folder = "journals",
             date_format = "%Y_%m_%d",
             alias_format = "%B %-d, %Y",
             template = nil,
+            workdays_only = false,
         },
     },
-
-    config = function(_, opts)
-        require("obsidian").setup(opts)
-
-        vim.keymap.set("n", "<space>od", "<cmd>ObsidianDailies<CR>", {
-            silent = true,
-            noremap = true,
-            desc = "[O]bsidian [D]aily",
-        })
-        vim.keymap.set("n", "<space>oy", "<cmd>ObsidianYesterday<CR>", {
-            silent = true,
-            noremap = true,
-            desc = "[O]bsidian [Y]esterday",
-        })
-
-        vim.keymap.set("n", "<space>ot", "<cmd>ObsidianToday<CR>", {
-            silent = true,
-            noremap = true,
-            desc = "[O]bsidian [T]oday",
-        })
-
-        vim.keymap.set("n", "<space>os", ":ObsidianQuickSwitch<CR>", {
-            silent = true,
-            noremap = true,
-            desc = "[O]bsidian Quick[S]witch",
-        })
-    end,
 }

@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+nvim_dir=$(dirname -- "$script_dir")
+data_dir=$(nvim --headless --clean \
+    '+lua io.write(vim.fn.stdpath("data"))' '+qa' 2>/dev/null)
+mason_bin="$data_dir/mason/bin"
+
+"$mason_bin/stylua" --check "$nvim_dir"
+(
+    cd "$nvim_dir"
+    "$mason_bin/selene" .
+)
+
+nvim --headless \
+    "+luafile $nvim_dir/scripts/check.lua" \
+    '+checkhealth astronvim lazy vim.lsp' \
+    '+qa'
