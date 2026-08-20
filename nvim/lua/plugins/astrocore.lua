@@ -18,6 +18,12 @@ return {
             virtual_text = true,
             underline = true,
         },
+        treesitter = {
+            ensure_installed = { "jinja", "jinja_inline", "lua", "vim" },
+            indent = function(lang)
+                return lang ~= "yaml"
+            end,
+        },
         autocmds = {
             neotree_start = false,
         },

@@ -77,6 +77,14 @@ assert(
     vim.filetype.match({ filename = "test.tfvars" }) == "terraform-vars",
     "tfvars must use the terraform-vars file type"
 )
+assert(
+    vim.filetype.match({ filename = "test.jinja" }) == "jinja",
+    "jinja extension detection failed"
+)
+assert(
+    vim.filetype.match({ filename = "test.html.j2" }) == "jinja_html",
+    "layered Jinja detection failed"
+)
 
 vim.cmd.packadd("nvim.undotree")
 assert(vim.fn.exists(":Undotree") == 2, "the Undotree command is missing")

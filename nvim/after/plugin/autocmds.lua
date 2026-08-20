@@ -6,11 +6,3 @@ vim.api.nvim_create_autocmd("TextYankPost", {
         vim.hl.on_yank()
     end,
 })
-
--- set filetype for Fastfile
-vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
-    pattern = "Fastfile",
-    callback = function()
-        vim.bo.filetype = "ruby"
-    end,
-})
