@@ -55,7 +55,7 @@ alias stopall="aws ec2 describe-instances --profile=infraops | jq '.Reservations
 # misc 
 alias pip=pip3
 alias python=python3
-alias la="eza -lha --icons"
+alias la="eza -lha --icons auto"
 alias rex="evcxr"
 alias clippy-fix="rustup run nightly cargo clippy --fix -Z unstable-options"
 alias flush="dscacheutil -flushcache"
