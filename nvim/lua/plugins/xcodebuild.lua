@@ -1,14 +1,13 @@
+---@type LazySpec
 return {
     "wojciech-kulik/xcodebuild.nvim",
-    dependencies = {
-        "nvim-telescope/telescope.nvim",
-        "MunifTanjim/nui.nvim",
+    ft = "swift",
+    dependencies = { "MunifTanjim/nui.nvim" },
+    opts = {
+        code_coverage = { enabled = true },
+        integrations = {
+            telescope_nvim = { enabled = false },
+            snacks_nvim = { enabled = true },
+        },
     },
-    config = function()
-        require("xcodebuild").setup({
-            code_coverage = {
-                enabled = true,
-            },
-        })
-    end,
 }

@@ -1,5 +1,20 @@
-local serpl = require("config.serpl")
 local snacks = require("snacks")
+
+local function open_grug_far(path)
+    local grug_far = require("grug-far")
+    local opts = {
+        instanceName = "main",
+        prefills = { paths = path and vim.fn.fnameescape(path) or "" },
+    }
+
+    if not grug_far.has_instance(opts.instanceName) then
+        grug_far.open(opts)
+        return
+    end
+
+    grug_far.open_instance(opts.instanceName)
+    grug_far.update_instance_prefills(opts.instanceName, opts.prefills, false)
+end
 
 return {
     {
@@ -143,19 +158,24 @@ return {
                         desc = "ToggleTerm 4th Window",
                     },
 
-                    -- toggle serpl
+                    -- search and replace
                     ["<Leader>srp"] = {
-                        serpl.serpl_project,
+                        open_grug_far,
                         desc = "Search and Replace Project",
                     },
 
                     ["<Leader>srf"] = {
-                        serpl.serpl_file,
+                        function()
+                            open_grug_far(vim.api.nvim_buf_get_name(0))
+                        end,
                         desc = "Search and Replace File",
                     },
 
                     ["<Leader>srd"] = {
-                        serpl.serpl_dir,
+                        function()
+                            local path = vim.api.nvim_buf_get_name(0)
+                            open_grug_far(vim.fs.dirname(path))
+                        end,
                         desc = "Search and Replace Directory",
                     },
 
@@ -203,7 +223,10 @@ return {
                     },
                     ["<Leader>ff"] = {
                         function()
-                            snacks.picker.files({ hidden = true, exclude = { ".git" } })
+                            snacks.picker.files({
+                                hidden = true,
+                                exclude = { ".git" },
+                            })
                         end,
                         desc = "Find all files",
                     },
@@ -240,7 +263,10 @@ return {
 
                     -- undo
                     ["<Leader>U"] = {
-                        vim.cmd.UndotreeToggle,
+                        function()
+                            vim.cmd.packadd("nvim.undotree")
+                            vim.cmd.Undotree()
+                        end,
                         desc = "Undo tree",
                     },
 
