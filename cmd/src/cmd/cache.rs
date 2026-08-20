@@ -37,6 +37,10 @@ pub enum CacheCmd {
         /// Replace a wrong or broken existing symlink
         #[arg(short, long)]
         force: bool,
+
+        /// Copy a non-empty local folder into the cache before linking
+        #[arg(long)]
+        migrate: bool,
     },
 
     /// Show whether a path is linked onto CacheDisk
@@ -50,6 +54,41 @@ pub enum CacheCmd {
 enum LeafDefault {
     Basename,
     RustTarget,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExistingSymlink {
+    Keep,
+    Replace,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NonEmptyLocal {
+    Refuse,
+    Migrate,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct LinkMode {
+    existing_symlink: ExistingSymlink,
+    non_empty_local: NonEmptyLocal,
+}
+
+impl LinkMode {
+    fn from_flags(force: bool, migrate: bool) -> Self {
+        Self {
+            existing_symlink: if force {
+                ExistingSymlink::Replace
+            } else {
+                ExistingSymlink::Keep
+            },
+            non_empty_local: if migrate {
+                NonEmptyLocal::Migrate
+            } else {
+                NonEmptyLocal::Refuse
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,9 +106,10 @@ pub fn run_with_flags(sh: &Shell, flags: Cache) -> Result<()> {
             name,
             as_leaf,
             force,
+            migrate,
         } => {
             let plan = resolve_link_plan(sh, path.as_deref(), name.as_deref(), as_leaf.as_deref())?;
-            apply_link(sh, &plan, force)
+            apply_link(sh, &plan, LinkMode::from_flags(force, migrate))
         }
         CacheCmd::Status { path } => show_status(sh, path.as_deref()),
     }
@@ -227,7 +267,7 @@ fn resolve_cache_root() -> Result<PathBuf> {
     ))
 }
 
-fn apply_link(sh: &Shell, plan: &LinkPlan, force: bool) -> Result<()> {
+fn apply_link(sh: &Shell, plan: &LinkPlan, mode: LinkMode) -> Result<()> {
     fs::create_dir_all(&plan.cache)?;
 
     let local_meta = fs::symlink_metadata(&plan.local);
@@ -244,23 +284,26 @@ fn apply_link(sh: &Shell, plan: &LinkPlan, force: bool) -> Result<()> {
                 return Ok(());
             }
 
-            if !force {
-                return Err(eyre!(
-                    "refusing to replace an existing symlink that points elsewhere\n\
-                     local symlink: {}\n\
-                     current target: {}\n\
-                     expected cache: {}\n\
-                     re-run with --force to replace it",
-                    plan.local.display(),
-                    current.display(),
-                    plan.cache.display()
-                ));
+            match mode.existing_symlink {
+                ExistingSymlink::Keep => {
+                    return Err(eyre!(
+                        "refusing to replace an existing symlink that points elsewhere\n\
+                         local symlink: {}\n\
+                         current target: {}\n\
+                         expected cache: {}\n\
+                         re-run with --force to replace it",
+                        plan.local.display(),
+                        current.display(),
+                        plan.cache.display()
+                    ));
+                }
+                ExistingSymlink::Replace => {
+                    fsutil::remove_existing_path(&plan.local)?;
+                }
             }
-
-            fsutil::remove_existing_path(&plan.local)?;
         }
         Ok(meta) if meta.is_dir() => {
-            migrate_or_remove_local_dir(sh, &plan.local, &plan.cache)?;
+            prepare_local_dir_for_link(sh, &plan.local, &plan.cache, mode.non_empty_local)?;
         }
         Ok(_) => {
             return Err(eyre!(
@@ -287,16 +330,32 @@ fn apply_link(sh: &Shell, plan: &LinkPlan, force: bool) -> Result<()> {
     Ok(())
 }
 
-fn migrate_or_remove_local_dir(sh: &Shell, local: &Path, cache: &Path) -> Result<()> {
-    let local_empty = is_empty_dir(local)?;
-    let cache_empty = is_empty_dir(cache)?;
-
-    if local_empty {
+fn prepare_local_dir_for_link(
+    sh: &Shell,
+    local: &Path,
+    cache: &Path,
+    non_empty_local: NonEmptyLocal,
+) -> Result<()> {
+    if is_empty_dir(local)? {
         fsutil::remove_existing_path(local)?;
         return Ok(());
     }
 
-    if !cache_empty {
+    match non_empty_local {
+        NonEmptyLocal::Refuse => {
+            return Err(eyre!(
+                "refusing to replace a non-empty local directory\n\
+                 local directory: {}\n\
+                 cache directory: {}\n\
+                 delete the local folder first, or re-run with --migrate to copy it into the cache",
+                local.display(),
+                cache.display()
+            ));
+        }
+        NonEmptyLocal::Migrate => {}
+    }
+
+    if !is_empty_dir(cache)? {
         return Err(eyre!(
             "refusing to merge two non-empty directories\n\
              local directory: {}\n\
@@ -307,7 +366,7 @@ fn migrate_or_remove_local_dir(sh: &Shell, local: &Path, cache: &Path) -> Result
         ));
     }
 
-    // move local contents into empty cache, then remove local
+    // copy local contents into empty cache, then remove local
     move_dir_contents(sh, local, cache)?;
     fsutil::remove_existing_path(local)?;
     Ok(())
@@ -471,8 +530,25 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use std::os::unix::fs::symlink;
+    use std::sync::{Mutex, MutexGuard};
     use tempfile::tempdir;
     use xshell::Shell;
+
+    static DEV_CACHE_ROOT_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_dev_cache_root() -> MutexGuard<'static, ()> {
+        DEV_CACHE_ROOT_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn with_dev_cache_root<T>(cache_root: &Path, f: impl FnOnce() -> T) -> T {
+        let _guard = lock_dev_cache_root();
+        env::set_var("DEV_CACHE_ROOT", cache_root);
+        let result = f();
+        env::remove_var("DEV_CACHE_ROOT");
+        result
+    }
 
     fn write_cargo_toml(dir: &Path) {
         fs::write(
@@ -480,6 +556,18 @@ mod tests {
             "[package]\nname = \"demo\"\nversion = \"0.1.0\"\n",
         )
         .unwrap();
+    }
+
+    fn default_link_mode() -> LinkMode {
+        LinkMode::from_flags(false, false)
+    }
+
+    fn migrate_link_mode() -> LinkMode {
+        LinkMode::from_flags(false, true)
+    }
+
+    fn force_link_mode() -> LinkMode {
+        LinkMode::from_flags(true, false)
     }
 
     #[test]
@@ -527,26 +615,24 @@ mod tests {
 
         let cache_root = dir.path().join("cache-root");
         fs::create_dir_all(&cache_root).unwrap();
-        env::set_var("DEV_CACHE_ROOT", &cache_root);
 
-        let plan =
-            resolve_link_plan(&sh, Some(local.to_str().unwrap()), Some("myapp"), None).unwrap();
+        with_dev_cache_root(&cache_root, || {
+            let plan =
+                resolve_link_plan(&sh, Some(local.to_str().unwrap()), Some("myapp"), None).unwrap();
 
-        assert_eq!(plan.local, local);
-        assert_eq!(plan.leaf, "node_modules");
-        assert_eq!(plan.cache, cache_root.join("myapp/node_modules"));
-
-        env::remove_var("DEV_CACHE_ROOT");
+            assert_eq!(plan.local, local);
+            assert_eq!(plan.leaf, "node_modules");
+            assert_eq!(plan.cache, cache_root.join("myapp/node_modules"));
+        });
     }
 
     #[test]
-    fn apply_link_moves_local_contents_then_symlinks() {
+    fn apply_link_refuses_non_empty_local_without_migrate() {
         let dir = tempdir().unwrap();
         let sh = Shell::new().unwrap();
 
         let cache_root = dir.path().join("cache-root");
         fs::create_dir_all(&cache_root).unwrap();
-        env::set_var("DEV_CACHE_ROOT", &cache_root);
 
         let local = dir.path().join("project/target");
         fs::create_dir_all(&local).unwrap();
@@ -559,16 +645,66 @@ mod tests {
             leaf: "rust-target".into(),
         };
 
-        apply_link(&sh, &plan, false).unwrap();
+        let err = apply_link(&sh, &plan, default_link_mode())
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("refusing to replace a non-empty local directory"));
+        assert!(err.contains("--migrate"));
+        assert!(local.is_dir());
+        assert!(!local.symlink_metadata().unwrap().file_type().is_symlink());
+    }
+
+    #[test]
+    fn apply_link_migrates_local_contents_then_symlinks() {
+        let dir = tempdir().unwrap();
+        let sh = Shell::new().unwrap();
+
+        let cache_root = dir.path().join("cache-root");
+        fs::create_dir_all(&cache_root).unwrap();
+
+        let local = dir.path().join("project/target");
+        fs::create_dir_all(&local).unwrap();
+        fs::write(local.join("artifact"), "data").unwrap();
+
+        let plan = LinkPlan {
+            local: local.clone(),
+            cache: cache_root.join("project/rust-target"),
+            name: "project".into(),
+            leaf: "rust-target".into(),
+        };
+
+        apply_link(&sh, &plan, migrate_link_mode()).unwrap();
 
         assert!(local.symlink_metadata().unwrap().file_type().is_symlink());
         assert_eq!(fs::read_link(&local).unwrap(), plan.cache);
         assert_eq!(fs::read(plan.cache.join("artifact")).unwrap(), b"data");
 
         // second call is a no-op success
-        apply_link(&sh, &plan, false).unwrap();
+        apply_link(&sh, &plan, default_link_mode()).unwrap();
+    }
 
-        env::remove_var("DEV_CACHE_ROOT");
+    #[test]
+    fn apply_link_replaces_empty_local_without_migrate() {
+        let dir = tempdir().unwrap();
+        let sh = Shell::new().unwrap();
+
+        let cache_root = dir.path().join("cache-root");
+        fs::create_dir_all(&cache_root).unwrap();
+
+        let local = dir.path().join("project/target");
+        fs::create_dir_all(&local).unwrap();
+
+        let plan = LinkPlan {
+            local: local.clone(),
+            cache: cache_root.join("project/rust-target"),
+            name: "project".into(),
+            leaf: "rust-target".into(),
+        };
+
+        apply_link(&sh, &plan, default_link_mode()).unwrap();
+
+        assert!(local.symlink_metadata().unwrap().file_type().is_symlink());
+        assert_eq!(fs::read_link(&local).unwrap(), plan.cache);
     }
 
     #[test]
@@ -590,7 +726,9 @@ mod tests {
             leaf: "y".into(),
         };
 
-        let err = apply_link(&sh, &plan, false).unwrap_err().to_string();
+        let err = apply_link(&sh, &plan, migrate_link_mode())
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("refusing to merge"));
     }
 
@@ -601,7 +739,6 @@ mod tests {
 
         let cache_root = dir.path().join("cache-root");
         fs::create_dir_all(&cache_root).unwrap();
-        env::set_var("DEV_CACHE_ROOT", &cache_root);
 
         let local = dir.path().join("target");
         let wrong = dir.path().join("wrong");
@@ -618,24 +755,22 @@ mod tests {
             leaf: "rust-target".into(),
         };
 
-        let err = apply_link(&sh, &plan, false).unwrap_err().to_string();
+        let err = apply_link(&sh, &plan, default_link_mode())
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("refusing to replace"));
 
-        apply_link(&sh, &plan, true).unwrap();
+        apply_link(&sh, &plan, force_link_mode()).unwrap();
         assert_eq!(fs::read_link(&local).unwrap(), cache);
-
-        env::remove_var("DEV_CACHE_ROOT");
     }
 
     #[test]
     fn default_leaf_for_auto_rust_is_rust_target() {
         let dir = tempdir().unwrap();
-        let sh = Shell::new().unwrap();
         write_cargo_toml(dir.path());
 
         let cache_root = dir.path().join("cache-root");
         fs::create_dir_all(&cache_root).unwrap();
-        env::set_var("DEV_CACHE_ROOT", &cache_root);
 
         // simulate no-arg by resolving local like find_rust_target + RustTarget leaf
         let local = find_rust_target_dir(dir.path()).unwrap();
@@ -652,8 +787,5 @@ mod tests {
             validate_cache_component("rust-target", "leaf").unwrap(),
             "rust-target"
         );
-
-        let _ = sh;
-        env::remove_var("DEV_CACHE_ROOT");
     }
 }
