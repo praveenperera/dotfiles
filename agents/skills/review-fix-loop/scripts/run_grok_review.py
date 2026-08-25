@@ -17,6 +17,14 @@ class GrokReviewError(Exception):
 
 
 @dataclass(frozen=True)
+class ParsedEvent:
+    """Store one JSON event with its source line for validation errors."""
+
+    line_number: int
+    payload: Mapping[str, object]
+
+
+@dataclass(frozen=True)
 class OutputChunk:
     """Identify one thought or message chunk in a model output stream."""
 
@@ -47,30 +55,47 @@ class CompletedReview:
     """Represent the final assistant message from one successful Grok turn."""
 
     session_id: str
-    prompt_id: str
-    stream_start_ms: int
+    prompt_id: str | None
+    stream_start_ms: int | None
     stop_reason: str
     message: str
+    request_id: str | None = None
 
 
 def parse_review_events(lines: Iterable[str]) -> CompletedReview:
-    """Parse Grok ACP updates and return the final successful message stream."""
+    """Parse Grok ACP or native streaming updates into a final message."""
+
+    events = [
+        ParsedEvent(line_number, _parse_json_object(raw_line, line_number))
+        for line_number, raw_line in enumerate(lines, start=1)
+        if raw_line.strip()
+    ]
+
+    has_acp_updates = any(_is_acp_session_update(event.payload) for event in events)
+    if has_acp_updates:
+        return _parse_acp_events(events)
+    if any(event.payload.get("type") == "end" for event in events):
+        return _parse_native_events(events)
+
+    raise GrokReviewError("Grok output contains no session updates or native terminal event")
+
+
+def _parse_acp_events(events: list[ParsedEvent]) -> CompletedReview:
+    """Parse the ACP session/update representation."""
 
     session_id: str | None = None
     output_chunks: list[OutputChunk] = []
     message_chunks: list[MessageChunk] = []
     completions: list[TurnCompletion] = []
 
-    for line_number, raw_line in enumerate(lines, start=1):
-        if not raw_line.strip():
-            continue
-
-        event = _parse_json_object(raw_line, line_number)
-        method = event.get("method")
+    for event in events:
+        line_number = event.line_number
+        payload = event.payload
+        method = payload.get("method")
         if not isinstance(method, str) or not method.endswith("session/update"):
             continue
 
-        params = _require_mapping(event, "params", line_number)
+        params = _require_mapping(payload, "params", line_number)
         event_session_id = _require_string(params, "sessionId", line_number)
         session_id = _merge_session_id(session_id, event_session_id, line_number)
         update = _require_mapping(params, "update", line_number)
@@ -135,6 +160,91 @@ def parse_review_events(lines: Iterable[str]) -> CompletedReview:
     )
 
 
+def _parse_native_events(events: list[ParsedEvent]) -> CompletedReview:
+    """Parse Grok CLI 1.0.5 native streaming-json events."""
+
+    terminal_events = [
+        event for event in events if event.payload.get("type") == "end"
+    ]
+    if len(terminal_events) != 1:
+        raise GrokReviewError(
+            "Grok native output must contain exactly one terminal end event"
+        )
+
+    terminal = terminal_events[0]
+    terminal_index = events.index(terminal)
+    if terminal_index != len(events) - 1:
+        raise GrokReviewError(
+            "Grok native output contains an event after the terminal end event"
+        )
+
+    session_id = _require_string(terminal.payload, "sessionId", terminal.line_number)
+    request_id = _require_string(terminal.payload, "requestId", terminal.line_number)
+    stop_reason = _require_string(
+        terminal.payload, "stopReason", terminal.line_number
+    )
+    if stop_reason != "end_turn":
+        raise GrokReviewError(
+            f"Grok native turn did not complete successfully: {stop_reason}"
+        )
+
+    text_data: dict[int, str] = {}
+    for event in events[:terminal_index]:
+        event_type = _parse_native_event_type(event)
+        if event_type in {"text", "thought"}:
+            text_data[event.line_number] = _require_string(
+                event.payload, "data", event.line_number
+            )
+        elif event_type not in {
+            "available_commands",
+            "tool_call",
+            "tool_call_update",
+            "usage",
+        }:
+            raise GrokReviewError(
+                f"Grok native event on line {event.line_number} has unsupported type"
+            )
+
+    final_text_index = terminal_index - 1
+    while (
+        final_text_index >= 0
+        and events[final_text_index].payload.get("type")
+        in {"available_commands", "usage"}
+    ):
+        final_text_index -= 1
+
+    if (
+        final_text_index < 0
+        or events[final_text_index].payload.get("type") != "text"
+    ):
+        raise GrokReviewError(
+            "Grok native turn completed without a final assistant message"
+        )
+
+    first_text_index = final_text_index
+    while (
+        first_text_index >= 0
+        and events[first_text_index].payload.get("type") == "text"
+    ):
+        first_text_index -= 1
+
+    message = "".join(
+        text_data[events[index].line_number]
+        for index in range(first_text_index + 1, final_text_index + 1)
+    ).strip()
+    if not message:
+        raise GrokReviewError("Grok native final assistant message is empty")
+
+    return CompletedReview(
+        session_id=session_id,
+        prompt_id=None,
+        stream_start_ms=None,
+        stop_reason=stop_reason,
+        message=message,
+        request_id=request_id,
+    )
+
+
 def parse_review_file(path: Path) -> CompletedReview:
     """Parse a saved Grok streaming JSONL artifact."""
 
@@ -182,7 +292,15 @@ def write_result(path: Path, review: CompletedReview) -> None:
             delete=False,
         ) as temporary_file:
             temporary_path = Path(temporary_file.name)
-            json.dump(asdict(review), temporary_file, indent=2)
+            json.dump(
+                {
+                    key: value
+                    for key, value in asdict(review).items()
+                    if value is not None
+                },
+                temporary_file,
+                indent=2,
+            )
             temporary_file.write("\n")
             temporary_file.flush()
             os.fsync(temporary_file.fileno())
@@ -205,7 +323,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--prompt-file", required=True, help="Self-contained review prompt"
     )
-    parser.add_argument("--raw-file", required=True, help="Raw Grok ACP JSONL output")
+    parser.add_argument(
+        "--raw-file", required=True, help="Raw Grok streaming JSONL output"
+    )
     parser.add_argument(
         "--result-file", required=True, help="Validated final result JSON"
     )
@@ -282,6 +402,20 @@ def main() -> int:
     """Run the Grok review adapter command."""
 
     return run(parse_args())
+
+
+def _is_acp_session_update(event: Mapping[str, object]) -> bool:
+    method = event.get("method")
+    return isinstance(method, str) and method.endswith("session/update")
+
+
+def _parse_native_event_type(event: ParsedEvent) -> str:
+    event_type = event.payload.get("type")
+    if not isinstance(event_type, str) or not event_type:
+        raise GrokReviewError(
+            f"Grok native event on line {event.line_number} has invalid type"
+        )
+    return event_type
 
 
 def _parse_json_object(raw_line: str, line_number: int) -> Mapping[str, object]:

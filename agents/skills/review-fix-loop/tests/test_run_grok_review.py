@@ -59,6 +59,134 @@ class ParseReviewEventsTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.GrokReviewError, "invalid JSON on line 1"):
             MODULE.parse_review_events(io.StringIO("{not-json}\n"))
 
+    def test_parses_native_final_text_after_thoughts_and_terminal_metadata(self):
+        events = _native_stream(
+            [
+                _native_event("available_commands"),
+                _native_event("thought", "P1 finding from the draft"),
+                _native_event("text", "P1 finding from an earlier output stream"),
+                _native_event("tool_call"),
+                _native_event("tool_call_update"),
+                _native_event("text", "No "),
+                _native_event("text", "P1/P2 findings"),
+                _native_event("available_commands"),
+                _native_event("usage"),
+                _native_end(),
+            ]
+        )
+
+        review = MODULE.parse_review_events(events)
+
+        self.assertEqual(review.message, "No P1/P2 findings")
+        self.assertEqual(review.session_id, "native-session")
+        self.assertEqual(review.request_id, "native-request")
+        self.assertEqual(review.stop_reason, "end_turn")
+        self.assertIsNone(review.prompt_id)
+        self.assertIsNone(review.stream_start_ms)
+
+    def test_native_text_data_wins_over_contradictory_aggregate_fields(self):
+        events = _native_stream(
+            [
+                _native_event(
+                    "thought",
+                    "draft thought",
+                    thought="P1 finding from an aggregate field",
+                ),
+                _native_event(
+                    "text",
+                    "No actionable findings",
+                    text="P1 finding from an aggregate field",
+                ),
+                _native_end(),
+            ]
+        )
+
+        review = MODULE.parse_review_events(events)
+
+        self.assertEqual(review.message, "No actionable findings")
+
+    def test_rejects_native_non_terminal_provider_stop(self):
+        events = _native_stream(
+            [_native_event("text", "No findings"), _native_end(stop_reason="length")]
+        )
+
+        with self.assertRaisesRegex(
+            MODULE.GrokReviewError,
+            "native turn did not complete successfully: length",
+        ):
+            MODULE.parse_review_events(events)
+
+    def test_rejects_native_missing_terminal_event(self):
+        events = _native_stream([_native_event("text", "No findings")])
+
+        with self.assertRaisesRegex(
+            MODULE.GrokReviewError, "no session updates or native terminal event"
+        ):
+            MODULE.parse_review_events(events)
+
+    def test_rejects_native_malformed_terminal_event(self):
+        events = _native_stream(
+            [
+                _native_event("text", "No findings"),
+                {"type": "end", "sessionId": "native-session"},
+            ]
+        )
+
+        with self.assertRaisesRegex(
+            MODULE.GrokReviewError, "has invalid requestId"
+        ):
+            MODULE.parse_review_events(events)
+
+    def test_rejects_native_empty_terminal_identifiers(self):
+        for field in ("sessionId", "requestId"):
+            with self.subTest(field=field):
+                terminal = _native_end()
+                terminal[field] = ""
+                events = _native_stream(
+                    [_native_event("text", "No findings"), terminal]
+                )
+
+                with self.assertRaisesRegex(
+                    MODULE.GrokReviewError, f"has invalid {field}"
+                ):
+                    MODULE.parse_review_events(events)
+
+    def test_rejects_native_multiple_terminal_events(self):
+        events = _native_stream([_native_end(), _native_end()])
+
+        with self.assertRaisesRegex(
+            MODULE.GrokReviewError, "exactly one terminal end event"
+        ):
+            MODULE.parse_review_events(events)
+
+    def test_rejects_native_output_after_terminal_event(self):
+        for output_event in (
+            _native_event("text", "late output"),
+            _native_event("tool_call"),
+        ):
+            with self.subTest(event_type=output_event["type"]):
+                events = _native_stream([_native_end(), output_event])
+
+                with self.assertRaisesRegex(
+                    MODULE.GrokReviewError, "after the terminal end event"
+                ):
+                    MODULE.parse_review_events(events)
+
+    def test_does_not_fallback_to_native_when_acp_event_is_present(self):
+        events = _native_stream(
+            [
+                _native_event("text", "No findings"),
+                {
+                    "method": "session/update",
+                    "params": "malformed ACP params",
+                },
+                _native_end(),
+            ]
+        )
+
+        with self.assertRaisesRegex(MODULE.GrokReviewError, "has invalid params"):
+            MODULE.parse_review_events(events)
+
 
 class RunAdapterTests(unittest.TestCase):
     """Protect raw evidence and stale-result handling across provider runs."""
@@ -154,6 +282,31 @@ def _minimal_stream(
         }
     )
     return io.StringIO("".join(f"{json.dumps(event)}\n" for event in events))
+
+
+def _native_stream(events: list[dict[str, object]]) -> io.StringIO:
+    return io.StringIO("".join(f"{json.dumps(event)}\n" for event in events))
+
+
+def _native_event(
+    event_type: str,
+    data: str | None = None,
+    **extra: object,
+) -> dict[str, object]:
+    event: dict[str, object] = {"type": event_type}
+    if data is not None:
+        event["data"] = data
+    event.update(extra)
+    return event
+
+
+def _native_end(*, stop_reason: str = "end_turn") -> dict[str, object]:
+    return {
+        "type": "end",
+        "stopReason": stop_reason,
+        "sessionId": "native-session",
+        "requestId": "native-request",
+    }
 
 
 def _adapter_paths(root: Path) -> dict[str, Path]:
