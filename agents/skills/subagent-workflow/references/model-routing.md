@@ -17,16 +17,17 @@ Higher is better on every axis.
 | Fable 5 | 9 | 9 | 2 | strongest intent inference and taste; expensive; can be lazy or pursue perceived intent over literal instructions |
 | GPT-5.6 Sol | 8 | 7 | 8 | relentless and efficient; drives hard to completion; can overbuild instead of stepping back |
 | Opus 5 | 8 | 8 | 6 | near-Fable on benchmarks at Opus price, but launch reports show early stopping and weaker adherence to long instruction sets; taste strong but unproven relative to Fable |
+| Grok 4.6 | 8 | 7 | 9 | long-running agents, visual or interactive first passes, and live research at lower API cost than Sol; DeepSWE and terminal results trail Sol |
 | GPT-5.6 Luna `max` | 7 | 4 | 9 | reaches near Sol-`medium` capability, so it owns easy bounded delegations; output tokens rise roughly 9x over no-reasoning, so keep it to one-off or low-count work; still weak for ambiguous or taste-sensitive work |
 | GPT-5.6 Luna `low` | 5 | 4 | 10 | very cheap after the July 30, 2026 80% price cut; for exact mechanical work at volume, where `max` wastes tokens and latency; not for anything that needs a decision |
 
-The Fable score preserves Theo Browne's published routing rubric; the Opus 5 scores are a local recalibration from Anthropic's launch benchmarks and positioning together with early practitioner reports, since Theo's video predates Opus 5. The Sol and Luna scores adapt the user's stated preferences, current provider positioning, and subsequent practitioner reports. Taste is especially subjective: use project-specific examples and evals when it matters.
+The Fable score preserves Theo Browne's published routing rubric; the Opus 5 scores are a local recalibration from Anthropic's launch benchmarks and positioning together with early practitioner reports, since Theo's video predates Opus 5. The Sol and Luna scores adapt the user's stated preferences, current provider positioning, and subsequent practitioner reports. The Grok score uses SpaceXAI's launch evaluations and price, with visual taste held at Sol's score until independent project evidence supports a change. Taste is especially subjective: use project-specific examples and evals when it matters.
 
 ## Root modes
 
-Capability scores stay the same under every root; default ownership moves with the root. The per-root routing tables, ownership defaults, and transports are in [root-fable.md](root-fable.md), [root-opus.md](root-opus.md), and [root-sol.md](root-sol.md).
+Capability scores stay the same under every root; default ownership moves with the root. The per-root routing tables, ownership defaults, and transports are in [root-fable.md](root-fable.md), [root-opus.md](root-opus.md), [root-sol.md](root-sol.md), and [root-grok.md](root-grok.md).
 
-Detect the root from the session model or an explicit user directive. A Claude Code session has a Fable or Opus root; a Codex CLI session has a Sol root. Do not silently switch roots mid-session unless the user asks.
+Detect the root from the session model or an explicit user directive. A Claude Code session has a Fable or Opus root; a Codex CLI session has a Sol root; a Grok Build session has a Grok root. Do not silently switch roots mid-session unless the user asks.
 
 No root is the final authority on the taste, surface design, or simplification of its own output. That pass goes to Fable.
 
@@ -40,9 +41,9 @@ Fable is strongest for:
 - intent-sensitive product decisions
 - public APIs, SDK shape, UI/UX, and copy where taste is part of correctness
 - final simplification of a Sol or Opus implementation
-- high-taste review when Opus is the root (or when an independent Fable pass is worth the cost)
+- high-taste review when Opus, Sol, or Grok is the root (or when an independent Fable pass is worth the cost)
 
-When Fable is root, do that work in-thread. When Opus is root, route the taste, review, and simplification rows above to a Fable subagent rather than leaving them on Opus.
+When Fable is root, do that work in-thread. Under another root, route the taste, review, and simplification rows above to a Fable subagent rather than leaving them with the model that produced the work.
 
 Counter Fable's failure modes with explicit non-negotiable requirements, completion evidence, and what must not be omitted. Use an implementation or verification checklist when early stopping would be costly. For Fable subagent prompts, keep the same short contract shape used for Opus: hard authority, scope, and verification; soft style; progressive references rather than skill dumps.
 
@@ -57,8 +58,8 @@ Use Sol as the default Codex executor for:
 - migrations and broad repository investigation
 - work that benefits from persistence and many tool calls
 - an independent code or plan review
-- tasks where the Claude root (Fable or Opus) has already chosen the architecture
-- under an Opus root, adversarial inventory-style review that benefits from cross-vendor scrutiny
+- tasks where another root has already chosen the architecture and terminal persistence is the main need
+- under an Opus or Grok root, adversarial inventory-style review that benefits from cross-vendor scrutiny
 
 Counter its failure modes in the prompt:
 
@@ -77,8 +78,8 @@ Use Opus 5 for:
 - root orchestration when the session root is Opus
 - long-horizon agentic implementation, including multi-step terminal work, broad refactors, and workflow automation
 - complex debugging and root-cause analysis
-- under a Fable root: a deliberate second opinion on a Sol or Fable result, and high-taste review when spending another Fable pass is not justified
-- under a Fable root: full delegated implementation when the user directs "use opus"
+- under a Fable or Grok root: a deliberate Claude second opinion on another model's result
+- under any non-Opus root: full delegated implementation when the user directs "use opus"
 - interactive iteration where collaboration quality matters
 
 Do **not** use Opus as the primary taste/review/simplification authority when Opus is already the root and produced or directed the implementation. Prefer Fable for that pass.
@@ -93,13 +94,32 @@ Finish the entire objective before reporting. Do not stop at a partial result, a
 
 Send Opus 5 a focused self-contained prompt rather than pointing it at a large bundle of instruction files, and use `high` effort by default, as with Sol. For how to write that prompt - judgment over hard style rules, interfaces over examples, progressive disclosure, rich references, and a short completion rider - read [opus5-prompting.md](opus5-prompting.md).
 
-Sol remains the default delegated implementer under both roots. When the user directs "use opus", usually because Sol usage limits are running low, Opus 5 owns delegated implementation for that session. The launch benchmarks support the substitution: Opus 5 matches or beats Sol on FrontierCode (53.4 vs 47.5), terminal coding (43.3 vs 34.4), and AutomationBench (26.0 vs 18.1), and trails only on DeepSWE (68.8 vs 72.7). Under this substitution:
+Sol remains the default delegated implementer under Claude roots. When the user directs "use opus", usually because Sol usage limits are running low, Opus 5 owns delegated implementation for that session. The launch benchmarks support the substitution: Opus 5 matches or beats Sol on FrontierCode (53.4 vs 47.5), terminal coding (43.3 vs 34.4), and AutomationBench (26.0 vs 18.1), and trails only on DeepSWE (68.8 vs 72.7). Under this substitution:
 
 - from a Fable root, take independent review from Sol (cross-vendor) and keep Fable on final taste/simplification when needed
 - from an Opus root, take taste/review/simplification from Fable and inventory-style cross-checks from Sol
 - verify every completion claim against the success condition and the diff before integrating
 
 The near-Fable framing above comes from Anthropic; the first outside reports temper it, and precedent from the GPT-5.1 and GPT-5.2 launches is that early impressions of an awkward model can improve as prompting adapts. Recalibrate this section from observed runs after a few weeks of use.
+
+## Select Grok 4.6
+
+Use Grok 4.6 for:
+
+- long-running agent work across research, code, and work artifacts
+- visual or interactive first-pass implementation after the product shape is clear
+- broad product prototypes where a substantial first version is useful
+- live web or X research that must inform the work
+- an independent review from a third model provider
+- full delegated implementation when the user directs "use grok"
+
+Keep difficult terminal-heavy debugging, migrations, and deep repository surgery with Sol unless project evidence favors Grok. Do not use Grok as the final taste or simplification authority for its own output. Fable keeps that role.
+
+SpaceXAI reports that Grok 4.6 at `high` matches Sol on the Artificial Analysis Intelligence Index, leads Sol slightly on GDPVal-AA, CursorBench, FrontierCode, APEX-Agents, and AA-Briefcase, and trails Sol on DeepSWE and Terminal-Bench. This mixed profile supports routing by workload instead of treating the aggregate score as a replacement for Sol. The visual and interactive role comes from SpaceXAI's reported first-pass project results; treat it as provisional until project-specific comparisons support it.
+
+Grok 4.6 has a 500,000-token context window, native web and X search, and API pricing of $2 per million input tokens and $6 per million output tokens below the long-context threshold. That makes a third-provider pass practical when it adds independence rather than duplicate coverage.
+
+Use `high` reasoning by default because the published comparisons use it and the model defaults to it. Use `xhigh` only for a user-directed or consequential escalation. Read [grok-cli.md](grok-cli.md) for fresh headless delegation, sandboxing, permission allowlists, and artifact capture.
 
 ## Select GPT-5.6 Luna
 
@@ -138,6 +158,12 @@ Do not run Fable and Opus as overlapping writers on the same files. One implemen
 
 Either model can implement while the other reviews for correctness and missed cases. With Sol implementing under a Fable root, Opus 5 can supply a deliberate second opinion on API shape, readability, and unnecessary code. With Opus 5 implementing (root or "use opus"), Sol supplies the cross-vendor review pass, where its persistence is well suited to re-deriving inventories and chasing missed cases. Under an Opus root, prefer Fable over Opus for the high-taste leg of that review, and Sol for the inventory leg. Check an Opus 5 review for coverage as well as verdicts: the same tendency to stop early can truncate a review before it reaches the whole diff.
 
+### Grok and the other frontier models
+
+Use Grok for a cost-efficient third-provider review, for live web or X evidence, or for a substantial visual or interactive first pass. Use Sol to cross-check terminal-heavy work and re-derived repository inventories. Use Fable to judge intent, restraint, surface taste, and final simplification. Use Opus when long-horizon orchestration or a deliberate Claude second opinion is the missing capability.
+
+Do not schedule Grok merely to repeat a Sol or Opus review. Give it a distinct evidence surface or failure class, and keep every reviewer read-only. When Grok implements, transfer file ownership explicitly before another model writes.
+
 ### Luna and a frontier model
 
 Use Luna for cheap structured observations across repeatable work, then reserve consequential judgment for a stronger model. Since the price cut, Luna at `max` also serves as the implementer for easy bounded changes under frontier-model orchestration, with the orchestrator verifying the diff.
@@ -151,6 +177,8 @@ Use Luna for cheap structured observations across repeatable work, then reserve 
 - [OpenAI GPT-5.6 Luna model page](https://developers.openai.com/api/docs/models/gpt-5.6-luna) provides cost-sensitive positioning and pricing details
 - [CNBC on the July 30, 2026 GPT-5.6 price cuts](https://www.cnbc.com/2026/07/30/open-ai-price-cut-gpt.html) reports the 80% Luna cut to $0.20/$1.20 per million tokens, the 20% Terra cut, and unchanged Sol pricing
 - [Augmented Mind on Luna's effort-dependent capability](https://augmentedmind.substack.com/p/gpt-56-luna-is-80-cheaper) grounds the `max`-reasoning numbers: Artificial Analysis index 26.6 without reasoning to 51.2 at `max`, with roughly 9x output tokens and 13.5x evaluation cost
+- [SpaceXAI, "Introducing Grok 4.6"](https://x.ai/news/grok-4-6) provides the launch focus, coding and agent evaluations, visual and interactive project observations, availability, and starting price
+- [SpaceXAI Grok 4.6 documentation](https://docs.x.ai/developers/grok-4-6) provides the model id, context window, reasoning efforts, tools, and API pricing
 - [Anthropic Claude Fable 5](https://www.anthropic.com/claude/fable) provides official use cases, availability, and pricing
 - [Claude Opus 5 announcement](https://www.anthropic.com/news/claude-opus-5) provides official use cases, availability, pricing, and the launch benchmark card that grounds the split criteria above
 - [Dan Shipper's Opus 5 day-zero vibe check](https://x.com/danshipper/status/2080700057892815114) is the source for the early stopping, instruction arguing, and large-skill-file observations; it reports one week of Every's testing on launch day and is explicitly provisional
