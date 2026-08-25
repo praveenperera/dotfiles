@@ -8,9 +8,10 @@ use std::process::{Command, Stdio};
 use clap::{Parser, Subcommand};
 use eyre::{eyre, Result, WrapErr};
 use toml::{map::Map, Value};
-use xshell::{cmd, Shell};
+use xshell::Shell;
 
 use crate::cmd::agent_target::AgentTarget;
+use crate::cmd::project_root::ProjectRoot;
 
 #[derive(Debug, Clone, Parser)]
 pub struct Mcp {
@@ -20,7 +21,7 @@ pub struct Mcp {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum McpCmd {
-    /// Add project-local MCP servers to the current Git repo
+    /// Add project-local MCP servers to the current project
     Add {
         /// MCP names to add. Opens a searchable multi-select picker when omitted
         mcps: Vec<String>,
@@ -142,18 +143,18 @@ pub fn add_mcp_servers_for_agent(
         });
     }
 
-    let git_root = git_root(sh)?;
+    let project_root = ProjectRoot::resolve(sh)?;
     match agent {
-        AgentTarget::Codex => add_codex_mcp_servers(&git_root, servers),
-        AgentTarget::Claude => add_claude_mcp_servers(&git_root, servers),
+        AgentTarget::Codex => add_codex_mcp_servers(project_root.as_ref(), servers),
+        AgentTarget::Claude => add_claude_mcp_servers(project_root.as_ref(), servers),
     }
 }
 
 fn add_codex_mcp_servers(
-    git_root: &Path,
+    project_root: &Path,
     servers: Vec<McpServerSource>,
 ) -> Result<McpInstallSummary> {
-    let config_path = AgentTarget::Codex.project_mcp_config_path(git_root);
+    let config_path = AgentTarget::Codex.project_mcp_config_path(project_root);
     let mut config = read_project_config(&config_path)?;
     let mut summary = McpInstallSummary {
         added: Vec::new(),
@@ -175,10 +176,10 @@ fn add_codex_mcp_servers(
 }
 
 fn add_claude_mcp_servers(
-    git_root: &Path,
+    project_root: &Path,
     servers: Vec<McpServerSource>,
 ) -> Result<McpInstallSummary> {
-    let config_path = AgentTarget::Claude.project_mcp_config_path(git_root);
+    let config_path = AgentTarget::Claude.project_mcp_config_path(project_root);
     let mut config = read_claude_mcp_config(&config_path)?;
     let mut summary = McpInstallSummary {
         added: Vec::new(),
@@ -207,11 +208,6 @@ fn print_mcp_summary(summary: &McpInstallSummary) {
     if !summary.skipped.is_empty() {
         println!("Skipped existing MCPs: {}", summary.skipped.join(", "));
     }
-}
-
-fn git_root(sh: &Shell) -> Result<PathBuf> {
-    let output = cmd!(sh, "git rev-parse --show-toplevel").read()?;
-    Ok(PathBuf::from(output.trim()))
 }
 
 fn list_project_mcps(project_mcps_dir: &Path) -> Result<Vec<McpEntry>> {

@@ -14,6 +14,7 @@ use serde_json::Value as JsonValue;
 use xshell::Shell;
 
 use crate::cmd::agent_target::{selected_agents, AgentTarget};
+use crate::cmd::project_root::ProjectRoot;
 
 #[derive(Debug, Clone, Parser)]
 pub struct Pack {
@@ -35,7 +36,7 @@ pub enum PackCmd {
 
     /// Refresh registered project pack links and plugin MCPs
     Refresh {
-        /// Refresh every registered project instead of only the current repo
+        /// Refresh every registered project instead of only the current project
         #[arg(long)]
         all: bool,
     },
@@ -128,13 +129,13 @@ fn refresh_packs(sh: &Shell, all: bool) -> Result<()> {
         return refresh_registered_packs(sh);
     }
 
-    let git_root = git_root(sh)?;
+    let project_root = ProjectRoot::resolve(sh)?;
     let registry_path = pack_registry_path()?;
     let registry = load_pack_registry(&registry_path)?;
-    let Some(project) = registry.projects.get(&path_key(&git_root)) else {
+    let Some(project) = registry.projects.get(&path_key(project_root.as_ref())) else {
         return Err(eyre!(
             "project is not registered for pack refresh: {}",
-            git_root.display()
+            project_root.as_ref().display()
         ));
     };
     let available_packs = list_packs(&pack_dir()?)?;
@@ -311,10 +312,10 @@ fn install_target_packs(
 }
 
 fn register_current_project(sh: &Shell, agent: AgentTarget, packs: &[String]) -> Result<()> {
-    let git_root = git_root(sh)?;
+    let project_root = ProjectRoot::resolve(sh)?;
     let registry_path = pack_registry_path()?;
     let mut registry = load_pack_registry(&registry_path)?;
-    register_project(&mut registry, &git_root, agent, packs);
+    register_project(&mut registry, project_root.as_ref(), agent, packs);
     save_pack_registry(&registry_path, &registry)
 }
 
@@ -386,11 +387,6 @@ fn save_pack_registry(path: &Path, registry: &PackProjectRegistry) -> Result<()>
 
 fn path_key(path: &Path) -> String {
     path.to_string_lossy().into_owned()
-}
-
-fn git_root(sh: &Shell) -> Result<PathBuf> {
-    let output = xshell::cmd!(sh, "git rev-parse --show-toplevel").read()?;
-    Ok(PathBuf::from(output.trim()))
 }
 
 fn list_packs(pack_dir: &Path) -> Result<Vec<PackEntry>> {

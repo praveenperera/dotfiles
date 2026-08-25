@@ -16,6 +16,7 @@ pub mod main_cmd;
 pub mod mcp;
 pub mod modal;
 pub mod pack;
+mod project_root;
 pub mod secrets;
 pub mod skill;
 pub mod sync;
