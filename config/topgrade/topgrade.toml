@@ -2,9 +2,12 @@
 only = [
     "vim",
     "node",
-    "cargo",
+    "custom_commands",
     "rustup",
     "brew_formula",
     "brew_cask",
     "gcloud",
 ]
+
+[commands]
+"Update Cargo tools" = "cargo install-update --all --cooldown 7d --locked"
