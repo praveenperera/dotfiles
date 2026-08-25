@@ -752,8 +752,15 @@ async fn run_monitor(
         };
 
         match event {
-            SessionEvent::ThreadStarted(thread) if thread.is_top_level() => {
+            SessionEvent::ThreadStarted(mut thread) if thread.is_top_level() => {
                 current_thread_id = Some(thread.id.clone());
+                if thread.name.is_none() {
+                    thread.name = read_thread_async(socket_path, &thread.id)
+                        .await
+                        .ok()
+                        .and_then(|stored_thread| stored_thread.name);
+                }
+
                 let session_thread = SessionThread {
                     id: thread.id,
                     rollout_path: thread.path,
@@ -940,24 +947,9 @@ async fn current_loaded_thread_async(socket_path: &Path) -> Result<Option<Sessio
         let mut top_level_threads = Vec::new();
         for (index, thread_id) in response.data.into_iter().enumerate() {
             let request_id = i64::try_from(index)? + 3;
-            send_json(
-                &mut socket,
-                json!({
-                    "method": "thread/read",
-                    "id": request_id,
-                    "params": {
-                        "threadId": thread_id,
-                        "includeTurns": false
-                    }
-                }),
-            )
-            .await?;
-            let response = serde_json::from_value::<ThreadReadResponse>(
-                read_response(&mut socket, request_id).await?,
-            )
-            .wrap_err("Codex app server returned invalid thread metadata")?;
-            if response.thread.is_top_level() {
-                top_level_threads.push(response.thread);
+            let thread = read_thread(&mut socket, &thread_id, request_id).await?;
+            if thread.is_top_level() {
+                top_level_threads.push(thread);
             }
         }
 
@@ -977,6 +969,41 @@ async fn current_loaded_thread_async(socket_path: &Path) -> Result<Option<Sessio
     tokio::time::timeout(APP_SERVER_REQUEST_TIMEOUT, future)
         .await
         .map_err(|_| eyre!("Timed out resolving the active Codex session"))?
+}
+
+async fn read_thread_async(socket_path: &Path, thread_id: &str) -> Result<AppServerThread> {
+    let future = async {
+        let mut socket = connect_initialized(socket_path).await?;
+        read_thread(&mut socket, thread_id, 2).await
+    };
+
+    tokio::time::timeout(APP_SERVER_REQUEST_TIMEOUT, future)
+        .await
+        .map_err(|_| eyre!("Timed out reading Codex thread metadata"))?
+}
+
+async fn read_thread(
+    socket: &mut AppServerSocket,
+    thread_id: &str,
+    request_id: i64,
+) -> Result<AppServerThread> {
+    send_json(
+        socket,
+        json!({
+            "method": "thread/read",
+            "id": request_id,
+            "params": {
+                "threadId": thread_id,
+                "includeTurns": false
+            }
+        }),
+    )
+    .await?;
+    let response =
+        serde_json::from_value::<ThreadReadResponse>(read_response(socket, request_id).await?)
+            .wrap_err("Codex app server returned invalid thread metadata")?;
+
+    Ok(response.thread)
 }
 
 async fn set_thread_name_async(socket_path: &Path, thread_id: &str, name: &str) -> Result<()> {
@@ -1464,6 +1491,114 @@ mod tests {
         );
         assert_eq!(thread.name.as_deref(), Some("Root thread"));
         server.await.unwrap();
+    }
+
+    #[test]
+    fn monitor_restores_stored_name_when_started_notification_omits_it() {
+        let dir = tempdir().unwrap();
+        let profile_home = dir.path().join("profiles/a");
+        let socket_path = dir.path().join("control.sock");
+        let (server_ready_tx, server_ready_rx) = mpsc::sync_channel(1);
+        let server_socket_path = socket_path.clone();
+        let server = std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            runtime.block_on(async move {
+                let listener = UnixListener::bind(&server_socket_path).unwrap();
+                server_ready_tx.send(()).unwrap();
+
+                let (stream, _) = listener.accept().await.unwrap();
+                let mut monitor_socket = accept_async(stream).await.unwrap();
+                let _ = next_json(&mut monitor_socket).await;
+                monitor_socket
+                    .send(Message::Text(
+                        json!({"id": 1, "result": {}}).to_string().into(),
+                    ))
+                    .await
+                    .unwrap();
+                let _ = next_json(&mut monitor_socket).await;
+                monitor_socket
+                    .send(Message::Text(
+                        json!({
+                            "method": "thread/started",
+                            "params": {"thread": {
+                                "id": "thread-1",
+                                "path": "/tmp/rollout.jsonl",
+                                "parentThreadId": null,
+                                "agentRole": null,
+                                "name": null
+                            }}
+                        })
+                        .to_string()
+                        .into(),
+                    ))
+                    .await
+                    .unwrap();
+
+                let (stream, _) = listener.accept().await.unwrap();
+                let mut read_socket = accept_async(stream).await.unwrap();
+                let _ = next_json(&mut read_socket).await;
+                read_socket
+                    .send(Message::Text(
+                        json!({"id": 1, "result": {}}).to_string().into(),
+                    ))
+                    .await
+                    .unwrap();
+                let _ = next_json(&mut read_socket).await;
+                let read = next_json(&mut read_socket).await;
+                assert_eq!(read["method"], "thread/read");
+                assert_eq!(read["params"]["threadId"], "thread-1");
+                read_socket
+                    .send(Message::Text(
+                        json!({
+                            "id": 2,
+                            "result": {"thread": {
+                                "id": "thread-1",
+                                "path": "/tmp/rollout.jsonl",
+                                "parentThreadId": null,
+                                "agentRole": null,
+                                "name": "Stored session name"
+                            }}
+                        })
+                        .to_string()
+                        .into(),
+                    ))
+                    .await
+                    .unwrap();
+                tokio::time::sleep(Duration::from_millis(300)).await;
+            });
+        });
+        server_ready_rx.recv().unwrap();
+        let marker = super::super::fs::write_session_marker(
+            &profile_home,
+            std::process::id(),
+            dir.path(),
+            None,
+            SessionControl::Local {
+                socket_path: socket_path.clone(),
+            },
+        )
+        .unwrap();
+
+        let monitor = SessionMonitor::start(socket_path, marker.clone(), None).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let current_thread = loop {
+            let saved =
+                serde_json::from_slice::<SessionMarker>(&std::fs::read(marker.path()).unwrap())
+                    .unwrap();
+            if saved.current_thread.is_some() {
+                break saved.current_thread.unwrap();
+            }
+            assert!(Instant::now() < deadline, "monitor did not update marker");
+            std::thread::sleep(Duration::from_millis(10));
+        };
+
+        assert_eq!(current_thread.id, "thread-1");
+        assert_eq!(current_thread.name.as_deref(), Some("Stored session name"));
+        monitor.stop();
+        server.join().unwrap();
     }
 
     #[test]
