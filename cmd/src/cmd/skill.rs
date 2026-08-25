@@ -7,9 +7,10 @@ use std::process::{Command, Stdio};
 
 use clap::{Parser, Subcommand};
 use eyre::{eyre, Result, WrapErr};
-use xshell::{cmd, Shell};
+use xshell::Shell;
 
 use crate::cmd::agent_target::{selected_agents, AgentTarget};
+use crate::cmd::project_root::ProjectRoot;
 
 #[derive(Debug, Clone, Parser)]
 pub struct Skill {
@@ -19,7 +20,7 @@ pub struct Skill {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum SkillCmd {
-    /// Link project-local skills into the current Git repo
+    /// Link project-local skills into the current project
     Add {
         /// Agent project layout to install into. When omitted, installs for every supported agent
         #[arg(long, value_enum)]
@@ -165,8 +166,8 @@ pub fn add_skill_sources_for_agent(
         });
     }
 
-    let git_root = git_root(sh)?;
-    let target_skills_dir = agent.project_skills_dir(&git_root);
+    let project_root = ProjectRoot::resolve(sh)?;
+    let target_skills_dir = agent.project_skills_dir(project_root.as_ref());
     let plan = plan_skill_links(sources, &target_skills_dir)?;
 
     fs::create_dir_all(&target_skills_dir).wrap_err_with(|| {
@@ -215,11 +216,6 @@ pub fn project_skill_names() -> Result<BTreeSet<String>> {
         .into_iter()
         .map(|skill| skill.name)
         .collect())
-}
-
-fn git_root(sh: &Shell) -> Result<PathBuf> {
-    let output = cmd!(sh, "git rev-parse --show-toplevel").read()?;
-    Ok(PathBuf::from(output.trim()))
 }
 
 fn list_project_skills(project_skills_dir: &Path) -> Result<Vec<SkillEntry>> {

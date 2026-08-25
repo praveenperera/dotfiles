@@ -19,17 +19,17 @@ impl AgentTarget {
         &[Self::Codex, Self::Claude]
     }
 
-    pub fn project_skills_dir(self, git_root: &Path) -> PathBuf {
+    pub fn project_skills_dir(self, project_root: &Path) -> PathBuf {
         match self {
-            Self::Codex => git_root.join(".agents/skills"),
-            Self::Claude => git_root.join(".claude/skills"),
+            Self::Codex => project_root.join(".agents/skills"),
+            Self::Claude => project_root.join(".claude/skills"),
         }
     }
 
-    pub fn project_mcp_config_path(self, git_root: &Path) -> PathBuf {
+    pub fn project_mcp_config_path(self, project_root: &Path) -> PathBuf {
         match self {
-            Self::Codex => git_root.join(".codex/config.toml"),
-            Self::Claude => git_root.join(".mcp.json"),
+            Self::Codex => project_root.join(".codex/config.toml"),
+            Self::Claude => project_root.join(".mcp.json"),
         }
     }
 
