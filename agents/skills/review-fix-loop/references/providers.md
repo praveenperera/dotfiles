@@ -75,7 +75,7 @@ grok models | rg -i 'grok-4\.6'
 
 Grok's local tool session, including read-only and plan sandbox modes, can return cancelled. Do not depend on it for this review. Create `final-neutral-grok-<iteration>.md` as the self-contained neutral packet described above. Include repository and branch identifiers, base or merge-base, and the PR URL when known because headless Grok cannot inspect them. Begin the packet with the same explicit review-only directive used for GLM.
 
-Invoke Grok through the bundled adapter in headless self-contained mode. The adapter disables edit, terminal, web, and subagent tools, saves Grok's native ACP event stream, and writes a result only after it finds one successful completed turn with a final assistant message:
+Invoke Grok through the bundled adapter in headless self-contained mode. The adapter disables edit, terminal, web, and subagent tools, saves Grok's native streaming JSON event stream, and writes a result only after it validates one successful completed turn with a final assistant message:
 
 ```bash
 skill_dir="<directory containing the loaded review-fix-loop SKILL.md>"
@@ -90,7 +90,7 @@ python3 "$skill_dir/scripts/run_grok_review.py" \
   --stderr-file "$scratch/raw/final-neutral-grok-$iteration.stderr"
 ```
 
-The adapter uses `--output-format streaming-json`; do not replace it with aggregate JSON output. Normalize only the `message` field from the validated `.final.json` artifact. The adapter selects the last model output stream before `turn_completed`, joins only its message chunks, ignores its thought chunks, and requires `stop_reason: end_turn`. Its nonzero exit means the provider run failed. Errors, cancellation, `MaxTurns`, multiple or missing completed turns, malformed events, and a missing final message must never count as a clean review.
+The adapter uses `--output-format streaming-json`; do not replace it with aggregate JSON output. Normalize only the `message` field from the validated `.final.json` artifact. It preserves backward compatibility with ACP `session/update` streams and also validates Grok CLI 1.0.5 native events when no ACP event is present. Native validation requires exactly one terminal `type: end` event with nonempty `sessionId`, `requestId`, and `stopReason: end_turn`; it selects only the last contiguous `type: text` chunk stream immediately before terminal metadata, permits `available_commands` and `usage` between that stream and `end`, and ignores `thought` chunks. Model output and tool events after the terminal are rejected. Its nonzero exit means the provider run failed. Errors, cancellation, `MaxTurns`, multiple or missing completed turns, malformed events, and a missing final message must never count as a clean review.
 
 Do not use `--permission-mode plan` or re-enable local repo tools to recover from cancellation. Do not read private session files under `~/.grok` or interpret the aggregate `text` or `thought` fields. If the packet is incomplete, enlarge the prompt with the missing rules or diff and run the adapter again with a new iteration artifact. Require review-only behavior and actionable, evidence-backed findings. Keep the JSONL, validated final JSON, and stderr as the provider evidence.
 
