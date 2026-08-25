@@ -75,26 +75,24 @@ grok models | rg -i 'grok-4\.6'
 
 Grok's local tool session, including read-only and plan sandbox modes, can return cancelled. Do not depend on it for this review. Create `final-neutral-grok-<iteration>.md` as the self-contained neutral packet described above. Include repository and branch identifiers, base or merge-base, and the PR URL when known because headless Grok cannot inspect them. Begin the packet with the same explicit review-only directive used for GLM.
 
-Invoke Grok in headless self-contained mode. Disable edit, terminal, web, and subagent tools so the review stays read-only and does not wait on the local tool loop:
+Invoke Grok through the bundled adapter in headless self-contained mode. The adapter disables edit, terminal, web, and subagent tools, saves Grok's native ACP event stream, and writes a result only after it finds one successful completed turn with a final assistant message:
 
 ```bash
+skill_dir="<directory containing the loaded review-fix-loop SKILL.md>"
 prompt_file="$scratch/prompts/final-neutral-grok-$iteration.md"
-grok \
+python3 "$skill_dir/scripts/run_grok_review.py" \
   --prompt-file "$prompt_file" \
-  --cwd "$repo" \
+  --repo "$repo" \
   --model grok-4.6 \
   --reasoning-effort high \
-  --always-approve \
-  --disallowed-tools "search_replace,write,run_terminal_cmd,run_terminal_command" \
-  --disable-web-search \
-  --no-subagents \
-  --no-plan \
-  --verbatim \
-  --output-format json \
-  > "$scratch/raw/final-neutral-grok-$iteration.json"
+  --raw-file "$scratch/raw/final-neutral-grok-$iteration.jsonl" \
+  --result-file "$scratch/raw/final-neutral-grok-$iteration.final.json" \
+  --stderr-file "$scratch/raw/final-neutral-grok-$iteration.stderr"
 ```
 
-Do not use `--permission-mode plan` or re-enable local repo tools to recover from cancellation. If the packet is incomplete, enlarge the prompt with the missing rules or diff and rerun. Require review-only behavior and actionable, evidence-backed findings. Parse the JSON `text` field when present. Treat an error object, `stopReason: MaxTurns`, cancellation, or missing final review as a failed run rather than a clean result.
+The adapter uses `--output-format streaming-json`; do not replace it with aggregate JSON output. Normalize only the `message` field from the validated `.final.json` artifact. The adapter selects the last model output stream before `turn_completed`, joins only its message chunks, ignores its thought chunks, and requires `stop_reason: end_turn`. Its nonzero exit means the provider run failed. Errors, cancellation, `MaxTurns`, multiple or missing completed turns, malformed events, and a missing final message must never count as a clean review.
+
+Do not use `--permission-mode plan` or re-enable local repo tools to recover from cancellation. Do not read private session files under `~/.grok` or interpret the aggregate `text` or `thought` fields. If the packet is incomplete, enlarge the prompt with the missing rules or diff and run the adapter again with a new iteration artifact. Require review-only behavior and actionable, evidence-backed findings. Keep the JSONL, validated final JSON, and stderr as the provider evidence.
 
 ## Claude Opus Review
 
