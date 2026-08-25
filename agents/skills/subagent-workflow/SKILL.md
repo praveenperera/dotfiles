@@ -122,8 +122,8 @@ For every Claude Agent-tool pass (Opus or Fable subagent):
 For every Grok CLI pass:
 
 1. Start a fresh headless `grok` invocation with model `grok-4.6`, `high` reasoning, an explicit working directory, a permission mode, a sandbox, and nested agents disabled.
-2. Use read-only sandboxing for analysis. For implementation, use deny-by-default permissions with explicit allows for the owned edit paths and required verification commands.
-3. Capture the prompt, exit status, stdout, stderr, baseline, and postflight repository state under `_scratch/subagent-workflow/<run-id>/`.
+2. Use `dontAsk` with read-only sandboxing for analysis. For implementation, use `acceptEdits` with workspace sandboxing, plus explicit allows for required verification commands and any exact shell inspection commands that cannot use Grok's built-in read-only tools.
+3. Capture the prompt, exit status, streaming JSON or a session trace, stderr, baseline, and postflight repository state under `_scratch/subagent-workflow/<run-id>/`; plain final output can hide permission denials.
 4. Reject read-only mutations and changes outside owned scope. Inspect and verify the result independently.
 
 Choose follow-ups, additional reviewers, escalation, and repair paths using your best judgment. The orchestrator remains accountable for the integrated result. Never let a delegate commit, push, open or modify a pull request, deploy, or change external state unless the user separately authorizes that exact action.
