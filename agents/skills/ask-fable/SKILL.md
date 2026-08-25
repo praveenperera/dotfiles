@@ -9,7 +9,7 @@ Run the command from the directory that contains the relevant context. Send the 
 
 ```sh
 claude -p --model fable --effort high \
-  --permission-mode plan \
+  --permission-mode auto \
   --no-session-persistence \
   <<'FABLE_PROMPT'
 <prompt>
@@ -17,6 +17,7 @@ FABLE_PROMPT
 ```
 
 - Never start `claude -p` before the prompt is available; print mode exits when it starts without a prompt argument or standard input
+- Do not use plan permission mode; it can cause Fable to propose research instead of doing it
 - Preserve the user's request and add only context that Fable needs to answer
 - Do not steer Fable: no preferred answer, no framing that implies a conclusion, no leading questions, no "consider that X is better" style hints
 - Pass facts, constraints, and paths; leave judgment and recommendation to Fable
