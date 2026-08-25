@@ -21,14 +21,24 @@ Grok headless mode starts a fresh session by default. Do not resume a prior sess
 
 Use `high` reasoning by default. Use `xhigh` only when the user requests it or when a consequential pass has evidence that the added cost and latency are useful. Do not silently lower the effort.
 
+In the task prompt, tell Grok to use its built-in `read_file`, `list_dir`, and `grep` tools for repository inspection. If the task requires shell inspection that those tools cannot perform, add an exact `Bash(...)` allow rule before the run. Match the complete command, including pipes, redirections, and arguments; do not grant a general shell pattern.
+
+In a headless `dontAsk` or `acceptEdits` run, Grok can receive an unapproved tool call as `User cancelled`. Tell it to treat that result as a permission denial, not as a user stop, and retry once with an approved built-in inspection tool. If no approved tool can perform the action, it must report the exact rejected action and stop. The orchestrator may then add only that exact safe allow rule in a fresh pass.
+
+Do not add `--no-plan` to recover from a permission denial. Plan mode and the `grok-build-plan` agent are independent of tool permissions.
+
 ## Run a fresh read-only delegate
 
 Use both deny-by-default permissions and the read-only OS sandbox:
 
 ```sh
+delegate_session_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+printf '%s\n' "$delegate_session_id" > "$delegate_dir/raw/session-id.txt"
+
 grok \
   --prompt-file "$delegate_dir/prompts/task.md" \
   --cwd "$PWD" \
+  --session-id "$delegate_session_id" \
   --model grok-4.6 \
   --reasoning-effort high \
   --permission-mode dontAsk \
@@ -36,51 +46,63 @@ grok \
   --no-subagents \
   --disable-web-search \
   --verbatim \
-  --output-format plain \
-  > "$delegate_dir/raw/final.md" \
+  --output-format streaming-json \
+  > "$delegate_dir/raw/events.ndjson" \
   2> "$delegate_dir/raw/stderr.txt"
 delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
+
+grok export "$delegate_session_id" "$delegate_dir/raw/transcript.md" \
+  2> "$delegate_dir/raw/export-stderr.txt"
 ```
 
 Omit `--disable-web-search` only when live web or X evidence is part of the assigned task. A web-enabled pass remains read-only unless the user separately authorizes an external mutation.
 
+Keep the raw NDJSON. It records session updates and tool failures that the plain final output can omit. The transcript is for quick review; it does not replace the raw event capture. If the NDJSON does not explain a failure, export a local trace with `grok trace "$delegate_session_id" --local --output "$delegate_dir/raw/session-trace.tar.gz"`.
+
 ## Run a fresh implementation delegate
 
-Use deny-by-default permissions. Add one exact `--allow` rule for each owned edit path and required verification command. The examples below are placeholders; replace them with the real scope and commands:
+Use `acceptEdits` so Grok can edit files without an approval prompt. Add one exact `--allow` rule for each required verification command and each shell inspection command that is not in Grok's built-in read-only set. The examples below are placeholders; replace them with the real commands:
 
 ```sh
+delegate_session_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+printf '%s\n' "$delegate_session_id" > "$delegate_dir/raw/session-id.txt"
+
 grok \
   --prompt-file "$delegate_dir/prompts/task.md" \
   --cwd "$PWD" \
+  --session-id "$delegate_session_id" \
   --model grok-4.6 \
   --reasoning-effort high \
-  --permission-mode dontAsk \
+  --permission-mode acceptEdits \
   --sandbox workspace \
   --no-subagents \
   --disable-web-search \
   --verbatim \
-  --allow 'Edit(path/to/owned/**)' \
   --allow 'Bash(exact verification command)' \
-  --output-format plain \
-  > "$delegate_dir/raw/final.md" \
+  --allow 'Bash(exact shell inspection command, when required)' \
+  --output-format streaming-json \
+  > "$delegate_dir/raw/events.ndjson" \
   2> "$delegate_dir/raw/stderr.txt"
 delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
+
+grok export "$delegate_session_id" "$delegate_dir/raw/transcript.md" \
+  2> "$delegate_dir/raw/export-stderr.txt"
 ```
 
-`--allow` is not an allowlist by itself. `--permission-mode dontAsk` makes unmatched non-read-only calls fail, so keep both. Do not use `--always-approve`, `bypassPermissions`, or sandbox `off` for delegated work. Do not allow commit, staging, push, pull-request, deployment, messaging, or other external-state commands.
+`acceptEdits` approves file edits, not every shell command. Unmatched shell calls can still fail in a headless run, so keep the exact command allows. Do not use `--always-approve`, `bypassPermissions`, or sandbox `off` for delegated work. Do not allow commit, staging, push, pull-request, deployment, messaging, or other external-state commands.
 
-The `workspace` sandbox limits writes to the working directory, Grok state, and temporary directories, but it does not enforce the prompt's narrower owned scope. Baseline and postflight comparison is still required. If a formatter or verification command can modify files outside owned scope, do not grant it to the delegate; run it independently after integration.
+The `workspace` sandbox limits writes to the working directory, Grok state, and temporary directories. `acceptEdits` does not enforce the prompt's narrower owned scope, so baseline and postflight comparison is still required. If a formatter or verification command can modify files outside owned scope, do not grant it to the delegate; run it independently after integration.
 
 ## Inspect and integrate
 
-Always record postflight state, including after a nonzero exit. Inspect the exit status, final message, stderr, baseline, and postflight artifacts. A zero exit and Grok's report are not proof of correctness.
+Always record postflight state, including after a nonzero exit. Inspect the exit status, NDJSON events, transcript, stderr, baseline, and postflight artifacts. A zero exit and Grok's report are not proof of correctness.
 
 - Treat any read-only repository mutation as a failed pass.
 - Reject implementation changes outside owned scope.
 - Verify important claims against the source and run the required repository checks independently.
-- If a permission rule blocks a required action, add only the exact rule the task needs in a fresh pass. Do not relax the whole permission mode or sandbox.
+- Treat `User cancelled` from a tool call in a headless permission mode as a permission denial unless there is separate evidence that the user stopped the run. Confirm it in the NDJSON or trace. If Grok did not recover with its one approved-tool retry, add only the exact safe rule the task needs in a fresh pass. Do not relax the whole permission mode or sandbox.
 
 ## Current command sources
 
