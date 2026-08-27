@@ -461,28 +461,103 @@ fn parse_flag(value: &str) -> bool {
     value.trim() == "1"
 }
 
-const ACTIONS: &[&str] = &[
-    "New Tab",
-    "Close Pane",
-    "Zoom Pane",
-    "Split Right",
-    "Split Down",
-    "Next Tab",
-    "Prev Tab",
-    "Swap Down",
-    "Swap Up",
-    "Rename Tab",
-    "Rename Session",
-    "Rename Pane",
-    "Name Pane with Codex",
-    "Toggle Pane Names",
-    "Scroll Back",
-    "Move Tab to Session",
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Action {
+    name: &'static str,
+    shortcut: &'static str,
+}
+
+impl PickerEntry for Action {
+    fn display_line(&self) -> String {
+        format!("{:<22} {}", self.name, self.shortcut)
+    }
+}
+
+const ACTIONS: &[Action] = &[
+    Action {
+        name: "New Tab",
+        shortcut: "prefix + c",
+    },
+    Action {
+        name: "Close Pane",
+        shortcut: "prefix + x",
+    },
+    Action {
+        name: "Zoom Pane",
+        shortcut: "prefix + z / Alt+z",
+    },
+    Action {
+        name: "Split Right",
+        shortcut: "prefix + %",
+    },
+    Action {
+        name: "Split Down",
+        shortcut: "prefix + \"",
+    },
+    Action {
+        name: "Next Tab",
+        shortcut: "prefix + n",
+    },
+    Action {
+        name: "Prev Tab",
+        shortcut: "prefix + p",
+    },
+    Action {
+        name: "Swap Down",
+        shortcut: "prefix + }",
+    },
+    Action {
+        name: "Swap Up",
+        shortcut: "prefix + {",
+    },
+    Action {
+        name: "Rename Tab",
+        shortcut: "prefix + ,",
+    },
+    Action {
+        name: "Rename Session",
+        shortcut: "prefix + $",
+    },
+    Action {
+        name: "Rename Pane",
+        shortcut: "prefix + . / Alt+Shift+r",
+    },
+    Action {
+        name: "Name Pane with Codex",
+        shortcut: "prefix + A / Alt+r",
+    },
+    Action {
+        name: "Toggle Pane Names",
+        shortcut: "prefix + P",
+    },
+    Action {
+        name: "Scroll Back",
+        shortcut: "prefix + [",
+    },
+    Action {
+        name: "Move Tab to Session",
+        shortcut: "prefix + M",
+    },
 ];
 
+fn resolve_action_name(selection: &str) -> Option<&'static str> {
+    let selection = selection.trim();
+    ACTIONS
+        .iter()
+        .filter_map(|action| {
+            if selection == action.name {
+                return Some(action.name);
+            }
+            selection
+                .strip_prefix(action.name)
+                .filter(|rest| rest.starts_with(char::is_whitespace))
+                .map(|_| action.name)
+        })
+        .max_by_key(|name| name.len())
+}
+
 fn action_picker(sh: &Shell) -> Result<()> {
-    let menu = ACTIONS.join("\n");
-    let selection = run_fzf(sh, "Action > ", &menu)?;
+    let selection = run_fzf(sh, "Action > ", &render_lines(ACTIONS))?;
     action(sh, &selection)
 }
 
@@ -495,7 +570,11 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
             .unwrap_or_default()
     };
 
-    match name.trim() {
+    let name = resolve_action_name(name).unwrap_or(name.trim());
+    if name.is_empty() {
+        return Ok(());
+    }
+    match name {
         "New Tab" => {
             let path = pane_path();
             cmd!(sh, "tmux new-window -c {path}").quiet().run()?;
@@ -1736,11 +1815,11 @@ mod tests {
     use super::{
         apply_synced_codex_name, build_naming_context, build_naming_prompt, latest_thread_name,
         order_panes, order_sessions, order_windows, parse_client_session_context,
-        parse_generated_title, parse_index_list, parse_pane_process, resolve_session_index_path,
-        thread_id_from_notification, thread_title_output_schema, title_messages_from_rollout,
-        ActiveCodexSession, CodexThreadId, CodexThreadName, PaneEntry, PaneTarget, SessionEntry,
-        TitleMessage, TitleMessageRole, WindowEntry, FIELD_SEP, THREAD_TITLE_MAX_CHARS,
-        THREAD_TITLE_PROMPT_MAX_BYTES,
+        parse_generated_title, parse_index_list, parse_pane_process, resolve_action_name,
+        resolve_session_index_path, thread_id_from_notification, thread_title_output_schema,
+        title_messages_from_rollout, ActiveCodexSession, CodexThreadId, CodexThreadName, PaneEntry,
+        PaneTarget, PickerEntry, SessionEntry, TitleMessage, TitleMessageRole, WindowEntry,
+        ACTIONS, FIELD_SEP, THREAD_TITLE_MAX_CHARS, THREAD_TITLE_PROMPT_MAX_BYTES,
     };
     use std::fs;
     use std::io::Write;
@@ -1784,6 +1863,29 @@ mod tests {
                 }],
             },
         })
+    }
+
+    #[test]
+    fn action_picker_lines_show_shortcuts_and_round_trip() {
+        for action in ACTIONS {
+            let line = action.display_line();
+            assert!(
+                line.contains(action.shortcut),
+                "{} display should include {}",
+                action.name,
+                action.shortcut
+            );
+            assert_eq!(resolve_action_name(&line), Some(action.name));
+            assert_eq!(resolve_action_name(action.name), Some(action.name));
+        }
+    }
+
+    #[test]
+    fn action_name_resolution_ignores_unknown_and_empty_input() {
+        assert_eq!(resolve_action_name(""), None);
+        assert_eq!(resolve_action_name("   "), None);
+        assert_eq!(resolve_action_name("Not An Action"), None);
+        assert_eq!(resolve_action_name("Rename"), None);
     }
 
     #[test]
