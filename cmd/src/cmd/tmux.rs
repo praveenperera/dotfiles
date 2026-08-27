@@ -3,11 +3,12 @@ use super::codex::app_server::{
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use eyre::{eyre, Result, WrapErr};
+use serde::Deserialize;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
@@ -89,6 +90,12 @@ pub enum TmuxCmd {
         #[arg(long)]
         target_pane: Option<String>,
     },
+    /// Set a pane name from a Codex turn-complete notification on stdin
+    SyncCodexPaneName {
+        /// Tmux pane target, defaults to TMUX_PANE
+        #[arg(long)]
+        target_pane: Option<String>,
+    },
     /// Rename a pane and the matching Codex session when possible
     RenamePane {
         /// Tmux pane target, defaults to the active pane
@@ -134,6 +141,9 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
         } => notify(sh, &kind, message.as_deref(), title.as_deref(), force),
         TmuxCmd::Action { name } => action(sh, &name.join(" ")),
         TmuxCmd::NameCodexPane { target_pane } => name_codex_pane(sh, target_pane.as_deref()),
+        TmuxCmd::SyncCodexPaneName { target_pane } => {
+            sync_codex_pane_name(sh, target_pane.as_deref())
+        }
         TmuxCmd::RenamePane { target_pane, name } => {
             rename_pane(sh, target_pane.as_deref(), &name.join(" "))
         }
@@ -595,12 +605,63 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
 }
 
 const NAME_MODEL: &str = "gpt-5.3-codex-spark";
-const MAX_FIRST_USER_CHARS: usize = 1500;
-const MAX_RECENT_USER_CHARS: usize = 1500;
-const MAX_VISIBLE_TEXT_CHARS: usize = 1500;
-const MAX_NAME_WORDS: usize = 6;
+const THREAD_TITLE_MAX_CHARS: usize = 36;
+const THREAD_TITLE_PROMPT_MAX_BYTES: usize = 960;
+const THREAD_TITLE_RECENT_MESSAGES: usize = 8;
 const SESSION_THREAD_WAIT_TIMEOUT: Duration = Duration::from_secs(3);
 const SESSION_THREAD_POLL_INTERVAL: Duration = Duration::from_millis(50);
+const TURN_COMPLETE_NOTIFICATION: &str = "agent-turn-complete";
+
+#[derive(Debug, Deserialize)]
+struct CodexNotificationPayload {
+    #[serde(rename = "type")]
+    kind: String,
+    #[serde(rename = "thread-id")]
+    thread_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CodexThreadId(String);
+
+impl CodexThreadId {
+    fn parse(value: String) -> Result<Self> {
+        if value.is_empty() || value.chars().any(char::is_whitespace) {
+            return Err(eyre!("Codex notification has an invalid thread id"));
+        }
+
+        Ok(Self(value))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CodexThreadName(String);
+
+impl CodexThreadName {
+    fn parse(value: &str) -> Option<Self> {
+        let without_controls = value
+            .chars()
+            .map(|character| {
+                if character.is_control() {
+                    ' '
+                } else {
+                    character
+                }
+            })
+            .collect::<String>();
+        let normalized = without_controls
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        (!normalized.is_empty()).then_some(Self(normalized))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct SessionIndexEntry {
+    id: String,
+    thread_name: Option<String>,
+}
 
 #[derive(Debug, Clone)]
 struct PaneTarget {
@@ -628,13 +689,36 @@ struct ActiveCodexSession {
     rollout_path: Option<PathBuf>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TitleMessageRole {
+    User,
+    Assistant,
+}
+
+impl TitleMessageRole {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::User => "user",
+            Self::Assistant => "assistant",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TitleMessage {
+    role: TitleMessageRole,
+    text: String,
+}
+
 #[derive(Debug, Default)]
 struct NamingContext {
-    first_user_request: Option<String>,
-    recent_user_requests: Vec<String>,
-    pane_cwd: PathBuf,
-    git_branch: Option<String>,
-    visible_text: Option<String>,
+    messages: Vec<TitleMessage>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct GeneratedPaneTitle {
+    title: String,
 }
 
 fn name_codex_pane(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
@@ -650,6 +734,111 @@ fn name_codex_pane(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+fn sync_codex_pane_name(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
+    let mut payload = String::new();
+    std::io::stdin()
+        .read_to_string(&mut payload)
+        .wrap_err("Failed to read the Codex notification")?;
+    let Some(thread_id) = thread_id_from_notification(&payload)? else {
+        return Ok(());
+    };
+    let pane_id = target_pane
+        .map(str::to_owned)
+        .or_else(|| std::env::var("TMUX_PANE").ok())
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| eyre!("Tmux pane target is not set"))?;
+    let session_index = codex_session_index_path()?;
+    let Some(name) = latest_thread_name(&session_index, &thread_id)? else {
+        return Ok(());
+    };
+
+    // use the notification thread id because cwd can match several live panes
+    set_tmux_pane_name(sh, &pane_id, &name.0)
+}
+
+fn thread_id_from_notification(payload: &str) -> Result<Option<CodexThreadId>> {
+    let notification = serde_json::from_str::<CodexNotificationPayload>(payload)
+        .wrap_err("Failed to parse the Codex notification")?;
+    if notification.kind != TURN_COMPLETE_NOTIFICATION {
+        return Ok(None);
+    }
+
+    let thread_id = notification
+        .thread_id
+        .ok_or_else(|| eyre!("Codex turn-complete notification has no thread id"))?;
+
+    Ok(Some(CodexThreadId::parse(thread_id)?))
+}
+
+fn codex_session_index_path() -> Result<PathBuf> {
+    let home = home_dir()?;
+    let codex_home = std::env::var_os("CODEX_HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from);
+
+    Ok(resolve_session_index_path(codex_home.as_deref(), &home))
+}
+
+fn resolve_session_index_path(codex_home: Option<&Path>, home: &Path) -> PathBuf {
+    let fallback = home.join(".codex").join("session_index.jsonl");
+    let Some(codex_home) = codex_home else {
+        return fallback;
+    };
+    let configured = codex_home.join("session_index.jsonl");
+
+    if configured.is_file() {
+        configured
+    } else {
+        fallback
+    }
+}
+
+fn latest_thread_name(path: &Path, thread_id: &CodexThreadId) -> Result<Option<CodexThreadName>> {
+    let file = File::open(path)
+        .wrap_err_with(|| format!("Failed to open Codex session index {}", path.display()))?;
+    let mut reader = BufReader::new(file);
+    let mut line = String::new();
+    let mut line_number = 0;
+    let mut latest = None;
+
+    loop {
+        line.clear();
+        let bytes_read = reader
+            .read_line(&mut line)
+            .wrap_err_with(|| format!("Failed to read Codex session index {}", path.display()))?;
+        if bytes_read == 0 {
+            break;
+        }
+        line_number += 1;
+        let is_complete_line = line.ends_with('\n');
+        let serialized = line.trim_end_matches(['\r', '\n']);
+        let entry = match serde_json::from_str::<SessionIndexEntry>(serialized) {
+            Ok(entry) => entry,
+            Err(_) if !is_complete_line => break,
+            Err(error) => {
+                return Err(error).wrap_err_with(|| {
+                    format!(
+                        "Failed to parse Codex session index {} at line {line_number}",
+                        path.display()
+                    )
+                });
+            }
+        };
+        if entry.id != thread_id.0 {
+            continue;
+        }
+        if let Some(name) = entry
+            .thread_name
+            .as_deref()
+            .and_then(CodexThreadName::parse)
+        {
+            latest = Some(name);
+        }
+    }
+
+    Ok(latest)
+}
+
 fn name_codex_pane_after_progress(sh: &Shell, pane: &PaneTarget) -> Result<()> {
     let processes = processes_on_tty(&pane.tty)?;
     if !pane_runs_codex(pane, &processes) {
@@ -657,11 +846,11 @@ fn name_codex_pane_after_progress(sh: &Shell, pane: &PaneTarget) -> Result<()> {
     }
 
     let session = resolve_active_codex_session(pane, &processes)?;
-    let context = build_naming_context(pane, Some(&session))?;
+    let context = build_naming_context(pane, Some(&session));
     let prompt = build_naming_prompt(&context);
     let raw_name = run_codex_name_model(&pane.cwd, Some(&session.launch_home), &prompt)
         .wrap_err("Failed to generate pane name")?;
-    let name = sanitize_generated_name(&raw_name)
+    let name = parse_generated_title(&raw_name)
         .or_else(|| fallback_pane_name(pane))
         .ok_or_else(|| eyre!("Generated pane name was empty"))?;
 
@@ -972,33 +1161,25 @@ fn process_exists(pid: u32) -> bool {
         .is_ok_and(|status| status.success())
 }
 
-fn build_naming_context(
-    pane: &PaneTarget,
-    session: Option<&ActiveCodexSession>,
-) -> Result<NamingContext> {
-    let mut context = NamingContext {
-        pane_cwd: pane.cwd.clone(),
-        git_branch: git_branch(&pane.cwd),
-        ..NamingContext::default()
-    };
+fn build_naming_context(pane: &PaneTarget, session: Option<&ActiveCodexSession>) -> NamingContext {
+    let mut messages = Vec::new();
 
     if let Some(rollout_path) = session.and_then(|session| session.rollout_path.as_deref()) {
-        let user_requests = user_requests_from_rollout(rollout_path);
-        context.first_user_request = user_requests
-            .first()
-            .map(|value| clip_chars(value, MAX_FIRST_USER_CHARS));
-        context.recent_user_requests = recent_user_requests(&user_requests);
+        messages = title_messages_from_rollout(rollout_path);
     }
 
-    if context.first_user_request.is_none() && context.recent_user_requests.is_empty() {
-        context.visible_text = Some(clip_chars(&pane.visible_text, MAX_VISIBLE_TEXT_CHARS));
+    if messages.is_empty() && !pane.visible_text.trim().is_empty() {
+        messages.push(TitleMessage {
+            role: TitleMessageRole::User,
+            text: pane.visible_text.trim().to_owned(),
+        });
     }
 
-    Ok(context)
+    NamingContext { messages }
 }
 
-fn user_requests_from_rollout(path: &Path) -> Vec<String> {
-    read_rollout_lines(path, |value| {
+fn title_messages_from_rollout(path: &Path) -> Vec<TitleMessage> {
+    let mut messages = read_rollout_lines(path, |value| {
         value
             .get("type")
             .and_then(serde_json::Value::as_str)
@@ -1008,25 +1189,53 @@ fn user_requests_from_rollout(path: &Path) -> Vec<String> {
             .get("type")
             .and_then(serde_json::Value::as_str)
             .filter(|kind| *kind == "message")?;
-        payload
-            .get("role")
-            .and_then(serde_json::Value::as_str)
-            .filter(|role| *role == "user")?;
 
-        let text = human_user_request_text(payload)?;
-        (!text.trim().is_empty()).then(|| text.trim().to_owned())
-    })
+        let role = match payload.get("role").and_then(serde_json::Value::as_str)? {
+            "user" => TitleMessageRole::User,
+            "assistant"
+                if payload.get("phase").and_then(serde_json::Value::as_str)
+                    != Some("commentary") =>
+            {
+                TitleMessageRole::Assistant
+            }
+            _ => return None,
+        };
+        let text = match role {
+            TitleMessageRole::User => human_user_request_text(payload),
+            TitleMessageRole::Assistant => assistant_message_text(payload),
+        }?;
+
+        Some(TitleMessage { role, text })
+    });
+    let keep_from = messages.len().saturating_sub(THREAD_TITLE_RECENT_MESSAGES);
+    messages.drain(..keep_from);
+    messages
 }
 
 fn human_user_request_text(payload: &serde_json::Value) -> Option<String> {
+    message_content_text(payload, /*filter_injected_context*/ true)
+}
+
+fn assistant_message_text(payload: &serde_json::Value) -> Option<String> {
+    message_content_text(payload, /*filter_injected_context*/ false)
+}
+
+fn message_content_text(
+    payload: &serde_json::Value,
+    filter_injected_context: bool,
+) -> Option<String> {
     let text = payload
         .get("content")
         .and_then(serde_json::Value::as_array)
         .into_iter()
         .flatten()
-        .filter_map(|item| item.get("text").or_else(|| item.get("input_text")))
+        .filter_map(|item| {
+            item.get("text")
+                .or_else(|| item.get("input_text"))
+                .or_else(|| item.get("output_text"))
+        })
         .filter_map(serde_json::Value::as_str)
-        .filter(|text| !is_injected_context_text(text))
+        .filter(|text| !filter_injected_context || !is_injected_context_text(text))
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -1074,64 +1283,104 @@ fn read_rollout_lines<T>(
         .collect()
 }
 
-fn recent_user_requests(user_requests: &[String]) -> Vec<String> {
-    let mut total = 0;
-    let mut recent = Vec::new();
-    for request in user_requests.iter().rev().take(3) {
-        let remaining = MAX_RECENT_USER_CHARS.saturating_sub(total);
-        if remaining == 0 {
-            break;
-        }
-        let clipped = clip_chars(request, remaining);
-        total += clipped.chars().count();
-        recent.push(clipped);
-    }
-    recent.reverse();
-    recent
-}
-
-fn git_branch(cwd: &Path) -> Option<String> {
-    let output = Command::new("git")
-        .args(["branch", "--show-current"])
-        .current_dir(cwd)
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let branch = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-    (!branch.is_empty()).then_some(branch)
-}
-
 fn build_naming_prompt(context: &NamingContext) -> String {
-    let mut prompt = String::from(
-        "Generate one short title for this Codex pane.\n\
-         Output only the title, with 4 to 6 words. No quotes, labels, punctuation-only lines, or explanation.\n",
+    let conversation = bounded_conversation_markup(&context.messages);
+    let instructions = thread_title_instructions();
+    let prefix = format!(
+        "{instructions}\n\
+Prioritize the current task and latest substantive user request.\n\n\
+Recent conversation messages:\n"
     );
-    prompt.push_str("\nContext:\n");
-    prompt.push_str(&format!("cwd: {}\n", context.pane_cwd.display()));
-    if let Some(branch) = &context.git_branch {
-        prompt.push_str(&format!("git branch: {branch}\n"));
+    let remaining_bytes = THREAD_TITLE_PROMPT_MAX_BYTES.saturating_sub(prefix.len());
+    let conversation = trailing_complete_chars(&conversation, remaining_bytes);
+
+    format!("{prefix}{conversation}")
+}
+
+fn thread_title_instructions() -> String {
+    format!(
+        "Generate a concise, single-line task title of at most \
+{THREAD_TITLE_MAX_CHARS} characters and under five words where possible. \
+Start with an imperative verb. Capitalize only the first word unless the \
+user's language, proper nouns, acronyms, or code terms require otherwise. \
+Preserve ticket references exactly. Write in the user's language. \
+Do not use quotes, markdown, or trailing punctuation. \
+Do not answer the request."
+    )
+}
+
+fn bounded_conversation_markup(messages: &[TitleMessage]) -> String {
+    let escaped = messages
+        .iter()
+        .map(|message| {
+            let text = message
+                .text
+                .trim()
+                .replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;");
+
+            (message.role.as_str(), text)
+        })
+        .collect::<Vec<_>>();
+    if escaped.is_empty() {
+        return "<conversation></conversation>".to_owned();
     }
-    if let Some(first) = &context.first_user_request {
-        prompt.push_str("\ninitial human request:\n");
-        prompt.push_str(first);
-        prompt.push('\n');
+
+    let empty_conversation = "<conversation>\n\n</conversation>";
+    let available_bytes = THREAD_TITLE_PROMPT_MAX_BYTES
+        .saturating_sub(thread_title_instructions().len())
+        .saturating_sub("\nPrioritize the current task and latest substantive user request.\n\nRecent conversation messages:\n".len());
+    let markup_bytes = empty_conversation.len()
+        + escaped.len().saturating_sub(1)
+        + escaped
+            .iter()
+            .map(|(role, _)| "<message role=\"\"></message>".len() + role.len())
+            .sum::<usize>();
+    let message_bytes = available_bytes.saturating_sub(markup_bytes) / escaped.len();
+    let should_truncate = escaped.iter().map(|(_, text)| text.len()).sum::<usize>()
+        > available_bytes.saturating_sub(markup_bytes);
+    let messages = escaped
+        .into_iter()
+        .map(|(role, text)| {
+            let text = if should_truncate {
+                truncate_complete_chars_and_entities(&text, message_bytes)
+            } else {
+                text
+            };
+
+            format!("<message role=\"{role}\">{text}</message>")
+        })
+        .collect::<Vec<_>>();
+
+    format!("<conversation>\n{}\n</conversation>", messages.join("\n"))
+}
+
+fn truncate_complete_chars_and_entities(value: &str, max_bytes: usize) -> String {
+    if value.len() <= max_bytes {
+        return value.to_owned();
     }
-    if !context.recent_user_requests.is_empty() {
-        prompt.push_str("\nrecent human requests, prefer these for the title:\n");
-        for request in &context.recent_user_requests {
-            prompt.push_str("- ");
-            prompt.push_str(&request.replace('\n', "\n  "));
-            prompt.push('\n');
+
+    let mut end = max_bytes;
+    while !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    if let Some(entity_start) = value[..end].rfind('&') {
+        if !value[entity_start..end].contains(';') {
+            end = entity_start;
         }
     }
-    if let Some(visible_text) = &context.visible_text {
-        prompt.push_str("\nvisible pane text fallback:\n");
-        prompt.push_str(visible_text);
-        prompt.push('\n');
+
+    value[..end].to_owned()
+}
+
+fn trailing_complete_chars(value: &str, max_bytes: usize) -> &str {
+    let mut start = value.len().saturating_sub(max_bytes);
+    while !value.is_char_boundary(start) {
+        start += 1;
     }
-    prompt
+
+    &value[start..]
 }
 
 fn run_codex_name_model(cwd: &Path, launch_home: Option<&Path>, prompt: &str) -> Result<String> {
@@ -1139,6 +1388,12 @@ fn run_codex_name_model(cwd: &Path, launch_home: Option<&Path>, prompt: &str) ->
         .prefix("codex-pane-name")
         .tempfile()?;
     let output_path = output_file.path().to_path_buf();
+    let mut schema_file = TempFileBuilder::new()
+        .prefix("codex-pane-name-schema")
+        .suffix(".json")
+        .tempfile()?;
+    serde_json::to_writer(schema_file.as_file_mut(), &thread_title_output_schema())?;
+    schema_file.as_file_mut().flush()?;
     let codex_home = launch_home
         .map(Path::to_path_buf)
         .unwrap_or(home_dir()?.join(".codex"));
@@ -1148,11 +1403,19 @@ fn run_codex_name_model(cwd: &Path, launch_home: Option<&Path>, prompt: &str) ->
             "exec",
             "--ephemeral",
             "--skip-git-repo-check",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--sandbox",
+            "read-only",
             "--model",
             NAME_MODEL,
+            "--config",
+            "model_reasoning_effort=\"xhigh\"",
             "--cd",
         ])
         .arg(cwd)
+        .arg("--output-schema")
+        .arg(schema_file.path())
         .args(["--output-last-message"])
         .arg(&output_path)
         .arg("-")
@@ -1176,27 +1439,43 @@ fn run_codex_name_model(cwd: &Path, launch_home: Option<&Path>, prompt: &str) ->
     Ok(fs::read_to_string(output_path).unwrap_or_default())
 }
 
-fn sanitize_generated_name(raw: &str) -> Option<String> {
-    let line = raw.lines().find(|line| !line.trim().is_empty())?.trim();
-    let mut value = line
-        .trim_matches(|ch| matches!(ch, '"' | '\'' | '`' | ' ' | '\t'))
-        .to_owned();
-    let lower = value.to_ascii_lowercase();
-    for label in ["pane:", "title:", "name:", "session:"] {
-        if lower.starts_with(label) {
-            value = value[label.len()..]
-                .trim()
-                .trim_matches(|ch| matches!(ch, '"' | '\'' | '`' | ' ' | '\t'))
-                .to_owned();
-            break;
-        }
+fn thread_title_output_schema() -> serde_json::Value {
+    serde_json::json!({
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": THREAD_TITLE_MAX_CHARS,
+            },
+        },
+        "required": ["title"],
+        "additionalProperties": false,
+    })
+}
+
+fn parse_generated_title(response: &str) -> Option<String> {
+    if !response.trim_start().starts_with('{') {
+        return None;
     }
-    value.retain(|ch| !ch.is_control());
-    let words = value
+
+    let title = serde_json::from_str::<GeneratedPaneTitle>(response)
+        .ok()?
+        .title;
+    let normalized = title
+        .trim()
+        .trim_matches(|character| matches!(character, '"' | '\'' | '`' | '“' | '”' | '‘' | '’'))
         .split_whitespace()
-        .take(MAX_NAME_WORDS)
-        .collect::<Vec<_>>();
-    (!words.is_empty()).then(|| words.join(" "))
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim_end_matches(['.', '?', '!'])
+        .trim_end()
+        .to_owned();
+    if normalized.is_empty() {
+        return None;
+    }
+
+    Some(normalized.chars().take(THREAD_TITLE_MAX_CHARS).collect())
 }
 
 fn fallback_pane_name(pane: &PaneTarget) -> Option<String> {
@@ -1219,10 +1498,6 @@ fn clear_tmux_pane_name(sh: &Shell, pane_id: &str) -> Result<()> {
         .quiet()
         .run()?;
     Ok(())
-}
-
-fn clip_chars(value: &str, max_chars: usize) -> String {
-    value.chars().take(max_chars).collect()
 }
 
 fn home_dir() -> Result<PathBuf> {
@@ -1459,11 +1734,15 @@ impl std::fmt::Display for NotifyKind {
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_synced_codex_name, build_naming_context, order_panes, order_sessions, order_windows,
-        parse_client_session_context, parse_index_list, parse_pane_process,
-        sanitize_generated_name, user_requests_from_rollout, ActiveCodexSession, PaneEntry,
-        PaneTarget, SessionEntry, WindowEntry, FIELD_SEP,
+        apply_synced_codex_name, build_naming_context, build_naming_prompt, latest_thread_name,
+        order_panes, order_sessions, order_windows, parse_client_session_context,
+        parse_generated_title, parse_index_list, parse_pane_process, resolve_session_index_path,
+        thread_id_from_notification, thread_title_output_schema, title_messages_from_rollout,
+        ActiveCodexSession, CodexThreadId, CodexThreadName, PaneEntry, PaneTarget, SessionEntry,
+        TitleMessage, TitleMessageRole, WindowEntry, FIELD_SEP, THREAD_TITLE_MAX_CHARS,
+        THREAD_TITLE_PROMPT_MAX_BYTES,
     };
+    use std::fs;
     use std::io::Write;
     use std::path::PathBuf;
 
@@ -1492,6 +1771,21 @@ mod tests {
         })
     }
 
+    fn assistant_message(phase: &str, text: &str) -> serde_json::Value {
+        serde_json::json!({
+            "type": "response_item",
+            "payload": {
+                "type": "message",
+                "role": "assistant",
+                "phase": phase,
+                "content": [{
+                    "type": "output_text",
+                    "text": text,
+                }],
+            },
+        })
+    }
+
     #[test]
     fn parses_pane_process_with_ps_spacing() {
         let process =
@@ -1501,6 +1795,74 @@ mod tests {
         assert_eq!(process.ppid, 71954);
         assert_eq!(process.command, "node");
         assert_eq!(process.args, "node /opt/bin/codex resume");
+    }
+
+    #[test]
+    fn parses_thread_id_from_turn_complete_notification() {
+        let thread_id =
+            thread_id_from_notification(r#"{"type":"agent-turn-complete","thread-id":"thread-1"}"#)
+                .unwrap();
+
+        assert_eq!(thread_id, Some(CodexThreadId("thread-1".to_owned())));
+    }
+
+    #[test]
+    fn ignores_notifications_that_do_not_complete_a_turn() {
+        let thread_id = thread_id_from_notification(r#"{"type":"approval-requested"}"#).unwrap();
+
+        assert_eq!(thread_id, None);
+    }
+
+    #[test]
+    fn rejects_turn_complete_notification_without_thread_id() {
+        let error = thread_id_from_notification(r#"{"type":"agent-turn-complete"}"#).unwrap_err();
+
+        assert!(error.to_string().contains("has no thread id"));
+    }
+
+    #[test]
+    fn latest_session_index_name_wins_and_is_normalized() {
+        let mut index = tempfile::NamedTempFile::new().unwrap();
+        writeln!(
+            index,
+            r#"{{"id":"thread-1","thread_name":"Initial title"}}"#
+        )
+        .unwrap();
+        writeln!(index, r#"{{"id":"thread-2","thread_name":"Other title"}}"#).unwrap();
+        writeln!(
+            index,
+            r#"{{"id":"thread-1","thread_name":"  Final\n  title  "}}"#
+        )
+        .unwrap();
+
+        let name = latest_thread_name(index.path(), &CodexThreadId("thread-1".to_owned())).unwrap();
+
+        assert_eq!(name, Some(CodexThreadName("Final title".to_owned())));
+    }
+
+    #[test]
+    fn session_index_reader_ignores_partial_trailing_record() {
+        let mut index = tempfile::NamedTempFile::new().unwrap();
+        writeln!(index, r#"{{"id":"thread-1","thread_name":"Stable title"}}"#).unwrap();
+        write!(index, r#"{{"id":"thread-1""#).unwrap();
+
+        let name = latest_thread_name(index.path(), &CodexThreadId("thread-1".to_owned())).unwrap();
+
+        assert_eq!(name, Some(CodexThreadName("Stable title".to_owned())));
+    }
+
+    #[test]
+    fn session_index_path_prefers_the_active_codex_home() {
+        let temp = tempfile::tempdir().unwrap();
+        let configured_home = temp.path().join("launch");
+        let fallback_home = temp.path().join("home");
+        fs::create_dir_all(&configured_home).unwrap();
+        fs::write(configured_home.join("session_index.jsonl"), "").unwrap();
+
+        assert_eq!(
+            resolve_session_index_path(Some(&configured_home), &fallback_home),
+            configured_home.join("session_index.jsonl")
+        );
     }
 
     #[test]
@@ -1544,12 +1906,11 @@ mod tests {
     }
 
     #[test]
-    fn sanitizes_generated_name_to_first_six_words() {
-        let name =
-            sanitize_generated_name("Title: `Implement Codex Pane Session Auto Naming`\nextra")
-                .unwrap();
+    fn parses_and_normalizes_structured_generated_title() {
+        let name = parse_generated_title(r#"{"title":"  `Fix login timeout!`  "}"#).unwrap();
 
-        assert_eq!(name, "Implement Codex Pane Session Auto Naming");
+        assert_eq!(name, "Fix login timeout");
+        assert!(parse_generated_title("Fix login timeout").is_none());
     }
 
     #[test]
@@ -1567,10 +1928,16 @@ mod tests {
         ]);
 
         assert_eq!(
-            user_requests_from_rollout(file.path()),
+            title_messages_from_rollout(file.path()),
             vec![
-                "i have $cloudflare and $cloudflare-deploy what is the differences between the 2 skills i need to conslidate",
-                "how are both installed?"
+                TitleMessage {
+                    role: TitleMessageRole::User,
+                    text: "i have $cloudflare and $cloudflare-deploy what is the differences between the 2 skills i need to conslidate".to_owned(),
+                },
+                TitleMessage {
+                    role: TitleMessageRole::User,
+                    text: "how are both installed?".to_owned(),
+                },
             ]
         );
     }
@@ -1584,8 +1951,11 @@ mod tests {
         ])]);
 
         assert_eq!(
-            user_requests_from_rollout(file.path()),
-            vec!["does it have everything we need?"]
+            title_messages_from_rollout(file.path()),
+            vec![TitleMessage {
+                role: TitleMessageRole::User,
+                text: "does it have everything we need?".to_owned(),
+            }]
         );
     }
 
@@ -1599,9 +1969,81 @@ mod tests {
         ])]);
 
         assert_eq!(
-            user_requests_from_rollout(file.path()),
-            vec!["what happened after this?"]
+            title_messages_from_rollout(file.path()),
+            vec![TitleMessage {
+                role: TitleMessageRole::User,
+                text: "what happened after this?".to_owned(),
+            }]
         );
+    }
+
+    #[test]
+    fn rollout_title_messages_include_final_answers_and_skip_commentary() {
+        let file = rollout_file(&[
+            user_message(&["Investigate flaky tests"]),
+            assistant_message("commentary", "Checking the test logs"),
+            assistant_message("final_answer", "The timeout caused the failures"),
+            user_message(&["Fix the timeout"]),
+        ]);
+
+        assert_eq!(
+            title_messages_from_rollout(file.path()),
+            vec![
+                TitleMessage {
+                    role: TitleMessageRole::User,
+                    text: "Investigate flaky tests".to_owned(),
+                },
+                TitleMessage {
+                    role: TitleMessageRole::Assistant,
+                    text: "The timeout caused the failures".to_owned(),
+                },
+                TitleMessage {
+                    role: TitleMessageRole::User,
+                    text: "Fix the timeout".to_owned(),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn rollout_title_messages_keep_only_the_latest_eight() {
+        let messages = (0..10)
+            .map(|index| user_message(&[&format!("Request {index}")]))
+            .collect::<Vec<_>>();
+        let file = rollout_file(&messages);
+
+        let messages = title_messages_from_rollout(file.path());
+
+        assert_eq!(messages.len(), 8);
+        assert_eq!(messages.first().unwrap().text, "Request 2");
+        assert_eq!(messages.last().unwrap().text, "Request 9");
+    }
+
+    #[test]
+    fn title_prompt_is_bounded_and_escapes_conversation_markup() {
+        let context = super::NamingContext {
+            messages: vec![TitleMessage {
+                role: TitleMessageRole::User,
+                text: format!("Fix <login> & retries {}", "🚀".repeat(1000)),
+            }],
+        };
+
+        let prompt = build_naming_prompt(&context);
+
+        assert!(prompt.len() <= THREAD_TITLE_PROMPT_MAX_BYTES);
+        assert!(prompt.contains("&lt;login&gt; &amp; retries"));
+        assert!(std::str::from_utf8(prompt.as_bytes()).is_ok());
+    }
+
+    #[test]
+    fn title_schema_enforces_codex_display_limit() {
+        let schema = thread_title_output_schema();
+
+        assert_eq!(
+            schema["properties"]["title"]["maxLength"],
+            THREAD_TITLE_MAX_CHARS
+        );
+        assert_eq!(schema["additionalProperties"], false);
     }
 
     #[test]
@@ -1628,11 +2070,15 @@ mod tests {
             rollout_path: Some(file.path().to_path_buf()),
         };
 
-        let context = build_naming_context(&pane, Some(&session)).unwrap();
+        let context = build_naming_context(&pane, Some(&session));
 
-        assert_eq!(context.first_user_request, None);
-        assert!(context.recent_user_requests.is_empty());
-        assert_eq!(context.visible_text.as_deref(), Some("visible task text"));
+        assert_eq!(
+            context.messages,
+            vec![TitleMessage {
+                role: TitleMessageRole::User,
+                text: "visible task text".to_owned(),
+            }]
+        );
     }
 
     #[test]
