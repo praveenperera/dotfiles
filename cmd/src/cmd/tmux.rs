@@ -84,7 +84,7 @@ pub enum TmuxCmd {
         #[arg(trailing_var_arg = true)]
         name: Vec<String>,
     },
-    /// Name a running Codex pane from its current thread
+    /// Name a running Codex pane, or restore its default label after Codex exits
     NameCodexPane {
         /// Tmux pane target, defaults to the active pane
         #[arg(long)]
@@ -760,12 +760,24 @@ struct PaneProcess {
     args: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CodexPaneNameAction {
+    Generate,
+    RestoreDefault,
+}
+
 #[derive(Debug, Clone)]
 struct ActiveCodexSession {
     launch_home: PathBuf,
     socket_path: PathBuf,
     thread_id: String,
     rollout_path: Option<PathBuf>,
+}
+
+enum SessionLookup<T> {
+    Ready(T),
+    Pending,
+    RetryableFailure(eyre::Report),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -802,10 +814,15 @@ struct GeneratedPaneTitle {
 
 fn name_codex_pane(sh: &Shell, target_pane: Option<&str>) -> Result<()> {
     let pane = read_pane_target(sh, target_pane)?;
+    let processes = processes_on_tty(&pane.tty)?;
+    if codex_pane_name_action(&pane, &processes) == CodexPaneNameAction::RestoreDefault {
+        return clear_tmux_pane_name(sh, &pane.id);
+    }
+
     let previous_name = pane.current_name.clone();
     set_tmux_pane_name(sh, &pane.id, "renaming...")?;
 
-    if let Err(err) = name_codex_pane_after_progress(sh, &pane) {
+    if let Err(err) = name_codex_pane_after_progress(sh, &pane, &processes) {
         set_tmux_pane_name(sh, &pane.id, &previous_name).ok();
         return Err(err);
     }
@@ -918,13 +935,12 @@ fn latest_thread_name(path: &Path, thread_id: &CodexThreadId) -> Result<Option<C
     Ok(latest)
 }
 
-fn name_codex_pane_after_progress(sh: &Shell, pane: &PaneTarget) -> Result<()> {
-    let processes = processes_on_tty(&pane.tty)?;
-    if !pane_runs_codex(pane, &processes) {
-        return Err(eyre!("Target pane is not running Codex"));
-    }
-
-    let session = resolve_active_codex_session(pane, &processes)?;
+fn name_codex_pane_after_progress(
+    sh: &Shell,
+    pane: &PaneTarget,
+    processes: &[PaneProcess],
+) -> Result<()> {
+    let session = resolve_active_codex_session(pane, processes)?;
     let context = build_naming_context(pane, Some(&session));
     let prompt = build_naming_prompt(&context);
     let raw_name = run_codex_name_model(&pane.cwd, Some(&session.launch_home), &prompt)
@@ -1089,14 +1105,19 @@ fn parse_pane_process(line: &str) -> Option<PaneProcess> {
 }
 
 fn pane_runs_codex(pane: &PaneTarget, processes: &[PaneProcess]) -> bool {
-    command_looks_like_codex(&pane.current_command)
-        || processes.iter().any(|process| {
-            command_looks_like_codex(&process.command)
-                || process
-                    .args
-                    .split_whitespace()
-                    .any(command_looks_like_codex)
-        })
+    if processes.is_empty() {
+        return command_looks_like_codex(&pane.current_command);
+    }
+
+    processes.iter().any(process_looks_like_interactive_codex)
+}
+
+fn codex_pane_name_action(pane: &PaneTarget, processes: &[PaneProcess]) -> CodexPaneNameAction {
+    if pane_runs_codex(pane, processes) {
+        CodexPaneNameAction::Generate
+    } else {
+        CodexPaneNameAction::RestoreDefault
+    }
 }
 
 fn command_looks_like_codex(value: &str) -> bool {
@@ -1106,42 +1127,92 @@ fn command_looks_like_codex(value: &str) -> bool {
         .is_some_and(|name| name == "codex")
 }
 
+fn process_looks_like_interactive_codex(process: &PaneProcess) -> bool {
+    let command = Path::new(&process.command)
+        .file_name()
+        .and_then(|name| name.to_str());
+    if !matches!(command, Some("codex" | "node")) {
+        return false;
+    }
+
+    let mut args = process.args.split_whitespace();
+    if args.find(|arg| command_looks_like_codex(arg)).is_none() {
+        return command == Some("codex");
+    }
+
+    args.next() != Some("app-server")
+}
+
 fn resolve_active_codex_session(
     pane: &PaneTarget,
     processes: &[PaneProcess],
 ) -> Result<ActiveCodexSession> {
     let codex_pids = codex_process_family(processes);
-    let deadline = Instant::now() + SESSION_THREAD_WAIT_TIMEOUT;
+    resolve_active_codex_session_with_retry(
+        SESSION_THREAD_WAIT_TIMEOUT,
+        SESSION_THREAD_POLL_INTERVAL,
+        || resolve_active_codex_session_once(pane, &codex_pids),
+    )
+}
+
+fn resolve_active_codex_session_with_retry<T>(
+    timeout: Duration,
+    poll_interval: Duration,
+    mut lookup: impl FnMut() -> Result<SessionLookup<T>>,
+) -> Result<T> {
+    let deadline = Instant::now() + timeout;
+    let mut last_failure = None;
     loop {
-        if let Some(session) = resolve_active_codex_session_once(pane, &codex_pids)? {
-            return Ok(session);
+        match lookup()? {
+            SessionLookup::Ready(session) => return Ok(session),
+            SessionLookup::Pending => {}
+            SessionLookup::RetryableFailure(error) => last_failure = Some(error),
         }
         if Instant::now() >= deadline {
+            if let Some(error) = last_failure {
+                return Err(error).wrap_err("Codex session did not become ready");
+            }
+
             return Err(eyre!(
                 "Codex has not reported its current session yet; send a prompt and try again"
             ));
         }
-        std::thread::sleep(SESSION_THREAD_POLL_INTERVAL);
+        std::thread::sleep(poll_interval);
     }
 }
 
 fn resolve_active_codex_session_once(
     pane: &PaneTarget,
     codex_pids: &HashSet<u32>,
-) -> Result<Option<ActiveCodexSession>> {
+) -> Result<SessionLookup<ActiveCodexSession>> {
     let markers = active_codex_session_markers()?;
     let marker = markers
         .iter()
-        .position(|marker| marker.pane_id.as_deref() == Some(pane.id.as_str()))
-        .map(|index| markers[index].clone())
-        .or_else(|| {
-            markers.into_iter().find(|marker| {
-                marker
+        .position(|marker| {
+            marker.pane_id.as_deref() == Some(pane.id.as_str())
+                && marker
                     .session_pid
                     .is_some_and(|pid| codex_pids.contains(&pid))
-            })
         })
-        .ok_or_else(|| eyre!("Codex session marker not found; restart Codex from cmd codex"))?;
+        .map(|index| markers[index].clone())
+        .or_else(|| {
+            markers
+                .iter()
+                .find(|marker| {
+                    marker
+                        .session_pid
+                        .is_some_and(|pid| codex_pids.contains(&pid))
+                })
+                .cloned()
+        })
+        .or_else(|| {
+            markers
+                .into_iter()
+                .find(|marker| marker.pane_id.as_deref() == Some(pane.id.as_str()))
+        });
+    let Some(marker) = marker else {
+        return Ok(SessionLookup::Pending);
+    };
     let socket_path = match marker.control {
         SessionControl::Local { socket_path } => socket_path,
         SessionControl::External => {
@@ -1157,17 +1228,24 @@ fn resolve_active_codex_session_once(
     // with a null path; refresh from the app server so name/set and context work.
     let thread = match marker.current_thread {
         Some(thread) if thread.rollout_path.is_some() => Some(thread),
-        Some(thread) => match current_loaded_thread(&socket_path)? {
-            Some(loaded) => Some(loaded),
-            None => Some(thread),
+        Some(thread) => match current_loaded_thread(&socket_path) {
+            Ok(Some(loaded)) => Some(loaded),
+            Ok(None) => Some(thread),
+            Err(error) => return Ok(SessionLookup::RetryableFailure(error)),
         },
-        None => current_loaded_thread(&socket_path)?,
+        None => match current_loaded_thread(&socket_path) {
+            Ok(thread) => thread,
+            Err(error) => return Ok(SessionLookup::RetryableFailure(error)),
+        },
     };
     let Some(thread) = thread else {
-        return Ok(None);
+        return Ok(SessionLookup::Pending);
+    };
+    if thread.rollout_path.is_none() {
+        return Ok(SessionLookup::Pending);
     };
 
-    Ok(Some(ActiveCodexSession {
+    Ok(SessionLookup::Ready(ActiveCodexSession {
         launch_home: marker.launch_home,
         socket_path,
         thread_id: thread.id,
@@ -1178,13 +1256,7 @@ fn resolve_active_codex_session_once(
 fn codex_process_family(processes: &[PaneProcess]) -> HashSet<u32> {
     let mut pids = processes
         .iter()
-        .filter(|process| {
-            command_looks_like_codex(&process.command)
-                || process
-                    .args
-                    .split_whitespace()
-                    .any(command_looks_like_codex)
-        })
+        .filter(|process| process_looks_like_interactive_codex(process))
         .map(|process| process.pid)
         .collect::<HashSet<_>>();
 
@@ -1813,17 +1885,20 @@ impl std::fmt::Display for NotifyKind {
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_synced_codex_name, build_naming_context, build_naming_prompt, latest_thread_name,
-        order_panes, order_sessions, order_windows, parse_client_session_context,
-        parse_generated_title, parse_index_list, parse_pane_process, resolve_action_name,
-        resolve_session_index_path, thread_id_from_notification, thread_title_output_schema,
-        title_messages_from_rollout, ActiveCodexSession, CodexThreadId, CodexThreadName, PaneEntry,
-        PaneTarget, PickerEntry, SessionEntry, TitleMessage, TitleMessageRole, WindowEntry,
-        ACTIONS, FIELD_SEP, THREAD_TITLE_MAX_CHARS, THREAD_TITLE_PROMPT_MAX_BYTES,
+        apply_synced_codex_name, build_naming_context, build_naming_prompt, codex_pane_name_action,
+        latest_thread_name, order_panes, order_sessions, order_windows,
+        parse_client_session_context, parse_generated_title, parse_index_list, parse_pane_process,
+        resolve_action_name, resolve_active_codex_session_with_retry, resolve_session_index_path,
+        thread_id_from_notification, thread_title_output_schema, title_messages_from_rollout,
+        ActiveCodexSession, CodexPaneNameAction, CodexThreadId, CodexThreadName, PaneEntry,
+        PaneProcess, PaneTarget, PickerEntry, SessionEntry, SessionLookup, TitleMessage,
+        TitleMessageRole, WindowEntry, ACTIONS, FIELD_SEP, THREAD_TITLE_MAX_CHARS,
+        THREAD_TITLE_PROMPT_MAX_BYTES,
     };
     use std::fs;
     use std::io::Write;
     use std::path::PathBuf;
+    use std::time::Duration;
 
     fn rollout_file(lines: &[serde_json::Value]) -> tempfile::NamedTempFile {
         let mut file = tempfile::NamedTempFile::new().unwrap();
@@ -1897,6 +1972,58 @@ mod tests {
         assert_eq!(process.ppid, 71954);
         assert_eq!(process.command, "node");
         assert_eq!(process.args, "node /opt/bin/codex resume");
+    }
+
+    #[test]
+    fn session_resolution_retries_startup_gaps() {
+        let mut attempts = 0;
+        let session =
+            resolve_active_codex_session_with_retry(Duration::from_secs(1), Duration::ZERO, || {
+                attempts += 1;
+                Ok(match attempts {
+                    1 => SessionLookup::Pending,
+                    2 => SessionLookup::RetryableFailure(eyre::eyre!("app server starting")),
+                    _ => SessionLookup::Ready("thread-1"),
+                })
+            })
+            .unwrap();
+
+        assert_eq!(session, "thread-1");
+        assert_eq!(attempts, 3);
+    }
+
+    #[test]
+    fn restores_default_pane_label_after_codex_exits() {
+        let pane = PaneTarget {
+            id: "%1".to_owned(),
+            tty: "/dev/ttys001".to_owned(),
+            cwd: PathBuf::from("/tmp/project"),
+            current_command: "zsh".to_owned(),
+            current_name: "Old Codex title".to_owned(),
+            visible_text: String::new(),
+        };
+
+        let mut processes = vec![PaneProcess {
+            pid: 2,
+            ppid: 1,
+            command: "codex".to_owned(),
+            args: "codex app-server --listen unix://".to_owned(),
+        }];
+        assert_eq!(
+            codex_pane_name_action(&pane, &processes),
+            CodexPaneNameAction::RestoreDefault
+        );
+
+        processes.push(PaneProcess {
+            pid: 3,
+            ppid: 1,
+            command: "node".to_owned(),
+            args: "node /opt/bin/codex resume".to_owned(),
+        });
+        assert_eq!(
+            codex_pane_name_action(&pane, &processes),
+            CodexPaneNameAction::Generate
+        );
     }
 
     #[test]
