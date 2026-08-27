@@ -22,6 +22,7 @@ const APP_SERVER_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const APP_SERVER_CONNECT_ATTEMPT_TIMEOUT: Duration = Duration::from_millis(500);
 const APP_SERVER_RETRY_INTERVAL: Duration = Duration::from_millis(50);
 const APP_SERVER_STOP_TIMEOUT: Duration = Duration::from_secs(2);
+const PERSISTED_THREAD_WAIT_TIMEOUT: Duration = Duration::from_secs(3);
 const APP_SERVER_SOCKET_DIR: &str = "app-server-control";
 const APP_SERVER_SOCKET_NAME: &str = "app-server-control.sock";
 const WRITER_CONFLICT_PREFIX: &str = "thread-store conflict: thread ";
@@ -752,22 +753,34 @@ async fn run_monitor(
         };
 
         match event {
-            SessionEvent::ThreadStarted(mut thread) if thread.is_top_level() => {
-                current_thread_id = Some(thread.id.clone());
-                if thread.name.is_none() {
-                    thread.name = read_thread_async(socket_path, &thread.id)
-                        .await
-                        .ok()
-                        .and_then(|stored_thread| stored_thread.name);
+            SessionEvent::ThreadStarted(thread) if thread.is_top_level() => {
+                if thread.path.is_none() && current_thread_id.is_some() {
+                    continue;
                 }
 
-                let session_thread = SessionThread {
-                    id: thread.id,
-                    rollout_path: thread.path,
-                    name: thread.name.clone(),
+                let session_thread = if thread.path.is_some() && thread.name.is_none() {
+                    let thread_id = thread.id.clone();
+                    Some(SessionThread::from(
+                        read_thread_async(socket_path, &thread_id)
+                            .await
+                            .unwrap_or(thread),
+                    ))
+                } else if thread.path.is_some() {
+                    Some(SessionThread::from(thread))
+                } else {
+                    wait_for_persisted_thread(socket_path, stop).await
                 };
+                let Some(session_thread) = session_thread else {
+                    continue;
+                };
+                if current_thread_id.as_deref() == Some(session_thread.id.as_str()) {
+                    continue;
+                }
+
+                current_thread_id = Some(session_thread.id.clone());
+                let pane_name = session_thread.name.clone();
                 marker.set_current_thread(Some(session_thread)).ok();
-                sync_pane_name(pane_id, thread.name.as_deref());
+                sync_pane_name(pane_id, pane_name.as_deref());
             }
             SessionEvent::ThreadNameUpdated { thread_id, name }
                 if current_thread_id.as_deref() == Some(thread_id.as_str()) =>
@@ -775,8 +788,46 @@ async fn run_monitor(
                 marker.update_current_thread_name(name.clone()).ok();
                 sync_pane_name(pane_id, name.as_deref());
             }
+            SessionEvent::ThreadNameUpdated { thread_id, name } => {
+                let Ok(thread) = read_thread_async(socket_path, &thread_id).await else {
+                    continue;
+                };
+                if !thread.is_top_level() || thread.path.is_none() {
+                    continue;
+                }
+
+                let mut session_thread = SessionThread::from(thread);
+                session_thread.name = name.clone();
+                current_thread_id = Some(session_thread.id.clone());
+                marker.set_current_thread(Some(session_thread)).ok();
+                sync_pane_name(pane_id, name.as_deref());
+            }
             _ => {}
         }
+    }
+}
+
+async fn wait_for_persisted_thread(socket_path: &Path, stop: &AtomicBool) -> Option<SessionThread> {
+    let deadline = tokio::time::Instant::now() + PERSISTED_THREAD_WAIT_TIMEOUT;
+    loop {
+        if stop.load(Ordering::Relaxed) {
+            return None;
+        }
+        let thread = current_loaded_thread_async(socket_path)
+            .await
+            .ok()
+            .flatten();
+        if thread
+            .as_ref()
+            .is_some_and(|thread| thread.rollout_path.is_some())
+        {
+            return thread;
+        }
+        if tokio::time::Instant::now() >= deadline {
+            return None;
+        }
+
+        tokio::time::sleep(APP_SERVER_RETRY_INTERVAL).await;
     }
 }
 
@@ -825,6 +876,16 @@ struct ThreadReadResponse {
 impl AppServerThread {
     fn is_top_level(&self) -> bool {
         self.parent_thread_id.is_none() && self.agent_role.is_none()
+    }
+}
+
+impl From<AppServerThread> for SessionThread {
+    fn from(thread: AppServerThread) -> Self {
+        Self {
+            id: thread.id,
+            rollout_path: thread.path,
+            name: thread.name,
+        }
     }
 }
 
@@ -945,26 +1006,40 @@ async fn current_loaded_thread_async(socket_path: &Path) -> Result<Option<Sessio
         .wrap_err("Codex app server returned an invalid loaded thread list")?;
 
         let mut top_level_threads = Vec::new();
-        for (index, thread_id) in response.data.into_iter().enumerate() {
-            let request_id = i64::try_from(index)? + 3;
+        for (request_id, thread_id) in (3..).zip(response.data) {
             let thread = read_thread(&mut socket, &thread_id, request_id).await?;
             if thread.is_top_level() {
                 top_level_threads.push(thread);
             }
         }
 
-        match top_level_threads.as_slice() {
-            [] => Ok(None),
-            [thread] => Ok(Some(SessionThread {
-                id: thread.id.clone(),
-                rollout_path: thread.path.clone(),
-                name: thread.name.clone(),
-            })),
-            threads => Err(eyre!(
-                "Codex app server reported {} top-level threads; cannot identify the active session",
-                threads.len()
-            )),
+        if top_level_threads.is_empty() {
+            return Ok(None);
         }
+
+        let (mut persisted_threads, mut transient_threads): (Vec<_>, Vec<_>) = top_level_threads
+            .into_iter()
+            .partition(|thread| thread.path.is_some());
+        if persisted_threads.len() > 1 {
+            return Err(eyre!(
+                "Codex app server reported {} persisted top-level threads; cannot identify the active session",
+                persisted_threads.len()
+            ));
+        }
+        let thread = match persisted_threads.pop() {
+            Some(thread) => thread,
+            None if transient_threads.len() == 1 => transient_threads
+                .pop()
+                .expect("one transient thread exists"),
+            None => {
+                return Err(eyre!(
+                    "Codex app server reported {} transient top-level threads; cannot identify the active session",
+                    transient_threads.len()
+                ));
+            }
+        };
+
+        Ok(Some(SessionThread::from(thread)))
     };
     tokio::time::timeout(APP_SERVER_REQUEST_TIMEOUT, future)
         .await
@@ -1280,6 +1355,7 @@ mod tests {
                 "method": "thread/started",
                 "params": { "thread": {
                     "id": "thread-1",
+                    "sessionId": "session-1",
                     "path": "/tmp/rollout.jsonl",
                     "source": "cli",
                     "parentThreadId": "parent",
@@ -1304,6 +1380,7 @@ mod tests {
                 "method": "thread/started",
                 "params": { "thread": {
                     "id": "thread-1",
+                    "sessionId": "session-1",
                     "path": "/tmp/rollout.jsonl",
                     "source": "vscode",
                     "parentThreadId": null,
@@ -1319,6 +1396,7 @@ mod tests {
             panic!("expected thread event");
         };
         assert!(thread.is_top_level());
+        assert_eq!(thread.id, "thread-1");
     }
 
     #[test]
@@ -1414,7 +1492,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn current_loaded_thread_ignores_subagents() {
+    async fn current_loaded_thread_prefers_persisted_root() {
         let dir = tempdir().unwrap();
         let socket_path = dir.path().join("control.sock");
         let listener = UnixListener::bind(&socket_path).unwrap();
@@ -1436,7 +1514,7 @@ mod tests {
                 .send(Message::Text(
                     json!({
                         "id": 2,
-                        "result": {"data": ["thread-1", "thread-2"]}
+                        "result": {"data": ["thread-1", "thread-2", "run-1"]}
                     })
                     .to_string()
                     .into(),
@@ -1449,6 +1527,7 @@ mod tests {
                     3,
                     json!({
                         "id": "thread-1",
+                        "sessionId": "thread-1",
                         "path": "/tmp/root-rollout.jsonl",
                         "parentThreadId": null,
                         "agentRole": null,
@@ -1459,10 +1538,22 @@ mod tests {
                     4,
                     json!({
                         "id": "thread-2",
+                        "sessionId": "thread-1",
                         "path": "/tmp/child-rollout.jsonl",
                         "parentThreadId": "thread-1",
                         "agentRole": "worker",
                         "name": "Child thread"
+                    }),
+                ),
+                (
+                    5,
+                    json!({
+                        "id": "run-1",
+                        "sessionId": "thread-1",
+                        "path": null,
+                        "parentThreadId": null,
+                        "agentRole": null,
+                        "name": null
                     }),
                 ),
             ] {
@@ -1631,8 +1722,9 @@ mod tests {
                         json!({
                             "method": "thread/started",
                             "params": {"thread": {
-                                "id": "thread-1",
-                                "path": "/tmp/rollout.jsonl",
+                                "id": "run-1",
+                                "sessionId": "run-1",
+                                "path": null,
                                 "source": "cli",
                                 "parentThreadId": null,
                                 "agentRole": null,
@@ -1644,11 +1736,114 @@ mod tests {
                     ))
                     .await
                     .unwrap();
+
+                let (stream, _) = listener.accept().await.unwrap();
+                let mut early_resolver_socket = accept_async(stream).await.unwrap();
+                let _ = next_json(&mut early_resolver_socket).await;
+                early_resolver_socket
+                    .send(Message::Text(
+                        json!({"id": 1, "result": {}}).to_string().into(),
+                    ))
+                    .await
+                    .unwrap();
+                let _ = next_json(&mut early_resolver_socket).await;
+                let loaded = next_json(&mut early_resolver_socket).await;
+                assert_eq!(loaded["method"], "thread/loaded/list");
+                early_resolver_socket
+                    .send(Message::Text(
+                        json!({"id": 2, "result": {"data": ["run-1"]}})
+                            .to_string()
+                            .into(),
+                    ))
+                    .await
+                    .unwrap();
+                let read = next_json(&mut early_resolver_socket).await;
+                assert_eq!(read["method"], "thread/read");
+                early_resolver_socket
+                    .send(Message::Text(
+                        json!({
+                            "id": 3,
+                            "result": {"thread": {
+                                "id": "run-1",
+                                "sessionId": "run-1",
+                                "path": null,
+                                "parentThreadId": null,
+                                "agentRole": null,
+                                "name": null
+                            }}
+                        })
+                        .to_string()
+                        .into(),
+                    ))
+                    .await
+                    .unwrap();
+                drop(early_resolver_socket);
+
+                let (stream, _) = listener.accept().await.unwrap();
+                let mut resolver_socket = accept_async(stream).await.unwrap();
+                let _ = next_json(&mut resolver_socket).await;
+                resolver_socket
+                    .send(Message::Text(
+                        json!({"id": 1, "result": {}}).to_string().into(),
+                    ))
+                    .await
+                    .unwrap();
+                let _ = next_json(&mut resolver_socket).await;
+                let loaded = next_json(&mut resolver_socket).await;
+                assert_eq!(loaded["method"], "thread/loaded/list");
+                resolver_socket
+                    .send(Message::Text(
+                        json!({
+                            "id": 2,
+                            "result": {"data": ["session-1", "run-1"]}
+                        })
+                        .to_string()
+                        .into(),
+                    ))
+                    .await
+                    .unwrap();
+
+                for (request_id, thread) in [
+                    (
+                        3,
+                        json!({
+                            "id": "session-1",
+                            "sessionId": "session-1",
+                            "path": "/tmp/root-rollout.jsonl",
+                            "parentThreadId": null,
+                            "agentRole": null,
+                            "name": "Initial name"
+                        }),
+                    ),
+                    (
+                        4,
+                        json!({
+                            "id": "run-1",
+                            "sessionId": "run-1",
+                            "path": null,
+                            "parentThreadId": null,
+                            "agentRole": null,
+                            "name": null
+                        }),
+                    ),
+                ] {
+                    let read = next_json(&mut resolver_socket).await;
+                    assert_eq!(read["method"], "thread/read");
+                    resolver_socket
+                        .send(Message::Text(
+                            json!({"id": request_id, "result": {"thread": thread}})
+                                .to_string()
+                                .into(),
+                        ))
+                        .await
+                        .unwrap();
+                }
+
                 socket
                     .send(Message::Text(
                         json!({
                             "method": "thread/name/updated",
-                            "params": {"threadId": "thread-1", "threadName": "Live name"}
+                            "params": {"threadId": "session-1", "threadName": "test"}
                         })
                         .to_string()
                         .into(),
@@ -1679,7 +1874,7 @@ mod tests {
             if saved
                 .current_thread
                 .as_ref()
-                .is_some_and(|thread| thread.name.as_deref() == Some("Live name"))
+                .is_some_and(|thread| thread.name.as_deref() == Some("test"))
             {
                 break saved.current_thread.unwrap();
             }
@@ -1687,10 +1882,10 @@ mod tests {
             std::thread::sleep(Duration::from_millis(10));
         };
 
-        assert_eq!(current_thread.id, "thread-1");
+        assert_eq!(current_thread.id, "session-1");
         assert_eq!(
             current_thread.rollout_path.as_deref(),
-            Some(std::path::Path::new("/tmp/rollout.jsonl"))
+            Some(std::path::Path::new("/tmp/root-rollout.jsonl"))
         );
         monitor.stop();
         server.join().unwrap();
