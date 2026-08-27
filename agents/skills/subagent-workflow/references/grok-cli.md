@@ -9,9 +9,10 @@ command -v grok
 grok --version
 grok models | rg 'grok-4\.6'
 grok --help
+grok inspect
 ```
 
-Do not modify login or global configuration automatically. If authentication or `grok-4.6` is unavailable, report the exact failure instead of substituting a model.
+Save the `grok inspect` output with the run artifacts. It identifies loaded permission sources and hooks that can override a permission mode or an `--allow` rule. Do not modify login or global configuration automatically. If authentication or `grok-4.6` is unavailable, report the exact failure instead of substituting a model.
 
 ## Use the shared evidence directory and prompt
 
@@ -62,7 +63,7 @@ Keep the raw NDJSON. It records session updates and tool failures that the plain
 
 ## Run a fresh implementation delegate
 
-Use `acceptEdits` so Grok can edit files without an approval prompt. Add one exact `--allow` rule for each required verification command and each shell inspection command that is not in Grok's built-in read-only set. The examples below are placeholders; replace them with the real commands:
+Use `acceptEdits` so Grok can edit files without an approval prompt. Also add an exact `Edit(...)` allow for each owned path because Grok routes `search_replace` through the `Edit` permission class. Add one exact `--allow` rule for each required verification command and each shell inspection command that is not in Grok's built-in read-only set. The examples below are placeholders; replace them with the real paths and commands:
 
 ```sh
 delegate_session_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
@@ -79,6 +80,7 @@ grok \
   --no-subagents \
   --disable-web-search \
   --verbatim \
+  --allow 'Edit(path/to/owned/**)' \
   --allow 'Bash(exact verification command)' \
   --allow 'Bash(exact shell inspection command, when required)' \
   --output-format streaming-json \
@@ -91,7 +93,7 @@ grok export "$delegate_session_id" "$delegate_dir/raw/transcript.md" \
   2> "$delegate_dir/raw/export-stderr.txt"
 ```
 
-`acceptEdits` approves file edits, not every shell command. Unmatched shell calls can still fail in a headless run, so keep the exact command allows. Do not use `--always-approve`, `bypassPermissions`, or sandbox `off` for delegated work. Do not allow commit, staging, push, pull-request, deployment, messaging, or other external-state commands.
+`acceptEdits` approves file edits, not every shell command. The explicit `Edit(...)` rule makes the intended path approval visible in the harness, but a deny rule or hook can still reject it. Unmatched shell calls can also fail in a headless run, so keep the exact command allows. Do not use `--always-approve`, `bypassPermissions`, or sandbox `off` for delegated work. Do not allow commit, staging, push, pull-request, deployment, messaging, or other external-state commands.
 
 The `workspace` sandbox limits writes to the working directory, Grok state, and temporary directories. `acceptEdits` does not enforce the prompt's narrower owned scope, so baseline and postflight comparison is still required. If a formatter or verification command can modify files outside owned scope, do not grant it to the delegate; run it independently after integration.
 
@@ -103,6 +105,7 @@ Always record postflight state, including after a nonzero exit. Inspect the exit
 - Reject implementation changes outside owned scope.
 - Verify important claims against the source and run the required repository checks independently.
 - Treat `User cancelled` from a tool call in a headless permission mode as a permission denial unless there is separate evidence that the user stopped the run. Confirm it in the NDJSON or trace. If Grok did not recover with its one approved-tool retry, add only the exact safe rule the task needs in a fresh pass. Do not relax the whole permission mode or sandbox.
+- Count permission and hook denials across all Grok passes for the task. After a second denial blocks a required action, stop using Grok for that task and reroute the remaining owned scopes according to the active root guidance or the user's model choice. Do not start a third Grok pass.
 
 ## Current command sources
 
