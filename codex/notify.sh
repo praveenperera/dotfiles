@@ -10,6 +10,12 @@ if [[ "$payload" != *'"agent-turn-complete"'* ]]; then
 fi
 
 if [[ -n "${TMUX:-}" ]] && command -v cmd >/dev/null 2>&1; then
+  if [[ -n "${TMUX_PANE:-}" ]]; then
+    printf '%s' "$payload" \
+      | cmd tmux sync-codex-pane-name --target-pane "$TMUX_PANE" >/dev/null 2>&1 \
+      || true
+  fi
+
   cmd tmux notify --type bell --force "$message" >/dev/null 2>&1 || true
 fi
 
