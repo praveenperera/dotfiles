@@ -22,7 +22,7 @@ const APP_SERVER_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const APP_SERVER_CONNECT_ATTEMPT_TIMEOUT: Duration = Duration::from_millis(500);
 const APP_SERVER_RETRY_INTERVAL: Duration = Duration::from_millis(50);
 const APP_SERVER_STOP_TIMEOUT: Duration = Duration::from_secs(2);
-const PERSISTED_THREAD_WAIT_TIMEOUT: Duration = Duration::from_secs(3);
+const PERSISTED_THREAD_MAX_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const APP_SERVER_SOCKET_DIR: &str = "app-server-control";
 const APP_SERVER_SOCKET_NAME: &str = "app-server-control.sock";
 const WRITER_CONFLICT_PREFIX: &str = "thread-store conflict: thread ";
@@ -98,9 +98,16 @@ pub(crate) enum AppServerLaunch {
         tui_args: Vec<std::ffi::OsString>,
         config_overrides: Vec<ConfigOverride>,
         strict_config: bool,
+        initial_thread_sync: InitialThreadSync,
     },
     External,
     Embedded,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum InitialThreadSync {
+    EventsOnly,
+    ResolveLoadedThread,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -215,10 +222,18 @@ pub(crate) fn plan_app_server_launch(args: &[std::ffi::OsString]) -> AppServerLa
         });
     }
 
+    let initial_thread_sync = codex_command_index(&tui_args)
+        .and_then(|command_index| tui_args.get(command_index))
+        .filter(|command| command.as_os_str() == "resume")
+        .map_or(InitialThreadSync::EventsOnly, |_| {
+            InitialThreadSync::ResolveLoadedThread
+        });
+
     AppServerLaunch::Managed {
         tui_args,
         config_overrides,
         strict_config,
+        initial_thread_sync,
     }
 }
 
@@ -441,6 +456,7 @@ impl ManagedAppServer {
     pub(crate) fn start(
         launch_home: &Path,
         strict_config: bool,
+        initial_thread_sync: InitialThreadSync,
         marker: SessionMarkerHandle,
         pane_id: Option<String>,
     ) -> Result<Self> {
@@ -469,7 +485,8 @@ impl ManagedAppServer {
             return Err(err).wrap_err("Failed to record Codex app server process");
         }
 
-        let monitor = match SessionMonitor::start(socket_path, marker, pane_id) {
+        let monitor = match SessionMonitor::start(socket_path, initial_thread_sync, marker, pane_id)
+        {
             Ok(monitor) => monitor,
             Err(err) => {
                 process.stop();
@@ -672,6 +689,7 @@ struct SessionMonitor {
 impl SessionMonitor {
     fn start(
         socket_path: PathBuf,
+        initial_thread_sync: InitialThreadSync,
         marker: SessionMarkerHandle,
         pane_id: Option<String>,
     ) -> Result<Self> {
@@ -691,6 +709,7 @@ impl SessionMonitor {
             };
             runtime.block_on(run_monitor(
                 &socket_path,
+                initial_thread_sync,
                 marker,
                 pane_id.as_deref(),
                 &thread_stop,
@@ -721,6 +740,7 @@ impl SessionMonitor {
 
 async fn run_monitor(
     socket_path: &Path,
+    initial_thread_sync: InitialThreadSync,
     marker: SessionMarkerHandle,
     pane_id: Option<&str>,
     stop: &AtomicBool,
@@ -735,14 +755,25 @@ async fn run_monitor(
     };
     ready.send(Ok(())).ok();
 
-    let mut current_thread_id = None;
+    let mut state = ThreadMonitorState::from(initial_thread_sync);
+    let mut loaded_thread = Box::pin(wait_for_persisted_thread(socket_path, stop));
     while !stop.load(Ordering::Relaxed) {
-        let message = tokio::select! {
-            _ = tokio::time::sleep(Duration::from_millis(100)) => continue,
-            message = socket.next() => message,
+        let input = tokio::select! {
+            thread = &mut loaded_thread, if state.is_resolving() => {
+                MonitorInput::LoadedThread(thread)
+            }
+            _ = tokio::time::sleep(Duration::from_millis(100)) => MonitorInput::CheckStop,
+            message = socket.next() => MonitorInput::Message(message),
         };
-        let Some(Ok(message)) = message else {
-            return;
+        let message = match input {
+            MonitorInput::LoadedThread(Some(thread)) => {
+                state = track_thread(&marker, pane_id, thread);
+                continue;
+            }
+            MonitorInput::LoadedThread(None) => return,
+            MonitorInput::CheckStop => continue,
+            MonitorInput::Message(Some(Ok(message))) => message,
+            MonitorInput::Message(Some(Err(_)) | None) => return,
         };
         if let Message::Ping(payload) = message {
             socket.send(Message::Pong(payload)).await.ok();
@@ -754,36 +785,32 @@ async fn run_monitor(
 
         match event {
             SessionEvent::ThreadStarted(thread) if thread.is_top_level() => {
-                if thread.path.is_none() && current_thread_id.is_some() {
+                if thread.path.is_none() {
+                    if matches!(state, ThreadMonitorState::AwaitingEvents) {
+                        loaded_thread = Box::pin(wait_for_persisted_thread(socket_path, stop));
+                        state = ThreadMonitorState::ResolvingLoadedThread;
+                    }
                     continue;
                 }
 
-                let session_thread = if thread.path.is_some() && thread.name.is_none() {
+                let session_thread = if thread.name.is_none() {
                     let thread_id = thread.id.clone();
-                    Some(SessionThread::from(
+                    SessionThread::from(
                         read_thread_async(socket_path, &thread_id)
                             .await
                             .unwrap_or(thread),
-                    ))
-                } else if thread.path.is_some() {
-                    Some(SessionThread::from(thread))
+                    )
                 } else {
-                    wait_for_persisted_thread(socket_path, stop).await
+                    SessionThread::from(thread)
                 };
-                let Some(session_thread) = session_thread else {
-                    continue;
-                };
-                if current_thread_id.as_deref() == Some(session_thread.id.as_str()) {
+                if state.tracked_thread_id() == Some(session_thread.id.as_str()) {
                     continue;
                 }
 
-                current_thread_id = Some(session_thread.id.clone());
-                let pane_name = session_thread.name.clone();
-                marker.set_current_thread(Some(session_thread)).ok();
-                sync_pane_name(pane_id, pane_name.as_deref());
+                state = track_thread(&marker, pane_id, session_thread);
             }
             SessionEvent::ThreadNameUpdated { thread_id, name }
-                if current_thread_id.as_deref() == Some(thread_id.as_str()) =>
+                if state.tracked_thread_id() == Some(thread_id.as_str()) =>
             {
                 marker.update_current_thread_name(name.clone()).ok();
                 sync_pane_name(pane_id, name.as_deref());
@@ -798,17 +825,62 @@ async fn run_monitor(
 
                 let mut session_thread = SessionThread::from(thread);
                 session_thread.name = name.clone();
-                current_thread_id = Some(session_thread.id.clone());
-                marker.set_current_thread(Some(session_thread)).ok();
-                sync_pane_name(pane_id, name.as_deref());
+                state = track_thread(&marker, pane_id, session_thread);
             }
             _ => {}
         }
     }
 }
 
+enum MonitorInput {
+    LoadedThread(Option<SessionThread>),
+    CheckStop,
+    Message(Option<std::result::Result<Message, tokio_tungstenite::tungstenite::Error>>),
+}
+
+enum ThreadMonitorState {
+    AwaitingEvents,
+    ResolvingLoadedThread,
+    Tracking(String),
+}
+
+impl ThreadMonitorState {
+    fn is_resolving(&self) -> bool {
+        matches!(self, Self::ResolvingLoadedThread)
+    }
+
+    fn tracked_thread_id(&self) -> Option<&str> {
+        match self {
+            Self::Tracking(thread_id) => Some(thread_id),
+            Self::AwaitingEvents | Self::ResolvingLoadedThread => None,
+        }
+    }
+}
+
+impl From<InitialThreadSync> for ThreadMonitorState {
+    fn from(initial_thread_sync: InitialThreadSync) -> Self {
+        match initial_thread_sync {
+            InitialThreadSync::EventsOnly => Self::AwaitingEvents,
+            InitialThreadSync::ResolveLoadedThread => Self::ResolvingLoadedThread,
+        }
+    }
+}
+
+fn track_thread(
+    marker: &SessionMarkerHandle,
+    pane_id: Option<&str>,
+    thread: SessionThread,
+) -> ThreadMonitorState {
+    let thread_id = thread.id.clone();
+    let pane_name = thread.name.clone();
+    marker.set_current_thread(Some(thread)).ok();
+    sync_pane_name(pane_id, pane_name.as_deref());
+
+    ThreadMonitorState::Tracking(thread_id)
+}
+
 async fn wait_for_persisted_thread(socket_path: &Path, stop: &AtomicBool) -> Option<SessionThread> {
-    let deadline = tokio::time::Instant::now() + PERSISTED_THREAD_WAIT_TIMEOUT;
+    let mut retry_interval = APP_SERVER_RETRY_INTERVAL;
     loop {
         if stop.load(Ordering::Relaxed) {
             return None;
@@ -823,11 +895,10 @@ async fn wait_for_persisted_thread(socket_path: &Path, stop: &AtomicBool) -> Opt
         {
             return thread;
         }
-        if tokio::time::Instant::now() >= deadline {
-            return None;
-        }
-
-        tokio::time::sleep(APP_SERVER_RETRY_INTERVAL).await;
+        tokio::time::sleep(retry_interval).await;
+        retry_interval = retry_interval
+            .saturating_mul(2)
+            .min(PERSISTED_THREAD_MAX_RETRY_INTERVAL);
     }
 }
 
@@ -1164,8 +1235,8 @@ mod tests {
     use super::{
         current_loaded_thread_async, managed_tui_connection_args, parse_latest_writer_conflict,
         plan_app_server_launch, session_event, set_thread_name_async, validate_socket_path,
-        writer_conflict_retry_args, AppServerLaunch, SessionControl, SessionEvent, SessionMarker,
-        SessionMonitor, ThreadWriterConflict,
+        writer_conflict_retry_args, AppServerLaunch, InitialThreadSync, SessionControl,
+        SessionEvent, SessionMarker, SessionMonitor, ThreadWriterConflict,
     };
     #[cfg(unix)]
     use super::{process_group_is_running, ManagedProcess};
@@ -1273,6 +1344,7 @@ mod tests {
             tui_args,
             config_overrides,
             strict_config,
+            initial_thread_sync,
         } = plan_app_server_launch(&args)
         else {
             panic!("expected managed launch");
@@ -1284,6 +1356,7 @@ mod tests {
         assert_eq!(config_overrides[1].key, "features.web_search");
         assert_eq!(config_overrides[1].value, "true");
         assert!(!strict_config);
+        assert_eq!(initial_thread_sync, InitialThreadSync::ResolveLoadedThread);
     }
 
     #[test]
@@ -1304,6 +1377,7 @@ mod tests {
         let AppServerLaunch::Managed {
             tui_args,
             config_overrides,
+            initial_thread_sync,
             ..
         } = plan_app_server_launch(&args)
         else {
@@ -1312,6 +1386,7 @@ mod tests {
 
         assert_eq!(tui_args, ["start here"].map(OsString::from));
         assert_eq!(config_overrides[0].key, "model");
+        assert_eq!(initial_thread_sync, InitialThreadSync::EventsOnly);
     }
 
     #[test]
@@ -1585,7 +1660,7 @@ mod tests {
     }
 
     #[test]
-    fn monitor_restores_stored_name_when_started_notification_omits_it() {
+    fn resume_monitor_resolves_stored_name_without_a_notification() {
         let dir = tempdir().unwrap();
         let profile_home = dir.path().join("profiles/a");
         let socket_path = dir.path().join("control.sock");
@@ -1610,24 +1685,6 @@ mod tests {
                     .await
                     .unwrap();
                 let _ = next_json(&mut monitor_socket).await;
-                monitor_socket
-                    .send(Message::Text(
-                        json!({
-                            "method": "thread/started",
-                            "params": {"thread": {
-                                "id": "thread-1",
-                                "path": "/tmp/rollout.jsonl",
-                                "parentThreadId": null,
-                                "agentRole": null,
-                                "name": null
-                            }}
-                        })
-                        .to_string()
-                        .into(),
-                    ))
-                    .await
-                    .unwrap();
-
                 let (stream, _) = listener.accept().await.unwrap();
                 let mut read_socket = accept_async(stream).await.unwrap();
                 let _ = next_json(&mut read_socket).await;
@@ -1638,13 +1695,23 @@ mod tests {
                     .await
                     .unwrap();
                 let _ = next_json(&mut read_socket).await;
+                let loaded = next_json(&mut read_socket).await;
+                assert_eq!(loaded["method"], "thread/loaded/list");
+                read_socket
+                    .send(Message::Text(
+                        json!({"id": 2, "result": {"data": ["thread-1"]}})
+                            .to_string()
+                            .into(),
+                    ))
+                    .await
+                    .unwrap();
                 let read = next_json(&mut read_socket).await;
                 assert_eq!(read["method"], "thread/read");
                 assert_eq!(read["params"]["threadId"], "thread-1");
                 read_socket
                     .send(Message::Text(
                         json!({
-                            "id": 2,
+                            "id": 3,
                             "result": {"thread": {
                                 "id": "thread-1",
                                 "path": "/tmp/rollout.jsonl",
@@ -1673,7 +1740,13 @@ mod tests {
         )
         .unwrap();
 
-        let monitor = SessionMonitor::start(socket_path, marker.clone(), None).unwrap();
+        let monitor = SessionMonitor::start(
+            socket_path,
+            InitialThreadSync::ResolveLoadedThread,
+            marker.clone(),
+            None,
+        )
+        .unwrap();
         let deadline = Instant::now() + Duration::from_secs(2);
         let current_thread = loop {
             let saved =
@@ -1865,7 +1938,13 @@ mod tests {
         )
         .unwrap();
 
-        let monitor = SessionMonitor::start(socket_path, marker.clone(), None).unwrap();
+        let monitor = SessionMonitor::start(
+            socket_path,
+            InitialThreadSync::EventsOnly,
+            marker.clone(),
+            None,
+        )
+        .unwrap();
         let deadline = Instant::now() + Duration::from_secs(2);
         let current_thread = loop {
             let saved =

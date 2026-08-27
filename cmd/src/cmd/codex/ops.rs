@@ -141,10 +141,15 @@ fn launch_with_profile(
         control,
     )?;
     let app_server = match &app_server_launch {
-        AppServerLaunch::Managed { strict_config, .. } => Some(
+        AppServerLaunch::Managed {
+            strict_config,
+            initial_thread_sync,
+            ..
+        } => Some(
             ManagedAppServer::start(
                 &launch_home,
                 *strict_config,
+                *initial_thread_sync,
                 session_marker.clone(),
                 pane_id,
             )
