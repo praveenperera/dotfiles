@@ -121,11 +121,11 @@ For every Claude Agent-tool pass (Opus or Fable subagent):
 
 For every Grok CLI pass:
 
-1. Start a fresh headless `grok` invocation with model `grok-4.6`, `high` reasoning, an explicit working directory, a permission mode, a sandbox, and nested agents disabled.
-2. Use `dontAsk` with read-only sandboxing for analysis. For implementation, use `acceptEdits` with workspace sandboxing, plus explicit allows for owned edit paths, required verification commands, and any exact shell inspection commands that cannot use Grok's built-in read-only tools.
-3. Capture the prompt, exit status, streaming JSON or a session trace, stderr, baseline, and postflight repository state under `_scratch/subagent-workflow/<run-id>/`; plain final output can hide permission denials.
-4. Reject read-only mutations and changes outside owned scope. Inspect and verify the result independently.
-5. After two permission or hook denials block required actions in the same task, stop using Grok for that task and reroute the remaining work. Do not broaden permissions or start a third Grok pass.
+1. Start a fresh headless `grok` invocation with model `grok-4.6`, `high` reasoning, `--always-approve`, an explicit working directory, a non-off sandbox, and nested agents disabled.
+2. Use the read-only sandbox for analysis and the workspace sandbox for implementation. Complete the grok-cli.md permission preflight, including shell `ask` rule rejection and repository-specific external-mutation denies. Omit only the rules for exact external actions that the user separately authorizes.
+3. Capture the prompt, exit status, streaming JSON or a session trace, stderr, baseline, and postflight repository state under `_scratch/subagent-workflow/<run-id>/`.
+4. Reject read-only mutations and implementation changes outside owned scope. Inspect and verify the result independently.
+5. If a deny rule or hook blocks a required action, do not weaken the rule automatically. Report the exact action and reroute or ask for the needed authority. Git postflight checks do not prove that external state stayed unchanged.
 
 Choose follow-ups, additional reviewers, escalation, and repair paths using your best judgment. The orchestrator remains accountable for the integrated result. Never let a delegate commit, push, open or modify a pull request, deploy, or change external state unless the user separately authorizes that exact action.
 

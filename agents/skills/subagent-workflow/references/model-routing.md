@@ -119,7 +119,7 @@ SpaceXAI reports that Grok 4.6 at `high` matches Sol on the Artificial Analysis 
 
 Grok 4.6 has a 500,000-token context window, native web and X search, and API pricing of $2 per million input tokens and $6 per million output tokens below the long-context threshold. That makes a third-provider pass practical when it adds independence rather than duplicate coverage.
 
-Use `high` reasoning by default because the published comparisons use it and the model defaults to it. Use `xhigh` only for a user-directed or consequential escalation. Read [grok-cli.md](grok-cli.md) for fresh headless delegation, sandboxing, permission allowlists, and artifact capture.
+Use `high` reasoning by default because the published comparisons use it and the model defaults to it. Use `xhigh` only for a user-directed or consequential escalation. Read [grok-cli.md](grok-cli.md) for fresh headless delegation, always-approve automation, sandboxing, deny rules, and artifact capture.
 
 ## Select GPT-5.6 Luna
 
