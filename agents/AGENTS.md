@@ -14,6 +14,11 @@
 - In public-facing copy, include only reader-visible content. Omit implementation notes, source labels, workflow state, reasoning, conversation context, and edit instructions.
 - Preserve unrelated user or agent changes. Use hunk staging for commits and never undo unrelated edits.
 
+# Codex Specific
+
+- Use `fork_turns="none"` for Codex subagents by default, and give each subagent a self-contained prompt. Use `fork_turns="all"` only when the user explicitly requests a full-history fork.
+- Reserve `gpt-6-astra` for architecture, difficult reviews, ambiguous decisions, and ideation. Default implementation agents to Luna Max for bounded, clearly defined work with concrete verification.
+
 # Rust Project Specific
 
 - Unless asked, do not set an MSRV for new Rust projects; default to stable.
