@@ -1,34 +1,24 @@
 ---
 name: rb
-description: |
-  Default path for building container images. Use for any Docker / Buildx /
-  Dockerfile / container image build: docker build, docker buildx build, image
-  tags, --load, --push, multi-stage builds, remote BuildKit, or rb itself
-  (rb build, rb project, rb status, rb stop, rb cache, rb doctor, rb login).
-  Prefer rb over local docker build and docker buildx build. Load this skill
-  before inventing a local build command. Do not use for non-image tasks
-  (compose up only, running an already-built container, pure Dockerfile edits
-  with no build).
+description: Build container images or manage remote builders with rb. Use for Docker/Buildx image builds and rb operations, not running images, compose-only work, or Dockerfile-only edits.
 ---
 
-# rb - Remote BuildKit (default Docker builds)
+# rb - Remote BuildKit
 
-**Default:** build images with `rb build`, not local `docker build` or
-`docker buildx build`.
+Use `rb build` as the default path for container image builds. It leases a
+temporary remote BuildKit builder, tunnels Buildx over SSH, and keeps a
+per-project cache Volume after compute stops. Prefer installed `rb <cmd>
+--help` when its flags differ from this skill.
 
-`rb` leases a temporary remote BuildKit builder, tunnels Buildx over SSH, and
-keeps a per-project cache Volume after compute stops. Prefer installed
-`rb <cmd> --help` over this skill when flags disagree.
+## Choose the build path
 
-## When to use local Docker instead
+Use local `docker build` or `docker buildx build` only when:
 
-Use local `docker build` / `docker buildx` only when one of these is true:
+1. the user explicitly asks for a local build
+2. `rb` is missing or `rb doctor` fails and the user accepts a local fallback
+3. the task is not an image build, such as running an existing image
 
-1. The user explicitly asks for a **local** build.
-2. `rb` is missing or `rb doctor` fails and the user accepts a local fallback.
-3. The task is not an image build (e.g. `docker run` of an existing image).
-
-Otherwise: **translate any local build into `rb build`.**
+Otherwise, translate the image build to `rb build`:
 
 | Do not run | Run instead |
 | --- | --- |
@@ -36,221 +26,63 @@ Otherwise: **translate any local build into `rb build`.**
 | `docker buildx build --push -t … .` | `rb build -- -t … --push .` |
 | `docker buildx build --platform …` | same flags after `rb build --` |
 
-`--project <name>` is optional and only overrides rb's project resolution.
+Do not run bare `docker buildx` against an rb tunnel. Everything after `--` is
+passed unchanged to `docker buildx build`; forward the user's intended flags,
+including `-t`, `--load`, `--push`, `-f`, `--platform`, `--target`, build args,
+and context path.
 
-## Prerequisites
-
-```bash
-rb doctor            # docker, buildx, ssh, control-plane
-rb doctor --offline  # local tools only
-```
-
-Auth once per machine (token via env, not shell history):
+## Basic commands
 
 ```bash
-export RB_TOKEN='…'
-rb login --control-plane https://example.example
+rb doctor
+rb doctor --offline
+rb build -- -t example/app:dev --load .
+rb build -- -t example/app:latest --push .
+rb status
+rb stop
+rb cache delete
 ```
 
-Never print `RB_TOKEN`, credential files, or project SSH private keys.
+`rb stop` releases compute and keeps the cache Volume. `rb cache delete`
+destroys compute and the cache Volume, so treat it as destructive and run it
+only after a clear request. Read [project-management.md](references/project-management.md)
+for authentication, project policy, and lifecycle administration.
 
-Config lives under Application Support `com.praveen.rb`
-(`config.json`, `credentials.json`). Do not hand-edit secrets.
-
-## Commands
-
-| Need | Command |
-| --- | --- |
-| readiness | `rb doctor` |
-| create/update project policy + SSH key | `rb project init --name <name> [opts]` |
-| **image build (default)** | `rb build -- [buildx args…]` |
-| state / deadlines | `rb status` |
-| stop compute, keep cache Volume | `rb stop` |
-| delete compute **and** cache Volume | `rb cache delete` |
-
-Project name: 1–32 chars, lowercase letters, digits, hyphens.
-
-### Project selection
+## Project selection
 
 `rb` resolves the project name in this order:
 
-1. The `--project` flag.
-2. The `RB_PROJECT` environment variable.
-3. The nearest user-authored `.rb.toml` file with a `project = "name"` key,
-   searched from the working directory up to the git toplevel; nearest file
-   wins. `rb` only reads this file and never writes it.
-4. A slug from the git-toplevel directory name, or the working directory name
-   outside a git repository; lowercase, non-alphanumeric runs become one
-   hyphen, max 32 characters.
+1. the `--project` flag
+2. the `RB_PROJECT` environment variable
+3. the nearest user-authored `.rb.toml` with `project = "name"`, searched from
+   the working directory up to the git toplevel; the nearest file wins
+4. a slug from the git-toplevel directory, or the working directory outside a
+   git repository, with lowercase non-alphanumeric runs collapsed to one
+   hyphen and a maximum length of 32 characters
 
-`rb build` auto-creates a missing project with the default policy and prints a
-one-line notice to stderr. `rb status`, `rb stop`, and `rb cache delete` never
-create a project; a missing project fails with a hint to run `rb build` or
-`rb project init --name <name>`.
+`rb` only reads `.rb.toml`; it never writes it. `rb build` auto-creates a
+missing project with the default policy and prints a one-line stderr notice.
+`rb status`, `rb stop`, and `rb cache delete` never create a project and show
+a hint to run `rb build` or `rb project init --name <name>` when it is missing.
+Pass `--project` only when the user names a project. Use `rb project init` for
+custom region, size, volume, TTL, or builder limits; read the project reference
+before changing policy or keys.
 
-Pass `--project` only when the user names a project. Use `rb project init` only
-when the user wants custom region, size, volume, TTLs, or max builders.
+## Constraints
 
-### `rb project init`
+- Keep `RB_TOKEN` in the environment, not shell history. Never print it,
+  credential files, or project SSH private keys
+- Do not hand-edit secrets in Application Support `com.praveen.rb`
+- Do not invent control-plane URLs or tokens
+- Treat `--rotate-key` as destructive and require a clear request
+- Prefer `rb stop` when reducing cost and keeping the cache
 
-```bash
-rb project init \
-  --name my-app \
-  --region nyc3 \
-  --size c-8 \
-  --volume-gib 50 \
-  --cache-ttl 3d \
-  --compute-idle-ttl 5m \
-  --max-builders 1
-```
+Read [registry-cache.md](references/registry-cache.md) for registry choice and
+managed cache behavior. Read [troubleshooting.md](references/troubleshooting.md)
+for readiness failures, occupied lanes, queueing, and recovery actions.
 
-Limits:
+## Platform assumptions
 
-- `--volume-gib`: 10–200
-- `--cache-ttl`: 1–7 days (`3d` or `3`)
-- `--compute-idle-ttl`: 5–15 minutes (`5m` or `5`)
-- `--max-builders`: 1–8
-
-`--rotate-key` replaces the project SSH key. Re-run `init` with the same
-`--name` to update policy.
-
-### `rb build`
-
-Everything after `--` is passed unchanged to `docker buildx build`:
-
-```bash
-rb build -- -t example/app:dev --load .
-rb build -- -t example/app:latest --push .
-rb build \
-  --cache-from type=registry,ref=… \
-  --cache-to type=registry,ref=… \
-  -- -t example/app:latest --push .
-```
-
-`--cache-from` / `--cache-to` are optional registry cache edges in addition to
-the project Volume cache.
-
-First build after idle can take longer (Droplet provision/warm).
-
-### Registry selection
-
-Select the registry from the image's visibility, not the source repository's
-visibility:
-
-| Image use | Preferred registry | Reason |
-| --- | --- | --- |
-| Private application image | Cloudflare Managed Registry | short-lived, scoped credentials keep the remote builder and deployment host outside the GitHub source credential boundary |
-| Public application image | public GHCR | anonymous digest pulls need no credential and GHCR provides a public package UI |
-| Private-image BuildKit cache | Cloudflare Managed Registry | the application image and cache share one temporary build credential |
-| Public-image BuildKit cache | private GHCR package | the public application package stays separate from the private build cache |
-
-For a private Cloudflare image, enable the automatic managed cache in the
-nearest `.rb.toml`:
-
-```toml
-project = "my-app"
-
-[registry_cache]
-provider = "cloudflare"
-account_id = "<OPTIONAL_ACCOUNT_ID>"
-retention_days = 7
-credential_minutes = 120
-```
-
-Omit `account_id` when Wrangler already has one selected. Wrangler must be
-installed and logged in only when this mode is enabled. After a lane is ready,
-`rb` issues a temporary push-and-pull credential, uses an isolated temporary
-Docker configuration, imports the newest retained cache tag for each lane, and
-exports the current lane to
-`<project>-buildcache:rb-v1-<lane>-<UTC-date>`. It prunes expired rb-owned tags
-after a successful build and lease release. A prune error warns and the next
-successful build retries it. The isolated configuration keeps Docker CLI
-plug-in discovery paths but does not copy existing registry authentication.
-
-Use `rb build --no-managed-cache -- ...` to bypass the configured cache for one
-build. Manual `--cache-from` and `--cache-to` options are additive.
-
-Push to this reference shape:
-
-```text
-registry.cloudflare.com/<ACCOUNT_ID>/<IMAGE>:<TAG>
-```
-
-Then build normally:
-
-```bash
-rb build -- --platform linux/amd64 --push \
-  --tag registry.cloudflare.com/<ACCOUNT_ID>/<IMAGE>:<TAG> .
-```
-
-Wrangler is the temporary credential issuer; it is not required for the image
-transfer. Give a deployment host a separate, short-lived pull-only credential.
-Do not send the build credential to a deployment host. For a public image,
-publish to GHCR, use a separate private GHCR cache package, and configure
-consumers to pull the verified digest without authentication.
-
-Each build carries labels that `rb status` shows under
-`lifecycle.lanes[].lease`: `owner` (`RB_BUILD_OWNER` or `user@host`),
-`command` (build-arg values redacted), `startedAt`, `lastHeartbeatAt`,
-`heartbeatDueAt`, `expiresAt`. Set `RB_BUILD_OWNER` in CI or agent runs so
-the lane holder is identifiable.
-
-If every lane is held by another build, `rb build` fails with
-`409 project_capacity_exhausted` and prints each occupied lane (owner, command,
-running time, last heartbeat). Queue instead of failing:
-
-```bash
-rb build --wait -- -t example/app:latest --push .
-rb build --wait --wait-timeout 1h -- -t example/app:latest --push .
-```
-
-Default `--wait-timeout` is `30m`. Do not kill a queued `rb build --wait` to
-"free" a lane; the lane belongs to the build shown in the report.
-
-### Lifecycle
-
-- **Warm compute**: up for `compute-idle-ttl` after last use, then stops.
-- **Cache Volume**: retained for `cache-ttl` after last use.
-- `rb stop`: free compute now; keep Volume.
-- `rb cache delete`: destroy compute and Volume (cold next build).
-
-```bash
-rb status
-rb stop
-rb cache delete   # destructive; confirm intent first
-```
-
-## Agent workflow
-
-1. On any image-build request, plan `rb build` first - not local Docker.
-2. Pass `--project` only when the user names one; otherwise rely on rb's
-   resolution.
-3. Map the user's intended Buildx flags after `--` (`-t`, `--load`, `--push`,
-   `-f`, `--platform`, `--target`, build-args, context path).
-4. If `rb` fails for tooling/auth, run `rb doctor`, report the error, and only
-   then offer local Docker as a fallback.
-5. Prefer `rb stop` over `rb cache delete` when cutting cost.
-6. Treat `rb cache delete` and `--rotate-key` as destructive; require a clear ask.
-7. Do not invent control-plane URLs or tokens.
-
-## Common failures
-
-| Symptom | Action |
-| --- | --- |
-| no control-plane URL/token | `rb login` with `RB_TOKEN` |
-| docker / buildx / ssh fail in doctor | fix local install, re-run `rb doctor` |
-| project missing | `rb build` auto-creates with default policy; lifecycle commands print a hint |
-| name conflict | name taken by another SSH key/policy; pick new name via `--project`/`RB_PROJECT` |
-| SSH / host key issues | `rb project init --name … --rotate-key` if key is bad |
-| builder provisioning timeout | re-run build; check `rb status` |
-| `409 project_capacity_exhausted` | another build holds every lane; read the printed owner/command, then re-run with `--wait` or ask the owner |
-| lane `active` but no local `rb build` running | check `rb status` `lease.heartbeatDueAt`; if it is in the past the control plane expires the lease and `rb terminate` / `rb build --wait` proceed; if it is in the future the build is live elsewhere |
-| want cheaper idle | `rb stop` (keeps cache) |
-
-## Do not
-
-- Default to local `docker build` / `docker buildx build` for images.
-- Run bare `docker buildx` against rb tunnels; use `rb build`.
-- Log or paste bearer tokens or private keys.
-- Delete cache Volumes unless the user wants a full reset.
-- Assume ARM or multi-arch defaults; pass platform flags in Buildx args when needed.
+Do not assume ARM or multi-arch defaults. Pass platform flags in the Buildx
+arguments when the target requires them. The first build after idle can take
+longer while the Droplet provisions or warms.

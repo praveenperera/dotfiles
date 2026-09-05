@@ -1,0 +1,5 @@
+description = "React application development"
+skills = [
+  "vercel-react-best-practices",
+]
+packs = ["web"]
