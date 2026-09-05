@@ -16,6 +16,7 @@
 
 # Codex Specific
 
+- NEVER USE THE RESET USAGE TOOL. NEVER RESET USAGE.
 - Use `fork_turns="none"` for Codex subagents by default, and give each subagent a self-contained prompt. Use `fork_turns="all"` only when the user explicitly requests a full-history fork.
 - Reserve `gpt-6-astra` for architecture, difficult reviews, ambiguous decisions, and ideation; default its reasoning effort to `high`. Default implementation agents to `gpt-5.6-luna` with `max` reasoning for bounded, clearly defined work with clear instructions and acceptance checks. Return unresolved design decisions to the primary agent.
 - Infer intent and scope from the request and bias toward action. Treat "can you", "I want to", and "help me" as instructions to do the work. Complete the work that is already authorized before asking a clarifying question, and do not add unsolicited warnings, disclaimers, or approval flows.
