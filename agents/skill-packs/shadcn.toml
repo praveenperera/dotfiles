@@ -1,0 +1,5 @@
+description = "shadcn/ui with Base UI"
+skills = [
+  "shadcn-baseui",
+]
+packs = ["react"]

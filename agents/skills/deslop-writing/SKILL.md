@@ -1,6 +1,6 @@
 ---
 name: deslop-writing
-description: Draft, rewrite, and audit English prose to remove formulaic AI-writing patterns and give finished copy a distinct, natural voice by default while preserving facts, identity, dialect, and channel conventions. Use when Codex is asked to deslop writing, avoid AIisms, add soul without inventing experience, preserve a writer's voice during editing, diagnose formulaic prose, or produce direct and specific copy without common LLM tics.
+description: Draft, rewrite, or audit English prose for direct, natural writing without formulaic AI patterns. Preserve facts and the writer's voice.
 ---
 
 # Deslop Writing

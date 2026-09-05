@@ -1,12 +1,6 @@
 ---
 name: btx
-description: |
-  Clone and explore external codebases using the btx CLI. Use this skill when:
-  - User wants to explore a GitHub repository (e.g., "explore anthropics/claude-code")
-  - User asks how a library/framework works and you need to read its source
-  - User wants to understand implementation details of an external project
-  - User provides a repo URL or owner/repo and wants you to examine it
-  - You need GitHub repository metadata (ownership, archived, last push) without curl
+description: Explore external repository source or fetch GitHub repository metadata with the btx CLI.
 ---
 
 # btx

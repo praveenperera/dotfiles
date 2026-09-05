@@ -6,6 +6,8 @@ Skill packs group project-local skills, MCP snippets, installed Codex plugin sou
 
 ```bash
 cmd pack add web
+cmd pack add react cloud
+cmd pack add web svelte
 cmd pack add rust
 cmd pack add --agent claude web
 cmd pack add --agent codex native
@@ -36,21 +38,53 @@ Codex does not load plugin enablement from project-local `.codex/config.toml`, s
 
 `cmd cfg` also runs `cmd pack refresh --all`, so registered project packs are refreshed whenever dotfiles config is reapplied.
 
+## Choose a focused pack
+
+Start with the tools the project uses. Combine packs when needed; shared
+dependencies are installed once.
+
+| Pack | Includes |
+| --- | --- |
+| `web` | Shared browser, design, and web development tools; no framework or cloud provider |
+| `react` | React guidance plus `web` |
+| `shadcn` | Base UI-backed shadcn components plus `react` |
+| `tailwind` | Tailwind Plus components plus `web` |
+| `svelte` | Svelte guidance; combine with `web` for shared tools |
+| `cloud` | Cloudflare guidance |
+| `remotion` | Skills from the installed Remotion plugin |
+| `hyperframes` | HyperFrames creation workflows and shared tools |
+| `video-editing` | Transcripts, captions, and graphic overlays with shared HyperFrames tools |
+| `video` | The full Remotion, HyperFrames, editing, and migration collection |
+
+`hyperframes-base` holds the shared HyperFrames tools. The creation and editing
+packs include it automatically. Use `native` for Apple app design and development.
+
+Install MoneyDevKit guidance only in projects that need it:
+
+```bash
+cmd skill add moneydevkit-nextjs
+```
+
+Pack refresh adds or updates links; it does not remove skills installed by an
+earlier pack definition. In an existing project, remove only the unwanted skill
+symlinks from `.agents/skills` and `.claude/skills`. Do not delete skill source
+directories or unrelated MCP settings.
+
 ## Plugin-backed packs
 
 Use `plugin_sources` when a Codex plugin should stay disabled globally but its
-skills should be available in selected projects. For example, the `video` pack
+skills should be available in selected projects. For example, the `remotion` pack
 links Remotion's plugin skills into the current project:
 
 ```toml
-description = "Video and motion graphics work"
+description = "Remotion video creation and rendering"
 plugin_sources = ["remotion@openai-curated-remote"]
 ```
 
 Install it in a project with:
 
 ```bash
-cmd pack add video
+cmd pack add remotion
 ```
 
 Do not also keep a vendored copy under `agents/skills`, because `cmd cfg`

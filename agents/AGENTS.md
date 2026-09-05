@@ -41,9 +41,7 @@
 
 # Docker image builds
 
-- Default to the global `rb` skill for container image builds. Prefer `rb build --project <name> -- [buildx args…]` over local `docker build` and `docker buildx build`.
-- Use local Docker only when the user asks for a local build, or when `rb` is unavailable and the user accepts that fallback.
-- Load `$rb` / the `rb` skill before inventing a build command. Do not print control-plane tokens or project SSH private keys.
+- Use the global `rb` skill for container image builds and follow its operational guidance. Use local Docker only when the user asks for a local build or when `rb` is unavailable and the user accepts the fallback.
 
 # Verification
 

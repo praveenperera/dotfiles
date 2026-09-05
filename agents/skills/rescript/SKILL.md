@@ -5,195 +5,80 @@ description: Use for new or substantially extended JavaScript-targeting apps wit
 
 # ReScript
 
-Treat ReScript as the default for JavaScript-targeting work when its compiler can own meaningful
-application logic. Optimize for total delivery cost, not language purity.
-
-ReScript can reduce repair loops through sound inference, non-nullable values, variants, and
-exhaustive pattern matching. Its incremental compiler is fast. It does not guarantee fewer source
-tokens or faster delivery: scaffolding, inaccurate externals, and unsupported package bindings can
-cost more than the compiler saves. ReScript's safety ends at an incorrectly typed JavaScript
-boundary, and the compiler cannot enforce domain facts the model omits.
+Default to ReScript for JavaScript-targeting work when its compiler can own meaningful application
+logic. Optimize for delivery cost, not language purity: bindings and scaffolding can cost more than
+the compiler saves. Type safety ends at an incorrectly typed JavaScript boundary.
 
 ## Choose the language boundary
 
+Honor explicit language and framework choices. Preserve the language of small changes in existing
+projects; do not migrate a project merely because ReScript would suit a new implementation.
+
 | Work | Default |
 | --- | --- |
-| new React SPA, dashboard, form workflow, or local interactive tool | ReScript React with Vite |
-| quick site with meaningful state, validation, persistence, data transformation, or API data | ReScript |
-| production React UI with a manageable dependency surface | ReScript |
-| reusable domain logic or state machine targeting JavaScript | ReScript |
-| static HTML/CSS page with no meaningful behavior | HTML/CSS; do not add a compiler |
-| tiny browser snippet, bookmarklet, config file, or disposable DOM script | JavaScript |
-| small change in an established JavaScript or TypeScript project | preserve the existing language |
-| Svelte, Vue, Solid, or `.astro` component/template files | use the framework's native TypeScript; apply the ReScript React rule separately to Astro islands |
-| Astro content site with substantial interactive React islands | Astro/TypeScript shell plus ReScript React islands |
-| Node service using a narrow, stable API surface | ReScript if bindings stay small; otherwise use a JavaScript/TypeScript adapter |
-| JavaScript-targeting Cloudflare Worker with Durable Objects or SQL | ReScript domain logic with a narrow TypeScript adapter when actual bindings justify it; for explicit Rust or an existing Rust Worker, use workers-rs and do not introduce TypeScript only for Durable Objects |
-| binary encoder, rasterizer, or typed-array algorithm | ReScript when platform bindings stay narrow; require parity or semantic format checks |
-| React consumer of stable package primitives | bind the primitive once and keep ordinary consumer JSX in ReScript |
-| dependency-heavy feature with missing, stale, or highly generic bindings | keep that boundary in TypeScript and expose a small API to ReScript |
+| new React app, dashboard, form, interactive tool, or reusable domain logic | ReScript; Vite + ReScript React for UI |
+| static page without meaningful behavior | HTML/CSS; no compiler |
+| tiny snippet, bookmarklet, configuration, or disposable DOM script | JavaScript |
+| Svelte, Vue, Solid, or Astro templates | native TypeScript; ReScript can own separate domain logic |
+| content site with substantial interactive React islands | Astro/TypeScript shell with ReScript React islands |
+| Node service or JavaScript-targeting Worker | ReScript where bindings stay narrow; a thin JS/TS adapter otherwise |
+| explicit Rust or existing Rust Worker | workers-rs; do not introduce TypeScript only for Durable Objects |
+| binary, raster, or typed-array algorithm | ReScript when platform bindings stay narrow; verify runtime output |
+| dependency-heavy integration with missing or highly generic bindings | a small TypeScript boundary exposed to ReScript |
 
-Honor an explicit user language or framework choice. Do not migrate an existing project merely
-because ReScript would have been a good greenfield choice.
+ReScript is useful when state transitions, nullable/error states, untrusted input, persisted data,
+or transformations carry meaningful invariants. Choose JS/TS when setup or binding code outweighs
+application logic, or code must be pasted into an existing runtime. Do not use a fixed line-count
+threshold. JSX, DOM APIs, regular expressions, and binary data do not by themselves require JS/TS.
 
-## Apply the payoff test
+For new interactive apps, prefer the official `create-rescript-app` Vite/React template and
+`@rescript/react`. Use the built-in ReScript React router for simple client routing. Add Next.js or
+another metaframework only when rendering, routing, content, or deployment requirements justify it.
+For a local durable tool, use a small Node API for filesystem/database access, with ReScript domain
+logic and a thin JS/TS server adapter only when bindings justify one.
 
-Default to ReScript when at least one of these is material and interop is straightforward:
+## Read the relevant reference
 
-- invalid states or transitions would create bugs
-- nullable, asynchronous, or error states need explicit handling
-- untrusted JSON, CSV, form, or API data crosses a boundary
-- multiple transformations must preserve a domain invariant
-- request plans, browser lifecycle, or selection stages can be separated from effects
-- the tool is likely to be modified, rerun, or reused
-- compiler feedback can replace runtime debugging
+Load only the guidance needed by the current task:
 
-Choose JavaScript or TypeScript when the work is smaller than the build setup, must be pasted
-directly into an existing runtime, or would require more binding code than application code.
-Do not use a fixed line-count threshold; judge the number of states and boundaries.
+| Task | Reference |
+| --- | --- |
+| create or upgrade a project; change build scripts, watchers, or generated output | [project-setup.md](references/project-setup.md) |
+| choose a framework/package or integrate Astro islands | [frameworks-and-packages.md](references/frameworks-and-packages.md) |
+| design or refactor nontrivial state, ownership, transitions, or persisted formats | [domain-modeling.md](references/domain-modeling.md) |
+| add browser, Node, npm, TypeScript, genType, or binary-data bindings | [interop.md](references/interop.md) |
+| choose declarative JSON codecs or validate wire formats | [json-codecs.md](references/json-codecs.md) |
+| evaluate a migration or claim a ReScript payoff | [evaluating-rescript.md](references/evaluating-rescript.md) |
 
-When evaluating a migration or whether ReScript paid off, read
-[evaluating-rescript.md](references/evaluating-rescript.md). Separate existing defects from
-migration mistakes, test findings, stronger models, and tooling costs.
+## Implementation constraints
 
-## Prefer these architectures
-
-For an interactive site or application, start with the current official
-`create-rescript-app` Vite and React template. Use `@rescript/react`; it is the strongest
-supported UI pairing.
-
-Before creating or upgrading a project, read [project-setup.md](references/project-setup.md).
-When choosing a framework or third-party package, read
-[frameworks-and-packages.md](references/frameworks-and-packages.md).
-
-For a local durable tool, use:
-
-```text
-Vite + ReScript React
-        |
-        | fetch
-        v
-small local Node API -> local file or database
-```
-
-Write the server in ReScript when its bindings are narrow. Otherwise keep a thin server adapter
-in TypeScript or JavaScript and keep validation and domain decisions in ReScript.
-
-For a content-first site, use Astro for pages and layouts and import compiled ReScript React
-components as interactive islands. Do not try to author `.astro` files in ReScript. Inspect
-embedded scripts rather than exempting them automatically, and keep one top-level ReScript
-component per hydrated island file.
-
-Do not select Next.js by default for a client-side or local tool. Add a metaframework only when
-SSR, server rendering, content routing, deployment, or another concrete requirement justifies it.
-
-## Implement domain-first
-
-Before designing or refactoring nontrivial application state, read
-[domain-modeling.md](references/domain-modeling.md).
-
-1. Inspect the repository, package manager, installed versions, build scripts, and existing
-   language before choosing an architecture.
-2. Model domain states with records, variants, `option`, and `result` before building callers.
-3. Preserve origin, authority, lifecycle, and transition information when behavior depends on it.
-4. Make transitions accept only the states they can handle. Prefer exhaustive `switch` branches
-   and avoid wildcard branches over closed variants.
-5. Validate external data at its boundary. Convert it once into trusted domain types.
-6. Keep browser, framework, filesystem, and package-specific APIs behind narrow modules.
-7. Compile after each meaningful slice. Fix the first causal type error before editing downstream
-   errors.
-8. Add tests for parsing, migrations, state transitions, and user-visible behavior where they
-   protect real invariants.
-
-Let inference remove routine annotations. Add explicit types at public APIs, domain boundaries,
-recursive values, and places where inference would communicate the wrong contract.
-
-## Bind JavaScript narrowly
-
-Prefer a maintained binding package only after confirming that its ReScript and upstream package
-versions match the project. Inspect installed exports, declarations, and source for unfamiliar
-libraries rather than guessing.
-
-Before adding browser, Node, npm-package, or TypeScript bindings, read
-[interop.md](references/interop.md).
-
-Before selecting generated or declarative JSON codecs, read
-[json-codecs.md](references/json-codecs.md).
-
-When no suitable binding exists:
-
-1. Bind only the functions, objects, and component props the feature uses.
-2. Match the real runtime representation, optionality, calling convention, and module export.
-3. Wrap raw externals in a typed ReScript module instead of exposing them throughout the app.
-4. Add a focused runtime test when an external declaration could compile while being wrong.
-5. Bind a stable reusable package primitive once, then reassess whether its ordinary consumers
-   still need TypeScript.
-6. Move the integration to a TypeScript or JavaScript adapter if the wrapper becomes large or
-   repeatedly needs unsafe escape hatches.
-
-Do not exempt code merely because it uses JSX, DOM APIs, regular expressions, typed arrays, or
-binary data. Inspect current ReScript APIs first. Retain an adapter when package-specific generic,
-configuration, callback, or render-prop machinery dominates the application logic.
-
-Prefer genType when TypeScript consumes an API owned by ReScript. ReScript 12 includes genType,
-so annotate the public ReScript types and values and generate `.gen.ts` or `.gen.tsx` boundaries
-instead of duplicating them in handwritten declarations. After consumers import the generated
-boundary, remove the corresponding manual `.d.ts` or ambient declaration entries. Use handwritten
-externals for narrow JavaScript or TypeScript APIs that ReScript consumes, or when genType cannot
-represent the boundary. Do not edit generated JavaScript or TypeScript.
-
-Avoid `Obj.magic`, unchecked casts, dishonest non-null types, and direct use of unvalidated
-`JSON.parse` results. These erase the advantage that justified choosing ReScript.
-
-## Keep quick work quick
-
-- reuse the repository's package manager and current build conventions
-- avoid adding a framework, router, server, or state library without a concrete need
-- use the built-in ReScript React router for simple client routing
-- keep one-time tools small, but still model consequential states and persisted data
-- prefer platform APIs or a tiny adapter over binding an entire library
-- do not duplicate TypeScript types when ReScript owns the domain model
-- do not migrate static literal content by default when schemas and interfaces add no useful
-  invariant
-- do not create a new controller solely to move one trivial boolean or page script
-- do not build a compatibility probe when the repository already demonstrates the integration
-
-The token-saving loop is: model once, implement a small slice, compile, repair the earliest error,
-and continue. Do not generate the whole application before the first compile.
+- Model states with records, variants, `option`, and `result`. Preserve origin, authority, lifecycle,
+  and transition information when behavior depends on them. Prefer exhaustive switches over closed
+  variants, and parse external data once at its owning boundary
+- Let inference remove routine annotations. Use explicit types at public APIs, domain boundaries,
+  recursive values, and places where inference would communicate the wrong contract
+- Check installed versions and real package exports/types before writing bindings. Bind only the
+  used surface, then wrap externals in a typed owner. A declaration can compile while being wrong;
+  verify uncertain runtime representations and calling conventions
+- Bind stable package primitives once and keep ordinary consumers in ReScript. Use genType when
+  TypeScript consumes ReScript-owned APIs; do not duplicate those types by hand or edit generated
+  files. Keep a small adapter when package-specific machinery dominates
+- Avoid `Obj.magic`, unchecked casts, dishonest non-null types, and unvalidated `JSON.parse` results
+- Reuse project conventions. Do not add a framework, server, controller, or schema without a useful
+  role, migrate static literals without an invariant, or create compatibility probes where the
+  repository already demonstrates the integration
+- Compile after each meaningful slice and fix the first causal type error before downstream
+  errors. Do not generate the entire application before the first compile
 
 ## Verify
 
 Run the repository's formatter, ReScript build, framework build, linter, and relevant tests.
-Run commands that invoke the ReScript compiler serially in one build tree; concurrent format,
-typecheck, test, and build commands can race on locks and generated output.
-Stop framework and Worker watchers that bundle in-source generated files before formatting or
-running a clean verification. A formatter or compiler may replace `.res.js` and GenType files
-atomically, and a live bundler can observe the temporary gap.
-For a new project, ensure the scripts cover at least:
+Run compiler-related commands serially within one build tree. Stop framework or Worker watchers
+that bundle in-source generated files before formatting or clean verification; they can observe
+files between replacement steps. Follow the generated-output and lifecycle rules in
+[project-setup.md](references/project-setup.md) when changing that setup.
 
-```text
-rescript format
-rescript
-vite build
-```
-
-Ignore compiler artifacts and in-source generated JavaScript according to the selected ReScript
-output configuration. Commit authored `.res` and `.resi` files, configuration, and lockfiles;
-follow repository policy for any intentionally published generated output.
-
-Verify the boundary the compiler cannot prove: use browser checks for hydration and initial URL
-state; byte-for-byte parity for output deterministic in the supported runtime; semantic decoding,
-signature, dimensions, chunks, and metadata when compression or encoding can vary; and the
-repository's Worker harness or Wrangler with isolated persistence for routes, methods, headers,
-state, and generated responses.
-
-When persisted-schema compatibility is in scope, test both representative legacy state and a
-fresh isolated state. Inspect actual columns and constraints during upgrades; a recorded migration
-version alone does not prove that persisted storage has the expected shape.
-
-Use the current official documentation when syntax or configuration may have changed:
-
-- https://rescript-lang.org/docs/manual/introduction/
-- https://rescript-lang.org/docs/manual/interop-cheatsheet/
-- https://rescript-lang.org/docs/react/introduction/
-- https://rescript-lang.org/docs/manual/typescript-integration/
+Verify boundaries the compiler cannot prove: browser hydration and initial URL state, binary
+parity or semantic decoding, Worker routes and responses, and legacy/fresh persisted state when
+those behaviors are in scope. The corresponding references above contain the focused checks.
+Use current official ReScript documentation when syntax or configuration may have changed.

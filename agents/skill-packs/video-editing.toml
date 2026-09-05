@@ -1,0 +1,7 @@
+description = "Captions and graphic overlays for existing footage"
+skills = [
+  "smrze-youtube-transcripts",
+  "embedded-captions",
+  "talking-head-recut",
+]
+packs = ["hyperframes-base"]

@@ -1,6 +1,6 @@
 ---
 name: slopstation
-description: Deploy, publish, verify, update, or troubleshoot websites and Cloudflare Workers on slopstation.net subdomains. Use when a request names slopstation.net, asks for a host such as app.slopstation.net, needs a source copy under ~/code/slopstation, or needs a browser-free Wrangler deployment to the Slopstation Cloudflare zone. Supports static sites, Workers, Vite or React builds, and vinext or ChatGPT Sites output.
+description: Deploy, update, archive, or troubleshoot sites and Workers on slopstation.net with Wrangler.
 ---
 
 # Slopstation

@@ -1,0 +1,11 @@
+description = "Shared HyperFrames authoring and rendering tools"
+skills = [
+  "hyperframes",
+  "hyperframes-core",
+  "hyperframes-animation",
+  "hyperframes-cli",
+  "hyperframes-creative",
+  "hyperframes-keyframes",
+  "hyperframes-registry",
+  "media-use",
+]

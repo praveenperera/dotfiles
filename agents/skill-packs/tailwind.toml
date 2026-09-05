@@ -1,0 +1,5 @@
+description = "Tailwind Plus component selection"
+skills = [
+  "tailwindplus",
+]
+packs = ["web"]

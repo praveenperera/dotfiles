@@ -13,11 +13,11 @@ Store raw provider output, normalized findings, prompts, fix summaries, verifica
 
 Before the first review, record a deterministic `target_fingerprint` for the exact code under review. Write a sorted snapshot manifest that contains the target mode, base or merge-base and head identifiers, the exact binary tracked diff for the target, and one content hash for every relevant untracked review file included in the packet. Exclude scratch artifacts and unrelated untracked files. Hash the manifest with SHA-256 and record the fingerprint in the run report, every final prompt, and every final-provider result.
 
-All final reviewers must receive the same fingerprint and the same code snapshot. Recompute it before each final invocation. Any code, test, configuration, generated-file, or relevant untracked review-content change invalidates every final approval. Regenerate the packet and rerun the enabled review sequence; never reuse an approval from an earlier fingerprint.
+**Snapshot invariant:** Every final reviewer in the current enabled sequence receives a fresh neutral packet for the same exact `target_fingerprint`. Recompute it before each final invocation. Any code, test, configuration, generated-file, or relevant untracked review-content change invalidates every final approval. Regenerate the packet and rerun the enabled review sequence; never reuse an approval from an earlier fingerprint. After targeted validation, recompute the fingerprint and run a fresh neutral final review on the new snapshot before continuing to another provider or declaring local success.
 
-A `final reviewer` is an enabled GLM, Grok, Opus, or Codex stage that uses a fresh provider session and a neutral broad prompt to review the exact final `target_fingerprint`. A targeted validation may see the finding and repair it checks, but it is never a final reviewer. The provider reference owns neutral-packet contents, artifact names, and invocation commands.
+A `final reviewer` is an enabled GLM, Grok, Opus, or Codex stage that uses a fresh provider session and a neutral broad prompt. A targeted validation may see the finding and repair it checks, but it is never a final reviewer. The provider reference owns neutral-packet contents, artifact names, and invocation commands.
 
-After targeted validation, recompute the fingerprint and run a fresh neutral final review on the new snapshot before continuing to another provider or declaring local success. Use the provider reference's separate `targeted-validation-<provider>-<iteration>` and provider-specific `final-neutral` artifact names.
+Use the provider reference's separate `targeted-validation-<provider>-<iteration>` and provider-specific `final-neutral` artifact names.
 
 ## Authority
 
@@ -39,7 +39,7 @@ Preserve unrelated work. Inspect status before the first review, after every fix
 
 Keep local and published outcomes distinct:
 
-- **Local success:** every enabled final reviewer has independently reviewed the final local code in the required order, no actionable findings remain, and required local verification passes. Targeted validation does not satisfy the independent-review requirement.
+- **Local success:** every enabled final reviewer has independently reviewed the final local code in the required order under the snapshot invariant, no actionable findings remain, required local verification passes, and no unreviewed code change followed the last gate.
 - **Published success:** local success is established, every authorized commit and push succeeds, and required CI on the published commit passes. Apply only independently authorized comments, labels, and thread resolutions.
 
 A locally successful run is complete when publication was not requested. If publication was requested, report CI that is pending, failed, unknown, or timed out as published incomplete without retracting the local result. Never describe unpushed local code as CI-verified.
@@ -64,12 +64,12 @@ After a broad review, allow at most one targeted follow-up for the same concern.
 
 Run the enabled stages in this order:
 
-1. **Z.ai GLM 5.3 final-review stage:** request an evidence-backed broad review using the neutral packet. When it reports actionable findings, normalize and deduplicate them, run one fresh Luna Max fix pass, verify locally, and use a separately named GLM targeted-validation prompt to check the repair. Then recompute the fingerprint and run a fresh neutral broad GLM review of that exact snapshot before Grok, Opus, Codex, or local success. Targeted GLM validation may include the finding and repair, but it is not an independent final review.
+1. **Z.ai GLM 5.3 final-review stage:** request an evidence-backed broad review using the neutral packet. When it reports actionable findings, normalize and deduplicate them, run one fresh Luna Max fix pass, verify locally, and use a separately named GLM targeted-validation prompt to check the repair. Then run a fresh neutral broad GLM review under the snapshot invariant before Grok, Opus, Codex, or local success. Targeted GLM validation may include the finding and repair, but it is not an independent final review.
 2. **Grok 4.6 final review:** start only after GLM and local verification are clean.
 3. **Claude Opus final review:** start only after Grok is clean.
 4. **Codex final review:** start only after Opus is clean. Use `high` effort by default; use `xhigh` only when the user explicitly requests Codex xhigh.
 
-If any final reviewer finds an actionable issue, stop later reviewers, spend a fix pass, verify, return to the first enabled stage, and rerun all enabled stages on the resulting code. Recompute the target fingerprint after every code-changing pass. Local success requires each enabled final reviewer to have seen the code after the last code-changing pass and to have reviewed the same fingerprint.
+If any final reviewer finds an actionable issue, stop later reviewers, spend a fix pass, verify, return to the first enabled stage, and rerun all enabled stages on the resulting code. Apply the snapshot invariant after every code-changing pass.
 
 A user may explicitly disable a provider. Remove only that stage and preserve the relative order of the remaining stages. Do not silently substitute a provider, model, credential, or skill. If an enabled dependency is unavailable, stop and request authorization to skip or substitute it.
 
@@ -80,7 +80,7 @@ A user may explicitly disable a provider. Remove only that stage and preserve th
 3. **Fix.** Load `references/fresh-luna-fix.md` and start a fresh GPT-5.6 Luna Max fix agent through the bundled helper or an equivalent internal Luna Max worker. Give it the repository context, applicable invariants and matrix, and normalized actionable findings. The agent must inspect the current diff, preserve unrelated changes, implement the requested repairs, verify its work, and avoid all publication and PR mutations.
 4. **Verify.** Inspect status, diff statistics, and whitespace errors after each pass. Run the repository-required formatter, linter, tests, build, migrations, or generated-file checks, including the risk-based cases from preflight. A mechanical verification repair still consumes a fix pass; a product or design ambiguity stops the loop for user direction.
 5. **Apply optional review gates.** Run an additional provider such as CodeRabbit or Greptile only when the user requests it or trusted repository policy requires it. Confirm that it can see the exact code state and classify any repair check as targeted validation. Findings that require changes consume the same fix budget and invalidate prior final reviews.
-6. **Establish local outcome.** Confirm that every enabled final reviewer independently reviewed the final code on the same recorded fingerprint, normalized findings are empty, local verification passed, and no unreviewed code change followed the last gate.
+6. **Establish local outcome.** Apply the local-success criteria above.
 7. **Perform authorized writes.** Create a commit, push, comment, label, or resolve threads only for actions individually recorded as authorized. Follow repository commit instructions. A push requires an existing authorized commit containing the intended changes; otherwise ask for commit authorization. For a pushed result, poll required CI with a finite timeout. Resolve only threads whose findings are demonstrably addressed and only when thread resolution was authorized.
 8. **Report.** Include the local outcome, publication/CI outcome, providers and exact models, fix-pass usage and efforts, findings fixed and remaining, verification commands and results, final-code reviewers, authorized writes performed or withheld, CI checks, and scratch artifact path.
 

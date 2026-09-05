@@ -1,0 +1,13 @@
+description = "HyperFrames video and motion graphic creation"
+skills = [
+  "figma",
+  "general-video",
+  "product-launch-video",
+  "website-to-video",
+  "faceless-explainer",
+  "pr-to-video",
+  "motion-graphics",
+  "music-to-video",
+  "slideshow",
+]
+packs = ["hyperframes-base"]
