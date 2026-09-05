@@ -1,6 +1,6 @@
 ---
 name: rescript
-description: Default suitable new JavaScript-targeting websites, React applications, local browser tools, and reusable frontend or Node modules to ReScript, while selecting TypeScript or a hybrid when framework syntax, tiny throwaway scope, or binding cost makes ReScript slower. Use when creating or substantially extending a website or web app without an explicit language choice, when asked to use or evaluate ReScript, when modeling UI states or external data in `.res` files, or when integrating ReScript with React, Vite, Astro, Node, JavaScript, or TypeScript. Preserve an existing project's language for small changes unless the user requests migration.
+description: Use for new or substantially extended JavaScript-targeting apps without an explicit language choice, or for ReScript development and evaluation. Default suitable work to ReScript; preserve existing languages for small edits.
 ---
 
 # ReScript

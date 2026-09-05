@@ -1,6 +1,6 @@
 ---
 name: moneydevkit-nextjs
-description: Integrate MoneyDevKit's `@moneydevkit/nextjs` package into Next.js App Router applications for hosted or custom Lightning checkout, amount and product payments, server-only MDK operations, and payment verification. Use when a Next.js project mentions MoneyDevKit/MDK, Lightning checkout, Bitcoin sats, product checkout, payment polling, or server-side fulfillment. Do not use for non-Next.js MDK integrations or generic Bitcoin wallet code.
+description: Integrate MoneyDevKit Lightning checkout, server operations, and payment verification in Next.js App Router apps. Use for MDK or Lightning payment work in Next.js, not generic wallet code.
 ---
 
 # MoneyDevKit for Next.js

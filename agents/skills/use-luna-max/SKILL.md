@@ -7,7 +7,7 @@ description: Route implementation, tests, and mechanical repository work to inte
 
 ## Enforce the invocation gate
 
-Activate this workflow only when the user explicitly names Luna or invokes this skill. Keep it active for the rest of the session until the user cancels it.
+Activate this workflow only when the user asks to use Luna for implementation or explicitly invokes this skill. A statement that Luna is the current root, a model comparison, or a request to edit this skill does not activate it. Keep it active for the rest of the session until the user cancels it.
 
 While active, send implementation work to Luna. Keep design and acceptance in the root thread. Do not silently substitute another model if Luna is unavailable.
 
@@ -61,7 +61,7 @@ After each pass:
 
 1. Inspect every changed file and the complete diff.
 2. Reject changes outside the owned scope.
-3. Run the relevant verification in the root thread.
+3. Complete required verification on the integrated code. Reuse reliable results for unchanged code; rerun checks in the root thread for new changes, failures, missing evidence, or unresolved concerns.
 4. Confirm that tests protect behavior or a non-obvious invariant instead of edited literals or implementation details.
 5. Check for repetition, unnecessary abstractions, dead logic, missed cases, and repository convention violations.
 
