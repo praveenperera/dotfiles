@@ -110,8 +110,8 @@ alias ll="cmd codex launch a -c shared"
 # spark
 alias llq="cmd codex launch a -c q"
 
-# terra / luna
-alias lla="cmd codex launch a -c terra -- -m gpt-5.6-terra"
+# sol high / luna
+alias lla="cmd codex launch a -c sol-high -- -m gpt-5.6-sol -c 'model_reasoning_effort=\"high\"'"
 alias lls="cmd codex launch a -c luna -- -m gpt-5.6-luna"
 
 # fast
