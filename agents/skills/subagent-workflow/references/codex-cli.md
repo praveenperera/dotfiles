@@ -9,7 +9,7 @@ command -v codex
 codex --version
 codex login status
 codex exec --help
-codex debug models | rg 'gpt-5\.6-(sol|luna)'
+codex debug models | rg 'gpt-6-astra|gpt-5\.6-luna'
 ```
 
 Do not modify login or global configuration automatically. If authentication or the requested model is unavailable, report the exact failure.
@@ -99,13 +99,13 @@ Mode: <read-only analysis|implementation>
 
 ## Run a fresh read-only delegate
 
-Default to Sol with high reasoning. Use Luna at `max` reasoning for an easy tightly scoped read, and at `low` for a repeated or high-volume exact mechanical read:
+Use Astra at `high` for difficult analysis. Use Luna at `max` for a bounded read with a cheap check, and at `low` for high-volume exact mechanical reads. Honor an active user choice of Luna `max`:
 
 ```sh
 codex --ask-for-approval never exec \
   --cd "$PWD" \
   --ephemeral \
-  --model gpt-5.6-sol \
+  --model gpt-6-astra \
   --config 'model_reasoning_effort="high"' \
   --sandbox read-only \
   --output-last-message "$delegate_dir/raw/final.md" \
@@ -117,17 +117,17 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-For a single easy, tightly scoped task, change the model to `gpt-5.6-luna` and the reasoning effort to `max`; do not run Sol below `high`. For repeated or high-volume mechanical work, use `gpt-5.6-luna` with `low` reasoning; `max` wastes tokens and latency at volume.
+For bounded work, change the model to `gpt-5.6-luna` and effort to `max`. Use `low` for bulk exact transformations only when no user directive requires `max`. Keep Astra at `high` unless the user selects another effort.
 
 ## Run a fresh implementation delegate
 
-Use workspace-write only after assigning an exact owned scope:
+Use workspace-write only after assigning an exact owned scope. The Astra command below is for a hard fix coupled to its diagnosis. Use Luna `max` for ordinary bounded implementation, or [Fable 5.1](claude-cli.md) when code-quality judgment is the main need:
 
 ```sh
 codex --ask-for-approval never exec \
   --cd "$PWD" \
   --ephemeral \
-  --model gpt-5.6-sol \
+  --model gpt-6-astra \
   --config 'model_reasoning_effort="high"' \
   --sandbox workspace-write \
   --output-last-message "$delegate_dir/raw/final.md" \
@@ -163,7 +163,7 @@ git ls-files --others --exclude-standard -z |
   done > "$delegate_dir/repository/postflight-untracked-sha256.txt"
 ```
 
-Inspect exit status, stdout, stderr, final message, baseline, and postflight artifacts. A read-only mutation is a failed pass. For implementation, reject changes outside owned scope. Independently inspect the diff and run repository verification before reporting completion.
+Inspect exit status, stdout, stderr, final message, baseline, and postflight artifacts. A read-only mutation is a failed pass. For implementation, reject changes outside owned scope. Inspect the diff and complete required verification on the integrated code. Reuse reliable results for unchanged code; repeat checks only for new changes, failures, missing evidence, or unresolved concerns.
 
 ## Choose follow-ups deliberately
 
