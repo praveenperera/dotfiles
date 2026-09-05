@@ -1,6 +1,6 @@
 ---
 name: "gh-fix-ci"
-description: "Use when a user asks to debug or fix failing GitHub PR checks that run in GitHub Actions. Use the GitHub app from this plugin for PR metadata and patch context, and use `gh` for Actions check and log inspection before implementing any approved fix."
+description: "Diagnose or fix failing GitHub Actions checks on a pull request. Use for CI failures; report external checks without attempting to repair them."
 ---
 
 
@@ -12,7 +12,8 @@ Use this skill when the task is specifically about failing GitHub Actions checks
 
 - Use the GitHub app from this plugin for PR metadata, changed files, and review context.
 - Use `gh` for GitHub Actions checks and logs because the connector does not expose that workflow end to end.
-- Summarize the root cause first, propose a focused fix plan, and implement only after explicit approval.
+- A request to fix CI authorizes diagnosis, scoped local repairs, and relevant local checks. Briefly state the cause and continue with that work. A diagnosis-only or plan-only request does not authorize implementation.
+- Ask only when missing information changes the repair scope or an action needs authority not already granted. Keep commits, pushes, workflow reruns, and other external writes within the user's existing authorization.
 
 Prereq: authenticate with GitHub CLI once, then confirm with `gh auth status`. Repo and workflow scopes are typically required for Actions inspection.
 
@@ -54,13 +55,13 @@ Prereq: authenticate with GitHub CLI once, then confirm with `gh auth status`. R
 5. Summarize failures for the user.
    - Provide the failing check name, run URL (if any), and a concise log snippet.
    - Call out missing logs explicitly and do not over-claim certainty.
-6. Propose a focused fix plan and wait for approval.
-   - Keep the plan tied directly to the failing checks and the observed root cause.
-7. Implement after approval.
-   - Apply the approved fix locally.
-   - Run the most relevant local verification available.
+6. Select a focused repair from the observed root cause.
+   - Keep it tied to the failing checks. For a diagnosis-only or plan-only request, report the findings or plan and stop here.
+7. Implement the requested fix locally.
+   - Preserve unrelated changes and repair failures caused by this change.
+   - Run relevant local checks and complete repository-required checks. Repeat or broaden checks only after a change, failure, or unresolved concern.
 8. Recheck status and summarize residual risk.
-   - Suggest re-running the relevant tests and `gh pr checks`.
+   - Inspect `gh pr checks` when useful. Local success does not mean hosted CI passed on the new code; report which revision each result covers.
    - Report what is still unverified, what may still be flaky, and whether any failing checks were external and therefore not actionable here.
 
 ## Bundled Resources

@@ -1,6 +1,6 @@
 ---
 name: aps
-description: Search and manage academic literature with the local `aps` CLI across unified Semantic Scholar, OpenAlex, and ChinaRxiv discovery; paper, citation, reference, and author lookup; repeatable scan manifests; PDF download; and a local full-text/vector library. Use for scholarly literature discovery, citation-graph research, paper identifiers, author metrics, systematic update scans, or local paper-corpus work. Do not use for ordinary web search or non-academic sources.
+description: Search academic papers, citation graphs, authors, and local paper collections with the aps CLI. Use for scholarly research and repeatable literature scans, not general web search.
 ---
 
 # aps - Academic Paper Search

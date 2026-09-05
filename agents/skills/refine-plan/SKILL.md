@@ -17,7 +17,7 @@ Ask only for intent, product decisions, scope boundaries, tradeoffs, or context 
 
 1. Identify the material decisions that affect scope, ownership, behavior, user experience, failure handling, security, data lifecycle, compatibility, verification, or maintenance.
 2. Inspect available evidence for the next decisions.
-3. Ask one to three focused questions with the host's available user-input tool. If the host provides no such tool, ask in normal chat.
+3. If a material decision remains that evidence cannot resolve, ask one to three focused questions with the host's available user-input tool. If the host provides no such tool, ask in normal chat. Otherwise proceed to the stop-condition check without an interview round.
 4. Incorporate answers into the working plan or spec before the next round.
 5. Put valuable but non-blocking follow-ups in `next.md` beside the working file. Do not expand active scope or promote them without user confirmation.
 6. Repeat until the stop condition is met.
