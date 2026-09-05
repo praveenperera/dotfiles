@@ -2,7 +2,7 @@
 
 Every fix pass must be a new GPT-5.6 Luna Max agent. Do not resume a prior fix session, even if the previous pass was close to correct. Every pass consumes the orchestrator's single global fix budget, regardless of which reviewer or verification failure triggered it.
 
-Use Luna with `max` reasoning for every fix pass. Do not use Sol for ordinary fixes. Sol remains a review provider only; use Sol `xhigh` only when the user explicitly requests it for Codex review.
+Use Luna with `max` reasoning for every fix pass. Do not use Astra for ordinary fixes. Astra remains a review provider only; use Codex `xhigh` only when the user explicitly requests it for Codex review.
 
 ## Prompt Template
 
@@ -53,7 +53,7 @@ Do not grant fresh fix agents permission to commit, push, resolve PR threads, la
 
 Load the Luna Max fix-pass section of `providers.md` for helper and direct invocation commands. Prefer the bundled helper with `--model gpt-5.6-luna` and `model_reasoning_effort='"max"'`, and dry-run it when checking argument construction. Never use a resume or continuation option.
 
-When the orchestrator is itself a Codex Sol session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Give it the same prompt contract and still save its final report under the scratch directory. Prefer a fresh worker over continuity unless the same owned scope needs an immediate repair follow-up.
+When the orchestrator is itself a Codex Astra session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Give it the same prompt contract and still save its final report under the scratch directory. Prefer a fresh worker over continuity unless the same owned scope needs an immediate repair follow-up.
 
 Use dangerous bypass mode only when the user explicitly approved that automation mode or the environment is already externally sandboxed.
 

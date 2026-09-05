@@ -123,7 +123,7 @@ Never start `claude --print` before the prompt is available. Keep plan mode so t
 
 ## Codex Review
 
-Default Sol (Codex) reasoning effort to `high`. Use `xhigh` only when the user explicitly requests Sol xhigh.
+Default Codex (Astra) reasoning effort to `high`. Use `xhigh` only when the user explicitly requests Codex xhigh.
 
 Choose exactly one target mode that represents the code under review:
 
@@ -157,7 +157,7 @@ codex review \
   > "$raw_file"
 ```
 
-When the user requests Sol xhigh, substitute `model_reasoning_effort='"xhigh"'` and use these mode-and-iteration-specific names for both artifacts:
+When the user requests Codex xhigh, substitute `model_reasoning_effort='"xhigh"'` and use these mode-and-iteration-specific names for both artifacts:
 
 ```bash
 prompt_file="$scratch/prompts/codex-xhigh-final-neutral-review-$target_mode-$iteration.md"
@@ -168,7 +168,7 @@ Codex review is a provider input, not a fixing session. Normalize only actionabl
 
 ## Fresh Luna Max Fix Pass
 
-Run every fix pass with GPT-5.6 Luna at `max` reasoning. Do not use Sol for ordinary fixes.
+Run every fix pass with GPT-5.6 Luna at `max` reasoning. Do not use Astra for ordinary fixes.
 
 Prefer the bundled helper:
 
@@ -207,7 +207,7 @@ codex exec \
   - < "$scratch/prompts/iteration-1.md"
 ```
 
-When the orchestrator is a Codex Sol session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Save its final report to the same scratch path and keep the same no-resume, no-publication constraints.
+When the orchestrator is a Codex Astra session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Save its final report to the same scratch path and keep the same no-resume, no-publication constraints.
 
 Never use the exec resume subcommand for CLI fix passes. Add dangerous bypass mode only when the user explicitly approved it or the environment is already externally sandboxed. After the pass, inspect repository status, diff statistics, and whitespace errors, then run trusted project verification.
 

@@ -48,7 +48,7 @@ A locally successful run is complete when publication was not requested. If publ
 
 Set one `max_total_fix_passes` during preflight; default to 3 unless the user supplies another value. Count every fresh Luna Max pass that may change source, tests, configuration, or generated project files, including repairs triggered by verification or optional gates. Never reset the counter between providers or stages. When the next repair would exceed the budget, stop editing and report the remaining findings or failures.
 
-Default every reviewer effort to `high`. Run every fix pass with GPT-5.6 Luna at `max` reasoning. Use `xhigh` only on Sol (Codex review) when the user explicitly requests it; never select Sol `xhigh` by default, and do not use Sol for ordinary fix passes.
+Default every reviewer effort to `high`. Run every fix pass with GPT-5.6 Luna at `max` reasoning. Use `xhigh` only on the Codex (Astra) review when the user explicitly requests it; never select Codex `xhigh` by default, and do not use Astra for ordinary fix passes.
 
 ## Review Discipline
 
@@ -67,7 +67,7 @@ Run the enabled stages in this order:
 1. **Z.ai GLM 5.3 final-review stage:** request an evidence-backed broad review using the neutral packet. When it reports actionable findings, normalize and deduplicate them, run one fresh Luna Max fix pass, verify locally, and use a separately named GLM targeted-validation prompt to check the repair. Then recompute the fingerprint and run a fresh neutral broad GLM review of that exact snapshot before Grok, Opus, Codex, or local success. Targeted GLM validation may include the finding and repair, but it is not an independent final review.
 2. **Grok 4.6 final review:** start only after GLM and local verification are clean.
 3. **Claude Opus final review:** start only after Grok is clean.
-4. **Codex final review:** start only after Opus is clean. Use `high` effort by default; use `xhigh` only when the user explicitly requests Sol xhigh.
+4. **Codex final review:** start only after Opus is clean. Use `high` effort by default; use `xhigh` only when the user explicitly requests Codex xhigh.
 
 If any final reviewer finds an actionable issue, stop later reviewers, spend a fix pass, verify, return to the first enabled stage, and rerun all enabled stages on the resulting code. Recompute the target fingerprint after every code-changing pass. Local success requires each enabled final reviewer to have seen the code after the last code-changing pass and to have reviewed the same fingerprint.
 
