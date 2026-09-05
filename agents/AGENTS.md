@@ -1,6 +1,6 @@
 # Workflow
 
-- Ship production-quality changes. Model the domain first, make impossible states impossible with typed domain models, and prefer the proper owner or abstraction over caller-specific conditionals. Repeated fixes in one area signal that the model may be wrong; revisit it and remove shortcuts or resulting tech debt before finishing.
+- Ship production-quality changes. For changes to domain state, public interfaces, or ownership, model the domain first and use typed models to exclude invalid states. Prefer the proper owner or abstraction over caller-specific conditionals. Small local changes should follow established patterns without a separate architecture exercise. Repeated fixes in one area signal that the model may be wrong; revisit it and remove resulting shortcuts before finishing.
 - Encode recurring corrections as types, tests, lints, scripts, or runtime checks instead of repeating instructions.
 
 # General
@@ -17,7 +17,10 @@
 # Codex Specific
 
 - Use `fork_turns="none"` for Codex subagents by default, and give each subagent a self-contained prompt. Use `fork_turns="all"` only when the user explicitly requests a full-history fork.
-- Reserve `gpt-6-astra` for architecture, difficult reviews, ambiguous decisions, and ideation. Default implementation agents to Luna Max for bounded, clearly defined work with concrete verification.
+- Reserve `gpt-6-astra` for architecture, difficult reviews, ambiguous decisions, and ideation; default its reasoning effort to `high`. Default implementation agents to `gpt-5.6-luna` with `max` reasoning for bounded, clearly defined work with clear instructions and acceptance checks. Return unresolved design decisions to the primary agent.
+- Infer intent and scope from the request and bias toward action. Treat "can you", "I want to", and "help me" as instructions to do the work. Complete the work that is already authorized before asking a clarifying question, and do not add unsolicited warnings, disclaimers, or approval flows.
+- The user's instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
+- When independent work can run in parallel, delegate it to a subagent with a self-contained, legible prompt.
 
 # Rust Project Specific
 
@@ -41,6 +44,17 @@
 - Default to the global `rb` skill for container image builds. Prefer `rb build --project <name> -- [buildx args…]` over local `docker build` and `docker buildx build`.
 - Use local Docker only when the user asks for a local build, or when `rb` is unavailable and the user accepts that fallback.
 - Load `$rb` / the `rb` skill before inventing a build command. Do not print control-plane tokens or project SSH private keys.
+
+# Verification
+
+- After implementation changes, run the repository's formatter and linter. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists.
+- Run the checks appropriate to the change. Reuse reliable results for unchanged code; repeat or broaden checks only for new changes, failures, missing evidence, or unresolved concerns.
+
+# Testing
+
+- Add or update tests when they protect user-visible behavior, reproduce a bug, cover compatibility or migration risk, or lock down a non-obvious invariant.
+- Do not write tests for reversible, low-impact changes that only restate edited literals or mirror the implementation.
+- For static configuration or list changes, prefer compile or lint verification unless selection, fallback, parsing, migration, or filtering behavior needs coverage.
 
 # Skills
 
