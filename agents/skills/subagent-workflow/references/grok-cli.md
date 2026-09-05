@@ -131,7 +131,7 @@ Always record postflight state, including after a nonzero exit. Inspect the exit
 
 - Treat any read-only repository mutation as a failed pass.
 - Reject implementation changes outside owned scope.
-- Verify important claims against the source and run required repository checks independently.
+- Verify important claims against the source and complete required checks on the integrated code. Reuse reliable results for unchanged code; repeat only for changes, failures, missing evidence, or unresolved concerns.
 - Treat `cancelled` after a tool call as a permission or hook failure unless there is separate evidence that the user stopped the run.
 - If a deny rule or hook blocks a required action, do not remove or weaken it automatically. Report the exact action and reroute the work or ask for the specific authority.
 - Do not treat a clean git postflight as proof that no external mutation occurred. Check the raw events for network-capable commands and every repository-specific publication tool.
