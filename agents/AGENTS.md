@@ -41,7 +41,7 @@
 
 # Docker image builds
 
-- Use the global `rb` skill for container image builds and follow its operational guidance. Use local Docker only when the user asks for a local build or when `rb` is unavailable and the user accepts the fallback.
+- Use the global `rb` skill before choosing a container image build command
 
 # Verification
 

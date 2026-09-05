@@ -1,8 +1,8 @@
 # rb project management
 
 Read this reference when readiness, authentication, project policy, SSH keys,
-or cache lifecycle administration is in scope. The root skill covers the normal
-build path and project-name resolution.
+project selection, or cache lifecycle administration is in scope. The root skill
+covers the normal build path.
 
 ## Readiness and authentication
 
@@ -24,6 +24,24 @@ rb login --control-plane https://example.example
 Never print `RB_TOKEN`, credential files, or project SSH private keys. Config
 lives under Application Support `com.praveen.rb` (`config.json` and
 `credentials.json`); do not hand-edit secrets.
+
+## Project selection
+
+`rb` resolves the project name in this order:
+
+1. the `--project` flag
+2. the `RB_PROJECT` environment variable
+3. the nearest user-authored `.rb.toml` with `project = "name"`, searched from
+   the working directory up to the git toplevel; the nearest file wins
+4. a slug from the git-toplevel directory, or the working directory outside a
+   git repository, with lowercase non-alphanumeric runs collapsed to one
+   hyphen and a maximum length of 32 characters
+
+`rb` only reads `.rb.toml`; it never writes it. `rb build` auto-creates a
+missing project with the default policy and prints a one-line stderr notice.
+`rb status`, `rb stop`, and `rb cache delete` never create a project and show
+a hint to run `rb build` or `rb project init --name <name>` when it is missing.
+Pass `--project` only when the user names a project.
 
 ## Project policy
 
