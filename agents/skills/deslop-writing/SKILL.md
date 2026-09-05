@@ -1,6 +1,6 @@
 ---
 name: deslop-writing
-description: Draft, rewrite, or audit English prose for direct, natural writing without formulaic AI patterns. Preserve facts and the writer's voice.
+description: Draft or edit natural English prose, or audit it for formulaic AI patterns, while preserving facts and voice.
 ---
 
 # Deslop Writing

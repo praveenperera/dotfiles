@@ -85,6 +85,16 @@ directives, fonts, metadata, and default exports may require ReScript externals 
 JavaScript/TypeScript wrappers. Use Next only when its routing, rendering, or deployment model is
 required. Prefer Vite for local tools and client-only applications.
 
+## Node services and Workers
+
+For a local durable tool, use Vite/ReScript React with a small Node API for filesystem or database
+access. Write the server in ReScript when bindings stay narrow; otherwise keep a thin JS/TS adapter
+and retain validation and domain decisions in ReScript.
+
+For a JavaScript-targeting Cloudflare Worker, use ReScript domain logic and add a narrow TypeScript
+adapter only when the actual bindings justify it. For an explicit Rust choice or an existing Rust
+Worker, use workers-rs; do not introduce TypeScript only for Durable Objects or SQL.
+
 ## Package-binding reality
 
 The official package index has a small official core and broad community coverage. Bindings exist
