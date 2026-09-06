@@ -1,6 +1,6 @@
 ---
 name: subagent-workflow
-description: Route work across Astra, Fable 5.1, Opus, Grok, and Luna. Use only when the user explicitly requests subagent-workflow by name.
+description: Route work across Astra, Fable 5.1, Opus, Grok, Sol, and Luna. Use only when the user explicitly requests subagent-workflow by name.
 ---
 
 # Subagent Workflow
@@ -23,9 +23,10 @@ These are local routing defaults, not benchmark scores. Fable 5.1's slight advan
 | Claude Fable 5.1 | Slightly better code ready for merge, focused cleanup, API shape, maintainability, and writing | Can expand scope, add excess tests, rewrite whole files, or stop before completion | `high` |
 | Claude Opus 5 | Long-running coding, bug finding, and a deliberate Claude second opinion | Can add process, verification, subagents, or prose beyond the task | `high` |
 | Grok 4.6 | Native X research, live evidence, visual or interactive first passes, and a third-provider review | Check project-specific code quality; do not infer production readiness from a good demo | `high` |
+| GPT-5.6 Sol | Read-only phase review in multi-phase work: correctness, missed consumers, failure paths, and inventory re-derivation | Overbuilds when it implements, and is not an authority on taste or simplification; in this workflow it reviews rather than writes | `high` |
 | GPT-5.6 Luna | Bounded implementation after design is settled; exact mechanical work | Literal execution cannot replace diagnosis, architecture, or final acceptance | `max` for bounded work; `low` for bulk mechanical work |
 
-Use Luna for ordinary bounded implementation with cheap checks. Use Fable 5.1 when implementation needs sustained code-quality judgment or cleanup. Reserve Astra for difficult reasoning, architecture, investigation, and review; it can implement a hard coupled change when separating diagnosis from the fix would lose essential context. Do not route all former implementation work to Astra.
+Use Luna for ordinary bounded implementation with cheap checks. Use Fable 5.1 when implementation needs sustained code-quality judgment or cleanup. Reserve Astra for difficult reasoning, architecture, investigation, and review; it can implement a hard coupled change when separating diagnosis from the fix would lose essential context. Do not route all former implementation work to Astra. Use Sol as the per-phase reviewer of Luna-written code when a goal has many phases, so Astra reviews less often and only the hard parts; a small task does not need Sol.
 
 Read only the active root's reference:
 
@@ -40,7 +41,7 @@ If another model is root, retain it and use the task table without pretending it
 
 ## Honor model choices
 
-A user-selected model takes precedence over these defaults. `use astra`, `use fable`, `use opus`, or `use grok` selects that model for the requested work until the user changes the selection; it does not change the running root. Fable means **Fable 5.1** in this workflow. `use luna` selects Luna `max` for implementation under the root's design and acceptance; follow the `use-luna-max` skill when active.
+A user-selected model takes precedence over these defaults. `use astra`, `use fable`, `use opus`, `use grok`, or `use sol` selects that model for the requested work until the user changes the selection; it does not change the running root. Fable means **Fable 5.1** in this workflow. `use luna` selects Luna `max` for implementation under the root's design and acceptance; follow the `use-luna-max` skill when active.
 
 Do not silently fall back to another model or lower effort. Keep explicit user budgets and effort choices. Compare lower effort only when tuning is requested or observed task cost justifies a scoped comparison.
 
@@ -62,7 +63,7 @@ Read the relevant transport reference only before using it:
 - [claude-cli.md](references/claude-cli.md): Claude CLI or Agent-tool model selection, read-only review, and scoped implementation
 - [grok-cli.md](references/grok-cli.md): Grok headless permission preflight and run commands
 
-For Astra or Fable delegates, read [frontier-prompting.md](references/frontier-prompting.md) when constructing model-specific instructions. For Opus, use [opus5-prompting.md](references/opus5-prompting.md). Load only the selected model's section.
+For Astra, Fable, or Sol delegates, read [frontier-prompting.md](references/frontier-prompting.md) when constructing model-specific instructions. For Opus, use [opus5-prompting.md](references/opus5-prompting.md). Load only the selected model's section.
 
 ## Accept and repair the result
 
@@ -70,7 +71,7 @@ Check the actual diff and completion evidence. Reject read-only mutations and ch
 
 Complete required checks on the integrated code. Reuse reliable results for unchanged code; repeat or broaden checks only for new changes, failures, missing evidence, or unresolved concerns. Add permanent tests for behavior or non-obvious invariants, not to reproduce edited literals.
 
-For substantial work, select independent review by the main risk: Astra for correctness and missed consumers, Fable 5.1 for merge readiness and simplification, or Grok for a distinct third-provider concern. Review the actual code and failure scenarios, not only the plan's checklist. Check relevant lifecycle changes, error paths, and runtime limits. Report behavior that still needs runtime or device evidence. Do not add a review panel to a trivial edit.
+For substantial work, select independent review by the main risk: Astra for correctness and missed consumers, Sol for per-phase correctness review when a multi-phase goal makes Astra review of every phase too costly, Fable 5.1 for merge readiness and simplification, or Grok for a distinct third-provider concern. Scale review to task size; the active root's reference states the tiers. Review the actual code and failure scenarios, not only the plan's checklist. Check relevant lifecycle changes, error paths, and runtime limits. Report behavior that still needs runtime or device evidence. Do not add a review panel to a trivial edit.
 
 A reviewer must not be the same run that wrote the code. Fable may simplify its own work, but that is not independent review. When Fable implements, use Astra for consequential correctness review; request a fresh Fable view only when independent code-quality judgment adds value.
 

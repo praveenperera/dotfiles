@@ -9,7 +9,7 @@ command -v codex
 codex --version
 codex login status
 codex exec --help
-codex debug models | rg 'gpt-6-astra|gpt-5\.6-luna'
+codex debug models | rg 'gpt-6-astra|gpt-5\.6-sol|gpt-5\.6-luna'
 ```
 
 Do not modify login or global configuration automatically. If authentication or the requested model is unavailable, report the exact failure.
@@ -99,7 +99,7 @@ Mode: <read-only analysis|implementation>
 
 ## Run a fresh read-only delegate
 
-Use Astra at `high` for difficult analysis. Use Luna at `max` for a bounded read with a cheap check, and at `low` for high-volume exact mechanical reads. Honor an active user choice of Luna `max`:
+Use Astra at `high` for difficult analysis. Use Sol at `high` for a per-phase review in a multi-phase goal. Use Luna at `max` for a bounded read with a cheap check, and at `low` for high-volume exact mechanical reads. Honor an active user choice of Luna `max`:
 
 ```sh
 codex --ask-for-approval never exec \
@@ -117,7 +117,7 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-For bounded work, change the model to `gpt-5.6-luna` and effort to `max`. Use `low` for bulk exact transformations only when no user directive requires `max`. Keep Astra at `high` unless the user selects another effort.
+For a Sol phase review, change the model to `gpt-5.6-sol` and keep effort at `high` and the sandbox read-only. For bounded work, change the model to `gpt-5.6-luna` and effort to `max`. Use `low` for bulk exact transformations only when no user directive requires `max`. Keep Astra at `high` unless the user selects another effort.
 
 ## Run a fresh implementation delegate
 
