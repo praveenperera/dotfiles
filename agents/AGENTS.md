@@ -43,6 +43,7 @@
 # Docker image builds
 
 - Use the global `rb` skill before choosing a container image build command
+- Publish public images to Docker Hub
 
 # Verification
 

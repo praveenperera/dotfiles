@@ -10,9 +10,9 @@ Choose from the image's visibility, not the source repository's visibility:
 | Image use | Preferred registry | Reason |
 | --- | --- | --- |
 | Private application image | Cloudflare Managed Registry | short-lived, scoped credentials keep the remote builder and deployment host outside the GitHub source credential boundary |
-| Public application image | public GHCR | anonymous digest pulls need no credential and GHCR provides a public package UI |
+| Public application image | Docker Hub | anonymous digest pulls need no credential and Docker Hub is the public image registry |
 | Private-image BuildKit cache | Cloudflare Managed Registry | the application image and cache share one temporary build credential |
-| Public-image BuildKit cache | private GHCR package | the public application package stays separate from the private build cache |
+| Public-image BuildKit cache | private Docker Hub repository | the public application repository stays separate from the private build cache |
 
 ## Managed Cloudflare cache
 
@@ -69,6 +69,21 @@ rb build -- --platform linux/amd64 --push \
 
 Wrangler is the temporary credential issuer; it is not required for the image
 transfer. Give a deployment host a separate short-lived pull-only credential.
-Never send the build credential to a deployment host. For a public image,
-publish to GHCR, use a separate private GHCR cache package, and configure
-consumers to pull the verified digest without authentication.
+Never send the build credential to a deployment host.
+
+Push public images to Docker Hub:
+
+```text
+docker.io/<NAMESPACE>/<IMAGE>:<TAG>
+```
+
+Then build normally:
+
+```bash
+rb build -- --platform linux/amd64 --push \
+  --tag docker.io/<NAMESPACE>/<IMAGE>:<TAG> .
+```
+
+Use a separate private Docker Hub repository for the public-image BuildKit
+cache, and configure consumers to pull the verified digest without
+authentication.
