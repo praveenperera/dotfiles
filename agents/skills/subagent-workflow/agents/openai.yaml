@@ -1,4 +1,4 @@
 interface:
   display_name: "Subagent Workflow"
   short_description: "Route work across Astra, Fable 5.1, and other agents"
-  default_prompt: "Use $subagent-workflow to route this task from the actual session model to Astra, Fable 5.1, Opus, Grok, or Luna."
+  default_prompt: "Use $subagent-workflow to route this task from the actual session model to Astra, Fable 5.1, Opus, Grok, Sol, or Luna."

@@ -1,4 +1,4 @@
-# Astra and Fable 5.1 prompts
+# Astra, Fable 5.1, and Sol prompts
 
 Read only the section for the selected model. Use the short task contract in [SKILL.md](../SKILL.md); add only the corrections relevant to this task.
 
@@ -21,3 +21,11 @@ Limit unrequested nearby fixes and permanent tests. Prefer targeted edits for sm
 Start at `high`; higher effort can delay long output. State current search needs explicitly at low effort. Use plain language for reports.
 
 Source: [Anthropic Fable 5.1 prompt guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1).
+
+## GPT-5.6 Sol
+
+Use Sol for read-only review passes. Give it the phase's objective, the diff or changed files, the consumers and call sites it must re-derive, and the failure paths to check. Ask for concrete defects with location, consequence, and the observable end state that would resolve each one; ask for a short list of residual risks that need runtime evidence.
+
+Sol overbuilds when it implements and can turn a review into a redesign proposal. Keep the mode read-only, tie findings to the current design, and ask it to separate confirmed defects from speculative concerns. Do not ask Sol for taste, surface design, or simplification judgment; that stays with Fable 5.1.
+
+Run Sol at `high`. There is no local evidence that `xhigh` or `max` improves review quality.

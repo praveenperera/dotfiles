@@ -1,6 +1,6 @@
 # Model routing evidence
 
-Reviewed on 2026-09-04. Use the task table in [SKILL.md](../SKILL.md) as the single source of routing defaults. The choices below combine provider guidance with local experience; they are not a cross-provider benchmark or a fixed cost ranking.
+Reviewed on 2026-09-05. Use the task table in [SKILL.md](../SKILL.md) as the single source of routing defaults. The choices below combine provider guidance with local experience; they are not a cross-provider benchmark or a fixed cost ranking.
 
 ## Astra and Fable 5.1
 
@@ -25,6 +25,8 @@ Keep the design with the current root when its context is already sufficient. Do
 **Opus 5:** Anthropic's current guide supports long-running coding and bug finding, while warning about scope growth, over-verification, verbosity, and excessive delegation. Use it for an explicit user choice, an Opus-root task, or a distinct Claude second opinion. Do not carry launch-era claims of weak instruction following into the current defaults without current local evidence. See [Opus 5 prompting](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5).
 
 **Grok 4.6:** Keep native X research and live evidence with Grok when those tools are useful. Its visual and interactive work can supply a first pass. Fable 5.1 checks code quality; Astra checks difficult repository interactions when warranted. Do not extrapolate a provider's aggregate scores into a universal code-quality ranking. See [Grok 4.6](https://docs.x.ai/developers/grok-4-6).
+
+**Sol:** GPT-5.6 Sol was the Codex root before Astra and served as the adversarial and inventory-style reviewer in many local runs. Praveen's assessment on 2026-09-05 is that Sol review is a cost-effective middle tier under an Astra root: it checks each phase of a multi-phase goal so that Astra reviews only the integrated milestones and the hard parts. Local notes from the Sol-root period record that Sol overbuilds when it implements and is not a taste or simplification authority, so it reviews rather than writes in this workflow, and Fable 5.1 keeps taste. A small task skips Sol; two reviewers on a bounded edit cost more than they save.
 
 **Luna:** Preserve the local workload split: `max` for bounded implementation or low-count analysis, `low` for high-volume exact transformations. The root settles diagnosis and design, and owns acceptance. Do not assign architecture, subtle security decisions, or open-ended cleanup to Luna. An explicit `use luna` request keeps `max` for implementation, including mechanical work, until the user changes that choice.
 
