@@ -39,5 +39,6 @@ The first build after idle can take longer while remote compute starts.
 - Keep `RB_TOKEN` in the environment, not shell history. Never print tokens,
   credential files, or project SSH private keys, and do not hand-edit secrets
 - Do not invent control-plane URLs or tokens
+- Publish public images to Docker Hub
 - Prefer `rb stop` to release compute while retaining cache. `rb cache delete`
   destroys both compute and cache; it and `--rotate-key` require a clear request
