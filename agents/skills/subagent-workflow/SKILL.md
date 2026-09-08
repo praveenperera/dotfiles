@@ -11,7 +11,7 @@ Activate only when the user explicitly requests `subagent-workflow`, including `
 
 Use the actual session model as root. The client name does not identify the model. An explicit root choice is a routing request, not proof that the running model changed. If the requested root is unavailable, report that limitation without silently substituting a model.
 
-The root owns scope, design decisions, integration, and acceptance. Delegate independent work only when it saves time or improves the result. Continue useful independent work while delegates run. A small local task can stay in the root thread, and the root may make a small edit when a handoff costs more than it saves.
+The root owns scope, design decisions, integration, and acceptance. Delegate independent work when a self-contained `fork_turns="none"` prompt would drop unused parent context, save wall-clock time, or improve the result. Extra agents are useful when each prompt stays small. Continue useful independent work while delegates run. A small local task can stay in the root thread, and the root may make a small edit when a handoff costs more than it saves. Do not spawn when the child would reload the same large context, the scopes overlap, or a nested agent would review or edit the same work. Only the root may spawn unless the user or the root's contract authorizes nested delegation.
 
 ## Choose by task
 
@@ -32,7 +32,7 @@ Do not launch Fable 5.1 unless the user opts in. The root may suggest specific r
 
 Reserve expensive Astra passes for high-level complex planning, architecture, hard ambiguity, difficult or high-risk review, reducing complexity, and cross-phase risk. Run Astra at `medium` by default, use `low` for focused bounded questions, and never select `high` or above unless the user explicitly requests it. Use Astra to decide simplification and code removal unless the user opts into Fable for that work. Sol may integrate an approved removal and check its correctness, but does not judge the simplification.
 
-For front-end design, choose Astra or Opus 5 based on user preference and task complexity; the root may suggest Fable. Once the overall design is established, Sol can implement and extend it. Do not add a model panel by default. In a larger multi-phase goal, a fresh Sol run can review each phase while the root reviews integrated milestones and final acceptance. Independent means a separate run, not necessarily a different model; do not duplicate routine investigations or checks that already have sufficient evidence. A small task does not need an extra reviewer, but the root still checks delegated work.
+For front-end design, choose Astra or Opus 5 based on user preference and task complexity; the root may suggest Fable. Once the overall design is established, Sol can implement and extend it. Do not add a model panel by default. In a larger multi-phase goal, a fresh Sol run can review a phase's related change set while the root reviews integrated milestones and final acceptance. Do not start one reviewer per package or file. Independent means a separate run, not necessarily a different model; do not duplicate routine investigations or checks that already have sufficient evidence. A small task does not need an extra reviewer, but the root still checks delegated work.
 
 Read only the active root's reference:
 
