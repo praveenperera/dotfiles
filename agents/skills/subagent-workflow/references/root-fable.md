@@ -1,6 +1,6 @@
 # Claude Fable 5.1 root
 
-Use this route when the actual session model is Claude Fable 5.1. Fable owns code quality, focused cleanup, integration, and acceptance. Do not delegate away a small change it can finish directly.
+Use this route when the actual session model is Claude Fable 5.1. That session is already an opt-in. Fable owns code quality, focused cleanup, integration, and acceptance. Do not delegate away a small change it can finish directly. Launch another Fable pass only after a further opt-in.
 
 | Work | Route |
 | --- | --- |

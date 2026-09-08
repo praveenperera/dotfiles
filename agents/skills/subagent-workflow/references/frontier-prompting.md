@@ -2,7 +2,7 @@
 
 Read only the section for the selected model. Use the short task contract in [SKILL.md](../SKILL.md); add only the corrections relevant to this task.
 
-For front-end design, choose Astra, Opus 5, or Fable 5.1 based on user preference and task complexity. Do not add a model panel by default. Once the overall design is established, Sol can implement and extend it.
+For front-end design, choose Astra or Opus 5 based on user preference and task complexity. The root may suggest Fable. Do not add a model panel by default. Once the overall design is established, Sol can implement and extend it.
 
 ## GPT-6 Astra
 
@@ -26,14 +26,14 @@ Limit unrequested nearby fixes and permanent tests. Prefer targeted edits for sm
 
 Start at `high`; higher effort can delay long output. State current search needs explicitly at low effort. Use plain language for reports.
 
-Fable can own quality-sensitive implementation, cleanup, simplification, and front-end design. Do not send Fable-written changes to Astra automatically; use a fresh Sol run for normal correctness review and reserve automatic Astra escalation for a hard or high-risk unresolved question. Honor an explicit user choice for Astra simplification or overall front-end design.
+Use this section only after the user opts into Fable. Do not send Fable-written changes to Astra automatically; use a fresh Sol run for normal correctness review and reserve automatic Astra escalation for a hard or high-risk unresolved question. Honor an explicit user choice for Astra simplification or overall front-end design.
 
 Source: [Anthropic Fable 5.1 prompt guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1).
 
 ## GPT-5.6 Sol
 
-When assigned a review, use Sol as a read-only analyst/reviewer for routine investigation, code and consumer mapping, evidence gathering, normal diagnosis, and phase correctness. Give it the objective, relevant diff or changed files, consumers and call sites to check, and failure paths in scope. A Sol root may implement ordinary work, integrate an approved removal, and check correctness; reviewer read-only mode is an assignment, not a Sol-wide prohibition. After an overall front-end design is established by Astra, Opus 5, or Fable 5.1, Sol may implement and extend that design. Ask a fresh review run for a brief evidence-backed report: paths or symbols checked, confirmed defects with location and consequence, the observable end state that would resolve each defect, and a short list of residual risks that need runtime evidence.
+When assigned a review, use Sol as a read-only analyst/reviewer for routine investigation, code and consumer mapping, evidence gathering, normal diagnosis, and phase correctness. Give it the objective, relevant diff or changed files, consumers and call sites to check, and failure paths in scope. A Sol root may implement ordinary work, integrate an approved removal, and check correctness; reviewer read-only mode is an assignment, not a Sol-wide prohibition. After an overall front-end design is established by Astra, Opus 5, or an opted-in Fable 5.1 run, Sol may implement and extend that design. Ask a fresh review run for a brief evidence-backed report: paths or symbols checked, confirmed defects with location and consequence, the observable end state that would resolve each defect, and a short list of residual risks that need runtime evidence.
 
-Keep an assigned review read-only, tie findings to the current design, and ask Sol to separate confirmed defects from speculative concerns. Route simplification and removal judgment to Astra or Fable 5.1; Sol may integrate an approved removal and check correctness, but does not decide what to remove. Escalate to Astra only when the evidence leaves a hard or high-risk question unresolved after Sol's investigation. A boundary signal alone is not enough. Do not ask Sol for taste or simplification judgment.
+Keep an assigned review read-only, tie findings to the current design, and ask Sol to separate confirmed defects from speculative concerns. Route simplification and removal judgment to Astra unless the user opts into Fable; Sol may integrate an approved removal and check correctness, but does not decide what to remove. Escalate to Astra only when the evidence leaves a hard or high-risk question unresolved after Sol's investigation. A boundary signal alone is not enough. Do not ask Sol for taste or simplification judgment.
 
 Run Sol at `high` for root work and assigned review. A fresh review is independent because it is a separate run, even when it uses Sol again. There is no local evidence that `xhigh` or `max` improves review quality.

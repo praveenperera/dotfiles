@@ -6,11 +6,11 @@ Use this route only when the actual session model is GPT-5.6 Sol. The actual ses
 | --- | --- |
 | Normal diagnosis, bounded implementation, integration, and acceptance | Sol root |
 | Bounded implementation after the approach is settled | Luna `max` by default; Sol root may keep a small or tightly coupled edit when a handoff costs more than it saves |
-| Quality-sensitive implementation, merge readiness, focused cleanup, and API shape | Fable 5.1 `high` |
+| Quality-sensitive implementation, merge readiness, focused cleanup, and API shape | Luna `max` or Sol root; the root may suggest Fable |
 | High-level complex planning, architecture, hard ambiguity, or difficult or high-risk review | Astra at `medium` by default; `low` for focused bounded questions; `high` or above only when explicitly requested |
-| Front-end design | Astra, Opus 5, or Fable 5.1; select one based on user preference and task complexity |
+| Front-end design | Astra or Opus 5; the root may suggest Fable |
 | Front-end implementation after the overall design is established | Sol root can implement and extend it |
-| Reducing complexity and deciding which code to remove | Astra or Fable 5.1 |
+| Reducing complexity and deciding which code to remove | Astra checks the run's complexity-check list; the root may suggest Fable |
 | Integrating an approved removal | Sol root |
 | Checking an approved removal for correctness | A fresh Sol review run, read-only for that assignment |
 | Native X research or a visual or interactive first pass | Grok 4.6 |
@@ -23,7 +23,7 @@ Use this route only when the actual session model is GPT-5.6 Sol. The actual ses
 
 **Larger goal** (many phases, or a plan with milestones): Sol sets scope and design, then assigns each settled bounded phase to Luna `max` by default. Sol may keep a tightly coupled phase or established front-end implementation when a handoff would lose context or cost more than it saves. Use a fresh Sol run after each phase for routine correctness, missed consumers, and failure paths when that reduces risk. The fresh run is read-only for that review assignment and returns checked paths, confirmed defects with consequences and required end states, and residual risks. Sol reviews the integrated milestones and final acceptance in the root run. Independent means a separate run, not a different model; do not repeat routine inventories or checks that already have sufficient evidence.
 
-Sol is not the authority for simplification or removal decisions. Astra or Fable 5.1 decides what to delete or how to reduce complexity. Sol can integrate an approved removal and check its correctness. Do not send Fable-written work to Astra automatically. Reserve automatic Astra escalation for evidence that leaves a hard or high-risk question unresolved, and make that request focused on the evidence and decision. These review escalation limits do not restrict the Astra planning, architecture, front-end design, or simplification routes above. A boundary signal alone is not enough.
+Sol is not the authority for simplification or removal decisions. Keep the complexity-check list during the run. Astra decides what to delete or how to reduce complexity from that list unless the user opts into Fable. Sol can integrate an approved removal and check its correctness. Do not send Fable-written work to Astra automatically. Reserve automatic Astra escalation for evidence that leaves a hard or high-risk question unresolved, and make that request focused on the evidence and decision. These review escalation limits do not restrict the Astra planning, architecture, front-end design, or simplification routes above. A boundary signal alone is not enough.
 
 ## Prompting and transport
 

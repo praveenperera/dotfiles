@@ -8,14 +8,14 @@ Use this route only when the actual session model is GPT-6 Astra. Praveen's asse
 | --- | --- |
 | Scope, domain design, hard ambiguity, difficult debugging, cross-phase risk, integration, and acceptance | Astra root |
 | Bounded implementation with a decided approach and cheap checks | Native Luna `max` worker |
-| Implementation that needs sustained code-quality judgment; focused cleanup | Fable 5.1 |
+| Implementation that needs sustained code-quality judgment; focused cleanup | Luna `max` or Sol; the root may suggest Fable |
 | Hard fix tightly coupled to the root's diagnosis | Astra root when a handoff would lose essential context |
 | Routine investigation, code and consumer mapping, evidence gathering, normal diagnosis, and phase correctness | Sol `high`, read-only analyst/reviewer |
 | Milestone review of the hard parts after a chunk of phases | Astra root |
-| Independent review of root-written code | Fable 5.1 for merge readiness; Grok or a fresh Astra run for a distinct correctness concern |
-| Merge readiness | Fable 5.1 |
-| Reducing complexity and deciding which code to remove | Astra root or Fable 5.1; Sol checks correctness, not simplification quality |
-| Front-end design | Astra root, Opus 5, or Fable 5.1; select one unless the user asks for alternatives |
+| Independent review of root-written code | Sol for ordinary merge-readiness; Grok or a fresh Astra run for a distinct correctness concern; the root may suggest Fable |
+| Merge readiness | Sol; the root may suggest Fable |
+| Reducing complexity and deciding which code to remove | Astra root checks the run's complexity-check list; Sol checks correctness, not simplification quality; the root may suggest Fable |
+| Front-end design | Astra root or Opus 5; the root may suggest Fable |
 | Front-end implementation and extension after the overall design is established | Sol, or Luna for bounded implementation |
 | Native X research or a visual first pass with clear scope | Grok 4.6 |
 | Deliberate additional Claude opinion | Opus 5 only when it adds a distinct perspective |
@@ -25,9 +25,9 @@ Use this route only when the actual session model is GPT-6 Astra. Praveen's asse
 
 **Small task** (one phase, or a few bounded edits): Luna `max` implements. The Astra root reviews the diff and the check results, then accepts or returns a defect. Do not add Sol unless a bounded investigation materially reduces root work; there is no mandatory Sol pass for a trivial edit.
 
-**Larger goal** (many phases, or a plan with milestones): Astra sets scope and design; Luna `max` implements each decided phase. Use Sol `high` for routine investigation, consumer mapping, evidence gathering, and normal diagnosis. After each phase, a fresh read-only Sol run checks correctness, missed consumers, and failure paths. Sol returns a brief evidence-backed report with checked paths, confirmed defects and locations, consequences, required end states, and residual risks. At integrated milestones and final acceptance, Astra reviews the integrated diff and these reports, with detailed review focused on hard parts: cross-phase interactions, design fit, lifecycle and error paths, and unresolved concerns. Do not repeat Sol's routine inventory or rerun passed checks on unchanged code.
+**Larger goal** (many phases, or a plan with milestones): Astra sets scope and design; Luna `max` implements each decided phase. Use Sol `high` for routine investigation, consumer mapping, evidence gathering, and normal diagnosis. After each phase, a fresh read-only Sol run checks correctness, missed consumers, and failure paths. Sol returns a brief evidence-backed report with checked paths, confirmed defects and locations, consequences, required end states, and residual risks. At integrated milestones and final acceptance, Astra reviews the integrated diff, these reports, and the complexity-check list, with detailed review focused on hard parts: cross-phase interactions, design fit, lifecycle and error paths, and unresolved concerns. Do not repeat Sol's routine inventory or rerun passed checks on unchanged code.
 
-Sol delegates assigned analysis or review are read-only; this is not a restriction on a Sol root in another session. Bring unresolved design choices and difficult risks to the Astra root with focused evidence. Return confirmed defects to their author. After two failed repairs of one defect, the root takes the design decision back. Astra or Fable 5.1 leads simplification and code removal; Sol checks correctness and does not judge simplification quality.
+Sol delegates assigned analysis or review are read-only; this is not a restriction on a Sol root in another session. Bring unresolved design choices and difficult risks to the Astra root with focused evidence. Return confirmed defects to their author. After two failed repairs of one defect, the root takes the design decision back. Astra leads simplification and code removal unless the user opts into Fable; Sol checks correctness and does not judge simplification quality.
 
 ## Transport and prompting
 
