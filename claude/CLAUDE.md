@@ -42,3 +42,5 @@
 - Add or update tests when they protect user-visible behavior, reproduce a bug, cover compatibility or migration risk, or lock down a non-obvious invariant.
 - Do not add tests that only restate edited literals or implementation details.
 - For static configuration or list changes, prefer compile or lint verification unless selection, fallback, parsing, migration, or filtering behavior needs coverage.
+
+DO NOT ADD "Claude-Session: .." to commit messages
