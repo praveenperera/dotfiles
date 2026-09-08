@@ -121,7 +121,7 @@ For a Sol phase review, change the model to `gpt-5.6-sol`, effort to `high`, and
 
 ## Run a fresh implementation delegate
 
-Use workspace-write only after assigning an exact owned scope. The Astra command below is for a hard fix coupled to its diagnosis. Use Luna `max` for ordinary bounded implementation, or [Fable 5.1](claude-cli.md) when code-quality judgment is the main need:
+Use workspace-write only after assigning an exact owned scope. The Astra command below is for a hard fix coupled to its diagnosis. Use Luna `max` for ordinary bounded implementation. Use [Fable 5.1](claude-cli.md) only after the user opts in:
 
 ```sh
 codex --ask-for-approval never exec \

@@ -2,7 +2,7 @@
 
 ## Select the model and transport
 
-Use a native Claude Agent tool when it exposes the requested model. Verify that a `fable` alias resolves to Fable 5.1; do not assume an older alias or a client name identifies the version. For the CLI, use the explicit model ID `claude-fable-5-1`. Use `claude-opus-5` only for a selected Opus pass. Default both to `high` effort.
+Launch Fable only after the user opts in; a root suggestion is not enough. Use a native Claude Agent tool when it exposes the requested model. Verify that a `fable` alias resolves to Fable 5.1; do not assume an older alias or a client name identifies the version. For the CLI, use the explicit model ID `claude-fable-5-1`. Use `claude-opus-5` only for a selected Opus pass. Default both to `high` effort.
 
 Check the installed CLI before using its flags:
 
