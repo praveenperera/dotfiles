@@ -5,7 +5,10 @@ Use this route when the actual session model is Claude Opus 5. Opus owns orchest
 | Work | Route |
 | --- | --- |
 | Root-local diagnosis or implementation selected by the user | Opus root |
-| Difficult architecture, broad investigation, independent correctness review | Astra `high` |
+| Front-end design | Opus root, Astra, or Fable 5.1 |
+| Reducing complexity and deciding which code to remove | Astra or Fable 5.1 |
+| Difficult architecture and high-risk independent review | Astra `medium`; `low` for focused work; `high` or above only on explicit user request |
+| Normal investigation and correctness review | Sol `high`, read-only |
 | Code-quality-sensitive implementation, API shape, merge readiness, cleanup | Fable 5.1 `high` |
 | Bounded implementation after design is settled | Luna `max` |
 | Native X research or visual first pass | Grok 4.6 |

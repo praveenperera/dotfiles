@@ -18,7 +18,9 @@
 
 - NEVER USE THE RESET USAGE TOOL. NEVER RESET USAGE.
 - Use `fork_turns="none"` for Codex subagents by default, and give each subagent a self-contained prompt. Use `fork_turns="all"` only when the user explicitly requests a full-history fork.
-- Reserve `gpt-6-astra` for architecture, difficult reviews, ambiguous decisions, and ideation; default its reasoning effort to `high`. Default implementation agents to `gpt-5.6-luna` with `max` reasoning for bounded, clearly defined work with clear instructions and acceptance checks. Return unresolved design decisions to the primary agent.
+- Prefer Sol `high` as root, Luna `max` for bounded implementation, and Fable 5.1 `high` for code-quality work. The actual root owns scope, integration, and acceptance; use fresh read-only Sol reviews for larger tasks without repeating completed checks.
+- Reserve Astra for complex planning, architecture, and difficult review: `medium` by default, `low` for focused work, and `high` or above only on explicit user request.
+- Use Astra, Opus 5, or Fable 5.1 for overall front-end design; Sol can implement and extend established designs. Use Astra or Fable—not Sol—to lead simplification and code removal. Opus and Fable default to `high`.
 - Infer intent and scope from the request and bias toward action. Treat "can you", "I want to", and "help me" as instructions to do the work. Complete the work that is already authorized before asking a clarifying question, and do not add unsolicited warnings, disclaimers, or approval flows.
 - The user's instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
 - When independent work can run in parallel, delegate it to a subagent with a self-contained, legible prompt.

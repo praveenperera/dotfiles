@@ -11,22 +11,26 @@ Activate only when the user explicitly requests `subagent-workflow`, including `
 
 Use the actual session model as root. The client name does not identify the model. An explicit root choice is a routing request, not proof that the running model changed. If the requested root is unavailable, report that limitation without silently substituting a model.
 
-The root owns scope, design decisions, integration, and acceptance. Delegate independent work only when it saves time or improves the result. Continue useful independent work while delegates run. A small local task can stay in the root thread.
+The root owns scope, design decisions, integration, and acceptance. Delegate independent work only when it saves time or improves the result. Continue useful independent work while delegates run. A small local task can stay in the root thread, and the root may make a small edit when a handoff costs more than it saves.
 
 ## Choose by task
 
-These are local routing defaults, not benchmark scores. Fable 5.1's slight advantage in code ready for merge and cleanup is Praveen's working assessment. Read [model-routing.md](references/model-routing.md) when a model choice needs supporting evidence or a tradeoff is unresolved.
+These are local routing defaults, not benchmark scores. Praveen's working assessment is that Astra is the most capable and most expensive option in this workflow, Sol is the usual lower-cost root for normal work, and Fable 5.1 is slightly better at quality-sensitive implementation and cleanup. Read [model-routing.md](references/model-routing.md) when a model choice needs supporting evidence or a tradeoff is unresolved.
 
 | Model | Strengths and preferred work | Limits to account for | Default effort |
 | --- | --- | --- | --- |
-| GPT-6 Astra | Architecture, difficult diagnosis and review, broad investigation, work across code, tools, and applications | Can pause early, follow conflicting skill rules too strictly, and run excess checks; code cleanup still benefits from Fable | `high` |
-| Claude Fable 5.1 | Slightly better code ready for merge, focused cleanup, API shape, maintainability, and writing | Can expand scope, add excess tests, rewrite whole files, or stop before completion | `high` |
-| Claude Opus 5 | Long-running coding, bug finding, and a deliberate Claude second opinion | Can add process, verification, subagents, or prose beyond the task | `high` |
+| GPT-6 Astra | High-level complex planning, architecture, hard ambiguity, difficult or high-risk review, reducing complexity, and cross-phase risk; can establish front-end design | Most expensive option; can pause early, follow conflicting skill rules too strictly, and run excess checks | `medium` by default; `low` for focused bounded questions |
+| Claude Fable 5.1 | Quality-sensitive implementation, code ready for merge, focused cleanup, API shape, maintainability, writing, and front-end design | Can expand scope, add excess tests, rewrite whole files, or stop before completion | `high` |
+| Claude Opus 5 | Long-running coding, bug finding, front-end design, and a deliberate Claude second opinion | Can add process, verification, subagents, or prose beyond the task | `high` |
 | Grok 4.6 | Native X research, live evidence, visual or interactive first passes, and a third-provider review | Check project-specific code quality; do not infer production readiness from a good demo | `high` |
-| GPT-5.6 Sol | Read-only phase review in multi-phase work: correctness, missed consumers, failure paths, and inventory re-derivation | Overbuilds when it implements, and is not an authority on taste or simplification; in this workflow it reviews rather than writes | `high` |
+| GPT-5.6 Sol | Usual root for normal diagnosis, bounded implementation, integration, and acceptance; fresh read-only phase review when assigned | Not an authority on simplification or removal; a reviewer is read-only only for that assignment | `high` |
 | GPT-5.6 Luna | Bounded implementation after design is settled; exact mechanical work | Literal execution cannot replace diagnosis, architecture, or final acceptance | `max` for bounded work; `low` for bulk mechanical work |
 
-Use Luna for ordinary bounded implementation with cheap checks. Use Fable 5.1 when implementation needs sustained code-quality judgment or cleanup. Reserve Astra for difficult reasoning, architecture, investigation, and review; it can implement a hard coupled change when separating diagnosis from the fix would lose essential context. Do not route all former implementation work to Astra. Use Sol as the per-phase reviewer of Luna-written code when a goal has many phases, so Astra reviews less often and only the hard parts; a small task does not need Sol.
+Use Luna `max` for ordinary bounded implementation with cheap checks. Use Fable 5.1 when implementation needs sustained quality judgment, cleanup, or front-end design. Use Sol as the usual root for normal diagnosis, bounded implementation, integration, and acceptance; a small root edit is allowed when a handoff costs more than it saves.
+
+Reserve expensive Astra passes for high-level complex planning, architecture, hard ambiguity, difficult or high-risk review, reducing complexity, and cross-phase risk. Run Astra at `medium` by default, use `low` for focused bounded questions, and never select `high` or above unless the user explicitly requests it. Use Astra or Fable 5.1 to decide simplification and code removal; Sol may integrate an approved removal and check its correctness, but does not judge the simplification.
+
+For front-end design, choose Astra, Opus 5, or Fable 5.1 based on user preference and task complexity; once that overall design is established, Sol can implement and extend it. Do not add a model panel by default. In a larger multi-phase goal, a fresh Sol run can review each phase while the root reviews integrated milestones and final acceptance. Independent means a separate run, not necessarily a different model; do not duplicate routine investigations or checks that already have sufficient evidence. A small task does not need an extra reviewer, but the root still checks delegated work.
 
 Read only the active root's reference:
 
@@ -36,6 +40,7 @@ Read only the active root's reference:
 | Claude Fable 5.1 | [root-fable.md](references/root-fable.md) |
 | Claude Opus 5 | [root-opus.md](references/root-opus.md) |
 | Grok 4.6 | [root-grok.md](references/root-grok.md) |
+| GPT-5.6 Sol | [root-sol.md](references/root-sol.md) |
 
 If another model is root, retain it and use the task table without pretending it is one of these roots.
 
@@ -71,9 +76,11 @@ Check the actual diff and completion evidence. Reject read-only mutations and ch
 
 Complete required checks on the integrated code. Reuse reliable results for unchanged code; repeat or broaden checks only for new changes, failures, missing evidence, or unresolved concerns. Add permanent tests for behavior or non-obvious invariants, not to reproduce edited literals.
 
-For substantial work, select independent review by the main risk: Astra for correctness and missed consumers, Sol for per-phase correctness review when a multi-phase goal makes Astra review of every phase too costly, Fable 5.1 for merge readiness and simplification, or Grok for a distinct third-provider concern. Scale review to task size; the active root's reference states the tiers. Review the actual code and failure scenarios, not only the plan's checklist. Check relevant lifecycle changes, error paths, and runtime limits. Report behavior that still needs runtime or device evidence. Do not add a review panel to a trivial edit.
+For substantial work, select independent review by the main risk: Astra for hard or high-risk scope, design, integration, acceptance, ambiguity, diagnosis, and cross-phase risk; Sol for bounded routine analysis and phase correctness when a multi-phase goal warrants a fresh run; Fable 5.1 for merge readiness and simplification; or Grok for a distinct third-provider concern. Scale review to task size; the active root's reference states the tiers.
 
-A reviewer must not be the same run that wrote the code. Fable may simplify its own work, but that is not independent review. When Fable implements, use Astra for consequential correctness review; request a fresh Fable view only when independent code-quality judgment adds value.
+Sol reports should be brief and evidence-backed, with checked paths or consumers, confirmed defects, and residual risks. Escalate automatically to Astra only when the evidence leaves a hard or high-risk decision unresolved after Sol's investigation. A boundary signal alone is not enough. These review escalation limits do not restrict the Astra planning, architecture, front-end design, or simplification routes above. Focus the Astra request on the evidence and decision; do not repeat investigations or checks that already have sufficient evidence. Review relevant code and failure scenarios, using sufficient Sol evidence instead of repeating a complete routine inventory. Check relevant lifecycle changes, error paths, and runtime limits. Report behavior that still needs runtime or device evidence. Do not add a review panel to a trivial edit.
+
+A reviewer must be a separate run from the run that wrote the code; independent does not require a different model. A Sol delegate assigned review is read-only, but Sol as root may implement and integrate ordinary work. Route simplification and removal judgment to Astra or Fable 5.1; Sol may integrate an approved removal and check correctness. Do not send Fable-written changes to Astra automatically. Use Astra for a hard or high-risk question, or honor an explicit user choice for Astra simplification or overall front-end design, and use a focused evidence-backed request.
 
 Return a concrete defect to its author with its location, consequence, required end state, owned scope, and relevant checks. Use a fresh pass for independent reasoning or a follow-up when context helps. After two failed repairs of the same defect, return the design decision to the root or move the work to a more suitable model. Do not repeat the same failed instructions.
 

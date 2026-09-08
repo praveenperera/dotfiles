@@ -99,14 +99,14 @@ Mode: <read-only analysis|implementation>
 
 ## Run a fresh read-only delegate
 
-Use Astra at `high` for difficult analysis. Use Sol at `high` for a per-phase review in a multi-phase goal. Use Luna at `max` for a bounded read with a cheap check, and at `low` for high-volume exact mechanical reads. Honor an active user choice of Luna `max`:
+Use Astra at `medium` by default or `low` for focused analysis; use `high` or above only when the user explicitly requests that effort. Use Sol at `high` for a per-phase review in a multi-phase goal. Use Luna at `max` for a bounded read with a cheap check, and at `low` for high-volume exact mechanical reads. Honor an active user choice of Luna `max`:
 
 ```sh
 codex --ask-for-approval never exec \
   --cd "$PWD" \
   --ephemeral \
   --model gpt-6-astra \
-  --config 'model_reasoning_effort="high"' \
+  --config 'model_reasoning_effort="medium"' \
   --sandbox read-only \
   --output-last-message "$delegate_dir/raw/final.md" \
   - \
@@ -117,7 +117,7 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-For a Sol phase review, change the model to `gpt-5.6-sol` and keep effort at `high` and the sandbox read-only. For bounded work, change the model to `gpt-5.6-luna` and effort to `max`. Use `low` for bulk exact transformations only when no user directive requires `max`. Keep Astra at `high` unless the user selects another effort.
+For a Sol phase review, change the model to `gpt-5.6-sol`, effort to `high`, and keep the sandbox read-only. For bounded work, change the model to `gpt-5.6-luna` and effort to `max`. Use `low` for bulk exact transformations only when no user directive requires `max`. Do not increase Astra to `high` or above without an explicit user request for that effort.
 
 ## Run a fresh implementation delegate
 
@@ -128,7 +128,7 @@ codex --ask-for-approval never exec \
   --cd "$PWD" \
   --ephemeral \
   --model gpt-6-astra \
-  --config 'model_reasoning_effort="high"' \
+  --config 'model_reasoning_effort="medium"' \
   --sandbox workspace-write \
   --output-last-message "$delegate_dir/raw/final.md" \
   - \
