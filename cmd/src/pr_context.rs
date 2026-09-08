@@ -157,7 +157,7 @@ struct OriginalRange {
     line: u64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "snake_case")]
 enum DiffSide {
     Left,
@@ -434,52 +434,55 @@ fn convert_review_thread(thread: github::ReviewThread) -> Result<ReviewThread> {
 }
 
 fn line_location(thread: &github::ReviewThread) -> Result<ThreadLocation> {
-    let current = current_range(thread)?;
-    let original = thread.original_line.map(|line| OriginalRange {
-        start_line: thread.original_start_line,
-        line,
-    });
-
-    if current.is_none() && original.is_none() {
-        eyre::bail!("Line review thread {} has no line anchor", thread.id);
-    }
-
     Ok(ThreadLocation::Line {
         path: thread.path.clone(),
-        current,
-        original,
+        current: current_range(thread)?,
+        original: original_range(thread),
     })
 }
 
 fn current_range(thread: &github::ReviewThread) -> Result<Option<DiffRange>> {
     let Some(line) = thread.line else {
-        if thread.start_line.is_some() || thread.start_diff_side.is_some() {
-            eyre::bail!(
-                "Review thread {} has a partial current line anchor",
-                thread.id
-            );
-        }
+        // GitHub nulls `line` on outdated threads and may still return startLine
         return Ok(None);
     };
-    let start = match (thread.start_line, thread.start_diff_side.as_deref()) {
-        (Some(line), Some(side)) => Some(DiffPosition {
-            line,
-            side: parse_diff_side(side)?,
-        }),
-        (None, None) => None,
-        _ => eyre::bail!(
-            "Review thread {} has a partial start line anchor",
-            thread.id
-        ),
-    };
+    let side = parse_diff_side(&thread.diff_side)?;
 
     Ok(Some(DiffRange {
-        start,
-        end: DiffPosition {
-            line,
-            side: parse_diff_side(&thread.diff_side)?,
-        },
+        start: start_position(thread.start_line, thread.start_diff_side.as_deref(), side)?,
+        end: DiffPosition { line, side },
     }))
+}
+
+fn start_position(
+    start_line: Option<u64>,
+    start_diff_side: Option<&str>,
+    end_side: DiffSide,
+) -> Result<Option<DiffPosition>> {
+    let Some(line) = start_line else {
+        return Ok(None);
+    };
+    // GitHub leaves startDiffSide null when the range stays on diffSide
+    let side = match start_diff_side {
+        Some(side) => parse_diff_side(side)?,
+        None => end_side,
+    };
+
+    Ok(Some(DiffPosition { line, side }))
+}
+
+fn original_range(thread: &github::ReviewThread) -> Option<OriginalRange> {
+    match (thread.original_start_line, thread.original_line) {
+        (_, Some(line)) => Some(OriginalRange {
+            start_line: thread.original_start_line,
+            line,
+        }),
+        (Some(line), None) => Some(OriginalRange {
+            start_line: None,
+            line,
+        }),
+        (None, None) => None,
+    }
 }
 
 fn parse_pull_request_state(state: &str) -> Result<PullRequestState> {
@@ -733,9 +736,9 @@ fn review_state_label(state: &ReviewState) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
-        current_range, format_as_markdown, CompactPrContext, DiffPosition, DiffRange, DiffSide,
-        OriginalRange, PrContext, PullRequest, PullRequestState, ReviewThread, ReviewThreadComment,
-        ThreadLocation, ThreadResolution,
+        convert_review_thread, current_range, format_as_markdown, CompactPrContext, DiffPosition,
+        DiffRange, DiffSide, OriginalRange, PrContext, PullRequest, PullRequestState, ReviewThread,
+        ReviewThreadComment, ThreadLocation, ThreadResolution,
     };
 
     #[test]
@@ -781,26 +784,153 @@ mod tests {
     }
 
     #[test]
-    fn rejects_a_multiline_anchor_without_its_diff_side() {
-        let thread = github_thread_with_partial_start_anchor();
+    fn inherits_end_diff_side_when_multiline_start_side_is_missing() {
+        let thread = github_thread(GithubThreadFields {
+            start_line: Some(10),
+            original_start_line: Some(10),
+            ..GithubThreadFields::default()
+        });
 
-        let error = current_range(&thread).unwrap_err().to_string();
+        let converted = convert_review_thread(thread).unwrap();
 
-        assert!(error.contains("partial start line anchor"));
+        assert!(matches!(
+            converted.location,
+            ThreadLocation::Line {
+                current: Some(DiffRange {
+                    start: Some(DiffPosition {
+                        line: 10,
+                        side: DiffSide::Right,
+                    }),
+                    end: DiffPosition {
+                        line: 12,
+                        side: DiffSide::Right,
+                    },
+                }),
+                original: Some(OriginalRange {
+                    start_line: Some(10),
+                    line: 12,
+                }),
+                ..
+            }
+        ));
     }
 
-    fn github_thread_with_partial_start_anchor() -> crate::github::ReviewThread {
+    #[test]
+    fn outdated_thread_keeps_original_range_when_current_line_is_gone() {
+        let thread = github_thread(GithubThreadFields {
+            is_outdated: true,
+            line: None,
+            start_line: Some(10),
+            start_diff_side: Some("RIGHT"),
+            original_start_line: Some(10),
+            ..GithubThreadFields::default()
+        });
+
+        let converted = convert_review_thread(thread).unwrap();
+
+        assert!(matches!(
+            converted.location,
+            ThreadLocation::Line {
+                current: None,
+                original: Some(OriginalRange {
+                    start_line: Some(10),
+                    line: 12,
+                }),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn line_thread_without_numeric_anchors_keeps_the_path() {
+        let thread = github_thread(GithubThreadFields {
+            line: None,
+            original_line: None,
+            ..GithubThreadFields::default()
+        });
+
+        let converted = convert_review_thread(thread).unwrap();
+
+        assert!(matches!(
+            converted.location,
+            ThreadLocation::Line {
+                current: None,
+                original: None,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn start_side_without_start_line_is_ignored() {
+        let thread = github_thread(GithubThreadFields {
+            start_diff_side: Some("LEFT"),
+            ..GithubThreadFields::default()
+        });
+
+        let range = current_range(&thread).unwrap().unwrap();
+
+        assert!(range.start.is_none());
+        assert_eq!(range.end.line, 12);
+    }
+
+    #[test]
+    fn original_start_line_is_used_when_original_line_is_missing() {
+        let thread = github_thread(GithubThreadFields {
+            line: None,
+            original_line: None,
+            original_start_line: Some(8),
+            ..GithubThreadFields::default()
+        });
+
+        let converted = convert_review_thread(thread).unwrap();
+
+        assert!(matches!(
+            converted.location,
+            ThreadLocation::Line {
+                original: Some(OriginalRange {
+                    start_line: None,
+                    line: 8,
+                }),
+                ..
+            }
+        ));
+    }
+
+    struct GithubThreadFields {
+        is_outdated: bool,
+        line: Option<u64>,
+        start_line: Option<u64>,
+        start_diff_side: Option<&'static str>,
+        original_line: Option<u64>,
+        original_start_line: Option<u64>,
+    }
+
+    impl Default for GithubThreadFields {
+        fn default() -> Self {
+            Self {
+                is_outdated: false,
+                line: Some(12),
+                start_line: None,
+                start_diff_side: None,
+                original_line: Some(12),
+                original_start_line: None,
+            }
+        }
+    }
+
+    fn github_thread(fields: GithubThreadFields) -> crate::github::ReviewThread {
         crate::github::ReviewThread {
             id: "PRRT_1".to_string(),
             is_resolved: false,
-            is_outdated: false,
+            is_outdated: fields.is_outdated,
             path: "src/lib.rs".to_string(),
-            line: Some(12),
+            line: fields.line,
             diff_side: "RIGHT".to_string(),
-            start_line: Some(10),
-            start_diff_side: None,
-            original_line: Some(12),
-            original_start_line: Some(10),
+            start_line: fields.start_line,
+            start_diff_side: fields.start_diff_side.map(str::to_string),
+            original_line: fields.original_line,
+            original_start_line: fields.original_start_line,
             subject_type: "LINE".to_string(),
             resolved_by: None,
             comments: Vec::new(),
