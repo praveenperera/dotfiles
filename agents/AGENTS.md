@@ -18,12 +18,12 @@
 
 - NEVER USE THE RESET USAGE TOOL. NEVER RESET USAGE.
 - Use `fork_turns="none"` for Codex subagents by default, and give each subagent a self-contained prompt. Use `fork_turns="all"` only when the user explicitly requests a full-history fork.
-- Prefer Sol `high` as root, Luna `max` for bounded implementation. The actual root owns scope, integration, and acceptance; use fresh read-only Sol reviews for larger tasks without repeating completed checks.
+- Prefer Sol `high` as root, Luna `max` for bounded implementation. The actual root owns scope, integration, and acceptance. For a larger task, use one fresh read-only Sol review of the related change set; add another only when a second risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
 - Reserve Astra for complex planning, architecture, and difficult review: `medium` by default, `low` for focused work, and `high` or above only on explicit user request or when stuggling with a solution.
 - Use Astra or Opus 5 for overall front-end design; Sol can implement and extend established designs. Use Astra to simplification and code removal from the root's complexity-check list. Fable 5.1 is opt-in only; the root may suggest it. Opus defaults to `medium`.
 - Infer intent and scope from the request and bias toward action. Treat "can you", "I want to", and "help me" as instructions to do the work. Complete the work that is already authorized before asking a clarifying question, and do not add unsolicited warnings, disclaimers, or approval flows.
 - The user's instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
-- When independent work can run in parallel, delegate it to a subagent with a self-contained, legible prompt.
+- Spawn a subagent when a self-contained `fork_turns="none"` prompt drops unused parent context, or when non-overlapping owned scopes can run at the same time. Extra agents are useful when each prompt stays small. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work. Only the root may spawn unless the user or the root's contract authorizes nested delegation.
 
 # Rust Project Specific
 
