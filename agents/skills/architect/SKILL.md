@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Design durable domain state, ownership, interfaces, or module boundaries before a non-trivial change. Use for API or schema changes, migrations, competing designs, or repeated caller patches. Do not use for local UI state, sorting, styling, one-component work, or established patterns.
+description: Resolve an unsettled durable domain, ownership, API, or schema design before implementation. Use when competing designs or repeated caller workarounds require a decision with migration or compatibility cost. Do not use for routine implementation, established patterns, or review that only checks an existing design.
 ---
 
 # Architect
@@ -9,9 +9,9 @@ Design the shape that makes the implementation direct. Keep architecture and int
 
 ## Confirm the need
 
-Use this workflow only when the decision affects a durable domain boundary or when choosing the wrong owner would create migration or compatibility cost. Ordinary feature work can still use good types and ownership without invoking this skill.
+Use this workflow only when the decision affects a durable domain boundary or when choosing the wrong owner would create migration or compatibility cost. Ordinary feature work can still use good types and ownership without invoking this skill. Do not use it for a review that only checks an existing design.
 
-Do not invoke `how` only because this skill is active. Use `how` separately only when the user asks for a system explanation or the execution path is independently complex enough to need a full trace.
+Do not invoke `how` only because this skill is active. Use `how` only when the user asks for a system explanation.
 
 ## Ground the design
 
