@@ -1,11 +1,15 @@
 ---
 name: blast-radius
-description: Find what a code or configuration change could break outside its direct diff, and prove the main safety assumption with executable evidence when practical. Use for compatibility risk, migration risk, suspicious small diffs, or requests about what to test before merging.
+description: Investigate a concrete failure path outside a change's direct callers. Use when the user requests a compatibility or change-impact assessment, or initial inspection identifies a specific cross-boundary safety assumption that needs proof. Do not use for general review, migration keywords alone, or hypothetical risk.
 ---
 
 # Blast radius
 
 Follow effects that symbol search does not show. This is a read-only review unless the user also asks for fixes.
+
+## Confirm the need
+
+Use this workflow when the user requests a compatibility or change-impact assessment, or when inspection has already named a specific cross-boundary safety assumption. Name the boundary and the assumption before continuing. Do not load it for general review, a migration keyword, or hypothetical risk. If a child continues related work, pass the assumption, evidence, and a bounded question. Do not instruct the child to load this skill again.
 
 ## Find the safety claim
 
