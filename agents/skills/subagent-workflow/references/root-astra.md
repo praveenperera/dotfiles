@@ -31,6 +31,6 @@ Sol delegates assigned analysis or review are read-only; this is not a restricti
 
 ## Transport and prompting
 
-Use native Codex workers when available. Use [claude-cli.md](claude-cli.md) for Fable 5.1 or Opus and [grok-cli.md](grok-cli.md) for Grok. External Codex transport for Astra, Sol, and Luna is in [codex-cli.md](codex-cli.md).
+Spawn Codex workers with [codex-native.md](codex-native.md). Use [claude-cli.md](claude-cli.md) for Fable 5.1 or Opus and [grok-cli.md](grok-cli.md) for Grok.
 
 Apply the Astra section of [frontier-prompting.md](frontier-prompting.md) to the root as well as its delegates, and the Sol section to Sol review prompts. Do not let a skill's routine approval step interrupt work already authorized by the user. Keep plan-only requests limited to planning.

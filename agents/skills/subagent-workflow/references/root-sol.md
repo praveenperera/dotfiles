@@ -27,4 +27,4 @@ Sol is not the authority for simplification or removal decisions. Keep the compl
 
 ## Prompting and transport
 
-Apply the Sol section of [frontier-prompting.md](frontier-prompting.md) to Sol root work and to fresh Sol review runs. Keep the root's scope, design, integration, and acceptance in the root thread. Use native workers when available, keep owned scopes separate, and keep staging, commits, publication, external writes, and nested delegation with the root unless separately authorized.
+Apply the Sol section of [frontier-prompting.md](frontier-prompting.md) to Sol root work and to fresh Sol review runs. Keep the root's scope, design, integration, and acceptance in the root thread. Spawn Codex workers with [codex-native.md](codex-native.md). Keep owned scopes separate, and keep staging, commits, publication, external writes, and nested delegation with the root unless separately authorized.

@@ -14,6 +14,6 @@ Use this route when the actual session model is Claude Opus 5. Opus owns orchest
 | Native X research or visual first pass | Grok 4.6 |
 | Bulk exact transformations | Luna `low`, unless an active user choice requires `max` |
 
-Use [claude-cli.md](claude-cli.md) for Fable 5.1, [codex-cli.md](codex-cli.md) for Astra and Luna when native workers are unavailable, and [grok-cli.md](grok-cli.md) for Grok.
+Use [claude-cli.md](claude-cli.md) for Fable 5.1, [codex-native.md](codex-native.md) for Astra and Luna, and [grok-cli.md](grok-cli.md) for Grok.
 
 Follow [opus5-prompting.md](opus5-prompting.md). Keep required checks, but do not add verification agents to routine work. Use Sol for ordinary code-quality review of Opus-written code; use Astra when correctness across consumers is the main concern. The root may suggest Fable.
