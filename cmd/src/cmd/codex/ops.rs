@@ -1,6 +1,7 @@
 use super::app_server::{
     control_socket_path, managed_tui_connection_args, plan_app_server_launch,
-    writer_conflict_retry_args, AppServerLaunch, ManagedAppServer, SessionControl,
+    writer_conflict_retry_args, AppServerLaunch, ManagedAppServer, ManagedShutdown, SessionControl,
+    ShutdownSignal, ThreadWriterConflict, WriterConflictLog,
 };
 use super::*;
 use crate::{fsutil, runtime};
@@ -140,13 +141,16 @@ fn launch_with_profile(
         pane_id.clone(),
         control,
     )?;
-    let app_server = match &app_server_launch {
+    let managed_session = match &app_server_launch {
         AppServerLaunch::Managed {
             strict_config,
             initial_thread_sync,
             ..
-        } => Some(
-            ManagedAppServer::start(
+        } => {
+            let shutdown = ManagedShutdown::install().inspect_err(|_| {
+                fsutil::remove_existing_path(session_marker.path()).ok();
+            })?;
+            let app_server = ManagedAppServer::start(
                 &launch_home,
                 *strict_config,
                 *initial_thread_sync,
@@ -155,17 +159,29 @@ fn launch_with_profile(
             )
             .inspect_err(|_| {
                 fsutil::remove_existing_path(session_marker.path()).ok();
-            })?,
-        ),
+            })?;
+
+            Some(ManagedSession {
+                app_server,
+                shutdown,
+            })
+        }
         AppServerLaunch::External | AppServerLaunch::Embedded => None,
     };
     let run_result = (|| -> Result<_> {
         let mut retried_writer_conflict = false;
         let mut retry_args = None;
         loop {
-            let app_server_log_checkpoint = app_server
+            if let Some(signal) = managed_session
                 .as_ref()
-                .map(ManagedAppServer::log_checkpoint)
+                .and_then(|session| session.shutdown.next_signal())
+            {
+                return Ok(LaunchResult::Interrupted(signal));
+            }
+
+            let mut writer_conflicts = managed_session
+                .as_ref()
+                .map(|session| session.app_server.writer_conflicts())
                 .transpose()?;
             let mut child = codex_command(&launch_home);
             if let Some(connection_args) = &managed_connection_args {
@@ -176,30 +192,56 @@ fn launch_with_profile(
             if let Err(err) = session_marker.set_session_pid(child.id()) {
                 child.kill().ok();
                 child.wait().ok();
+                if let Some(session) = &managed_session {
+                    session.shutdown.restore_terminal();
+                }
+
                 return Err(err);
             }
 
-            let status = child.wait()?;
+            let recovery = WriterRecoverySupervisor {
+                launch_home: &launch_home,
+                profiles_root: &profiles_root,
+                policy: writer_policy,
+                current_server_pid: managed_session
+                    .as_ref()
+                    .map(|session| session.app_server.id()),
+            };
+            let supervision = managed_session
+                .as_ref()
+                .map_or(LaunchSupervision::Direct, |session| {
+                    LaunchSupervision::Managed(&session.shutdown)
+                });
+            let (status, conflict) =
+                match recovery.wait(&mut child, writer_conflicts.as_mut(), supervision) {
+                    Ok(TuiExit::Completed { status, conflict }) => (status, conflict),
+                    Ok(TuiExit::Interrupted(signal)) => {
+                        return Ok(LaunchResult::Interrupted(signal));
+                    }
+                    Err(err) => {
+                        // let the terminal restore its state before stopping its server
+                        eprintln!(
+                            "\r\nLock recovery failed: {err}. Exit Codex to return to the shell.\r"
+                        );
+                        match recovery.wait(&mut child, None, supervision)? {
+                            TuiExit::Completed { .. } => return Err(err),
+                            TuiExit::Interrupted(signal) => {
+                                return Ok(LaunchResult::Interrupted(signal));
+                            }
+                        }
+                    }
+                };
             if status.success() || retried_writer_conflict {
-                return Ok((status, None));
+                return Ok(LaunchResult::Completed(status));
             }
-            let Some(managed_app_server) = app_server.as_ref() else {
-                return Ok((status, None));
-            };
-            let Some(checkpoint) = app_server_log_checkpoint else {
-                return Ok((status, None));
-            };
-            let Some(conflict) = managed_app_server.latest_writer_conflict_since(checkpoint)?
-            else {
-                return Ok((status, None));
+            let Some(conflict) = conflict else {
+                return Ok(LaunchResult::Completed(status));
             };
 
-            match recover_thread_writer(
-                &launch_home,
-                &profiles_root,
-                conflict.thread_id(),
-                writer_policy,
-            )? {
+            match recovery.recover(&conflict)? {
+                ThreadWriterRecovery::CurrentSession => {
+                    return Ok(LaunchResult::Completed(status));
+                }
                 ThreadWriterRecovery::Ready { stopped_pids } => {
                     retried_writer_conflict = true;
                     retry_args = Some(writer_conflict_retry_args(tui_args, &conflict));
@@ -234,7 +276,7 @@ fn launch_with_profile(
                         pane_id.as_deref(),
                         thread_name.as_deref(),
                     );
-                    return Ok((status, Some(error)));
+                    return Err(error);
                 }
                 ThreadWriterRecovery::Unmanaged { pids } => {
                     let pids = display_pids(&pids);
@@ -242,20 +284,21 @@ fn launch_with_profile(
                         "Codex session {} has an active writer ({pids}) that is not managed by cmd. Run resume again with --force to stop it",
                         conflict.thread_id()
                     );
-                    return Ok((status, Some(error)));
+                    return Err(error);
                 }
             }
         }
     })();
 
-    if let Some(app_server) = app_server {
-        app_server.stop();
-    }
+    let shutdown = managed_session.map(ManagedSession::stop);
     fsutil::remove_existing_path(session_marker.path())?;
-    let (status, writer_error) = run_result?;
-    if let Some(err) = writer_error {
-        return Err(err);
+    if let Some(shutdown) = shutdown {
+        shutdown.finish();
     }
+    let status = match run_result? {
+        LaunchResult::Completed(status) => status,
+        LaunchResult::Interrupted(signal) => std::process::exit(signal.exit_code()),
+    };
     if let LaunchAuthMode::ProfileCopy {
         profile_auth,
         launch_auth,
@@ -268,6 +311,113 @@ fn launch_with_profile(
         )?;
     }
     std::process::exit(status.code().unwrap_or(1));
+}
+
+struct ManagedSession {
+    app_server: ManagedAppServer,
+    shutdown: ManagedShutdown,
+}
+
+impl ManagedSession {
+    fn stop(self) -> ManagedShutdown {
+        self.app_server.stop();
+        self.shutdown
+    }
+}
+
+enum LaunchResult {
+    Completed(std::process::ExitStatus),
+    Interrupted(ShutdownSignal),
+}
+
+#[derive(Clone, Copy)]
+enum LaunchSupervision<'a> {
+    Managed(&'a ManagedShutdown),
+    Direct,
+}
+
+enum TuiExit {
+    Completed {
+        status: std::process::ExitStatus,
+        conflict: Option<ThreadWriterConflict>,
+    },
+    Interrupted(ShutdownSignal),
+}
+
+struct WriterRecoverySupervisor<'a> {
+    launch_home: &'a Path,
+    profiles_root: &'a Path,
+    policy: ThreadWriterPolicy,
+    current_server_pid: Option<u32>,
+}
+
+impl WriterRecoverySupervisor<'_> {
+    fn recover(&self, conflict: &ThreadWriterConflict) -> Result<ThreadWriterRecovery> {
+        recover_thread_writer(
+            self.launch_home,
+            self.profiles_root,
+            conflict.thread_id(),
+            self.policy,
+            self.current_server_pid,
+        )
+    }
+
+    fn wait(
+        &self,
+        child: &mut std::process::Child,
+        conflicts: Option<&mut WriterConflictLog>,
+        supervision: LaunchSupervision<'_>,
+    ) -> Result<TuiExit> {
+        if matches!(supervision, LaunchSupervision::Direct) && conflicts.is_none() {
+            return Ok(TuiExit::Completed {
+                status: child.wait()?,
+                conflict: None,
+            });
+        }
+        let mut latest_conflict = None;
+        let mut conflicts = conflicts;
+
+        loop {
+            if let LaunchSupervision::Managed(shutdown) = supervision {
+                if let Some(signal) = shutdown.next_signal() {
+                    shutdown.stop_tui(child, signal)?;
+                    return Ok(TuiExit::Interrupted(signal));
+                }
+            }
+
+            let status = child.try_wait()?;
+            if let Some(conflict) = conflicts
+                .as_deref_mut()
+                .map(WriterConflictLog::latest_conflict)
+                .transpose()?
+                .flatten()
+            {
+                latest_conflict = match self.recover(&conflict)? {
+                    ThreadWriterRecovery::Ready { stopped_pids }
+                        if status.is_none() && !stopped_pids.is_empty() =>
+                    {
+                        eprintln!("\r\nConversation lock cleared. Press R to retry.\r");
+                        Some(conflict)
+                    }
+                    ThreadWriterRecovery::CurrentSession => None,
+                    _ => Some(conflict),
+                };
+            }
+
+            if let Some(status) = status {
+                if let LaunchSupervision::Managed(shutdown) = supervision {
+                    shutdown.restore_terminal();
+                }
+
+                return Ok(TuiExit::Completed {
+                    status,
+                    conflict: latest_conflict,
+                });
+            }
+
+            std::thread::sleep(Duration::from_millis(200));
+        }
+    }
 }
 
 fn display_pids(pids: &[u32]) -> String {
@@ -1051,6 +1201,106 @@ pub(super) fn delete(profile: &str, yes: bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn exited_tui_retries_the_latest_conflict() {
+        let dir = tempfile::tempdir().unwrap();
+        let log = dir.path().join("app-server.log");
+        stdfs::write(&log, "").unwrap();
+        let mut conflicts = WriterConflictLog::new(&log).unwrap();
+        let first = "01a091f5-1f6f-7290-89e4-4a39e852a050";
+        let last = "01a091f5-8751-72d3-9f7b-950351028034";
+        stdfs::write(
+            &log,
+            format!(
+                "thread-store conflict: thread {first} already has an active writer\n\
+                 thread-store conflict: thread {last} already has an active writer\n"
+            ),
+        )
+        .unwrap();
+        let mut tui = std::process::Command::new("sh")
+            .args(["-c", "exit 1"])
+            .spawn()
+            .unwrap();
+        tui.wait().unwrap();
+        let recovery = WriterRecoverySupervisor {
+            launch_home: dir.path(),
+            profiles_root: dir.path(),
+            policy: ThreadWriterPolicy::StopConflicting,
+            current_server_pid: None,
+        };
+
+        let TuiExit::Completed { status, conflict } = recovery
+            .wait(&mut tui, Some(&mut conflicts), LaunchSupervision::Direct)
+            .unwrap()
+        else {
+            panic!("direct wait was interrupted");
+        };
+
+        assert_eq!(status.code(), Some(1));
+        assert_eq!(conflict.unwrap().thread_id(), last);
+    }
+
+    #[test]
+    fn force_clears_lock_while_tui_is_still_waiting() {
+        use std::process::{Command, Stdio};
+        use std::time::Instant;
+
+        let dir = tempfile::tempdir().unwrap();
+        let locks = dir.path().join("thread-writer-locks");
+        stdfs::create_dir(&locks).unwrap();
+        let thread_id = "01a091f5-1f6f-7290-89e4-4a39e852a050";
+        let lock = locks.join(format!("{thread_id}.lock"));
+        let mut holder = Command::new("sh")
+            .args(["-c", "trap '' TERM; echo ready; exec sleep 10"])
+            .stdout(Stdio::from(stdfs::File::create(&lock).unwrap()))
+            .spawn()
+            .unwrap();
+        let holder_pid = holder.id();
+        let reaper = std::thread::spawn(move || holder.wait().unwrap());
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while stdfs::read(&lock).unwrap().is_empty() {
+            assert!(Instant::now() < deadline, "lock holder did not start");
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        let log = dir.path().join("app-server.log");
+        stdfs::write(&log, "").unwrap();
+        let mut conflicts = WriterConflictLog::new(&log).unwrap();
+        stdfs::write(
+            &log,
+            format!("thread-store conflict: thread {thread_id} already has an active writer\n"),
+        )
+        .unwrap();
+        // the fake terminal cannot exit successfully until live recovery stops its holder
+        let mut tui = Command::new("sh")
+            .args([
+                "-c",
+                "i=0; while kill -0 \"$1\" 2>/dev/null; do i=$((i + 1)); [ \"$i\" -lt 80 ] || exit 1; sleep 0.1; done",
+                "sh",
+            ])
+            .arg(holder_pid.to_string())
+            .spawn()
+            .unwrap();
+        let profiles_root = dir.path().join("profiles");
+        let recovery = WriterRecoverySupervisor {
+            launch_home: dir.path(),
+            profiles_root: &profiles_root,
+            policy: ThreadWriterPolicy::StopConflicting,
+            current_server_pid: None,
+        };
+
+        let TuiExit::Completed { status, conflict } = recovery
+            .wait(&mut tui, Some(&mut conflicts), LaunchSupervision::Direct)
+            .unwrap()
+        else {
+            panic!("direct wait was interrupted");
+        };
+        reaper.join().unwrap();
+
+        assert!(status.success(), "TUI timed out before live recovery");
+        assert_eq!(conflict.unwrap().thread_id(), thread_id);
+    }
 
     #[test]
     fn auto_launch_selection_uses_displayed_percent_delta() {
