@@ -4,6 +4,7 @@ use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs::{File, OpenOptions};
+use std::io::{Read, Seek, SeekFrom};
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -22,6 +23,8 @@ const APP_SERVER_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const APP_SERVER_CONNECT_ATTEMPT_TIMEOUT: Duration = Duration::from_millis(500);
 const APP_SERVER_RETRY_INTERVAL: Duration = Duration::from_millis(50);
 const APP_SERVER_STOP_TIMEOUT: Duration = Duration::from_secs(2);
+const TUI_SIGNAL_GRACE_PERIOD: Duration = Duration::from_millis(250);
+const TUI_STOP_TIMEOUT: Duration = Duration::from_secs(2);
 const PERSISTED_THREAD_MAX_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const APP_SERVER_SOCKET_DIR: &str = "app-server-control";
 const APP_SERVER_SOCKET_NAME: &str = "app-server-control.sock";
@@ -452,6 +455,245 @@ pub(crate) struct ManagedAppServer {
     log_path: PathBuf,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ShutdownSignal {
+    Interrupt,
+    Hangup,
+    Terminate,
+}
+
+impl ShutdownSignal {
+    #[cfg(unix)]
+    fn kill_argument(self) -> &'static str {
+        match self {
+            Self::Interrupt => "INT",
+            Self::Hangup => "HUP",
+            Self::Terminate => "TERM",
+        }
+    }
+
+    pub(crate) fn exit_code(self) -> i32 {
+        match self {
+            Self::Interrupt => 130,
+            Self::Hangup => 129,
+            Self::Terminate => 143,
+        }
+    }
+}
+
+pub(crate) struct ManagedShutdown {
+    #[cfg(unix)]
+    receiver: mpsc::Receiver<ShutdownSignal>,
+    #[cfg(unix)]
+    stop_sender: Option<tokio::sync::oneshot::Sender<()>>,
+    #[cfg(unix)]
+    listener: Option<JoinHandle<()>>,
+    #[cfg(unix)]
+    terminal_state: Option<TerminalState>,
+}
+
+impl ManagedShutdown {
+    pub(crate) fn install() -> Result<Self> {
+        #[cfg(unix)]
+        {
+            let (signal_sender, receiver) = mpsc::channel();
+            let (stop_sender, stop_receiver) = tokio::sync::oneshot::channel();
+            let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
+            let listener = std::thread::spawn(move || {
+                run_signal_listener(signal_sender, stop_receiver, ready_sender);
+            });
+            let ready = ready_receiver
+                .recv()
+                .map_err(|_| eyre!("Managed shutdown signal listener stopped during startup"))?;
+            if let Err(err) = ready {
+                listener.join().ok();
+                return Err(eyre!(err));
+            }
+
+            Ok(Self {
+                receiver,
+                stop_sender: Some(stop_sender),
+                listener: Some(listener),
+                terminal_state: TerminalState::capture(),
+            })
+        }
+
+        #[cfg(not(unix))]
+        {
+            Ok(Self {})
+        }
+    }
+
+    pub(crate) fn next_signal(&self) -> Option<ShutdownSignal> {
+        #[cfg(unix)]
+        {
+            self.receiver.try_recv().ok()
+        }
+
+        #[cfg(not(unix))]
+        {
+            None
+        }
+    }
+
+    pub(crate) fn stop_tui(
+        &self,
+        child: &mut Child,
+        signal: ShutdownSignal,
+    ) -> std::io::Result<std::process::ExitStatus> {
+        #[cfg(unix)]
+        let result = self.stop_tui_unix(child, signal);
+        #[cfg(not(unix))]
+        let result = child.kill().and_then(|()| child.wait());
+
+        self.restore_terminal();
+        result
+    }
+
+    pub(crate) fn restore_terminal(&self) {
+        #[cfg(unix)]
+        if let Some(terminal_state) = &self.terminal_state {
+            terminal_state.restore();
+        }
+    }
+
+    pub(crate) fn finish(mut self) {
+        self.stop_listener();
+    }
+
+    #[cfg(unix)]
+    fn stop_tui_unix(
+        &self,
+        child: &mut Child,
+        signal: ShutdownSignal,
+    ) -> std::io::Result<std::process::ExitStatus> {
+        if let Some(status) = wait_for_child_exit(child, TUI_SIGNAL_GRACE_PERIOD)? {
+            return Ok(status);
+        }
+
+        signal_process(child.id(), signal.kill_argument()).ok();
+        if let Some(status) = wait_for_child_exit(child, TUI_STOP_TIMEOUT)? {
+            return Ok(status);
+        }
+
+        if signal != ShutdownSignal::Terminate {
+            signal_process(child.id(), "TERM").ok();
+            if let Some(status) = wait_for_child_exit(child, TUI_STOP_TIMEOUT)? {
+                return Ok(status);
+            }
+        }
+
+        child.kill().ok();
+        child.wait()
+    }
+
+    fn stop_listener(&mut self) {
+        #[cfg(unix)]
+        {
+            if let Some(stop_sender) = self.stop_sender.take() {
+                stop_sender.send(()).ok();
+            }
+            if let Some(listener) = self.listener.take() {
+                listener.join().ok();
+            }
+        }
+    }
+}
+
+impl Drop for ManagedShutdown {
+    fn drop(&mut self) {
+        self.stop_listener();
+    }
+}
+
+#[cfg(unix)]
+struct TerminalState(std::ffi::OsString);
+
+#[cfg(unix)]
+impl TerminalState {
+    fn capture() -> Option<Self> {
+        let output = Command::new("stty")
+            .arg("-g")
+            .stdin(Stdio::inherit())
+            .stderr(Stdio::null())
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+
+        let state = String::from_utf8(output.stdout).ok()?;
+        let state = state.trim();
+        (!state.is_empty()).then(|| Self(state.into()))
+    }
+
+    fn restore(&self) {
+        Command::new("stty")
+            .arg(&self.0)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .ok();
+    }
+}
+
+#[cfg(unix)]
+fn run_signal_listener(
+    signal_sender: mpsc::Sender<ShutdownSignal>,
+    mut stop_receiver: tokio::sync::oneshot::Receiver<()>,
+    ready_sender: mpsc::SyncSender<std::result::Result<(), String>>,
+) {
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(err) => {
+            ready_sender.send(Err(err.to_string())).ok();
+            return;
+        }
+    };
+
+    runtime.block_on(async move {
+        use tokio::signal::unix::{signal, SignalKind};
+
+        let mut interrupt = match signal(SignalKind::interrupt()) {
+            Ok(signal) => signal,
+            Err(err) => {
+                ready_sender.send(Err(err.to_string())).ok();
+                return;
+            }
+        };
+        let mut hangup = match signal(SignalKind::hangup()) {
+            Ok(signal) => signal,
+            Err(err) => {
+                ready_sender.send(Err(err.to_string())).ok();
+                return;
+            }
+        };
+        let mut terminate = match signal(SignalKind::terminate()) {
+            Ok(signal) => signal,
+            Err(err) => {
+                ready_sender.send(Err(err.to_string())).ok();
+                return;
+            }
+        };
+        ready_sender.send(Ok(())).ok();
+
+        loop {
+            let received = tokio::select! {
+                _ = interrupt.recv() => ShutdownSignal::Interrupt,
+                _ = hangup.recv() => ShutdownSignal::Hangup,
+                _ = terminate.recv() => ShutdownSignal::Terminate,
+                _ = &mut stop_receiver => break,
+            };
+            if signal_sender.send(received).is_err() {
+                break;
+            }
+        }
+    });
+}
+
 impl ManagedAppServer {
     pub(crate) fn start(
         launch_home: &Path,
@@ -506,29 +748,12 @@ impl ManagedAppServer {
         })
     }
 
-    pub(crate) fn log_checkpoint(&self) -> Result<u64> {
-        Ok(std::fs::metadata(&self.log_path)?.len())
+    pub(crate) fn id(&self) -> u32 {
+        self.process.id()
     }
 
-    pub(crate) fn latest_writer_conflict_since(
-        &self,
-        checkpoint: u64,
-    ) -> Result<Option<ThreadWriterConflict>> {
-        let log = std::fs::read_to_string(&self.log_path).wrap_err_with(|| {
-            format!(
-                "Failed to inspect Codex app-server log at {}",
-                self.log_path.display()
-            )
-        })?;
-        let checkpoint = usize::try_from(checkpoint)?;
-        let attempt_log = log.get(checkpoint..).ok_or_else(|| {
-            eyre!(
-                "Codex app-server log became shorter while inspecting {}",
-                self.log_path.display()
-            )
-        })?;
-
-        Ok(parse_latest_writer_conflict(attempt_log))
+    pub(crate) fn writer_conflicts(&self) -> Result<WriterConflictLog> {
+        WriterConflictLog::new(&self.log_path)
     }
 
     pub(crate) fn stop(mut self) {
@@ -552,6 +777,59 @@ fn parse_latest_writer_conflict(log: &str) -> Option<ThreadWriterConflict> {
         let thread_id = message.strip_suffix(WRITER_CONFLICT_SUFFIX)?;
         is_uuid(thread_id).then(|| ThreadWriterConflict(thread_id.to_owned()))
     })
+}
+
+pub(crate) struct WriterConflictLog {
+    path: PathBuf,
+    offset: u64,
+    partial_line: Vec<u8>,
+}
+
+impl WriterConflictLog {
+    pub(crate) fn new(path: &Path) -> Result<Self> {
+        let offset = std::fs::metadata(path)?.len();
+        Ok(Self {
+            path: path.to_path_buf(),
+            offset,
+            partial_line: Vec::new(),
+        })
+    }
+
+    pub(crate) fn latest_conflict(&mut self) -> Result<Option<ThreadWriterConflict>> {
+        let length = std::fs::metadata(&self.path)?.len();
+        if length < self.offset {
+            self.offset = 0;
+            self.partial_line.clear();
+        }
+        if length == self.offset {
+            return Ok(None);
+        }
+
+        let mut file = File::open(&self.path)?;
+        file.seek(SeekFrom::Start(self.offset))?;
+        let mut appended = Vec::new();
+        file.read_to_end(&mut appended)?;
+        self.offset += u64::try_from(appended.len())?;
+        self.partial_line.extend(appended);
+
+        let Some(complete_len) = self
+            .partial_line
+            .iter()
+            .rposition(|byte| *byte == b'\n')
+            .map(|index| index + 1)
+        else {
+            return Ok(None);
+        };
+        let complete = self.partial_line.drain(..complete_len).collect::<Vec<_>>();
+        // only the last selection can still be waiting in the terminal
+        Ok(complete
+            .as_slice()
+            .rsplit(|byte| *byte == b'\n')
+            .find_map(|line| {
+                let line = String::from_utf8_lossy(line);
+                parse_latest_writer_conflict(line.trim_end_matches('\r'))
+            }))
+    }
 }
 
 fn is_uuid(value: &str) -> bool {
@@ -630,8 +908,18 @@ impl ManagedProcess {
 
 #[cfg(unix)]
 fn signal_process_group(process_group_id: u32, signal: &str) -> std::io::Result<()> {
+    signal_process_target(format!("-{process_group_id}"), signal)
+}
+
+#[cfg(unix)]
+fn signal_process(process_id: u32, signal: &str) -> std::io::Result<()> {
+    signal_process_target(process_id.to_string(), signal)
+}
+
+#[cfg(unix)]
+fn signal_process_target(target: String, signal: &str) -> std::io::Result<()> {
     let status = Command::new("kill")
-        .args([format!("-{signal}"), format!("-{process_group_id}")])
+        .args([format!("-{signal}"), target.clone()])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()?;
@@ -640,8 +928,25 @@ fn signal_process_group(process_group_id: u32, signal: &str) -> std::io::Result<
     }
 
     Err(std::io::Error::other(format!(
-        "failed to send {signal} to process group {process_group_id}"
+        "failed to send {signal} to process target {target}"
     )))
+}
+
+#[cfg(unix)]
+fn wait_for_child_exit(
+    child: &mut Child,
+    timeout: Duration,
+) -> std::io::Result<Option<std::process::ExitStatus>> {
+    let deadline = std::time::Instant::now() + timeout;
+    while std::time::Instant::now() < deadline {
+        if let Some(status) = child.try_wait()? {
+            return Ok(Some(status));
+        }
+
+        std::thread::sleep(APP_SERVER_RETRY_INTERVAL);
+    }
+
+    child.try_wait()
 }
 
 #[cfg(unix)]
@@ -1236,13 +1541,22 @@ mod tests {
         current_loaded_thread_async, managed_tui_connection_args, parse_latest_writer_conflict,
         plan_app_server_launch, session_event, set_thread_name_async, validate_socket_path,
         writer_conflict_retry_args, AppServerLaunch, InitialThreadSync, SessionControl,
-        SessionEvent, SessionMarker, SessionMonitor, ThreadWriterConflict,
+        SessionEvent, SessionMarker, SessionMonitor, ThreadWriterConflict, WriterConflictLog,
     };
     #[cfg(unix)]
-    use super::{process_group_is_running, ManagedProcess};
+    use super::{
+        process_group_is_running, signal_process, ManagedProcess, ManagedShutdown, ShutdownSignal,
+        TerminalState,
+    };
     use futures_util::{SinkExt, StreamExt};
     use serde_json::{json, Value};
     use std::ffi::OsString;
+    use std::fs::OpenOptions;
+    use std::io::Write;
+    #[cfg(unix)]
+    use std::path::{Path, PathBuf};
+    #[cfg(unix)]
+    use std::process::Stdio;
     use std::sync::mpsc;
     use std::time::{Duration, Instant};
     use tempfile::tempdir;
@@ -1264,6 +1578,29 @@ mod tests {
         assert_eq!(conflict.thread_id(), last);
     }
 
+    #[test]
+    fn writer_conflict_log_reads_new_complete_lines_once() {
+        let dir = tempdir().unwrap();
+        let log_path = dir.path().join("app-server.log");
+        let first = "019fddc8-e0e4-7992-a85d-84d5b50d0068";
+        let second = "019fe286-71f0-7513-ba31-fa0433073e6b";
+        std::fs::write(&log_path, "app-server started\n").unwrap();
+        let mut log = WriterConflictLog::new(&log_path).unwrap();
+
+        let mut file = OpenOptions::new().append(true).open(&log_path).unwrap();
+        write!(file, "thread-store conflict: thread {first}").unwrap();
+        assert!(log.latest_conflict().unwrap().is_none());
+
+        writeln!(
+            file,
+            " already has an active writer\nthread-store conflict: thread {second} already has an active writer"
+        )
+        .unwrap();
+        assert_eq!(log.latest_conflict().unwrap().unwrap().thread_id(), second);
+        assert!(log.latest_conflict().unwrap().is_none());
+        assert!(log.latest_conflict().unwrap().is_none());
+    }
+
     #[cfg(unix)]
     #[test]
     fn managed_process_stops_its_child_process_group() {
@@ -1277,6 +1614,198 @@ mod tests {
         process.stop();
 
         assert!(!process_group_is_running(process_group_id));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_shutdown_survives_repeated_interrupts_during_cleanup() {
+        const HELPER_TEST: &str =
+            "cmd::codex::app_server::tests::managed_shutdown_subprocess_helper";
+
+        let dir = tempdir().unwrap();
+        let mut helper = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", HELPER_TEST, "--nocapture"])
+            .env("CMD_MANAGED_SHUTDOWN_TEST_DIR", dir.path())
+            .spawn()
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        wait_for_test_phase(dir.path(), "protected", deadline);
+
+        signal_process(helper.id(), "INT").unwrap();
+        wait_for_test_phase(dir.path(), "cleanup", deadline);
+        for _ in 0..3 {
+            signal_process(helper.id(), "INT").unwrap();
+        }
+
+        let status = wait_for_test_child(&mut helper, deadline).unwrap_or_else(|| {
+            helper.kill().ok();
+            helper.wait().ok();
+            panic!("managed shutdown helper did not exit");
+        });
+        let pids = std::fs::read_to_string(dir.path().join("pids")).unwrap();
+        let mut pids = pids
+            .split_whitespace()
+            .map(|pid| pid.parse::<u32>().unwrap());
+        let server_process_group = pids.next().unwrap();
+        let tui_pid = pids.next().unwrap();
+
+        assert!(status.success(), "managed shutdown helper failed: {status}");
+        assert!(!process_group_is_running(server_process_group));
+        assert!(!process_is_running(tui_pid));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_shutdown_subprocess_helper() {
+        let Some(dir) = std::env::var_os("CMD_MANAGED_SHUTDOWN_TEST_DIR").map(PathBuf::from) else {
+            return;
+        };
+        let shutdown = ManagedShutdown::install().unwrap();
+        std::fs::write(dir.join("phase"), "protected").unwrap();
+
+        // model a signal that arrives while the managed server is still starting
+        std::thread::sleep(Duration::from_millis(300));
+        let mut tui = std::process::Command::new("sh")
+            .args([
+                "-c",
+                "trap 'exit 42' INT; trap 'exit 43' HUP; trap 'exit 44' TERM; while :; do :; done",
+            ])
+            .spawn()
+            .unwrap();
+        let mut server_command = std::process::Command::new("sh");
+        server_command.args(["-c", "trap '' TERM INT HUP; exec sleep 30"]);
+        let mut server = ManagedProcess::spawn(&mut server_command).unwrap();
+        std::fs::write(
+            dir.join("pids"),
+            format!("{} {}", server.process_group_id, tui.id()),
+        )
+        .unwrap();
+
+        let signal = wait_for_test_signal(&shutdown).unwrap_or_else(|| {
+            tui.kill().ok();
+            tui.wait().ok();
+            server.stop();
+            panic!("managed shutdown helper did not receive a signal");
+        });
+        let tui_status = shutdown.stop_tui(&mut tui, signal).unwrap();
+        assert_eq!(tui_status.code(), Some(42));
+        std::fs::write(dir.join("phase"), "cleanup").unwrap();
+
+        server.stop();
+
+        assert!(!process_group_is_running(server.process_group_id));
+        std::fs::write(dir.join("phase"), "done").unwrap();
+        shutdown.finish();
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn managed_shutdown_restores_terminal_after_forced_tui_stop() {
+        const HELPER_TEST: &str =
+            "cmd::codex::app_server::tests::managed_terminal_subprocess_helper";
+
+        let dir = tempdir().unwrap();
+        let status = std::process::Command::new("script")
+            .args(["-q", "/dev/null"])
+            .arg(std::env::current_exe().unwrap())
+            .args(["--exact", HELPER_TEST, "--nocapture"])
+            .env("CMD_MANAGED_TERMINAL_TEST_DIR", dir.path())
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .unwrap();
+
+        assert!(status.success(), "terminal restore helper failed: {status}");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn managed_terminal_subprocess_helper() {
+        let Some(dir) = std::env::var_os("CMD_MANAGED_TERMINAL_TEST_DIR").map(PathBuf::from) else {
+            return;
+        };
+        let shutdown = ManagedShutdown::install().unwrap();
+        let initial_state = TerminalState::capture().unwrap().0;
+        let ready_path = dir.join("terminal-ready");
+        let mut tui = std::process::Command::new("sh")
+            .args([
+                "-c",
+                "stty -echo; echo ready > \"$1\"; trap '' TERM; while :; do :; done",
+                "sh",
+            ])
+            .arg(&ready_path)
+            .spawn()
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !ready_path.exists() {
+            assert!(
+                Instant::now() < deadline,
+                "fake TUI did not change terminal mode"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        shutdown
+            .stop_tui(&mut tui, ShutdownSignal::Terminate)
+            .unwrap();
+
+        assert_eq!(TerminalState::capture().unwrap().0, initial_state);
+        shutdown.finish();
+    }
+
+    #[cfg(unix)]
+    fn wait_for_test_phase(path: &Path, expected: &str, deadline: Instant) {
+        while Instant::now() < deadline {
+            let phase = std::fs::read_to_string(path.join("phase")).unwrap_or_default();
+            if phase == expected {
+                return;
+            }
+
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        panic!("managed shutdown helper did not reach {expected}");
+    }
+
+    #[cfg(unix)]
+    fn wait_for_test_child(
+        child: &mut std::process::Child,
+        deadline: Instant,
+    ) -> Option<std::process::ExitStatus> {
+        while Instant::now() < deadline {
+            if let Some(status) = child.try_wait().unwrap() {
+                return Some(status);
+            }
+
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        None
+    }
+
+    #[cfg(unix)]
+    fn wait_for_test_signal(shutdown: &ManagedShutdown) -> Option<super::ShutdownSignal> {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < deadline {
+            if let Some(signal) = shutdown.next_signal() {
+                return Some(signal);
+            }
+
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        None
+    }
+
+    #[cfg(unix)]
+    fn process_is_running(process_id: u32) -> bool {
+        std::process::Command::new("kill")
+            .args(["-0", &process_id.to_string()])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success())
     }
 
     #[test]

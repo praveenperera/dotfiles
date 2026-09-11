@@ -14,6 +14,7 @@ const STALE_PROCESS_POLL_INTERVAL: StdDuration = StdDuration::from_millis(50);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum ThreadWriterRecovery {
+    CurrentSession,
     Ready {
         stopped_pids: Vec<u32>,
     },
@@ -337,11 +338,17 @@ pub(super) fn recover_thread_writer(
     profiles_root: &Path,
     thread_id: &str,
     policy: ThreadWriterPolicy,
+    current_server_pid: Option<u32>,
 ) -> Result<ThreadWriterRecovery> {
     let lock_path = launch_home
         .join("thread-writer-locks")
         .join(format!("{thread_id}.lock"));
     let holder_pids = pids_holding_path(&lock_path)?;
+    // a retry can succeed before its earlier conflict is read from the log
+    if current_server_pid.is_some_and(|pid| holder_pids.contains(&pid)) {
+        return Ok(ThreadWriterRecovery::CurrentSession);
+    }
+
     if holder_pids.is_empty() {
         return Ok(ThreadWriterRecovery::Ready {
             stopped_pids: Vec::new(),
@@ -887,8 +894,8 @@ pub(super) fn delete_profile_home(profile_home: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        pids_holding_path, process_is_running, recover_thread_writer, ThreadWriterPolicy,
-        ThreadWriterRecovery,
+        pids_holding_path, process_is_running, recover_thread_writer, stop_process,
+        ThreadWriterPolicy, ThreadWriterRecovery,
     };
     use std::fs;
     use std::process::Command;
@@ -898,13 +905,32 @@ mod tests {
 
     #[test]
     fn force_stops_only_the_process_holding_the_thread_lock() {
+        assert_force_stops_lock_holder("sleep 30 > \"$1\" 2>&1 & echo $!");
+    }
+
+    #[test]
+    fn force_stops_lock_holder_that_ignores_termination() {
+        assert_force_stops_lock_holder("(trap '' TERM; exec sleep 30) > \"$1\" 2>&1 & echo $!");
+    }
+
+    fn assert_force_stops_lock_holder(script: &str) {
         let dir = tempdir().unwrap();
         let launch_home = dir.path().join("launch");
         let locks_dir = launch_home.join("thread-writer-locks");
         fs::create_dir_all(&locks_dir).unwrap();
         let thread_id = "019fe286-71f0-7513-ba31-fa0433073e6b";
         let lock_path = locks_dir.join(format!("{thread_id}.lock"));
-        let script = "sleep 30 > \"$1\" 2>&1 & echo $!";
+        let unrelated_lock_path = locks_dir.join("other-thread.lock");
+        let unrelated = Command::new("sh")
+            .args(["-c", "sleep 30 > \"$1\" 2>&1 & echo $!", "sh"])
+            .arg(&unrelated_lock_path)
+            .output()
+            .unwrap();
+        let unrelated_pid = String::from_utf8(unrelated.stdout)
+            .unwrap()
+            .trim()
+            .parse::<u32>()
+            .unwrap();
         let output = Command::new("sh")
             .args(["-c", script, "sh"])
             .arg(&lock_path)
@@ -925,11 +951,24 @@ mod tests {
             thread::sleep(Duration::from_millis(50));
         }
 
+        let current = recover_thread_writer(
+            &launch_home,
+            &dir.path().join("profiles"),
+            thread_id,
+            ThreadWriterPolicy::StopConflicting,
+            Some(holder_pid),
+        )
+        .unwrap();
+
+        assert_eq!(current, ThreadWriterRecovery::CurrentSession);
+        assert!(process_is_running(holder_pid).unwrap());
+
         let preserved = recover_thread_writer(
             &launch_home,
             &dir.path().join("profiles"),
             thread_id,
             ThreadWriterPolicy::PreserveActive,
+            None,
         )
         .unwrap();
 
@@ -946,6 +985,7 @@ mod tests {
             &dir.path().join("profiles"),
             thread_id,
             ThreadWriterPolicy::StopConflicting,
+            None,
         )
         .unwrap();
 
@@ -956,5 +996,7 @@ mod tests {
             }
         );
         assert!(!process_is_running(holder_pid).unwrap());
+        assert!(process_is_running(unrelated_pid).unwrap());
+        stop_process(unrelated_pid).unwrap();
     }
 }
