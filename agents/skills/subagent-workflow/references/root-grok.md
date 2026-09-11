@@ -14,6 +14,6 @@ Use this route when the actual session model is `grok-4.6`. Grok owns live evide
 | Deliberate second Claude opinion | Opus 5 when it adds a distinct perspective |
 | Bulk exact transformations | Luna `low`, unless an active user choice requires `max` |
 
-Use [claude-cli.md](claude-cli.md) for Claude delegates and [codex-cli.md](codex-cli.md) for Astra and Luna when native workers are unavailable. Use [grok-cli.md](grok-cli.md) only when starting a separate Grok pass.
+Use [claude-cli.md](claude-cli.md) for Claude delegates and [codex-native.md](codex-native.md) for Astra and Luna. Use [grok-cli.md](grok-cli.md) only when starting a separate Grok pass.
 
 A strong visual first pass does not establish production code quality. Use Sol for ordinary merge-readiness review and Astra for difficult correctness questions. The root may suggest Fable. Preserve ownership boundaries while the root continues independent research.

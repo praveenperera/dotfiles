@@ -62,11 +62,12 @@ Never assign overlapping writing scopes. Read-only reviewers can share a snapsho
 
 ## Use the available transport
 
-Prefer defulat subagent spawn too for native Codex delegates when it exposes the requested model and effort. Default to `fork_turns="none"` and a self-contained prompt; use a full-history fork only when the user requests it. Inspect the available model choices instead of assuming another provider is supported.
+For native Codex delegates, call `collaboration.spawn_agent` as a direct tool with `task_name`, `message`, and `fork_turns="none"`. Read [codex-native.md](references/codex-native.md) before the first spawn. Use a full-history fork only when the user requests it. Inspect the available model choices instead of assuming another provider is supported.
 
 Read the relevant transport reference only before using it:
 
-- [codex-cli.md](references/codex-cli.md): external Codex runs, shared CLI prompt template, and evidence capture; do not launch a second CLI when native workers suffice
+- [codex-native.md](references/codex-native.md): Codex `collaboration.spawn_agent` and related collaboration tools
+- [codex-cli.md](references/codex-cli.md): external Codex runs when native spawn is rejected as unregistered; shared CLI prompt template and evidence capture
 - [claude-cli.md](references/claude-cli.md): Claude CLI or Agent-tool model selection, read-only review, and scoped implementation
 - [grok-cli.md](references/grok-cli.md): Grok headless permission preflight and run commands
 
