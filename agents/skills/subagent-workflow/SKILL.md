@@ -17,14 +17,14 @@ The root owns scope, design decisions, integration, and acceptance. Delegate ind
 
 These are local routing defaults, not benchmark scores. Praveen's working assessment is that Astra is the most capable and most expensive Codex option, Sol is the usual lower-cost root for normal work, and Fable 5.1 is an expensive Claude option that is slightly better at quality-sensitive implementation and cleanup. Fable is opt-in only. Read [model-routing.md](references/model-routing.md) when a model choice needs supporting evidence or a tradeoff is unresolved.
 
-| Model | Strengths and preferred work | Limits to account for | Default effort |
-| --- | --- | --- | --- |
-| GPT-6 Astra | High-level complex planning, architecture, hard ambiguity, difficult or high-risk review, reducing complexity, and cross-phase risk; can establish front-end design | Most expensive Codex option; can pause early, follow conflicting skill rules too strictly, and run excess checks | `medium` by default; `low` for focused bounded questions |
-| Claude Fable 5.1 | Opt-in only. Strong at public API shape, simplification or removal, merge-ready cleanup, and front-end design | Expensive Claude 5-hour limit; can expand scope, add excess tests, rewrite whole files, or stop before completion | `high` |
-| Claude Opus 5 | Long-running coding, bug finding, front-end design, and a deliberate Claude second opinion | Can add process, verification, subagents, or prose beyond the task | `high` |
-| Grok 4.6 | Native X research, live evidence, visual or interactive first passes, and a third-provider review | Check project-specific code quality; do not infer production readiness from a good demo | `high` |
-| GPT-5.6 Sol | Usual root for normal diagnosis, bounded implementation, integration, and acceptance; fresh read-only phase review when assigned | Not an authority on simplification or removal; a reviewer is read-only only for that assignment | `high` |
-| GPT-5.6 Luna | Bounded implementation after design is settled; exact mechanical work | Literal execution cannot replace diagnosis, architecture, or final acceptance | `max` for bounded work; `low` for bulk mechanical work |
+| Model            | Strengths and preferred work                                                                                                                                        | Limits to account for                                                                                             | Default effort                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| GPT-6 Astra      | High-level complex planning, architecture, hard ambiguity, difficult or high-risk review, reducing complexity, and cross-phase risk; can establish front-end design | Most expensive Codex option; can pause early, follow conflicting skill rules too strictly, and run excess checks  | `medium` by default; `low` for focused bounded questions |
+| Claude Fable 5.1 | Opt-in only. Strong at public API shape, simplification or removal, merge-ready cleanup, and front-end design                                                       | Expensive Claude 5-hour limit; can expand scope, add excess tests, rewrite whole files, or stop before completion | `high`                                                   |
+| Claude Opus 5    | Long-running coding, bug finding, front-end design, and a deliberate Claude second opinion                                                                          | Can add process, verification, subagents, or prose beyond the task                                                | `high`                                                   |
+| Grok 4.6         | Native X research, live evidence, visual or interactive first passes, and a third-provider review                                                                   | Check project-specific code quality; do not infer production readiness from a good demo                           | `high`                                                   |
+| GPT-5.6 Sol      | Usual root for normal diagnosis, bounded implementation, integration, and acceptance; fresh read-only phase review when assigned                                    | Not an authority on simplification or removal; a reviewer is read-only only for that assignment                   | `high`                                                   |
+| GPT-5.6 Luna     | Bounded implementation after design is settled; exact mechanical work                                                                                               | Literal execution cannot replace diagnosis, architecture, or final acceptance                                     | `max` for bounded work; `low` for bulk mechanical work   |
 
 Use Luna `max` for ordinary bounded implementation with cheap checks. Use Sol as the usual root for normal diagnosis, bounded implementation, integration, and acceptance; a small root edit is allowed when a handoff costs more than it saves.
 
@@ -36,13 +36,13 @@ For front-end design, choose Astra or Opus 5 based on user preference and task c
 
 Read only the active root's reference:
 
-| Root | Reference |
-| --- | --- |
-| GPT-6 Astra | [root-astra.md](references/root-astra.md) |
+| Root             | Reference                                 |
+| ---------------- | ----------------------------------------- |
+| GPT-6 Astra      | [root-astra.md](references/root-astra.md) |
 | Claude Fable 5.1 | [root-fable.md](references/root-fable.md) |
-| Claude Opus 5 | [root-opus.md](references/root-opus.md) |
-| Grok 4.6 | [root-grok.md](references/root-grok.md) |
-| GPT-5.6 Sol | [root-sol.md](references/root-sol.md) |
+| Claude Opus 5    | [root-opus.md](references/root-opus.md)   |
+| Grok 4.6         | [root-grok.md](references/root-grok.md)   |
+| GPT-5.6 Sol      | [root-sol.md](references/root-sol.md)     |
 
 If another model is root, retain it and use the task table without pretending it is one of these roots.
 
@@ -62,7 +62,7 @@ Never assign overlapping writing scopes. Read-only reviewers can share a snapsho
 
 ## Use the available transport
 
-Prefer native subagents when they expose the requested model and effort. For Codex workers, default to `fork_turns="none"` and a self-contained prompt; use a full-history fork only when the user requests it. Inspect the available model choices instead of assuming another provider is supported.
+Prefer defulat subagent spawn too for native Codex delegates when it exposes the requested model and effort. Default to `fork_turns="none"` and a self-contained prompt; use a full-history fork only when the user requests it. Inspect the available model choices instead of assuming another provider is supported.
 
 Read the relevant transport reference only before using it:
 
