@@ -33,7 +33,7 @@ These are configured roles and addresses, not proof that a machine is online. Co
 
 ## Task instructions
 
-- For agents and remote commands, read [sessions.md](references/sessions.md). All remote work must run in named tmux sessions on the execution machine. Local agents also use named tmux sessions.
+- For agents and work that must survive a disconnect, remain interactive, or support a later handoff, read [sessions.md](references/sessions.md) and use a named tmux session on the execution machine. Run short, non-interactive checks and routine commands directly without creating a session.
 - For GPU work, shared files, and image builds, also read [compute.md](references/compute.md).
 - For compute administration, read `~/code/homelab/ai5090/README.md` and the relevant setup script in `ai5090/scripts/`. Do not rerun provisioning for routine work.
 - For service administration, read the relevant homelab configuration: `main.tf`, `server/etc/avahi/hosts`, `stacks/<name>/`, or `justfile`. Service stacks use `/opt/stack` in their containers.

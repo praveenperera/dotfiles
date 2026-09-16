@@ -1,20 +1,24 @@
-# Agent and command sessions
+# Persistent sessions
 
-## Choose the session
+## Choose whether to use tmux
 
-Use named tmux sessions on the execution machine. A local tmux session that holds an SSH connection does not replace remote tmux. Connect to `praveen@code.local` for coding or `praveen@training.local` for training. From the host, enter `code` with the command below; use `training` instead for training:
+Use a direct local shell or SSH command for short, non-interactive work that is safe to rerun, such as checking machine identity, resource availability, service state, configuration, or Git status. Do not create a tmux session only to run routine commands.
+
+Use a named tmux session when work must survive a disconnect, can outlive the current interaction, needs an interactive prompt, or may require a user handoff. Agents, training jobs, and long-running builds normally meet these conditions. Create the session on the execution machine; a local tmux session that holds an SSH connection does not make remote work persistent.
+
+Connect to `praveen@code.local` for coding or `praveen@training.local` for training. From the host, enter `code` with the command below; use `training` instead for training:
 
 ```bash
 incus exec code -- su - praveen
 ```
 
-Start or attach to tmux inside that container. Run agents and training as `praveen`, not root.
+When tmux is needed, start or attach to it inside that container. Run agents and training as `praveen`, not root.
 
 The remote `praveen` user must have systemd lingering enabled so tmux survives the final SSH disconnect. Check with `loginctl show-user praveen -p Linger`; the result must be `Linger=yes`. If it is not, repair the machine setup instead of replacing tmux with a transient service.
 
 Use a task-specific session name. Inspect existing sessions before reuse. Never send commands into an active agent or job, or create a second copy after a connection failure. Inspect the existing session first.
 
-SSH calls that create or inspect tmux are session control steps. Run actual commands, checks, builds, and agents in interactive panes so prompts remain accessible.
+SSH calls that create or inspect tmux are session control steps. Run the persistent or interactive task in the pane. Supporting checks can remain direct commands unless they need the same persistence or interactive context.
 
 ## Start and inspect
 
@@ -35,7 +39,7 @@ ssh praveen@code.local 'tmux capture-pane -p -S -100 -t %3'
 
 Use the actual pane ID. Preserve quoting across the local shell, SSH, and remote shell. For complex input, transfer a prompt or script file. Keep task notes and evidence in the repository's `_scratch/` directory.
 
-For a local agent, use the same tmux commands without SSH. Create a separate pane or session; do not start it inside an active agent process.
+For a local agent that needs persistence or handoff, use the same tmux commands without SSH. Create a separate pane or session; do not start it inside an active agent process.
 
 ## Run and verify
 

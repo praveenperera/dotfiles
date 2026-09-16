@@ -1,6 +1,6 @@
 # GPU work, shared files, and images
 
-Use [sessions.md](sessions.md) for all execution, including resource checks.
+Use [sessions.md](sessions.md) for persistent or interactive execution. Run short resource checks directly.
 
 ## GPU runs
 
