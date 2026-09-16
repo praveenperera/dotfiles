@@ -42,7 +42,7 @@ For a local agent, use the same tmux commands without SSH. Create a separate pan
 Inside the pane:
 
 1. Confirm the machine, user, and repository path. Read `AGENTS.md` and inspect Git state.
-2. Reuse a suitable checkout or create an isolated checkout/worktree. Do not assume Mac paths exist on Linux. Keep one writer per working tree.
+2. Reuse a suitable checkout or create an isolated clone or worktree that follows the project's existing pattern. Do not assume Mac paths exist on Linux. Keep one writer per checkout.
 3. Transfer only the required patch and untracked files, and record the base revision. Do not commit, push, overwrite a dirty checkout, or copy secrets merely to transfer work.
 4. Check that the selected agent CLI is installed and authenticated. Give it the repository, task, scope, constraints, and required checks. Run it in the foreground with its normal permission controls.
 

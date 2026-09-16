@@ -38,4 +38,11 @@ These are configured roles and addresses, not proof that a machine is online. Co
 - For compute administration, read `~/code/homelab/ai5090/README.md` and the relevant setup script in `ai5090/scripts/`. Do not rerun provisioning for routine work.
 - For service administration, read the relevant homelab configuration: `main.tf`, `server/etc/avahi/hosts`, `stacks/<name>/`, or `justfile`. Service stacks use `/opt/stack` in their containers.
 
+## Storage reuse
+
+- Reuse the project's established checkout pattern and keep one writer per checkout. For long-lived agent slots such as `cove-wk1` through `cove-wk4`, use independent clones with private build and scratch directories. Use worktrees only where the project already prefers them.
+- On `code` or `training`, use `cp -a --reflink=always -- SOURCE NEW_DESTINATION` for large independent writable copies of fixtures, datasets, models, checkpoints, or SDKs. Run the copy inside the owning container; use `/shared` for data both containers need.
+- Keep pnpm `packageImportMethod: auto`; it tries a CoW clone, then a hard link, and then a full copy. Use `sccache` for Rust compilation when the project configures it.
+- For managed storage, copy conditions, and optional Rust build seeds, read **Reflink workflows** in `ai5090/README.md`.
+
 Locate the homelab checkout if it is elsewhere. Check current configuration and live state when a task depends on an address, driver, installed tool, or available resource. Do not read tokens, `.env` files, or Terraform state to discover machine roles.
