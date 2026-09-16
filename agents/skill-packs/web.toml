@@ -8,3 +8,4 @@ skills = [
   "web-design-guidelines",
   "image-design-director",
 ]
+packs = ["svelte"]

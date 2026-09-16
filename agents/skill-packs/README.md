@@ -7,7 +7,7 @@ Skill packs group project-local skills, MCP snippets, installed Codex plugin sou
 ```bash
 cmd pack add web
 cmd pack add react cloud
-cmd pack add web svelte
+cmd pack add web cloud
 cmd pack add rust
 cmd pack add --agent claude web
 cmd pack add --agent codex native
@@ -45,11 +45,11 @@ dependencies are installed once.
 
 | Pack | Includes |
 | --- | --- |
-| `web` | Shared browser, design, and web development tools; no framework or cloud provider |
+| `web` | Shared browser, design, and web development tools plus `svelte`; no cloud provider |
 | `react` | React guidance plus `web` |
 | `shadcn` | Base UI-backed shadcn components plus `react` |
 | `tailwind` | Tailwind Plus components plus `web` |
-| `svelte` | Svelte guidance; combine with `web` for shared tools |
+| `svelte` | Svelte guidance; included by `web` |
 | `cloud` | Cloudflare guidance |
 | `remotion` | Skills from the installed Remotion plugin |
 | `hyperframes` | HyperFrames creation workflows and shared tools |
