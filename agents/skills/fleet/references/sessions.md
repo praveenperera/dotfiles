@@ -1,36 +1,31 @@
 # Agent and command sessions
 
-## Place the session with the work
+## Choose the session
 
-Start a named tmux session on the execution machine. A tmux session on the Mac mini that only holds an SSH connection does not replace a remote tmux session. For a local agent, use local tmux. For coding on ai5090, connect directly to `praveen@code.local`.
-
-If already on `ai5090.local`, enter either container as `praveen` without SSH:
+Use named tmux sessions on the execution machine. A local tmux session that holds an SSH connection does not replace remote tmux. Connect to `praveen@code.local` for coding or `praveen@training.local` for training. From the host, enter `code` with the command below; use `training` instead for training:
 
 ```bash
 incus exec code -- su - praveen
-incus exec training -- su - praveen
 ```
 
-Run only the command for the required container. Then start or attach to a named tmux session inside that container. The login shell uses `praveen`'s home and environment; do not run coding agents or training as root.
+Start or attach to tmux inside that container. Run agents and training as `praveen`, not root.
 
-Use a task-specific name such as `fleet-myproject`. Inspect an existing session before reuse. Do not send commands to a pane that is running another agent or job. Keep long-running jobs and sessions that Praveen must inspect. After a short maintenance, benchmark, or verification task succeeds and its result is recorded, remove its tmux session and temporary files.
+The remote `praveen` user must have systemd lingering enabled so tmux survives the final SSH disconnect. Check with `loginctl show-user praveen -p Linger`; the result must be `Linger=yes`. If it is not, repair the machine setup instead of replacing tmux with a transient service.
 
-SSH calls that create or inspect tmux are the session control steps. Run the actual shell commands, checks, builds, and agents inside its panes. Use an interactive shell pane so password prompts and agent prompts remain accessible.
+Use a task-specific session name. Inspect existing sessions before reuse. Never send commands into an active agent or job, or create a second copy after a connection failure. Inspect the existing session first.
 
-The `praveen` user must have systemd lingering enabled on each remote machine so tmux survives the final SSH disconnect. If a detached server stops at disconnect, check `loginctl show-user praveen -p Linger`; the expected value is `yes`. Repair the machine setup before replacing the tmux workflow with a transient service.
+SSH calls that create or inspect tmux are session control steps. Run actual commands, checks, builds, and agents in interactive panes so prompts remain accessible.
 
 ## Start and inspect
 
-Examples below use `code.local`; change the destination for training or host administration. Choose an unused session name before creation:
+These examples use `code.local`. Change the destination for training or host administration. Choose an unused name:
 
 ```bash
 ssh praveen@code.local 'tmux list-sessions'
 ssh praveen@code.local 'tmux new-session -d -s fleet-myproject -P -F "#{pane_id}"'
 ```
 
-Record the returned pane ID. Use it for subsequent commands; do not assume that window or pane numbering starts at zero. If there is no tmux server yet, `list-sessions` can fail normally. Distinguish this from an SSH failure.
-
-For example, if the returned ID is `%3`, send a command as literal text, then send Enter separately:
+A missing tmux server is not an SSH failure. Record the returned pane ID; do not assume pane numbering starts at zero. If the returned ID is `%3`:
 
 ```bash
 ssh praveen@code.local 'tmux send-keys -t %3 -l -- "hostname; pwd; id -un"'
@@ -38,36 +33,31 @@ ssh praveen@code.local 'tmux send-keys -t %3 Enter'
 ssh praveen@code.local 'tmux capture-pane -p -S -100 -t %3'
 ```
 
-Use the actual returned ID, not `%3` without checking it. Keep shell quoting intact across the local shell, SSH, and the remote shell. For a long task, transfer a prompt or script file instead of building a deeply quoted command. Put task notes and captured evidence in the relevant repository's `_scratch/` directory.
+Use the actual pane ID. Preserve quoting across the local shell, SSH, and remote shell. For complex input, transfer a prompt or script file. Keep task notes and evidence in the repository's `_scratch/` directory.
 
-On the Mac mini, use the same tmux commands without SSH. Create a new pane or session for a new local agent; do not nest it inside an active agent process.
+For a local agent, use the same tmux commands without SSH. Create a separate pane or session; do not start it inside an active agent process.
 
-## Prepare the checkout and agent
+## Run and verify
 
-Inside the target pane:
+Inside the pane:
 
-1. Confirm the machine, user, and repository path. Read the checkout's `AGENTS.md` and inspect its Git state.
-2. Reuse a suitable checkout or create an isolated checkout/worktree for the task. Do not assume a Mac path exists on Linux. Keep one writer per working tree.
-3. If local changes are needed remotely, transfer the intended patch and required untracked files. Record the base revision. Do not commit, push, overwrite a dirty checkout, or copy secrets merely to transfer work.
-4. Check that the chosen agent CLI is installed and authenticated. The configured `code` workspace includes Codex, Claude Code, Grok Build, T3 Code nightly, Rust, Node.js, Python, and build tools; verify availability before use.
-5. Give the agent a self-contained task with the repository, scope, constraints, and required checks. Start the chosen CLI in the foreground inside the pane. Preserve its normal permission controls.
+1. Confirm the machine, user, and repository path. Read `AGENTS.md` and inspect Git state.
+2. Reuse a suitable checkout or create an isolated checkout/worktree. Do not assume Mac paths exist on Linux. Keep one writer per working tree.
+3. Transfer only the required patch and untracked files, and record the base revision. Do not commit, push, overwrite a dirty checkout, or copy secrets merely to transfer work.
+4. Check that the selected agent CLI is installed and authenticated. Give it the repository, task, scope, constraints, and required checks. Run it in the foreground with its normal permission controls.
 
-The parent agent remains responsible for progress, result review, and integration. A successful `send-keys` call means only that input was sent. Inspect output, check exit status or explicit completion evidence, and review the resulting Git diff and checks. For long tasks, retain logs and record the command's exit status in the task's `_scratch/` directory. Do not treat silence or a disconnected SSH client as success.
+The parent agent owns progress, review, and integration. Successful `send-keys` only confirms that input was sent. Inspect output, completion or exit status, the Git diff, and checks. For long tasks, retain logs and exit status in `_scratch/`. Silence or an SSH disconnect is not proof of success.
 
-If authentication or a password needs Praveen, leave the session running and provide the attach command. Do not enter credentials into task files or captured logs.
+If a prompt needs Praveen, keep the session and give the attach command. Never put credentials in task files or captured logs.
 
-## Attach and hand back results
+## Handoff and cleanup
 
-Give Praveen the execution machine, session name, repository path, task status, and exact attach command:
+Give Praveen the machine, session name, repository path, status, and exact attach command:
 
 ```bash
 ssh -t praveen@code.local 'tmux attach-session -t fleet-myproject'
 ```
 
-For a local agent:
+For local work, use `tmux attach-session -t fleet-myproject`.
 
-```bash
-tmux attach-session -t fleet-myproject
-```
-
-Detaching keeps the work running. Do not kill an active job or a session that is part of the handoff. For a completed short task, capture the required evidence and then kill its task-specific session. Report where retained changes and logs remain. When the task requires local integration, transfer and review the intended diff without replacing unrelated local changes. Do not create a second copy of an active job after a connection failure; inspect its session first.
+Keep active jobs and handoff sessions. When a short maintenance, benchmark, or verification task succeeds, record its result, then remove only its completed session and temporary files. Report retained changes and logs. Transfer and review the intended diff when local integration is needed; preserve unrelated changes.
