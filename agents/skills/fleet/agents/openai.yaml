@@ -1,0 +1,3 @@
+interface:
+  display_name: "Fleet"
+  short_description: "Use your machines for coding and GPU training"
