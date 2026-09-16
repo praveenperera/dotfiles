@@ -13,9 +13,11 @@ incus exec training -- su - praveen
 
 Run only the command for the required container. Then start or attach to a named tmux session inside that container. The login shell uses `praveen`'s home and environment; do not run coding agents or training as root.
 
-Use a task-specific name such as `fleet-myproject`. Inspect an existing session before reuse. Do not send commands to a pane that is running another agent or job. Keep the session after the job ends so Praveen can inspect it.
+Use a task-specific name such as `fleet-myproject`. Inspect an existing session before reuse. Do not send commands to a pane that is running another agent or job. Keep long-running jobs and sessions that Praveen must inspect. After a short maintenance, benchmark, or verification task succeeds and its result is recorded, remove its tmux session and temporary files.
 
 SSH calls that create or inspect tmux are the session control steps. Run the actual shell commands, checks, builds, and agents inside its panes. Use an interactive shell pane so password prompts and agent prompts remain accessible.
+
+The `praveen` user must have systemd lingering enabled on each remote machine so tmux survives the final SSH disconnect. If a detached server stops at disconnect, check `loginctl show-user praveen -p Linger`; the expected value is `yes`. Repair the machine setup before replacing the tmux workflow with a transient service.
 
 ## Start and inspect
 
@@ -68,4 +70,4 @@ For a local agent:
 tmux attach-session -t fleet-myproject
 ```
 
-Detaching keeps the work running. Do not kill the session as automatic cleanup. Report where changes and logs remain. When the task requires local integration, transfer and review the intended diff without replacing unrelated local changes. Do not create a second copy of an active job after a connection failure; inspect its session first.
+Detaching keeps the work running. Do not kill an active job or a session that is part of the handoff. For a completed short task, capture the required evidence and then kill its task-specific session. Report where retained changes and logs remain. When the task requires local integration, transfer and review the intended diff without replacing unrelated local changes. Do not create a second copy of an active job after a connection failure; inspect its session first.

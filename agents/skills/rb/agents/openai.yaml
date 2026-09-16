@@ -1,4 +1,4 @@
 interface:
   display_name: "rb"
-  short_description: "Remote container builds and rb management"
+  short_description: "Route local and AWS container builds"
   default_prompt: "Use $rb for container image builds or rb management."

@@ -41,5 +41,7 @@ in the future, the build is live elsewhere.
 | `409 project_capacity_exhausted` | read the printed owner and command, then use `--wait` or ask the owner |
 | cheaper idle operation | use `rb stop`; it keeps the cache |
 
-If rb fails for tooling or authentication, run `rb doctor`, report the error,
-and use local Docker only after the user accepts that fallback.
+If an explicitly requested AWS or parallel build fails for tooling or
+authentication, run `rb doctor` and report the error. Do not silently move that
+build to a local machine. For a normal single build, use the local route in the
+root skill instead of treating local Docker as a fallback.

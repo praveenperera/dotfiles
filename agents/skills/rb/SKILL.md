@@ -1,15 +1,51 @@
 ---
 name: rb
-description: Build container images and manage rb builders. Use for Docker/Buildx builds or rb operations, not image runs, compose-only tasks, or Dockerfile-only edits.
+description: Route container image builds between local Docker and rb, and manage rb builders. Use for Docker/Buildx builds or rb operations, not image runs, compose-only tasks, or Dockerfile-only edits.
 ---
 
-# rb - Remote BuildKit
+# rb - Container image builds
 
-Default to `rb build` for container images. Use local Docker only when the user
-requests a local build, or when `rb` is missing or fails readiness checks and the
-user accepts the fallback. Running an existing image is outside this workflow.
+Choose the build location before choosing the command:
 
-## Build
+- On `code`, `training`, or another intended Linux build machine with Docker,
+  use its local Docker daemon
+- On `ai5090`, enter the selected Incus container and use that container's
+  Docker daemon; do not install Docker on the host
+- Build an image used only for GPU training directly in `training`
+- On the Mac, default to a named tmux session on `code`, except for a training
+  image, which belongs in a named tmux session on `training`; read the `fleet`
+  skill for remote session and checkout handling
+- Use AWS through `rb build` only when the task needs parallel builds beyond the
+  available local builder, or when the user explicitly requests AWS
+
+Running an existing image is outside this workflow.
+
+## Local build
+
+Use Buildx and forward the required BuildKit flags directly:
+
+```bash
+docker buildx build -t example/app:dev --load .
+docker buildx build -t example/app:latest --push .
+```
+
+Do not send a single build to AWS only because the current shell is on the Mac.
+Move the work to `code` first. Keep public image publishing on Docker Hub.
+
+On `code` and `training`, keep BuildKit garbage collection enabled with a 50 GB cache limit.
+Inspect `docker system df` after an unusually large build batch. For immediate
+cleanup, remove only old unused build cache and dangling images:
+
+```bash
+docker builder prune --force --filter until=168h --reserved-space 50GB
+docker image prune --force --filter until=168h
+```
+
+Do not run `docker system prune --volumes` or `docker image prune --all` without
+a clear request because unused volumes and tagged images can contain work that
+must be retained.
+
+## Parallel AWS build
 
 Forward the intended Buildx flags after `--`; do not run bare Buildx against an
 rb tunnel. Prefer installed `rb <command> --help` if flags differ from this skill.
