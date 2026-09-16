@@ -117,7 +117,7 @@ const TOOLS_MINIMAL: &[&str] = &[
 
 const TOOLS_VIA_SHELL_SCRIPT: &[(&str, &str, &[&str])] = &[
     ("https://starship.rs/install.sh", "starship", &["--yes"]),
-    ("https://setup.atuin.sh", "atuin", &[]),
+    ("https://setup.atuin.sh", "atuin", &["--non-interactive"]),
 ];
 
 const LINUX_TOOLS_MINIMAL: &[&str] = &["ca-certificates", "curl", "unzip", "xsel", "wget", "gpg"];
