@@ -1,0 +1,4 @@
+interface:
+  display_name: "Homebasd"
+  short_description: "Run background agent and general task workloads that report back to this thread"
+  default_prompt: "Use $hbd to run this work as a background task and report back here when it finishes."
