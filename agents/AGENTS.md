@@ -34,7 +34,7 @@
 - For unfamiliar crates or external libraries, inspect documentation or source instead of guessing. Check `target/doc/`, run `cargo doc -p <crate-name>`, inspect `~/.cargo/registry/src`, or use `btx` to look at the code directly.
 - When clippy reports autofixable issues, run `cargo fix --allow-dirty` only when the working tree and command scope make it safe from unrelated changes; otherwise apply the fixes manually. Fix remaining lints directly instead of silencing them with `allow` or `warn` unless there is a specific reason.
 - Prefer `eyre`, or `color-eyre` for CLIs, over `anyhow`.
-- Use the Rust 2018+ module layout instead of `mod.rs` for regular modules.
+- Use the Rust 2018+ module layout instead of `mod.rs` for regular modules, use edition 2024 not 2021 for new projects.
 - Avoid redundant closures; use `.map(func)` instead of `.map(|value| func(value))`.
 - Prefer tuple structs over named-field structs for simple wrappers, such as `struct Foo(Arc<Inner>)`.
 - Prefer structs with methods over freestanding functions when they encapsulate shared state.
