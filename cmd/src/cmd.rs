@@ -9,6 +9,7 @@ pub mod codex;
 pub mod crate_versions;
 pub mod digitalocean;
 pub mod file;
+pub mod fleet;
 pub mod gcloud;
 pub mod generate;
 pub mod install;
@@ -96,6 +97,10 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::File { subcommand } => {
             let file_flags = file::File { subcommand };
             file::run_with_flags(sh, file_flags)
+        }
+        MainCmd::Fleet { subcommand } => {
+            let fleet_flags = fleet::Fleet { subcommand };
+            fleet::run_with_flags(sh, fleet_flags)
         }
         MainCmd::Skill { subcommand } => {
             let skill_flags = skill::Skill { subcommand };

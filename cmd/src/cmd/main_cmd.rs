@@ -191,6 +191,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::file::FileCmd,
     },
 
+    /// ai5090 fleet operations
+    #[command(arg_required_else_help = true)]
+    Fleet {
+        #[command(subcommand)]
+        subcommand: crate::cmd::fleet::FleetCmd,
+    },
+
     /// Manage reusable agent skills
     #[command(arg_required_else_help = true)]
     Skill {
@@ -260,6 +267,7 @@ mod tests {
     use crate::cmd::billing::{BillingCmd, BillingOutput};
     use crate::cmd::cloudflare::{BillingProduct, CloudflareCmd, RedirectCmd};
     use crate::cmd::digitalocean::DigitalOceanCmd;
+    use crate::cmd::fleet::FleetCmd;
     use crate::cmd::mcp::McpCmd;
     use crate::cmd::modal::ModalCmd;
     use crate::cmd::pack::PackCmd;
@@ -778,5 +786,39 @@ mod tests {
         };
 
         assert!(matches!(subcommand, PackCmd::Refresh { all: false }));
+    }
+
+    #[test]
+    fn parses_fleet_dotfiles_up() {
+        let cmd =
+            Cmd::from_args(&[OsString::from("fleet"), OsString::from("dotfiles-up")]).unwrap();
+
+        let MainCmd::Fleet { subcommand } = cmd.subcommand else {
+            panic!("expected fleet command");
+        };
+
+        assert!(matches!(subcommand, FleetCmd::DotfilesUp));
+    }
+
+    #[test]
+    fn parses_fleet_dfu_alias() {
+        let cmd = Cmd::from_args(&[OsString::from("fleet"), OsString::from("dfu")]).unwrap();
+
+        let MainCmd::Fleet { subcommand } = cmd.subcommand else {
+            panic!("expected fleet command");
+        };
+
+        assert!(matches!(subcommand, FleetCmd::DotfilesUp));
+    }
+
+    #[test]
+    fn parses_fleet_maintain() {
+        let cmd = Cmd::from_args(&[OsString::from("fleet"), OsString::from("maintain")]).unwrap();
+
+        let MainCmd::Fleet { subcommand } = cmd.subcommand else {
+            panic!("expected fleet command");
+        };
+
+        assert!(matches!(subcommand, FleetCmd::Maintain));
     }
 }
