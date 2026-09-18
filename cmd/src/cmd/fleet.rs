@@ -17,13 +17,14 @@ pub enum FleetCmd {
     #[command(name = "dotfiles-up", visible_alias = "dfu")]
     DotfilesUp,
 
-    /// Update Codex, Claude Code, and Grok Build on ai5090, code, and training
+    /// Update Codex, Claude Code, Grok Build, and any installed Homebased on
+    /// ai5090, code, and training
     ///
     /// Without --all, this uses no sudo, changes no system packages, and
     /// restarts no services
     Update {
-        /// Also upgrade APT packages and update T3 Code, which uses sudo and
-        /// restarts services
+        /// Also upgrade APT packages and update T3 Code; this can use sudo and
+        /// restart T3 Code and running Homebased daemons
         #[arg(long)]
         all: bool,
     },
@@ -32,9 +33,10 @@ pub enum FleetCmd {
 /// Selects how much of the fleet `fleet-update` is allowed to change
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum UpdateMode {
-    /// User-owned agent CLIs only: no sudo, APT, T3 Code, or service restart
+    /// User-owned tools only: no sudo, APT, T3 Code, or service restart
     Safe,
-    /// Safe mode plus APT packages, T3 Code, sudo, and service restarts
+    /// Safe mode plus APT packages, T3 Code, sudo, and service restarts,
+    /// including running Homebased daemons
     Full,
 }
 
