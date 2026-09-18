@@ -50,10 +50,10 @@ Reads `output.log` directly from disk. The log can be empty while the child has 
 
 ## Dashboard
 
-The daemon also serves a read-only HTTP listener, by default `http://127.0.0.1:7677`. Open it in a browser to see every task, its status, and its log tail without an agent turn.
+The daemon serves a read-only HTTP dashboard only when `--web-listen` / `HOMEBASED_WEB_LISTEN` is a host:port. Open that URL in a browser to see every task, its status, and its log tail without an agent turn.
 
 ```bash
-homebased --json daemon status       # "web" holds the URL, or null when the socket is down
+homebased --json daemon status       # "web" holds the URL, or null when the dashboard is off or the socket is down
 curl -s http://127.0.0.1:7677/v1/tasks
 curl -s "http://127.0.0.1:7677/v1/tasks/<id>/log?tail=200"
 ```

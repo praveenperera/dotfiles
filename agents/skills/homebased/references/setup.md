@@ -17,7 +17,7 @@ The dashboard is embedded in the binary at compile time, so `just web-build` mus
 ```bash
 homebased daemon install --dry-run    # print the unit or plist
 homebased daemon install              # write, verify, enable, start
-homebased --json daemon status        # {"socket": "up", "in_flight": 0, "home": "...", "web": "http://127.0.0.1:7677"}
+homebased --json daemon status        # {"socket": "up", "in_flight": 0, "home": "...", "web": null}
 ```
 
 The unit's `ExecStart` points at the binary that ran `install`, so run it as the installed `homebased`, not `target/debug/homebased`. Install is an idempotent apply. Run it from a shell where `codex`, `claude`, `grok`, and the project toolchains are on `PATH`: the installer bakes that `PATH` and the absolute agent paths (`HOMEBASED_CODEX`, `HOMEBASED_CLAUDE`, `HOMEBASED_GROK`) into the unit. Re-run it after `PATH` changes. An agent that is not on `PATH` at install time is silently left out of the unit; only the unit's `PATH` is left to find it later.
@@ -29,15 +29,16 @@ State directory: `--home`, else `HOMEBASED_HOME`, else `$XDG_STATE_HOME/homebase
 
 ## Dashboard listener
 
-`daemon serve` binds a read-only HTTP listener for the dashboard, `127.0.0.1:7677` by default. Change it with `--web-listen <addr|off>` or `HOMEBASED_WEB_LISTEN`:
+`daemon serve` does not bind the dashboard unless `--web-listen` / `HOMEBASED_WEB_LISTEN` is a host:port:
 
 ```bash
-homebased daemon serve --web-listen off              # socket only
+homebased daemon serve                               # socket only; dashboard off
+homebased daemon serve --web-listen 127.0.0.1:7677   # local dashboard
 HOMEBASED_WEB_LISTEN=127.0.0.1:9000 homebased daemon serve
 HOMEBASED_WEB_LISTEN=0.0.0.0:7677 homebased daemon install   # bake a LAN bind into the host unit
 ```
 
-`daemon install` copies `HOMEBASED_WEB_LISTEN` from the installing shell into the unit, next to `PATH` and the agent paths, and rejects an invalid value. Re-run `install` to change it.
+`daemon install` copies `HOMEBASED_WEB_LISTEN` from the installing shell into the unit, next to `PATH` and the agent paths, and rejects an invalid value. If the env is unset, the unit does not start a dashboard. Re-run `install` to change it.
 
 The listener has no authentication and exposes cwd paths, prompts, and logs, so bind a non-loopback address only on a trusted network. A bind failure (busy port) is a warning: the daemon keeps serving the socket and `daemon status` reports `"web": null`.
 

@@ -15,6 +15,7 @@ description: Run long, unattended agent CLIs and general task commands through t
 - Always pass `--json` on data commands and parse the result. Every JSON object carries `api_version: 1`.
 - Do not poll a running task in a loop. Submit, tell the user the task id, end the turn, and wait for events. Inspect on demand only.
 - Use `homebased daemon stop` or `homebased daemon restart`, never raw `systemctl` or `launchctl`, so in-flight tasks are protected.
+- On Praveen's machines, every daemon install or reinstall must set `HOMEBASED_WEB_LISTEN=0.0.0.0:7677`. The dashboard is off unless this is set. Do not omit it, and do not replace the LAN bind with loopback.
 - Task ids are full UUIDs. Prefix matching does not exist.
 - Delivery is at-least-once. Treat a repeated event for the same task and event name as a duplicate, not a new result.
 - Prefer `workload.type: "task"` for long commands and CI watchers. Use `agent` only when a model must reason and produce a report.
