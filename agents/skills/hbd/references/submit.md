@@ -53,6 +53,7 @@ Agent example:
 {
   "api_version": 1,
   "thread": "01a0ab97-a7aa-7463-a5b0-8d500e40e431",
+  "name": "implement file browser",
   "cwd": "/home/praveen/code/project",
   "timeout": "2h",
   "workload": {
@@ -70,6 +71,7 @@ Task example:
 {
   "api_version": 1,
   "thread": "01a0ab97-a7aa-7463-a5b0-8d500e40e431",
+  "name": "cargo release build",
   "cwd": "/home/praveen/code/project",
   "timeout": "4h",
   "workload": {
@@ -92,6 +94,7 @@ GitHub CI watcher as a normal task:
 | --- | --- | --- |
 | `api_version` | yes | Always `1`. |
 | `thread` | yes | Codex thread UUID from step 1. |
+| `name` | yes | Short goal label for the dashboard and events. Name the work, not the agent or the CLI. Trimmed. Rejects blank names, line breaks, control characters, and names longer than 120 Unicode scalar values. Non-unique; task id remains the identity. |
 | `cwd` | yes | Existing directory. The child runs there. |
 | `timeout` | no | Attention timer. Humantime string. Default `4h`. Minimum `2h`. Larger values are valid. Expiry sends `TASK_CHECK_DUE` and does **not** kill the child. |
 | `workload` | yes | Internally tagged enum: `type` is `agent` or `task`. |

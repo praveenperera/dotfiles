@@ -12,7 +12,7 @@ homebased --quiet task list --status running               # bare ids, one per l
 
 Status values: `queued`, `running`, `succeeded`, `failed`, `cancelled`, `lost`. `--status` accepts repeats or a comma list.
 
-Each entry: `id`, `status`, `workload`, `thread`, `cwd`, `pid`, `callback`, `timeout_secs`, `check_timeout`, `exit_reason`, `cancel_requested_at`, `created_at`, `updated_at`. Entries come back in id order, which is creation order. Human list output shows a workload column (agent/model or program plus a short argv preview).
+Each entry: `id`, `name`, `display_name`, `status`, `workload`, `thread`, `cwd`, `pid`, `callback`, `timeout_secs`, `check_timeout`, `exit_reason`, `cancel_requested_at`, `created_at`, `updated_at`. Entries come back in id order, which is creation order. Human list output shows `display_name`. `name` is omitted only for tasks stored before it was required.
 
 ## Show
 
@@ -22,6 +22,8 @@ homebased --json task show <id>
 
 | Field | Meaning |
 | --- | --- |
+| `name` | Submitted goal label. Omitted only for tasks stored before name was required. |
+| `display_name` | Non-empty label: the submitted name, or a workload fallback for unnamed stored rows. |
 | `status` | Process status, see above. |
 | `workload` | `{"type":"agent","agent":"…","model":null\|string}` or `{"type":"task","command":[…]}`. |
 | `exit_reason` | `null` while running, else the tagged payload (`exit`, `signal`, `cancelled`, `spawn_failed`). |

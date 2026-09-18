@@ -11,6 +11,7 @@ description: Run long, unattended agent CLIs and general task commands through t
 
 - Never run `codex queue` yourself, and never tell a worker to run it. Delivery belongs to `homebased`.
 - Submit only with `homebased task submit --spec <file|->`. There are no per-field submit flags.
+- Always set `name` to a short goal label. Do not name the task after the agent or the CLI.
 - Always pass `--json` on data commands and parse the result. Every JSON object carries `api_version: 1`.
 - Do not poll a running task in a loop. Submit, tell the user the task id, end the turn, and wait for events. Inspect on demand only.
 - Use `homebased daemon stop` or `homebased daemon restart`, never raw `systemctl` or `launchctl`, so in-flight tasks are protected.
