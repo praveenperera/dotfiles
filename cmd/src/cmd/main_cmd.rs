@@ -812,13 +812,37 @@ mod tests {
     }
 
     #[test]
-    fn parses_fleet_maintain() {
-        let cmd = Cmd::from_args(&[OsString::from("fleet"), OsString::from("maintain")]).unwrap();
+    fn parses_fleet_update_as_safe_by_default() {
+        let cmd = Cmd::from_args(&[OsString::from("fleet"), OsString::from("update")]).unwrap();
 
         let MainCmd::Fleet { subcommand } = cmd.subcommand else {
             panic!("expected fleet command");
         };
 
-        assert!(matches!(subcommand, FleetCmd::Maintain));
+        assert!(matches!(subcommand, FleetCmd::Update { all: false }));
+    }
+
+    #[test]
+    fn parses_fleet_update_all() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("fleet"),
+            OsString::from("update"),
+            OsString::from("--all"),
+        ])
+        .unwrap();
+
+        let MainCmd::Fleet { subcommand } = cmd.subcommand else {
+            panic!("expected fleet command");
+        };
+
+        assert!(matches!(subcommand, FleetCmd::Update { all: true }));
+    }
+
+    #[test]
+    fn rejects_removed_fleet_maintain() {
+        // from_args exits the process on parse errors, so parse directly
+        let result = Cmd::try_parse_from(["cmd", "fleet", "maintain"]);
+
+        assert!(result.is_err());
     }
 }
