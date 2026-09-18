@@ -46,7 +46,7 @@
 
 # Docker image builds
 
-- Use the global `rb` skill before choosing a container image build command
+- On mac use `rb` to run create docker images on the code box, if on a linux box just do the build directly, if in a project that uses another builder like `sht` use that by default
 - Publish public images to Docker Hub
 
 # Verification
