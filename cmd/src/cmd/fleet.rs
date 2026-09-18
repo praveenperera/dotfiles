@@ -1,9 +1,10 @@
 use clap::{Parser, Subcommand};
-use eyre::Result;
+use eyre::{eyre, Result, WrapErr};
+use std::process::{Command, Stdio};
 use xshell::{cmd, Shell};
 
 const HOST: &str = "praveen@ai5090";
-const UPDATE_COMMAND: &str = "fleet-update";
+const UPDATE_COMMAND: &str = "/home/praveen/.local/bin/fleet-update";
 
 #[derive(Debug, Clone, Parser)]
 pub struct Fleet {
@@ -84,23 +85,98 @@ fn run_dfu(sh: &Shell) -> Result<()> {
 }
 
 fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
-    let session = mode.tmux_session();
-    let args = mode.args();
+    let local = on_ai5090(sh);
+    require_update_command(local)?;
 
-    if on_ai5090(sh) {
-        cmd!(
-            sh,
-            "tmux new-session -A -s {session} {UPDATE_COMMAND} {args...}"
-        )
-        .run()?;
+    let (program, args) = update_argv(local, mode);
+
+    run_attached(program, &args)
+}
+
+fn require_update_command(on_ai5090: bool) -> Result<()> {
+    let installed = if on_ai5090 {
+        Command::new("test")
+            .args(["-x", UPDATE_COMMAND])
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
     } else {
-        cmd!(
-            sh,
-            "ssh -t {HOST} tmux new-session -A -s {session} {UPDATE_COMMAND} {args...}"
-        )
-        .run()?;
+        Command::new("ssh")
+            .args(["-o", "BatchMode=yes", HOST, "test", "-x", UPDATE_COMMAND])
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
+    };
+
+    if installed {
+        return Ok(());
     }
-    Ok(())
+
+    Err(eyre!(
+        "fleet-update is not installed at {UPDATE_COMMAND}; setup-host.sh installs it"
+    ))
+}
+
+fn update_argv(on_ai5090: bool, mode: UpdateMode) -> (&'static str, Vec<&'static str>) {
+    let mut args = Vec::new();
+
+    if on_ai5090 {
+        args.extend([
+            "new-session",
+            "-A",
+            "-s",
+            mode.tmux_session(),
+            UPDATE_COMMAND,
+        ]);
+
+        args.extend(mode.args().iter().copied());
+
+        ("tmux", args)
+    } else {
+        // force a remote pty even when stdin is not a local tty
+        args.extend([
+            "-tt",
+            HOST,
+            "tmux",
+            "new-session",
+            "-A",
+            "-s",
+            mode.tmux_session(),
+            UPDATE_COMMAND,
+        ]);
+
+        args.extend(mode.args().iter().copied());
+
+        ("ssh", args)
+    }
+}
+
+fn run_attached(program: &str, args: &[&str]) -> Result<()> {
+    // inherit stdin so ssh and tmux can use the local tty; xshell run() uses
+    // /dev/null and then ssh -t refuses to allocate a pty
+    eprintln!("$ {program} {}", args.join(" "));
+
+    let status = Command::new(program)
+        .args(args)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .wrap_err_with(|| format!("failed to run `{program}`"))?;
+
+    if status.success() {
+        return Ok(());
+    }
+
+    let displayed = std::iter::once(program)
+        .chain(args.iter().copied())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let code = status.code().unwrap_or(1);
+
+    Err(eyre!(
+        "command exited with non-zero code `{displayed}`: {code}"
+    ))
 }
 
 fn on_ai5090(sh: &Shell) -> bool {
@@ -115,7 +191,7 @@ fn is_ai5090_host(hostname: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_ai5090_host, UpdateMode};
+    use super::{is_ai5090_host, update_argv, UpdateMode};
 
     #[test]
     fn treats_ai5090_as_local() {
@@ -143,5 +219,63 @@ mod tests {
 
         assert_eq!(mode, UpdateMode::Full);
         assert_eq!(mode.args(), ["--all"]);
+    }
+
+    #[test]
+    fn local_update_attaches_tmux() {
+        let (program, args) = update_argv(true, UpdateMode::Safe);
+
+        assert_eq!(program, "tmux");
+        assert_eq!(
+            args,
+            [
+                "new-session",
+                "-A",
+                "-s",
+                "fleet-update",
+                "/home/praveen/.local/bin/fleet-update"
+            ]
+        );
+    }
+
+    #[test]
+    fn remote_update_forces_a_pty() {
+        let (program, args) = update_argv(false, UpdateMode::Safe);
+
+        assert_eq!(program, "ssh");
+        assert_eq!(
+            args,
+            [
+                "-tt",
+                "praveen@ai5090",
+                "tmux",
+                "new-session",
+                "-A",
+                "-s",
+                "fleet-update",
+                "/home/praveen/.local/bin/fleet-update"
+            ]
+        );
+    }
+
+    #[test]
+    fn remote_full_update_uses_the_all_session() {
+        let (program, args) = update_argv(false, UpdateMode::Full);
+
+        assert_eq!(program, "ssh");
+        assert_eq!(
+            args,
+            [
+                "-tt",
+                "praveen@ai5090",
+                "tmux",
+                "new-session",
+                "-A",
+                "-s",
+                "fleet-update-all",
+                "/home/praveen/.local/bin/fleet-update",
+                "--all"
+            ]
+        );
     }
 }
