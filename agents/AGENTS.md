@@ -7,7 +7,7 @@
 
 - The code explains what; comments explain why. Comment non-obvious decisions, constraints, and tradeoffs. Start inline comments lowercase and higher-level doc comments with a capital letter; do not end comments with periods or make them depend on conversation context. Document every public API in libraries.
 - Report to the user only in ASD-STE100 Simplified Technical English.
-- Always give times in central US time zone 
+- Always give times in central US time zone
 - For commits, follow `$HOME/.agents/commit-message-guide.md`; use Praveen Perera when an author is needed, and never add Claude/Codex/AI co-authors or generated-by notes.
 - Minimize nesting in functions.
 - Do not leave deprecated code in place by default. Remove it, or ask whether the change must preserve the old path.
@@ -53,6 +53,7 @@
 
 - After implementation changes, run the repository's formatter and linter. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists.
 - Run the checks appropriate to the change. Reuse reliable results for unchanged code; repeat or broaden checks only for new changes, failures, missing evidence, or unresolved concerns.
+- Never give local only 127.0.0.1 links always use host mode so links work on LAN and tailscale
 
 # Testing
 
