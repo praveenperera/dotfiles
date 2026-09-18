@@ -1,11 +1,11 @@
 ---
-name: hbd
-description: Run long, unattended agent CLIs and general task commands through the homebasd (homebased) daemon and handle the HOMEBASED_EVENT callback that returns to this Codex thread. Use when the user invokes $hbd, when work should run in the background and report back later, when a HOMEBASED_EVENT message arrives, when checking, cancelling, or resubmitting homebased tasks, or when this session is itself a homebased worker. Do not use for work that finishes inside the current turn.
+name: homebased
+description: Run long, unattended agent CLIs and general task commands through the homebased daemon and handle the HOMEBASED_EVENT callback that returns to this Codex thread. Use when the user invokes $homebased or $hbd, when work should run in the background and report back later, when a HOMEBASED_EVENT message arrives, when checking, cancelling, or resubmitting homebased tasks, or when this session is itself a homebased worker. Do not use for work that finishes inside the current turn.
 ---
 
-# Homebasd
+# Homebased
 
-`homebased` (repo `homebasd`, invoke as `$hbd`) is a user daemon that runs one detached child per supervised task and sends `HOMEBASED_EVENT` messages back to the submitting Codex thread. A task is either an `agent` workload (Codex, Claude, or Grok with a prompt and reporting trailer) or a `task` workload (arbitrary argv such as `cargo build --release` or `gh pr checks --watch`). The daemon owns the lifecycle end to end: queue, run, stream combined output to `output.log`, send a check reminder when the attention timeout expires, cancel only on explicit request, and deliver the terminal callback. The orchestrator submits a JSON spec, ends its turn, and acts when events arrive.
+`homebased` (invoke as `$homebased` or `$hbd`) is a user daemon that runs one detached child per supervised task and sends `HOMEBASED_EVENT` messages back to the submitting Codex thread. A task is either an `agent` workload (Codex, Claude, or Grok with a prompt and reporting trailer) or a `task` workload (arbitrary argv such as `cargo build --release` or `gh pr checks --watch`). The daemon owns the lifecycle end to end: queue, run, stream combined output to `output.log`, send a check reminder when the attention timeout expires, cancel only on explicit request, and deliver the terminal callback. The orchestrator submits a JSON spec, ends its turn, and acts when events arrive.
 
 ## Rules that hold everywhere
 
