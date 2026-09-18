@@ -18,8 +18,8 @@ pub enum FleetCmd {
     #[command(name = "dotfiles-up", visible_alias = "dfu")]
     DotfilesUp,
 
-    /// Update Codex, Claude Code, Grok Build, and any installed Homebased on
-    /// ai5090, code, and training
+    /// Pull ~/code/dotfiles, then update Codex, Claude Code, Grok Build, and
+    /// any installed Homebased on ai5090, code, and training
     ///
     /// Without --all, this uses no sudo, changes no system packages, and
     /// restarts no services
