@@ -5,7 +5,9 @@ description: Ask the Fable model a question through the installed Claude CLI and
 
 # Ask Fable
 
-Run the command from the directory that contains the relevant context. Send the prompt through standard input in the same shell call:
+If you are running in Codex, use the `$hbd` skill.
+
+Otherwise, run the command from the directory that contains the relevant context. Send the prompt through standard input in the same shell call:
 
 ```sh
 claude -p --model fable --effort high \
