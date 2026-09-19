@@ -34,8 +34,8 @@ homebased --json task show <id>
 | `output_log` | Path of the combined stdout and stderr of the child. |
 | `last_event` | The event object already sent, or the one that will be sent. `null` while running with no interim event. |
 | `pid` | Worker pid, for display only. Liveness is the lock, not the pid. |
-| `timeout_secs` | Attention (check) timeout in seconds. Not remaining execution budget. |
-| `check_timeout` | `pending` or `sent` for the attention reminder. |
+| `timeout_secs` | Output-inactivity timeout in seconds. Not remaining execution budget. |
+| `check_timeout` | `pending` or `sent` for the inactivity reminder. |
 | `created_at` | Insert time. |
 | `updated_at` | Last row change. For a terminal task this is the finish time. |
 
