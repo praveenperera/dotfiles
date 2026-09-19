@@ -2,7 +2,7 @@
 
 ## 1. Find the Codex thread id
 
-The spec needs the UUID of the Codex thread that should receive the event. `homebased` accepts only a UUID, not a session name.
+The spec needs the UUID of the Codex thread that should receive the event. `homebased` accepts only a UUID, not a session name. Submit on this machine; another host cannot find this thread.
 
 1. Use the thread id if the user or the harness already gave one.
 2. Otherwise take the newest session file whose `cwd` matches this workspace and read `session_id` from its first line:

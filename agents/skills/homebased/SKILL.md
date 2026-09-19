@@ -10,6 +10,7 @@ description: Run long, unattended agent CLIs and general task commands through t
 ## Rules that hold everywhere
 
 - Never run `codex queue` yourself, and never tell a worker to run it. Delivery belongs to `homebased`.
+- Run `homebased` on this machine. Another host cannot find this thread, so the callback fails. To run work elsewhere, put `ssh` in the task command.
 - Submit only with `homebased task submit --spec <file|->`. There are no per-field submit flags.
 - Always set `name` to a short goal label. Do not name the task after the agent or the CLI.
 - Always pass `--json` on data commands and parse the result. Every JSON object carries `api_version: 1`.

@@ -41,4 +41,4 @@ This happens after a raw `systemctl stop`, a crash, or an upgrade in progress. W
 
 ## Callback failed
 
-`task show` with `callback: "failed"` means `codex queue` failed three times. The message text is appended to `<home>/callback-fallback.log`. Read it there, check that `codex` is on the daemon's `PATH`, and re-run `homebased daemon install` if the install-time `PATH` is stale.
+`task show` with `callback: "failed"` means `codex queue` failed three times. The message text is appended to `<home>/callback-fallback.log`. Read it there, check that `codex` is on the daemon's `PATH` and that submit ran on this machine, and re-run `homebased daemon install` if the install-time `PATH` is stale.
