@@ -55,7 +55,7 @@ Agent example:
   "thread": "01a0ab97-a7aa-7463-a5b0-8d500e40e431",
   "name": "implement file browser",
   "cwd": "/home/praveen/code/project",
-  "timeout": "2h",
+  "timeout": "1h",
   "workload": {
     "type": "agent",
     "agent": "claude",
@@ -73,7 +73,7 @@ Task example:
   "thread": "01a0ab97-a7aa-7463-a5b0-8d500e40e431",
   "name": "cargo release build",
   "cwd": "/home/praveen/code/project",
-  "timeout": "4h",
+  "timeout": "2h",
   "workload": {
     "type": "task",
     "command": ["cargo", "build", "--release"]
@@ -96,7 +96,7 @@ GitHub CI watcher as a normal task:
 | `thread` | yes | Codex thread UUID from step 1. |
 | `name` | yes | Short goal label for the dashboard and events. Name the work, not the agent or the CLI. Trimmed. Rejects blank names, line breaks, control characters, and names longer than 120 Unicode scalar values. Non-unique; task id remains the identity. |
 | `cwd` | yes | Existing directory. The child runs there. |
-| `timeout` | no | Attention timer. Humantime string. Default `4h`. Minimum `2h`. Larger values are valid. Expiry sends `TASK_CHECK_DUE` and does **not** kill the child. |
+| `timeout` | no | Attention check. Humantime. Default `1h`, min `30m`. Set an amount that matches the work. Writes to `output.log` restart it; expiry sends `TASK_CHECK_DUE` and does not kill the child. |
 | `workload` | yes | Internally tagged enum: `type` is `agent` or `task`. |
 
 Agent-only fields under `workload`:
@@ -106,7 +106,7 @@ Agent-only fields under `workload`:
 | `agent` | yes | `codex`, `claude`, or `grok`. |
 | `prompt` or `prompt_file` | exactly one | Relative `prompt_file` resolves against `cwd`. Prefer `prompt_file`. |
 | `model` | no | Passed through unchanged: `-m` for codex and grok, `--model` for claude. |
-| `extra_args` | no | Array of strings appended after the unattended flags. |
+| `extra_args` | no | Array of strings appended after the unattended flags. Claude defaults to `--output-format stream-json --verbose`. An explicit `--output-format` in either `--output-format VALUE` or `--output-format=VALUE` form replaces the format default; `stream-json` still gets `--verbose` unless `extra_args` already has it. |
 | `report_trailer` | no | Default `true`. Set `false` only when the worker must not be told to report. |
 
 Task-only fields under `workload`:
@@ -134,7 +134,7 @@ The dry run validates the spec, resolves the executable and `cwd`, and prints th
 
 ## 6. End the turn
 
-Tell the user the task id, the workload, the check timeout, and that results arrive as `HOMEBASED_EVENT` messages. Do not wait, sleep, or poll. On `TASK_CHECK_DUE`, inspect status and recent logs, report useful progress, and cancel only when evidence requires it. Several tasks may run at once; there is no concurrency bound, so keep the count sensible for the machine.
+Tell the user the task id, the workload, the inactivity timeout, and that results arrive as `HOMEBASED_EVENT` messages. Do not wait, sleep, or poll. On `TASK_CHECK_DUE`, inspect status and recent logs. If the task is still live but the evidence does not show whether it can make progress, tell the user that the state is uncertain and leave the task running. Cancel or intervene only when evidence requires it. Several tasks may run at once; there is no concurrency bound, so keep the count sensible for the machine.
 
 ## Resubmitting after a blocked or failed task
 

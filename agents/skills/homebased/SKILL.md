@@ -5,7 +5,7 @@ description: Run long, unattended agent CLIs and general task commands through t
 
 # Homebased
 
-`homebased` (invoke as `$homebased` or `$hbd`) is a user daemon that runs one detached child per supervised task and sends `HOMEBASED_EVENT` messages back to the submitting Codex thread. A task is either an `agent` workload (Codex, Claude, or Grok with a prompt and reporting trailer) or a `task` workload (arbitrary argv such as `cargo build --release` or `gh pr checks --watch`). The daemon owns the lifecycle end to end: queue, run, stream combined output to `output.log`, send a check reminder when the attention timeout expires, cancel only on explicit request, and deliver the terminal callback. The orchestrator submits a JSON spec, ends its turn, and acts when events arrive.
+`homebased` (invoke as `$homebased` or `$hbd`) is a user daemon that runs one detached child per supervised task and sends `HOMEBASED_EVENT` messages back to the submitting Codex thread. A task is either an `agent` workload (Codex, Claude, or Grok with a prompt and reporting trailer) or a `task` workload (arbitrary argv such as `cargo build --release` or `gh pr checks --watch`). The daemon owns the lifecycle end to end: queue, run, stream combined output to `output.log`, send a check reminder when output stays idle for the timeout, cancel only on explicit request, and deliver the terminal callback. The orchestrator submits a JSON spec, ends its turn, and acts when events arrive.
 
 ## Rules that hold everywhere
 
@@ -20,7 +20,8 @@ description: Run long, unattended agent CLIs and general task commands through t
 - Task ids are full UUIDs. Prefix matching does not exist.
 - Delivery is at-least-once. Treat a repeated event for the same task and event name as a duplicate, not a new result.
 - Prefer `workload.type: "task"` for long commands and CI watchers. Use `agent` only when a model must reason and produce a report.
-- `timeout` is an attention timer (default 4h, minimum 2h). It sends `TASK_CHECK_DUE` and never kills the child.
+- Set `timeout` to match the work (default 1h, min 30m). Quiet `output.log` for that long sends `TASK_CHECK_DUE`; it never kills the child.
+- Claude streams JSON output by default. Set `--output-format` in `extra_args` only when the task needs another format.
 
 ## Route
 
