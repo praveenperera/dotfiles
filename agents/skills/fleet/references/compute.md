@@ -6,6 +6,17 @@ Use [sessions.md](sessions.md) for persistent or interactive execution. Run shor
 
 Check `nvidia-smi`, active jobs, RAM, and disk space before a large run. Test GPU access in the selected Incus container and Docker image before a long run. GPU Docker workloads use `--gpus all`.
 
+Do not add Incus memory limits. Cap the nested Docker job instead. `ai5090` has 30 GiB of RAM. Leave several GiB for the kernel, SSH, Incus, and `code`. For a single training job, pass both flags and keep them equal so the container cannot fill host swap:
+
+```bash
+docker run --rm --gpus all \
+    --memory=22g \
+    --memory-swap=22g \
+    my-project:<version>
+```
+
+If `--memory-swap` is omitted, Docker allows extra swap equal to `--memory`. That can stall SSH. Do not pass `--oom-kill-disable`. Lower `--memory` when `free -h` shows less headroom. A `nvidia-smi` smoke test does not need these flags. Consult `~/code/homelab/ai5090/README.md` for the same rule.
+
 Use a distinct run directory. Keep the configuration, source revision, image tag or ID, logs, and checkpoint path together. Report the run directory with the tmux attach command. Do not overwrite another run's checkpoints.
 
 The host provides the NVIDIA kernel driver. The containers provide the user-space libraries and NVIDIA Container Toolkit. For driver or nested Docker faults, consult the homelab README before changing setup. Do not change the host driver to fix an application dependency without that check.

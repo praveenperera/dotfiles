@@ -27,7 +27,7 @@ These are configured roles and addresses, not proof that a machine is online. Co
 
 - Keep `ai5090` small. Use it only for Incus, storage, NVIDIA driver work, and recovery. Do not install coding agents, Docker, or language toolchains on the host. Do not use Nix.
 - `code` and `training` are Incus system containers. Each has its own nested Docker daemon and Docker/containerd stores. Never share `/var/lib/docker` or containerd stores.
-- Both containers share one RTX 5090 with 32 GB VRAM. They have no fixed CPU, RAM, or GPU limits. Check active work before a large job; do not interrupt another job to make room.
+- Both containers share one RTX 5090 with 32 GB VRAM. Incus has no CPU, RAM, or GPU limits. Cap nested Docker jobs with `--memory` and `--memory-swap` as in [compute.md](references/compute.md). Check active work before a large job; do not interrupt another job to make room.
 - Do not use service machines as coding workers. Coding or training does not authorize host reconfiguration, stack deployment, or container recreation.
 - If the selected machine is unavailable, report the connection failure. Do not silently move the job elsewhere.
 
