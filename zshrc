@@ -122,7 +122,7 @@ alias llr="cmd codex launch a -c review-high"
 alias llrr="cmd codex launch a -c review-xhigh"
 
 # grok
-alias gg="grok -m grok-4.6 --effort high"
+alias gg="grok -m grok-4.7 --effort high"
 alias gga="grok -m grok-4.5 --effort low"
 alias ggs="grok -m grok-4.5 --effort medium"
 alias ggd="grok -m grok-4.5 --effort high"
