@@ -21,6 +21,7 @@ description: Run long, unattended agent CLIs and general task commands through t
 - Delivery is at-least-once. Treat a repeated event for the same task and event name as a duplicate, not a new result.
 - Prefer `workload.type: "task"` for long commands and CI watchers. Use `agent` only when a model must reason and produce a report.
 - Set `timeout` to match the work (default 1h, min 30m). Quiet `output.log` for that long sends `TASK_CHECK_DUE`; it never kills the child.
+- For wait-only and monitoring tasks, treat a requested interval in hours as the Homebased inactivity timeout unless the user explicitly names an application checkpoint. Call it the `inactivity timeout` or `check reminder interval` in user messages, not a checkpoint.
 - Claude streams JSON output by default. Set `--output-format` in `extra_args` only when the task needs another format.
 
 ## Route
