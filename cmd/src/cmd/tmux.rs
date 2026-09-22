@@ -178,30 +178,53 @@ fn move_after(sh: &Shell, position: u32) -> Result<()> {
 }
 
 fn session_picker(sh: &Shell) -> Result<()> {
-    let client_fmt = format!("#{{client_session}}{FIELD_SEP}#{{client_last_session}}");
-    let client_context = cmd!(sh, "tmux display-message -p {client_fmt}")
-        .quiet()
-        .read()
-        .unwrap_or_default();
-    let (current_session, last_session) = parse_client_session_context(&client_context);
+    let current_session = current_session_name(sh);
 
     let fmt = format!("#S{FIELD_SEP}#{{session_last_attached}}{FIELD_SEP}#{{session_activity}}");
-    let sessions = cmd!(sh, "tmux list-sessions -F {fmt}").quiet().read()?;
+    let sessions = cmd!(sh, "tmux list-sessions -O activity -F {fmt}")
+        .quiet()
+        .read()?;
     let mut sessions = sessions
         .lines()
-        .filter_map(SessionEntry::parse)
+        .enumerate()
+        .filter_map(|(mru_rank, line)| {
+            let mut entry = SessionEntry::parse(line)?;
+            entry.mru_rank = Some(mru_rank);
+            Some(entry)
+        })
         .collect::<Vec<_>>();
-    order_sessions(
-        &mut sessions,
-        current_session.as_deref(),
-        last_session.as_deref(),
-    );
+    order_sessions(&mut sessions, current_session.as_deref());
     let selection = run_fzf(sh, "Session > ", &render_lines(&sessions))?;
     let session = selection.trim();
     if !session.is_empty() {
         cmd!(sh, "tmux switch-client -t {session}").quiet().run()?;
     }
     Ok(())
+}
+
+fn current_session_name(sh: &Shell) -> Option<String> {
+    let pane = std::env::var("TMUX_PANE")
+        .ok()
+        .filter(|pane| !pane.trim().is_empty());
+
+    pane.as_deref()
+        .and_then(|pane| read_current_session(sh, Some(pane)))
+        .or_else(|| read_current_session(sh, None))
+}
+
+fn read_current_session(sh: &Shell, target_pane: Option<&str>) -> Option<String> {
+    let fmt = "#S";
+    let output = if let Some(target_pane) = target_pane {
+        cmd!(sh, "tmux display-message -p -t {target_pane} {fmt}")
+            .quiet()
+            .read()
+    } else {
+        cmd!(sh, "tmux display-message -p {fmt}").quiet().read()
+    };
+
+    output
+        .ok()
+        .and_then(|output| non_empty_string(Some(output.trim())))
 }
 
 fn window_picker(sh: &Shell) -> Result<()> {
@@ -255,18 +278,20 @@ struct SessionEntry {
     name: String,
     last_attached: u64,
     activity: u64,
+    mru_rank: Option<usize>,
 }
 
 impl SessionEntry {
     fn parse(line: &str) -> Option<Self> {
         let mut parts = line.split(FIELD_SEP);
-        let name = parts.next()?.to_string();
-        let last_attached = parse_num(parts.next()?);
-        let activity = parse_num(parts.next()?);
+        let name = parts.next()?.to_owned();
+        let last_attached = parts.next().map(parse_num::<u64>).unwrap_or_default();
+        let activity = parts.next().map(parse_num::<u64>).unwrap_or_default();
         Some(Self {
             name,
             last_attached,
             activity,
+            mru_rank: None,
         })
     }
 
@@ -356,18 +381,13 @@ fn render_lines<T: PickerEntry>(entries: &[T]) -> String {
         .join("\n")
 }
 
-fn order_sessions(
-    entries: &mut [SessionEntry],
-    current_session: Option<&str>,
-    last_session: Option<&str>,
-) {
+fn order_sessions(entries: &mut [SessionEntry], current_session: Option<&str>) {
     entries.sort_by(|a, b| {
         demote_active(
             is_named_session(a, current_session),
             is_named_session(b, current_session),
         )
-        .then_with(|| compare_session_rank(a, b, last_session))
-        .then_with(|| b.recency_key().cmp(&a.recency_key()))
+        .then_with(|| compare_session_recency(a, b))
         .then_with(|| a.name.cmp(&b.name))
     });
 }
@@ -376,18 +396,10 @@ fn is_named_session(entry: &SessionEntry, session: Option<&str>) -> bool {
     session.is_some_and(|session| entry.name == session)
 }
 
-fn compare_session_rank(
-    left: &SessionEntry,
-    right: &SessionEntry,
-    last_session: Option<&str>,
-) -> Ordering {
-    match (
-        is_named_session(left, last_session),
-        is_named_session(right, last_session),
-    ) {
-        (true, true) | (false, false) => Ordering::Equal,
-        (true, false) => Ordering::Less,
-        (false, true) => Ordering::Greater,
+fn compare_session_recency(left: &SessionEntry, right: &SessionEntry) -> Ordering {
+    match (left.mru_rank, right.mru_rank) {
+        (Some(left_rank), Some(right_rank)) => left_rank.cmp(&right_rank),
+        _ => right.recency_key().cmp(&left.recency_key()),
     }
 }
 
@@ -437,13 +449,6 @@ fn parse_index_list(value: &str) -> Vec<u32> {
         .filter(|part| !part.is_empty())
         .filter_map(|part| part.parse().ok())
         .collect()
-}
-
-fn parse_client_session_context(value: &str) -> (Option<String>, Option<String>) {
-    let mut parts = value.trim_end().split(FIELD_SEP);
-    let current = non_empty_string(parts.next());
-    let last = non_empty_string(parts.next());
-    (current, last)
 }
 
 fn non_empty_string(value: Option<&str>) -> Option<String> {
@@ -1886,9 +1891,9 @@ impl std::fmt::Display for NotifyKind {
 mod tests {
     use super::{
         apply_synced_codex_name, build_naming_context, build_naming_prompt, codex_pane_name_action,
-        latest_thread_name, order_panes, order_sessions, order_windows,
-        parse_client_session_context, parse_generated_title, parse_index_list, parse_pane_process,
-        resolve_action_name, resolve_active_codex_session_with_retry, resolve_session_index_path,
+        latest_thread_name, order_panes, order_sessions, order_windows, parse_generated_title,
+        parse_index_list, parse_pane_process, resolve_action_name,
+        resolve_active_codex_session_with_retry, resolve_session_index_path,
         thread_id_from_notification, thread_title_output_schema, title_messages_from_rollout,
         ActiveCodexSession, CodexPaneNameAction, CodexThreadId, CodexThreadName, PaneEntry,
         PaneProcess, PaneTarget, PickerEntry, SessionEntry, SessionLookup, TitleMessage,
@@ -2317,41 +2322,41 @@ mod tests {
     }
 
     #[test]
-    fn parses_client_session_context() {
-        let (current, last) =
-            parse_client_session_context(&format!("current{FIELD_SEP}previous\n"));
-
-        assert_eq!(current.as_deref(), Some("current"));
-        assert_eq!(last.as_deref(), Some("previous"));
-    }
-
-    #[test]
-    fn orders_sessions_by_last_session_and_moves_current_to_end() {
+    fn orders_sessions_by_tmux_mru_and_moves_current_to_end() {
         let mut entries = vec![
             SessionEntry {
                 name: "current".into(),
                 last_attached: 300,
                 activity: 300,
+                mru_rank: Some(0),
             },
             SessionEntry {
-                name: "recent".into(),
-                last_attached: 200,
-                activity: 200,
+                name: "older".into(),
+                last_attached: 100,
+                activity: 100,
+                mru_rank: Some(3),
             },
             SessionEntry {
                 name: "previous".into(),
                 last_attached: 100,
-                activity: 500,
+                activity: 100,
+                mru_rank: Some(1),
+            },
+            SessionEntry {
+                name: "recent".into(),
+                last_attached: 400,
+                activity: 400,
+                mru_rank: Some(2),
             },
         ];
 
-        order_sessions(&mut entries, Some("current"), Some("previous"));
+        order_sessions(&mut entries, Some("current"));
 
         let names = entries
             .iter()
             .map(|entry| entry.name.as_str())
             .collect::<Vec<_>>();
-        assert_eq!(names, vec!["previous", "recent", "current"]);
+        assert_eq!(names, vec!["previous", "recent", "older", "current"]);
     }
 
     #[test]
@@ -2361,21 +2366,39 @@ mod tests {
                 name: "quiet".into(),
                 last_attached: 0,
                 activity: 100,
+                mru_rank: None,
             },
             SessionEntry {
                 name: "busy".into(),
                 last_attached: 0,
                 activity: 200,
+                mru_rank: None,
             },
         ];
 
-        order_sessions(&mut entries, None, None);
+        order_sessions(&mut entries, None);
 
         let names = entries
             .iter()
             .map(|entry| entry.name.as_str())
             .collect::<Vec<_>>();
         assert_eq!(names, vec!["busy", "quiet"]);
+    }
+
+    #[test]
+    fn orders_sessions_with_missing_metadata_by_name() {
+        let mut entries = [
+            SessionEntry::parse("z").unwrap(),
+            SessionEntry::parse(&format!("a{FIELD_SEP}not-a-number")).unwrap(),
+        ];
+
+        order_sessions(&mut entries, None);
+
+        let names = entries
+            .iter()
+            .map(|entry| entry.name.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(names, vec!["a", "z"]);
     }
 
     #[test]
