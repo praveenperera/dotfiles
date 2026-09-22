@@ -84,7 +84,6 @@ clx() {
     ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="GPT-6.0 Sol via local CLIProxyAPI" \
     ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES="effort,xhigh_effort,max_effort,thinking,adaptive_thinking,interleaved_thinking" \
     ANTHROPIC_DEFAULT_OPUS_MODEL="gpt-6.0-sol" \
-    ANTHROPIC_DEFAULT_SONNET_MODEL="gpt-5.6-terra" \
     ANTHROPIC_DEFAULT_HAIKU_MODEL="gpt-6.0-luna" \
     CLAUDE_CODE_SUBAGENT_MODEL="gpt-6.0-sol" \
     CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1 \
