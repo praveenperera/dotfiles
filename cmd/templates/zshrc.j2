@@ -79,19 +79,19 @@ clx() {
 
   ANTHROPIC_BASE_URL="http://127.0.0.1:8317" \
     ANTHROPIC_AUTH_TOKEN="$CLIPROXY_API_KEY" \
-    ANTHROPIC_CUSTOM_MODEL_OPTION="gpt-6.0-sol" \
+    ANTHROPIC_CUSTOM_MODEL_OPTION="gpt-6-sol" \
     ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="GPT-6.0 Sol" \
     ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="GPT-6.0 Sol via local CLIProxyAPI" \
     ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES="effort,xhigh_effort,max_effort,thinking,adaptive_thinking,interleaved_thinking" \
-    ANTHROPIC_DEFAULT_OPUS_MODEL="gpt-6.0-sol" \
-    ANTHROPIC_DEFAULT_HAIKU_MODEL="gpt-6.0-luna" \
-    CLAUDE_CODE_SUBAGENT_MODEL="gpt-6.0-sol" \
+    ANTHROPIC_DEFAULT_OPUS_MODEL="gpt-6-sol" \
+    ANTHROPIC_DEFAULT_HAIKU_MODEL="gpt-6-luna" \
+    CLAUDE_CODE_SUBAGENT_MODEL="gpt-6-sol" \
     CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1 \
     CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY=3 \
     CLAUDE_CODE_MAX_CONTEXT_TOKENS=272000 \
     CLAUDE_CODE_AUTO_COMPACT_WINDOW=244800 \
     ENABLE_TOOL_SEARCH=false \
-    command claude --permission-mode plan --dangerously-skip-permissions --model gpt-6.0-sol "$@"
+    command claude --permission-mode plan --dangerously-skip-permissions --model gpt-6-sol "$@"
 }
 
 alias clp="claude --permission-mode plan"
@@ -111,8 +111,8 @@ alias ll="cmd codex launch a -c shared"
 alias llq="cmd codex launch a -c q"
 
 # sol high / luna
-alias lla="cmd codex launch a -c sol-high -- -m gpt-6.0-sol -c 'model_reasoning_effort=\"high\"'"
-alias lls="cmd codex launch a -c luna -- -m gpt-6.0-luna"
+alias lla="cmd codex launch a -c sol-high -- -m gpt-6-sol -c 'model_reasoning_effort=\"high\"'"
+alias lls="cmd codex launch a -c luna -- -m gpt-6-luna"
 
 # fast
 alias llf="cmd codex launch a -c fast"

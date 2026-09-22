@@ -177,7 +177,7 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --repo "$repo" \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/luna/iteration-1-summary.md" \
-  --model gpt-6.0-luna \
+  --model gpt-6-luna \
   --sandbox danger-full-access \
   --config model_reasoning_effort='"max"'
 ```
@@ -189,7 +189,7 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --repo "$repo" \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/luna/iteration-1-summary.md" \
-  --model gpt-6.0-luna \
+  --model gpt-6-luna \
   --sandbox danger-full-access \
   --config model_reasoning_effort='"max"' \
   --dry-run
@@ -200,7 +200,7 @@ If the helper cannot be used, invoke a fresh Luna Max session directly:
 ```bash
 codex exec \
   --cd "$repo" \
-  --model gpt-6.0-luna \
+  --model gpt-6-luna \
   --config model_reasoning_effort='"max"' \
   --sandbox danger-full-access \
   --output-last-message "$scratch/luna/iteration-1-summary.md" \

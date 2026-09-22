@@ -117,7 +117,7 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-For a Sol phase review, change the model to `gpt-6.0-sol`, effort to `high`, and keep the sandbox read-only. For bounded work, change the model to `gpt-6.0-luna` and effort to `max`. Use `low` for bulk exact transformations only when no user directive requires `max`. Do not increase Astra to `high` or above without an explicit user request for that effort.
+For a Sol phase review, change the model to `gpt-6-sol`, effort to `high`, and keep the sandbox read-only. For bounded work, change the model to `gpt-6-luna` and effort to `max`. Use `low` for bulk exact transformations only when no user directive requires `max`. Do not increase Astra to `high` or above without an explicit user request for that effort.
 
 ## Run a fresh implementation delegate
 

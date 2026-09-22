@@ -51,7 +51,7 @@ Do not grant fresh fix agents permission to commit, push, resolve PR threads, la
 
 ## Invocation
 
-Load the Luna Max fix-pass section of `providers.md` for helper and direct invocation commands. Prefer the bundled helper with `--model gpt-6.0-luna` and `model_reasoning_effort='"max"'`, and dry-run it when checking argument construction. Never use a resume or continuation option.
+Load the Luna Max fix-pass section of `providers.md` for helper and direct invocation commands. Prefer the bundled helper with `--model gpt-6-luna` and `model_reasoning_effort='"max"'`, and dry-run it when checking argument construction. Never use a resume or continuation option.
 
 When the orchestrator is itself a Codex Astra session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Give it the same prompt contract and still save its final report under the scratch directory. Prefer a fresh worker over continuity unless the same owned scope needs an immediate repair follow-up.
 
