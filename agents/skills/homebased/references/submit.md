@@ -23,13 +23,6 @@ Several sessions can share one cwd. Tell the user which id you chose. If you can
 | GitHub CI watch: `gh pr checks … --watch` | `task` |
 | A model must reason and produce a report | `agent` |
 
-For a wait-only or monitoring task, set `timeout` to the requested monitoring
-period or expected quiet period. When the user gives an interval in hours
-while discussing a Homebased watcher, interpret it as this inactivity timeout
-unless they explicitly name an application, model, recovery, or training
-checkpoint. In user-facing text, call it the inactivity timeout or check
-reminder interval.
-
 A `task` runs an argv array with no shell. A caller that needs shell syntax must request it explicitly, for example `["sh", "-lc", "..."]`.
 
 ## 3. Write the prompt file (agent only)
