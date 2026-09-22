@@ -113,7 +113,7 @@ Agent-only fields under `workload`:
 | `agent` | yes | `codex`, `claude`, or `grok`. |
 | `prompt` or `prompt_file` | exactly one | Relative `prompt_file` resolves against `cwd`. Prefer `prompt_file`. |
 | `model` | no | Passed through unchanged: `-m` for codex and grok, `--model` for claude. |
-| `extra_args` | no | Array of strings appended after the unattended flags. Claude defaults to `--output-format stream-json --verbose`. An explicit `--output-format` in either `--output-format VALUE` or `--output-format=VALUE` form replaces the format default; `stream-json` still gets `--verbose` unless `extra_args` already has it. |
+| `extra_args` | no | Array of strings added after the unattended flags. Exact spellings of Homebased-managed standalone switches are reserved tokens: Homebased treats every exact match as that switch, not as another option's value, and emits each at most once. Other tokens keep their order and spelling. Claude defaults to `--output-format stream-json --verbose`. An explicit `--output-format` in either `--output-format VALUE` or `--output-format=VALUE` form replaces the format default; `stream-json` still gets `--verbose` unless `extra_args` already has it. |
 | `report_trailer` | no | Default `true`. Set `false` only when the worker must not be told to report. |
 
 Task-only fields under `workload`:
