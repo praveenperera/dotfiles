@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 use tempfile::{Builder as TempFileBuilder, NamedTempFile};
 use xshell::{cmd, Shell};
 
+mod image;
 mod managed;
 mod model;
 
@@ -64,6 +65,8 @@ pub enum TmuxCmd {
     Close(managed::CloseArgs),
     /// Stop tracking a canonical remote session
     Unsubscribe(managed::UnsubscribeArgs),
+    /// Capture, transfer, and insert one image into the selected task
+    PasteImage(image::PasteImageArgs),
     /// Move current window after specified position (0 = move to first)
     MoveAfter {
         /// Window position to move after (0 moves to first position)
@@ -150,6 +153,7 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
         TmuxCmd::Sync(args) => managed::sync(args),
         TmuxCmd::Close(args) => managed::close(args),
         TmuxCmd::Unsubscribe(args) => managed::unsubscribe(args),
+        TmuxCmd::PasteImage(args) => image::paste_image(args),
         TmuxCmd::MoveAfter { position } => move_after(sh, position),
         TmuxCmd::ClearBell => clear_bell(sh),
         TmuxCmd::SyncSsh { all } => sync_ssh(sh, all),

@@ -1,0 +1,30 @@
+#!/bin/zsh
+set -eu
+
+readonly cmd_path="/Users/praveen/.local/bin/cmd"
+
+if [[ ! -x "$cmd_path" ]]; then
+  print -u2 -- "Paste Image: $cmd_path is not installed"
+  exit 1
+fi
+
+terminal_context=$(/usr/bin/osascript <<'APPLESCRIPT'
+tell application "Ghostty"
+  if not frontmost then error "Ghostty is not focused"
+  set activeWindow to front window
+  set activeTab to selected tab of activeWindow
+  set activeTerminal to focused terminal of activeTab
+  return (id of activeTerminal) & linefeed & (tty of activeTerminal)
+end tell
+APPLESCRIPT
+)
+
+terminal_id=${terminal_context%%$'\n'*}
+terminal_tty=${terminal_context#*$'\n'}
+
+if [[ -z "$terminal_id" || -z "$terminal_tty" || "$terminal_id" == "$terminal_tty" ]]; then
+  print -u2 -- "Paste Image: Ghostty did not return a focused terminal"
+  exit 1
+fi
+
+exec "$cmd_path" tmux paste-image --terminal-id "$terminal_id" --tty "$terminal_tty"

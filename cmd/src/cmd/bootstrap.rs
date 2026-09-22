@@ -35,6 +35,7 @@ struct Zshrc {
 struct OsxDefaults {}
 
 const MAC_ONLY_TOOLS: &[&str] = &[
+    "pngpaste",
     "swiftformat",
     "1password-cli",
     "xcode-build-server",

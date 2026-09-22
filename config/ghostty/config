@@ -1,5 +1,6 @@
 ## GENERAL
 macos-titlebar-style = hidden
+macos-shortcuts = ask
 shell-integration-features = ssh-env,ssh-terminfo
 desktop-notifications = true
 bell-features = system,attention,title
