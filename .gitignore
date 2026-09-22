@@ -61,3 +61,4 @@ claude/.last-update-result.json
 /claude/skills/*
 !/claude/skills/use-luna-max/
 *.log
+/claude/state
