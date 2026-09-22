@@ -1,6 +1,6 @@
 ---
 name: use-luna-max
-description: Route implementation, tests, and mechanical repository work to internal GPT-5.6 Luna subagents at max reasoning. Use only when the user explicitly says "use Luna", "use Luna sub-agents", "use Luna Max", or invokes $use-luna-max. Do not infer this skill from a task that merely looks suitable for delegation.
+description: Route implementation, tests, and mechanical repository work to internal GPT-6.0 Luna subagents at max reasoning. Use only when the user explicitly says "use Luna", "use Luna sub-agents", "use Luna Max", or invokes $use-luna-max. Do not infer this skill from a task that merely looks suitable for delegation.
 ---
 
 # Use Luna Max
@@ -34,7 +34,7 @@ Decompose a large change into bounded passes after the root agent decides the de
 
 If you are Codex, spawn with [codex-native.md](../subagent-workflow/references/codex-native.md). If you are not Codex, use the [Codex CLI delegation reference](../subagent-workflow/references/codex-cli.md).
 
-Select GPT-5.6 Luna with `max` reasoning when the tool needs an explicit model choice. If the configured worker already uses Luna Max, do not add redundant overrides. Start a fresh worker with only the task-local context unless continuity is necessary.
+Select GPT-6.0 Luna with `max` reasoning when the tool needs an explicit model choice. If the configured worker already uses Luna Max, do not add redundant overrides. Start a fresh worker with only the task-local context unless continuity is necessary.
 
 Give each worker a self-contained contract with:
 

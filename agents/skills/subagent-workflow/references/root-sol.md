@@ -1,6 +1,6 @@
-# GPT-5.6 Sol root
+# GPT-6.0 Sol root
 
-Use this route only when the actual session model is GPT-5.6 Sol. The actual session model is the root; a client name or an explicit model preference does not silently change it. Sol owns scope, design decisions, integration, and acceptance. Sol is the usual root for normal diagnosis and bounded implementation, and it may make a small root edit when a handoff costs more than it saves.
+Use this route only when the actual session model is GPT-6.0 Sol. The actual session model is the root; a client name or an explicit model preference does not silently change it. Sol owns scope, design decisions, integration, and acceptance. Sol is the usual root for normal diagnosis and bounded implementation, and it may make a small root edit when a handoff costs more than it saves.
 
 | Work | Route |
 | --- | --- |

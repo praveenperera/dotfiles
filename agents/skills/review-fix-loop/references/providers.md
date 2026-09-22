@@ -168,7 +168,7 @@ Codex review is a provider input, not a fixing session. Normalize only actionabl
 
 ## Fresh Luna Max Fix Pass
 
-Run every fix pass with GPT-5.6 Luna at `max` reasoning. Do not use Astra for ordinary fixes.
+Run every fix pass with GPT-6.0 Luna at `max` reasoning. Do not use Astra for ordinary fixes.
 
 Prefer the bundled helper:
 
@@ -177,7 +177,7 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --repo "$repo" \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/luna/iteration-1-summary.md" \
-  --model gpt-5.6-luna \
+  --model gpt-6.0-luna \
   --sandbox danger-full-access \
   --config model_reasoning_effort='"max"'
 ```
@@ -189,7 +189,7 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --repo "$repo" \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/luna/iteration-1-summary.md" \
-  --model gpt-5.6-luna \
+  --model gpt-6.0-luna \
   --sandbox danger-full-access \
   --config model_reasoning_effort='"max"' \
   --dry-run
@@ -200,7 +200,7 @@ If the helper cannot be used, invoke a fresh Luna Max session directly:
 ```bash
 codex exec \
   --cd "$repo" \
-  --model gpt-5.6-luna \
+  --model gpt-6.0-luna \
   --config model_reasoning_effort='"max"' \
   --sandbox danger-full-access \
   --output-last-message "$scratch/luna/iteration-1-summary.md" \

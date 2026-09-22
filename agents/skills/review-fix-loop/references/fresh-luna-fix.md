@@ -1,6 +1,6 @@
 # Fresh Luna Max Fix Pass
 
-Every fix pass must be a new GPT-5.6 Luna Max agent. Do not resume a prior fix session, even if the previous pass was close to correct. Every pass consumes the orchestrator's single global fix budget, regardless of which reviewer or verification failure triggered it.
+Every fix pass must be a new GPT-6.0 Luna Max agent. Do not resume a prior fix session, even if the previous pass was close to correct. Every pass consumes the orchestrator's single global fix budget, regardless of which reviewer or verification failure triggered it.
 
 Use Luna with `max` reasoning for every fix pass. Do not use Astra for ordinary fixes. Astra remains a review provider only; use Codex `xhigh` only when the user explicitly requests it for Codex review.
 
@@ -11,7 +11,7 @@ Write each prompt to `_scratch/review-fix-loop/<timestamp>/prompts/iteration-<n>
 ```markdown
 # Review Fix Loop Pass <n>
 
-You are a fresh GPT-5.6 Luna Max agent fixing review findings for this repository.
+You are a fresh GPT-6.0 Luna Max agent fixing review findings for this repository.
 
 ## Required Behavior
 
@@ -32,7 +32,7 @@ You are a fresh GPT-5.6 Luna Max agent fixing review findings for this repositor
 - Base: <base branch or SHA>
 - PR: <PR URL or number, if known>
 - Scratch artifacts: <absolute scratch path>
-- Fix agent: GPT-5.6 Luna Max
+- Fix agent: GPT-6.0 Luna Max
 
 ## Invariants and Risk Matrix
 
@@ -51,7 +51,7 @@ Do not grant fresh fix agents permission to commit, push, resolve PR threads, la
 
 ## Invocation
 
-Load the Luna Max fix-pass section of `providers.md` for helper and direct invocation commands. Prefer the bundled helper with `--model gpt-5.6-luna` and `model_reasoning_effort='"max"'`, and dry-run it when checking argument construction. Never use a resume or continuation option.
+Load the Luna Max fix-pass section of `providers.md` for helper and direct invocation commands. Prefer the bundled helper with `--model gpt-6.0-luna` and `model_reasoning_effort='"max"'`, and dry-run it when checking argument construction. Never use a resume or continuation option.
 
 When the orchestrator is itself a Codex Astra session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Give it the same prompt contract and still save its final report under the scratch directory. Prefer a fresh worker over continuity unless the same owned scope needs an immediate repair follow-up.
 

@@ -23,8 +23,8 @@ These are local routing defaults, not benchmark scores. Praveen's working assess
 | Claude Fable 5.1 | Opt-in only. Strong at public API shape, simplification or removal, merge-ready cleanup, and front-end design                                                       | Expensive Claude 5-hour limit; can expand scope, add excess tests, rewrite whole files, or stop before completion | `high`                                                   |
 | Claude Opus 5    | Long-running coding, bug finding, front-end design, and a deliberate Claude second opinion                                                                          | Can add process, verification, subagents, or prose beyond the task                                                | `high`                                                   |
 | Grok 4.6         | Native X research, live evidence, visual or interactive first passes, and a third-provider review                                                                   | Check project-specific code quality; do not infer production readiness from a good demo                           | `high`                                                   |
-| GPT-5.6 Sol      | Usual root for normal diagnosis, bounded implementation, integration, and acceptance; fresh read-only phase review when assigned                                    | Not an authority on simplification or removal; a reviewer is read-only only for that assignment                   | `high`                                                   |
-| GPT-5.6 Luna     | Bounded implementation after design is settled; exact mechanical work                                                                                               | Literal execution cannot replace diagnosis, architecture, or final acceptance                                     | `max` for bounded work; `low` for bulk mechanical work   |
+| GPT-6.0 Sol      | Usual root for normal diagnosis, bounded implementation, integration, and acceptance; fresh read-only phase review when assigned                                    | Not an authority on simplification or removal; a reviewer is read-only only for that assignment                   | `high`                                                   |
+| GPT-6.0 Luna     | Bounded implementation after design is settled; exact mechanical work                                                                                               | Literal execution cannot replace diagnosis, architecture, or final acceptance                                     | `max` for bounded work; `low` for bulk mechanical work   |
 
 Use Luna `max` for ordinary bounded implementation with cheap checks. Use Sol as the usual root for normal diagnosis, bounded implementation, integration, and acceptance; a small root edit is allowed when a handoff costs more than it saves.
 
@@ -42,7 +42,7 @@ Read only the active root's reference:
 | Claude Fable 5.1 | [root-fable.md](references/root-fable.md) |
 | Claude Opus 5    | [root-opus.md](references/root-opus.md)   |
 | Grok 4.6         | [root-grok.md](references/root-grok.md)   |
-| GPT-5.6 Sol      | [root-sol.md](references/root-sol.md)     |
+| GPT-6.0 Sol      | [root-sol.md](references/root-sol.md)     |
 
 If another model is root, retain it and use the task table without pretending it is one of these roots.
 

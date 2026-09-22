@@ -30,7 +30,7 @@ Use this section only after the user opts into Fable. Do not send Fable-written 
 
 Source: [Anthropic Fable 5.1 prompt guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1).
 
-## GPT-5.6 Sol
+## GPT-6.0 Sol
 
 When assigned a review, use Sol as a read-only analyst/reviewer for routine investigation, code and consumer mapping, evidence gathering, normal diagnosis, and phase correctness. Give it the objective, relevant diff or changed files, consumers and call sites to check, and failure paths in scope. A Sol root may implement ordinary work, integrate an approved removal, and check correctness; reviewer read-only mode is an assignment, not a Sol-wide prohibition. After an overall front-end design is established by Astra, Opus 5, or an opted-in Fable 5.1 run, Sol may implement and extend that design. Ask a fresh review run for a brief evidence-backed report: paths or symbols checked, confirmed defects with location and consequence, the observable end state that would resolve each defect, and a short list of residual risks that need runtime evidence.
 
