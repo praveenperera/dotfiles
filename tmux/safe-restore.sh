@@ -3,6 +3,12 @@
 
 set -euo pipefail
 
+if [[ "${1:-}" == "--rebuild-managed" ]]; then
+	command="$(tmux show-option -gqv @fleet_restore_command)"
+	command="${command:-cmd tmux workspace restore}"
+	exec tmux run-shell -b "$command"
+fi
+
 dir="${HOME}/.tmux/resurrect"
 last="${dir}/last"
 restore="${HOME}/.tmux/plugins/tmux-resurrect/scripts/restore.sh"
@@ -21,4 +27,4 @@ if [[ ! -s "$last" ]]; then
 	ln -fs "$(basename "$newest")" "$last"
 fi
 
-exec "$restore"
+exec "$restore" "$@"

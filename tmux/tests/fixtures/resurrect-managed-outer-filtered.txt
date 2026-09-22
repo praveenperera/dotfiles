@@ -1,0 +1,6 @@
+pane	fleet	0	0	:	0	local	:/repo	1	zsh	:zsh
+window	fleet	0	local	0	:	local-layout	off
+pane	fleet	2	1	:*	0	remote	:/repo	1	ssh	:exit
+pane	fleet	2	1	:*	1	notes	:/repo	0	zsh	:nvim notes.md
+pane	fleet	2	1	:*	2	tests	:/repo	0	zsh	:cargo test
+window	fleet	2	remote	1	:*	mixed-layout	off

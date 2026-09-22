@@ -15,6 +15,9 @@ use std::time::{Duration, Instant};
 use tempfile::{Builder as TempFileBuilder, NamedTempFile};
 use xshell::{cmd, Shell};
 
+mod managed;
+mod model;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum NotifyKind {
     /// Send BEL character (marks tmux window)
@@ -51,6 +54,16 @@ pub struct NotifyArgs {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum TmuxCmd {
+    /// Create, attach, or list canonical fleet sessions
+    Remote(managed::RemoteArgs),
+    /// Manage the shared Mini workspace
+    Workspace(managed::WorkspaceArgs),
+    /// Run or reconcile the workspace synchronization service
+    Sync(managed::SyncArgs),
+    /// Close the selected pane with managed-view semantics
+    Close(managed::CloseArgs),
+    /// Stop tracking a canonical remote session
+    Unsubscribe(managed::UnsubscribeArgs),
     /// Move current window after specified position (0 = move to first)
     MoveAfter {
         /// Window position to move after (0 moves to first position)
@@ -126,10 +139,17 @@ pub enum PickerKind {
     /// Fzf pane switcher
     #[command(alias = "p")]
     Pane,
+    /// Select a pane in the managed remote window
+    RemotePane,
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
     match flags.subcommand {
+        TmuxCmd::Remote(args) => managed::remote(args),
+        TmuxCmd::Workspace(args) => managed::workspace(args),
+        TmuxCmd::Sync(args) => managed::sync(args),
+        TmuxCmd::Close(args) => managed::close(args),
+        TmuxCmd::Unsubscribe(args) => managed::unsubscribe(args),
         TmuxCmd::MoveAfter { position } => move_after(sh, position),
         TmuxCmd::ClearBell => clear_bell(sh),
         TmuxCmd::SyncSsh { all } => sync_ssh(sh, all),
@@ -152,6 +172,7 @@ pub fn run_with_flags(sh: &Shell, flags: Tmux) -> Result<()> {
             PickerKind::Session => session_picker(sh),
             PickerKind::Action => action_picker(sh),
             PickerKind::Pane => pane_picker(sh),
+            PickerKind::RemotePane => managed::remote_pane_picker(sh),
         },
     }
 }
@@ -540,6 +561,10 @@ const ACTIONS: &[Action] = &[
         shortcut: "prefix + [",
     },
     Action {
+        name: "Remote Pane",
+        shortcut: "Alt+p in a managed view",
+    },
+    Action {
         name: "Move Tab to Session",
         shortcut: "prefix + M",
     },
@@ -585,7 +610,7 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
             cmd!(sh, "tmux new-window -c {path}").quiet().run()?;
         }
         "Close Pane" => {
-            cmd!(sh, "tmux kill-pane").quiet().run()?;
+            managed::close(managed::CloseArgs { target_pane: None })?;
         }
         "Zoom Pane" => {
             cmd!(sh, "tmux resize-pane -Z").quiet().run()?;
@@ -643,6 +668,9 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
         }
         "Scroll Back" => {
             cmd!(sh, "tmux copy-mode").quiet().run()?;
+        }
+        "Remote Pane" => {
+            managed::remote_pane_picker(sh)?;
         }
         "Move Tab to Session" => {
             let session_fmt = "#S";

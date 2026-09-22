@@ -1,0 +1,8 @@
+pane	workspace	0	1	:*	0	local	:/repo	1	zsh	:codex
+pane	workspace	0	1	:*	1	tests	:/repo	0	zsh	:cargo test
+window	workspace	0	main	1	:*	layout-canonical	off
+pane	__fleet_view_1	0	1	:*	0	remote	:/repo	1	ssh	:ssh code tmux attach
+window	__fleet_view_1	0	remote	1	:*	layout-view	off
+pane	__fleet_service	0	1	:*	0	sync	:/repo	1	cmd	:cmd tmux workspace sync
+window	__fleet_service	0	sync	1	:*	layout-service	off
+state	__fleet_view_1	workspace

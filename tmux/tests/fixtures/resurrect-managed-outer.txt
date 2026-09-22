@@ -1,0 +1,10 @@
+pane	fleet	0	0	:	0	local	:/repo	1	zsh	:zsh
+window	fleet	0	local	0	:	local-layout	off
+pane	fleet	2	1	:*	0	remote	:/repo	1	ssh	:ssh code tmux attach-session -t view
+pane	fleet	2	1	:*	1	notes	:/repo	0	zsh	:nvim notes.md
+pane	fleet	2	1	:*	2	tests	:/repo	0	zsh	:cargo test
+window	fleet	2	remote	1	:*	mixed-layout	off
+pane	__fleet_display	0	1	:*	0	display	:/repo	1	zsh	:zsh
+window	__fleet_display	0	display	1	:*	display-layout	off
+grouped_session	__fleet_display	fleet	:	:2
+state	__fleet_display	fleet
