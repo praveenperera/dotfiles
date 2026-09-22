@@ -12,6 +12,7 @@ t() {
   fi
 }
 alias td="tmux detach"
+source "$HOME/code/dotfiles/tmux/remote.zsh"
 
 # zsh
 alias zreload2=exec zsh
