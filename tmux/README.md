@@ -1,7 +1,7 @@
 # Fleet tmux workspace
 
-The Mini owns one shared tmux workspace. The `code` and `training` machines
-keep their normal tmux servers and sessions. A remote workspace tab is a view
+The Mini owns one shared tmux workspace. The `code` machine keeps its normal
+tmux server and sessions. A remote workspace tab is a view
 of an existing remote window. It does not start a second agent.
 
 ## Remote sessions
@@ -10,11 +10,9 @@ Use the existing commands from any normal shell:
 
 ```sh
 ttc                    # list sessions on code
-ttt                    # list sessions on training
 ttc my-task            # create or attach on code
-ttt my-task            # create or attach on training
 ttc -a my-task         # attach only, with an exact session name
-ttt --attach my-task
+ttc --attach my-task
 ```
 
 Use `--mode normal` for a normal remote tmux client. Use `--mode minimal` to
@@ -23,7 +21,7 @@ when the command runs in the managed workspace. It uses the normal view in
 other shells.
 
 Managed service and view sessions have reserved `__fleet_` names. The `ttc`
-and `ttt` lists omit them. A raw `tmux list-sessions` command can show them.
+list omits them. A raw `tmux list-sessions` command can show them.
 
 ## Shared workspace
 
@@ -61,7 +59,6 @@ Use these recovery commands on the Mini:
 cmd tmux workspace reconnect
 cmd tmux workspace restore
 cmd tmux unsubscribe code SESSION_ID
-cmd tmux unsubscribe training SESSION_ID
 cmd tmux workspace shutdown
 ```
 
@@ -70,8 +67,7 @@ cmd tmux workspace shutdown
 worker and removes only managed workspace state and views.
 
 Closing a mirrored tab with Cmd+W or prefix+x hides that tab and keeps the
-remote task alive. Run `ttc SESSION` or `ttt SESSION` again to restore its
-hidden windows. A direct `kill-window` is an intentional stop and ends that
+remote task alive. Run `ttc SESSION` again to restore its hidden windows. A direct `kill-window` is an intentional stop and ends that
 remote window everywhere.
 
 ## Remote panes and keys

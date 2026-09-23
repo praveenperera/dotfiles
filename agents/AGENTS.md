@@ -46,7 +46,7 @@
 - Add a blank line after a multi-line construct before the next statement or block, regardless of its closing syntax. Also use blank lines to separate distinct logical phases in a function. A related single-line statement can stay with the block that follows it when separation would add noise. Keep a short, single-phase body together, and do not add a blank line only before the final expression.
 - Keep test-only functions, types, and modules out of production code paths. Put them under `mod tests` or a dedicated `mod test_support`, and use `#[cfg(test)]` only to gate those modules.
 - Prefer turso + toasty orm with compile-time typed checked queries over raw sqlite
-- On the Linux containers `code` and `training`, keep Cargo build output off tmpfs. Do not set `CARGO_TARGET_DIR` to a `/tmp` path; use the configured disk-backed target directory. Use a separate disk-backed target directory for isolated concurrent work instead of cleaning a shared target directory while another build may run
+- On the Linux container `code`, keep Cargo build output off tmpfs. Do not set `CARGO_TARGET_DIR` to a `/tmp` path; use the configured disk-backed target directory. Use a separate disk-backed target directory for isolated concurrent work instead of cleaning a shared target directory while another build may run
 
 # Docker image builds
 

@@ -535,7 +535,6 @@ fn machine_name(machine: MachineId) -> &'static str {
     match machine {
         MachineId::Mini => "mini",
         MachineId::Code => "code",
-        MachineId::Training => "training",
     }
 }
 

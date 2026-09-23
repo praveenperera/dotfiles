@@ -6,7 +6,7 @@ Use a direct local shell or SSH command for short, non-interactive work that is 
 
 Use a named tmux session when work must survive a disconnect, can outlive the current interaction, needs an interactive prompt, or may require a user handoff. Agents, training jobs, and long-running builds normally meet these conditions. Create the session on the execution machine; a local tmux session that holds an SSH connection does not make remote work persistent.
 
-Connect to `praveen@code.local` for coding or `praveen@training.local` for training. From the host, enter `code` with the command below; use `training` instead for training:
+Connect to `praveen@code.local` for coding and training. From the host, enter `code` with the command below:
 
 ```bash
 incus exec code -- su - praveen
@@ -22,7 +22,7 @@ SSH calls that create or inspect tmux are session control steps. Run the persist
 
 ## Start and inspect
 
-These examples use `code.local`. Change the destination for training or host administration. Choose an unused name:
+These examples use `code.local`. Change the destination for host administration. Choose an unused name:
 
 ```bash
 ssh praveen@code.local 'tmux list-sessions'

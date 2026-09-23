@@ -10,6 +10,3 @@ _fleet_tmux() {
 
 # Connect to, import, or list tmux sessions on the coding container
 ttc() { _fleet_tmux code "$@"; }
-
-# Connect to, import, or list tmux sessions on the training container
-ttt() { _fleet_tmux training "$@"; }

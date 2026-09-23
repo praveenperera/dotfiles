@@ -7,14 +7,13 @@ description: Route container image builds between local Docker and rb, and manag
 
 Choose the build location before choosing the command:
 
-- On `code`, `training`, or another intended Linux build machine with Docker,
+- On `code` or another intended Linux build machine with Docker,
   use its local Docker daemon
 - On `ai5090`, enter the selected Incus container and use that container's
   Docker daemon; do not install Docker on the host
-- Build an image used only for GPU training directly in `training`
-- On the Mac, default to a named tmux session on `code`, except for a training
-  image, which belongs in a named tmux session on `training`; read the `fleet`
-  skill for remote session and checkout handling
+- On the Mac, default to a named tmux session on `code`, including for GPU
+  training images; read the `fleet` skill for remote session and checkout
+  handling
 - Use AWS through `rb build` only when the task needs parallel builds beyond the
   available local builder, or when the user explicitly requests AWS
 
@@ -32,7 +31,7 @@ docker buildx build -t example/app:latest --push .
 Do not send a single build to AWS only because the current shell is on the Mac.
 Move the work to `code` first. Keep public image publishing on Docker Hub.
 
-On `code` and `training`, keep BuildKit garbage collection enabled with a 50 GB cache limit.
+On `code`, keep BuildKit garbage collection enabled with a 50 GB cache limit.
 Inspect `docker system df` after an unusually large build batch. For immediate
 cleanup, remove only old unused build cache and dangling images:
 

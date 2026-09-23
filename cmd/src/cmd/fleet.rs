@@ -14,12 +14,12 @@ pub struct Fleet {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum FleetCmd {
-    /// Pull ~/code/dotfiles with git up on ai5090, code, and training
+    /// Pull ~/code/dotfiles with git up on ai5090 and code
     #[command(name = "dotfiles-up", visible_alias = "dfu")]
     DotfilesUp,
 
     /// Pull ~/code/dotfiles, then update Codex, Claude Code, Grok Build, and
-    /// any installed Homebased on ai5090, code, and training
+    /// any installed Homebased on ai5090 and code
     ///
     /// Without --all, this uses no sudo, changes no system packages, and
     /// restarts no services

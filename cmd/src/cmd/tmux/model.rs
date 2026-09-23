@@ -47,15 +47,16 @@ pub(super) struct ClientId(String);
 pub(super) enum MachineId {
     Mini,
     Code,
-    Training,
 }
 
 impl MachineId {
+    /// Machines that host remote tmux sessions for the Mini workspace
+    pub(super) const REMOTE: [Self; 1] = [Self::Code];
+
     pub(super) fn ssh_alias(self) -> Option<&'static str> {
         match self {
             Self::Mini => Some("praveen@Praveens-Mac-mini.local"),
             Self::Code => Some("code"),
-            Self::Training => Some("training"),
         }
     }
 }
@@ -247,8 +248,8 @@ mod tests {
     #[test]
     fn permits_approved_fleet_destinations_only() {
         assert_eq!(
-            SshDestination::approved(MachineId::Training).unwrap().alias,
-            "training"
+            SshDestination::approved(MachineId::Code).unwrap().alias,
+            "code"
         );
         assert_eq!(
             SshDestination::approved(MachineId::Mini).unwrap().alias,

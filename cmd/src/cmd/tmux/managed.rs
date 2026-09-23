@@ -657,7 +657,6 @@ fn parse_view_key(key: &str) -> Result<(MachineId, u32, &str)> {
     let mut fields = key.split(':');
     let machine = match fields.next() {
         Some("code") => MachineId::Code,
-        Some("training") => MachineId::Training,
         _ => return Err(eyre!("selected window is not a managed remote view")),
     };
     let generation = fields
@@ -733,7 +732,6 @@ fn resolve_remote_view(tty: &Path, source: PaneRef, key: &str) -> Result<Resolve
     let mut fields = key.split(':');
     let machine = match fields.next() {
         Some("code") => MachineId::Code,
-        Some("training") => MachineId::Training,
         _ => return Err(eyre!("managed view has an invalid machine")),
     };
     let expected_generation = fields
@@ -852,7 +850,7 @@ fn subscribe(machine: MachineId, session_name: &str) -> Result<()> {
 fn remote_session_identity(machine: MachineId, session: &str) -> Result<(u32, String)> {
     let destination = machine
         .ssh_alias()
-        .ok_or_else(|| eyre!("remote subscription requires code or training"))?;
+        .ok_or_else(|| eyre!("remote subscription requires code"))?;
     let output = remote_tmux_output(
         destination,
         [
@@ -878,7 +876,7 @@ fn remote_windows(subscription: &Subscription) -> Result<Vec<RemoteWindow>> {
     let destination = subscription
         .machine
         .ssh_alias()
-        .ok_or_else(|| eyre!("remote subscription requires code or training"))?;
+        .ok_or_else(|| eyre!("remote subscription requires code"))?;
     let identity = remote_session_identity(subscription.machine, &subscription.session_name)?;
     if identity
         != (
@@ -920,12 +918,12 @@ fn remote_windows(subscription: &Subscription) -> Result<Vec<RemoteWindow>> {
 
 pub(super) fn remote(args: RemoteArgs) -> Result<()> {
     if args.machine == MachineId::Mini {
-        return Err(eyre!("remote sessions require code or training"));
+        return Err(eyre!("remote sessions require code"));
     }
     let destination = args
         .machine
         .ssh_alias()
-        .ok_or_else(|| eyre!("remote sessions require code or training"))?;
+        .ok_or_else(|| eyre!("remote sessions require code"))?;
     if args.list || args.session.is_none() {
         return list_sessions(destination);
     }
@@ -1579,7 +1577,7 @@ fn sync_worker(workspace: &str) -> Result<()> {
     reconcile(workspace)?;
     let (sender, receiver) = mpsc::channel();
     let mut watchers = Vec::new();
-    for machine in [MachineId::Code, MachineId::Training] {
+    for machine in MachineId::REMOTE {
         let candidates = load_state()?
             .subscriptions
             .into_iter()
@@ -1869,7 +1867,7 @@ fn refresh_subscription(subscription: &mut Subscription) -> Result<()> {
     let destination = subscription
         .machine
         .ssh_alias()
-        .ok_or_else(|| eyre!("remote subscription requires code or training"))?;
+        .ok_or_else(|| eyre!("remote subscription requires code"))?;
     let output = remote_tmux_output(
         destination,
         [
@@ -2224,7 +2222,6 @@ fn machine_name(machine: MachineId) -> &'static str {
     match machine {
         MachineId::Mini => "mini",
         MachineId::Code => "code",
-        MachineId::Training => "training",
     }
 }
 
@@ -2397,10 +2394,10 @@ mod tests {
 
     #[test]
     fn reconciliation_removes_disappeared_remote_windows() {
-        let views = vec![view(MachineId::Training, 7, "@8", false)];
+        let views = vec![view(MachineId::Code, 7, "@8", false)];
         assert_eq!(
             reconcile_decisions([], &views),
-            vec![ReconcileDecision::Remove("training:7:@8".to_owned())]
+            vec![ReconcileDecision::Remove("code:7:@8".to_owned())]
         );
     }
 

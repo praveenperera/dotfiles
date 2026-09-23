@@ -35,34 +35,31 @@ class RemoteTmuxTests(unittest.TestCase):
             capture_output=True,
         )
 
-    def test_routes_each_public_command_to_its_machine(self):
-        for command, machine in (("ttc", "code"), ("ttt", "training")):
-            with self.subTest(command=command):
-                result = self.invoke(command)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(json.loads(result.stdout), ["tmux", "remote", machine])
+    def test_routes_public_command_to_code(self):
+        result = self.invoke("ttc")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), ["tmux", "remote", "code"])
 
     def test_forwards_legacy_and_explicit_mode_arguments_exactly(self):
         cases = (
             ("ttc", "two words'$(printf unsafe >&2)"),
-            ("ttt", "-a", "app"),
+            ("ttc", "-a", "app"),
             ("ttc", "--attach", "app"),
-            ("ttt", "--list"),
+            ("ttc", "--list"),
             ("ttc", "--mode", "minimal", "app"),
-            ("ttt", "--mode", "normal", "app"),
+            ("ttc", "--mode", "normal", "app"),
             ("ttc", "--help"),
         )
         for arguments in cases:
             with self.subTest(arguments=arguments):
                 result = self.invoke(*arguments)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                machine = "code" if arguments[0] == "ttc" else "training"
-                expected = ["tmux", "remote", machine, *arguments[1:]]
+                expected = ["tmux", "remote", "code", *arguments[1:]]
                 self.assertEqual(json.loads(result.stdout), expected)
 
     def test_cmd_failure_is_returned(self):
         self.environment["FLEET_TEST_CMD_EXIT"] = "255"
-        for arguments in (("ttc",), ("ttc", "app"), ("ttt", "-a", "app")):
+        for arguments in (("ttc",), ("ttc", "app"), ("ttc", "-a", "app")):
             with self.subTest(arguments=arguments):
                 self.assertEqual(self.invoke(*arguments).returncode, 255)
 
