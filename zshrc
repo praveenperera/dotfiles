@@ -111,7 +111,7 @@ alias ll="cmd codex launch a -c shared"
 alias llq="cmd codex launch a -c q"
 
 # sol high / luna
-alias lla="cmd codex launch a -c sol-high -- -m gpt-6-sol -c 'model_reasoning_effort=\"high\"'"
+alias lla="cmd codex launch a -c shared -- -m gpt-6-sol -c 'model_reasoning_effort=\"high\"'"
 alias lls="cmd codex launch a -c luna -- -m gpt-6-luna"
 
 # fast
