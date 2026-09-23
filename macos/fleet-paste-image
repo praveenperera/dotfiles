@@ -3,12 +3,14 @@ set -eu
 
 readonly cmd_path="/Users/praveen/.local/bin/cmd"
 
-if [[ ! -x "$cmd_path" ]]; then
-  print -u2 -- "Paste Image: $cmd_path is not installed"
-  exit 1
-fi
+main() {
+  if [[ ! -x "$cmd_path" ]]; then
+    print -u2 -- "Paste Image: $cmd_path is not installed"
+    return 1
+  fi
 
-terminal_context=$(/usr/bin/osascript <<'APPLESCRIPT'
+  local terminal_context
+  if terminal_context=$(/usr/bin/osascript <<'APPLESCRIPT' 2>&1
 tell application "Ghostty"
   if not frontmost then error "Ghostty is not focused"
   set activeWindow to front window
@@ -17,14 +19,70 @@ tell application "Ghostty"
   return (id of activeTerminal) & linefeed & (tty of activeTerminal)
 end tell
 APPLESCRIPT
-)
+  ); then
+    :
+  else
+    local exit_code=$?
+    print -r -- "$terminal_context"
+    return "$exit_code"
+  fi
 
-terminal_id=${terminal_context%%$'\n'*}
-terminal_tty=${terminal_context#*$'\n'}
+  local terminal_id=${terminal_context%%$'\n'*}
+  local terminal_tty=${terminal_context#*$'\n'}
+  if [[ -z "$terminal_id" || -z "$terminal_tty" || "$terminal_id" == "$terminal_tty" ]]; then
+    print -u2 -- "Paste Image: Ghostty did not return a focused terminal"
+    return 1
+  fi
 
-if [[ -z "$terminal_id" || -z "$terminal_tty" || "$terminal_id" == "$terminal_tty" ]]; then
-  print -u2 -- "Paste Image: Ghostty did not return a focused terminal"
-  exit 1
+  "$cmd_path" tmux paste-image --terminal-id "$terminal_id" --tty "$terminal_tty"
+}
+
+paste_image_error_reason() {
+  setopt local_options extended_glob
+
+  local output=${1//$'\e'\[[0-9;]#m/}
+  output=${output//$'\r'/}
+  if [[ "$output" == *"clipboard does not contain one image"* ]]; then
+    print -r -- "The clipboard does not contain one image"
+    return 0
+  fi
+
+  local line
+  local reason=""
+  for line in "${(@f)output}"; do
+    line=${line##[[:space:]]#}
+    if [[ "$line" == 0:* ]]; then
+      reason=${line#0:}
+      reason=${reason##[[:space:]]#}
+      break
+    fi
+    if [[ -z "$reason" && -n "$line" && "$line" != "Error:" ]]; then
+      reason=$line
+    fi
+  done
+
+  reason=${reason:-Paste Image failed with exit status $2}
+  if (( ${#reason} > 180 )); then
+    reason="${reason[1,177]}..."
+  fi
+  print -r -- "$reason"
+}
+
+show_failure_alert() {
+  /usr/bin/osascript - "$1" >/dev/null 2>&1 <<'APPLESCRIPT' || true
+on run argv
+  display alert "Paste Image failed" message (item 1 of argv) as critical
+end run
+APPLESCRIPT
+}
+
+if output=$(main 2>&1); then
+  if [[ -n "$output" ]]; then
+    print -r -- "$output"
+  fi
+else
+  exit_code=$?
+  print -u2 -r -- "$output"
+  show_failure_alert "$(paste_image_error_reason "$output" "$exit_code")"
+  exit "$exit_code"
 fi
-
-exec "$cmd_path" tmux paste-image --terminal-id "$terminal_id" --tty "$terminal_tty"

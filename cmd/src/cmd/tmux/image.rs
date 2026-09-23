@@ -57,8 +57,8 @@ pub(super) fn paste_image(args: PasteImageArgs) -> Result<()> {
     validate_terminal_id(&args.terminal_id)?;
     validate_tty(&args.tty)?;
     let _lock = OperationLock::acquire(&args.tty)?;
-    let target = resolve_target(&args.tty)?;
     let image = capture_image(args.source_file.as_deref())?;
+    let target = resolve_target(&args.tty)?;
     let destination = upload(&image, &target, &random_id())?;
 
     if let Err(error) = revalidate_ghostty_focus(&args.terminal_id, &args.tty) {
@@ -654,6 +654,20 @@ mod tests {
         text.write_all(b"not an image").unwrap();
         assert!(validate_image(text.path()).is_err());
         assert!(validate_image(tempfile::NamedTempFile::new().unwrap().path()).is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_image_before_resolving_route() {
+        let mut text = tempfile::NamedTempFile::new().unwrap();
+        text.write_all(b"not an image").unwrap();
+        let error = paste_image(PasteImageArgs {
+            terminal_id: "terminal-7".to_owned(),
+            tty: PathBuf::from(format!("/dev/cmd-image-{}", random_id())),
+            source_file: Some(text.path().to_path_buf()),
+        })
+        .unwrap_err();
+
+        assert!(format!("{error:#}").contains("not a supported PNG, JPEG, or GIF image"));
     }
 
     #[test]
