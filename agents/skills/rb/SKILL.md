@@ -1,6 +1,6 @@
 ---
 name: rb
-description: Route container image builds between local Docker and rb, and manage rb builders. Use for Docker/Buildx builds or rb operations, not image runs, compose-only tasks, or Dockerfile-only edits.
+description: Run only when on MacOS machines. Route container image builds between local Docker and rb, and manage rb builders. Use for Docker/Buildx builds or rb operations, not image runs, compose-only tasks, or Dockerfile-only edits.
 ---
 
 # rb - Container image builds

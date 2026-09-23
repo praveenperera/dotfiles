@@ -50,7 +50,8 @@
 
 # Docker image builds
 
-- On mac use `rb` to run create docker images on the code box, if on a linux box just do the build directly, if in a project that uses another builder like `sht` use that by default
+- On mac use `rb` to run create docker images if in a project that uses another builder like `sht` use that by default
+- If on code/ai5090 or another linux box just build the docker image directly on the machine
 - Publish public images to Docker Hub
 
 # Verification
