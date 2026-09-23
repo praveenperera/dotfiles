@@ -97,11 +97,17 @@ Install it on each Mac:
 3. Keep this repository at `/Users/praveen/code/dotfiles`.
 4. Open [Paste Image.shortcut](../macos/Paste%20Image.shortcut) and add it to
    Shortcuts.
-5. In the shortcut details, set Cmd+Shift+V as its keyboard shortcut.
-6. In Shortcuts settings, allow scripts to run when macOS asks.
-7. Reload Ghostty configuration. Keep `macos-shortcuts = ask`, and approve the
-   Ghostty automation request when it appears.
-8. Allow Shortcuts to automate Ghostty in **System Settings > Privacy &
+5. If Shortcuts uses Cmd+Shift+V for **Edit > Set Variable**, change that menu
+   key first. In **System Settings > Keyboard > Keyboard Shortcuts > App
+   Shortcuts**, select Shortcuts, enter `Set Variable` as the menu title, and
+   assign Cmd+Option+Shift+V. Restart Shortcuts.
+6. Open the shortcut's **Details** panel and select **Add Keyboard Shortcut**.
+   Press Cmd+Shift+V in the key recorder, not in the action editor.
+7. In Shortcuts settings, allow scripts to run when macOS asks.
+8. Reload Ghostty configuration. Its default Cmd+Shift+V binding must be
+   unbound so the shortcut receives the key. Keep `macos-shortcuts = ask`, and
+   approve the Ghostty automation request when it appears.
+9. Allow Shortcuts to automate Ghostty in **System Settings > Privacy &
    Security > Automation** if macOS asks.
 
 The unsigned source is
@@ -123,5 +129,5 @@ there so the agent can read them. The maximum image size is 20 MiB. A missing
 image, failed transfer, changed focus, stale route, or cancelled picker inserts
 nothing.
 
-Apply the same eight setup steps on the Mini and Air. Permissions are local to
+Apply the same setup steps on the Mini and Air. Permissions are local to
 each Mac, so approval on one Mac does not approve the other.
