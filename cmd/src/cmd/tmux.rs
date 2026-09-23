@@ -720,7 +720,7 @@ fn action(sh: &Shell, name: &str) -> Result<()> {
     Ok(())
 }
 
-const NAME_MODEL: &str = "gpt-5.3-codex-spark";
+const NAME_MODEL: &str = "gpt-6-luna";
 const THREAD_TITLE_MAX_CHARS: usize = 36;
 const THREAD_TITLE_PROMPT_MAX_BYTES: usize = 960;
 const THREAD_TITLE_RECENT_MESSAGES: usize = 8;
@@ -1598,7 +1598,7 @@ fn run_codex_name_model(cwd: &Path, launch_home: Option<&Path>, prompt: &str) ->
             "--model",
             NAME_MODEL,
             "--config",
-            "model_reasoning_effort=\"xhigh\"",
+            "model_reasoning_effort=\"low\"",
             "--cd",
         ])
         .arg(cwd)
