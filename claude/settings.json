@@ -43,9 +43,10 @@
       "mcp__pencil"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "defaultMode": "auto"
   },
-  "model": "claude-fable-5[1m]",
+  "model": "opus",
   "hooks": {
     "Stop": [
       {
@@ -81,9 +82,16 @@
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
+  "switchModelsOnFlag": true,
+  "crossSessionInbound": "accept",
   "agentPushNotifEnabled": true,
   "voiceEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
+  },
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    }
   }
 }
