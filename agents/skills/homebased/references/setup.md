@@ -18,12 +18,40 @@ The dashboard is embedded in the binary at compile time, so `just web-build` mus
 HOMEBASED_WEB_LISTEN=0.0.0.0:7677 homebased daemon install --dry-run
 HOMEBASED_WEB_LISTEN=0.0.0.0:7677 homebased daemon install
 homebased --json daemon status        # {"socket": "up", "in_flight": 0, "home": "...", "web": "http://0.0.0.0:7677"}
-# without HOMEBASED_WEB_LISTEN, "web" is null and the dashboard is off
+# without HOMEBASED_WEB_LISTEN, "web" is null and other machines cannot reach Fleet routes
 ```
 
 On Praveen's machines, always preserve `HOMEBASED_WEB_LISTEN=0.0.0.0:7677` during install or reinstall. The `main:7677` dashboard depends on this LAN bind. Verify both `http://main:7677/` and `/v1/status` after installation.
 
-The unit's `ExecStart` points at the binary that ran `install`, so run it as the installed `homebased`, not `target/debug/homebased`. Install is an idempotent apply. Run it from a shell where `codex`, `claude`, `grok`, and the project toolchains are on `PATH`: the installer bakes that `PATH` and the absolute agent paths (`HOMEBASED_CODEX`, `HOMEBASED_CLAUDE`, `HOMEBASED_GROK`) into the unit. Re-run it after `PATH` changes. An agent that is not on `PATH` at install time is silently left out of the unit; only the unit's `PATH` is left to find it later.
+The unit's `ExecStart` points at the binary that ran `install`, so run it as the installed `homebased`, not `target/debug/homebased`. Install is an idempotent apply. Run it from a shell where `codex`, `claude`, `grok`, `opencode`, and the project toolchains are on `PATH`: the installer bakes that `PATH` and the absolute agent paths (`HOMEBASED_CODEX`, `HOMEBASED_CLAUDE`, `HOMEBASED_GROK`, and `HOMEBASED_OPENCODE`) into the unit. Re-run it after `PATH` changes. An agent that is not on `PATH` at install time is silently left out of the unit; only the unit's `PATH` is left to find it later.
+
+## Config file and host unit
+
+The default config is `~/.config/homebased/config.toml`. It is optional; if it
+is absent, Fleet is disabled. A path selected with `--config` or
+`HOMEBASED_CONFIG` must exist and pass validation before install.
+
+```bash
+homebased --config /etc/homebased/config.toml --json config validate
+homebased --config /etc/homebased/config.toml daemon install --dry-run
+homebased --config /etc/homebased/config.toml daemon install
+```
+
+When you select an explicit config path, `daemon install` writes its absolute
+path as `HOMEBASED_CONFIG` in the systemd unit or LaunchAgent. The daemon uses
+that file after logout, host restart, or `homebased daemon restart`. If you
+reinstall the unit, pass the same `--config` path or set `HOMEBASED_CONFIG`
+again. Without an explicit path, the unit uses the default config path.
+
+After a config edit, restart the daemon. Keep each machine name unique and
+enable Fleet in the config on every machine that must join. See [fleet.md](fleet.md)
+for the config shape and machine commands.
+
+OpenCode v2 uses `opencode run --standalone`. Keep its credentials in the OpenCode user environment and install from the same user shell. Homebased passes the selected `provider/model#variant` value to OpenCode and gives the child its managed work permissions. Run the ignored CLI smoke check after an OpenCode upgrade:
+
+```bash
+HOMEBASED_OPENCODE="$HOME/.opencode/bin/opencode" just smoke-cli
+```
 
 - Linux: user unit `~/.config/systemd/user/homebased.service`, `KillMode=process`, `Restart=on-failure`. If install warns that lingering is off, run `loginctl enable-linger $USER` so the daemon survives logout.
 - macOS: `~/Library/LaunchAgents/dev.praveen.homebased.plist` with `KeepAlive` and `AbandonProcessGroup`.
@@ -32,21 +60,21 @@ State directory: `--home`, else `HOMEBASED_HOME`, else `$XDG_STATE_HOME/homebase
 
 ## Dashboard listener
 
-`daemon serve` does not bind the dashboard unless `--web-listen` / `HOMEBASED_WEB_LISTEN` is a host:port:
+`daemon serve` does not bind the HTTP listener unless `--web-listen` / `HOMEBASED_WEB_LISTEN` is a host:port. Fleet peers use this same listener:
 
 ```bash
 homebased daemon serve                               # socket only; dashboard off
-homebased daemon serve --web-listen 127.0.0.1:7677   # local dashboard
-HOMEBASED_WEB_LISTEN=127.0.0.1:9000 homebased daemon serve
+homebased daemon serve --web-listen code:7677        # host-based listener
+HOMEBASED_WEB_LISTEN=0.0.0.0:9000 homebased daemon serve
 HOMEBASED_WEB_LISTEN=100.x.y.z:7677 homebased daemon install   # Tailscale bind
 HOMEBASED_WEB_LISTEN=0.0.0.0:7677 homebased daemon install   # bake a LAN bind into the host unit
 ```
 
-`daemon install` copies `HOMEBASED_WEB_LISTEN` from the installing shell into the unit, next to `PATH` and the agent paths, and rejects an invalid value. If the env is unset, the unit does not start a dashboard. Re-run `install` to change it.
+`daemon install` copies `HOMEBASED_WEB_LISTEN` from the installing shell into the unit, next to `PATH`, the agent paths, and an explicit `HOMEBASED_CONFIG` path. It rejects an invalid listener or config. If the listener is unset, the unit does not start an HTTP listener, so other machines cannot reach Fleet routes. Re-run `install` to change the listener.
 
 There is no application login or access token. Network reachability is the access boundary: any peer that can reach the dashboard can read task data and every regular file available to the daemon user through the device-wide file browser. A second content-origin port serves raw files (text, raster images, and fully active HTML inline; other types download). The dashboard and content origins do not grant CORS access to each other. Accepted `Host` values are `localhost`, single-label LAN names, mDNS names (`*.local`), numeric local and Tailscale addresses, the configured bind address, and Tailscale MagicDNS names (`*.ts.net`). Unexpected hosts are rejected.
 
-Bind a non-loopback address only on a trusted network. A bind failure (busy port) is a warning: the daemon keeps serving the socket and `daemon status` reports `"web": null`.
+The listener has no application login or access token. It exposes Fleet routes and the optional dashboard. Bind a non-loopback address only on a trusted network. A bind failure (busy port) is a warning: the daemon keeps serving the socket and `daemon status` reports `"web": null`.
 
 ## Upgrade
 
