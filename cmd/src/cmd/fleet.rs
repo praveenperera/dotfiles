@@ -3,6 +3,8 @@ use eyre::{eyre, Result, WrapErr};
 use std::process::{Command, Stdio};
 use xshell::{cmd, Shell};
 
+use crate::command_exists;
+
 const HOST: &str = "praveen@ai5090";
 const UPDATE_COMMAND: &str = "/home/praveen/.local/bin/fleet-update";
 
@@ -19,13 +21,14 @@ pub enum FleetCmd {
     DotfilesUp,
 
     /// Pull ~/code/dotfiles, then update Codex, Claude Code, Grok Build, and
-    /// any installed Homebased on ai5090 and code
+    /// installed Homebased on ai5090 and code; update Homebased on the calling
+    /// machine too if it is installed and was not updated remotely
     ///
-    /// Without --all, this uses no sudo, changes no system packages, and
-    /// restarts no services
+    /// Without --all, this uses no sudo and changes no system packages;
+    /// running Homebased daemons restart after their update
     Update {
         /// Also upgrade APT packages and update T3 Code; this can use sudo and
-        /// restart T3 Code and running Homebased daemons
+        /// restart T3 Code
         #[arg(long)]
         all: bool,
     },
@@ -34,10 +37,9 @@ pub enum FleetCmd {
 /// Selects how much of the fleet `fleet-update` is allowed to change
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum UpdateMode {
-    /// User-owned tools only: no sudo, APT, T3 Code, or service restart
+    /// User-owned tools only: no sudo, APT, or T3 Code
     Safe,
-    /// Safe mode plus APT packages, T3 Code, sudo, and service restarts,
-    /// including running Homebased daemons
+    /// Safe mode plus APT packages, T3 Code, sudo, and service restarts
     Full,
 }
 
@@ -89,8 +91,13 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
     require_update_command(local)?;
 
     let (program, args) = update_argv(local, mode);
+    run_attached(program, &args)?;
 
-    run_attached(program, &args)
+    if !updated_by_remote_script(sh) && command_exists(sh, "homebased") {
+        run_attached("homebased", &["update"])?;
+    }
+
+    Ok(())
 }
 
 fn require_update_command(on_ai5090: bool) -> Result<()> {
@@ -185,13 +192,23 @@ fn on_ai5090(sh: &Shell) -> bool {
         .is_ok_and(|name| is_ai5090_host(&name))
 }
 
+fn updated_by_remote_script(sh: &Shell) -> bool {
+    cmd!(sh, "hostname -s")
+        .read()
+        .is_ok_and(|name| is_remote_updated_host(&name))
+}
+
 fn is_ai5090_host(hostname: &str) -> bool {
     hostname.trim() == "ai5090"
 }
 
+fn is_remote_updated_host(hostname: &str) -> bool {
+    matches!(hostname.trim(), "ai5090" | "code")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{is_ai5090_host, update_argv, UpdateMode};
+    use super::{is_ai5090_host, is_remote_updated_host, update_argv, UpdateMode};
 
     #[test]
     fn treats_ai5090_as_local() {
@@ -202,7 +219,14 @@ mod tests {
     #[test]
     fn treats_other_hosts_as_remote() {
         assert!(!is_ai5090_host("code"));
-        assert!(!is_ai5090_host("Praveens-Mac-mini"));
+        assert!(!is_ai5090_host("workstation"));
+    }
+
+    #[test]
+    fn local_homebased_update_skips_remote_machines() {
+        assert!(is_remote_updated_host("ai5090"));
+        assert!(is_remote_updated_host("code\n"));
+        assert!(!is_remote_updated_host("workstation"));
     }
 
     #[test]
