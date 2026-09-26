@@ -84,6 +84,7 @@
       "effortLevel": "high"
     }
   },
+  "autoMemoryEnabled": false,
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
@@ -93,6 +94,5 @@
   "voiceEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
-  },
-  "autoMemoryEnabled": false
+  }
 }
