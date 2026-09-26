@@ -8,6 +8,9 @@ use crate::command_exists;
 const HOST: &str = "praveen@ai5090";
 const UPDATE_COMMAND: &str = "/home/praveen/.local/bin/fleet-update";
 
+/// Terminal type for ssh and tmux when the caller has no usable one
+const FALLBACK_TERM: &str = "xterm-256color";
+
 #[derive(Debug, Clone, Parser)]
 pub struct Fleet {
     #[command(subcommand)]
@@ -163,7 +166,14 @@ fn run_attached(program: &str, args: &[&str]) -> Result<()> {
     // /dev/null and then ssh -t refuses to allocate a pty
     eprintln!("$ {program} {}", args.join(" "));
 
-    let status = Command::new(program)
+    let mut command = Command::new(program);
+    // ssh passes TERM to the remote pty, and tmux refuses to start when it
+    // is unset or dumb, as it is under agents and other non-interactive shells
+    if let Some(term) = fallback_term(std::env::var("TERM").ok().as_deref()) {
+        command.env("TERM", term);
+    }
+
+    let status = command
         .args(args)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
@@ -184,6 +194,14 @@ fn run_attached(program: &str, args: &[&str]) -> Result<()> {
     Err(eyre!(
         "command exited with non-zero code `{displayed}`: {code}"
     ))
+}
+
+/// Terminal type to set when `current` cannot drive tmux
+fn fallback_term(current: Option<&str>) -> Option<&'static str> {
+    match current.map(str::trim) {
+        None | Some("" | "dumb") => Some(FALLBACK_TERM),
+        Some(_) => None,
+    }
 }
 
 fn on_ai5090(sh: &Shell) -> bool {
@@ -208,7 +226,18 @@ fn is_remote_updated_host(hostname: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_ai5090_host, is_remote_updated_host, update_argv, UpdateMode};
+    use super::{
+        fallback_term, is_ai5090_host, is_remote_updated_host, update_argv, UpdateMode,
+        FALLBACK_TERM,
+    };
+
+    #[test]
+    fn sets_a_terminal_type_only_when_tmux_cannot_use_the_current_one() {
+        assert_eq!(fallback_term(None), Some(FALLBACK_TERM));
+        assert_eq!(fallback_term(Some("")), Some(FALLBACK_TERM));
+        assert_eq!(fallback_term(Some("dumb")), Some(FALLBACK_TERM));
+        assert_eq!(fallback_term(Some("xterm-ghostty")), None);
+    }
 
     #[test]
     fn treats_ai5090_as_local() {
