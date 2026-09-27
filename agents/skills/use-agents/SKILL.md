@@ -57,7 +57,7 @@ A common split: the root or Opus 5.5 decides the design (with an optional Astra 
 
 ## Opus 5.5 effort levels
 
-Use only `low`, `medium`, and `high` for Opus 5.5. Never use `xhigh` or `max`. The default is `medium`. A level spends more thinking on Opus 5.5 than the same level did on Opus 5, so do not carry over Opus 5 habits.
+Use mostly `medium` and `high` for Opus 5.5. Use `low` and `xhigh` only where the table below says. Never use `max`. The default is `medium`. A level spends more thinking on Opus 5.5 than the same level did on Opus 5, so do not carry over Opus 5 habits.
 
 Effort controls how much the model verifies, tests edge cases, and uses its own judgment. It is not a general quality dial. Higher effort reduces failures from missed edge cases, untested bugs, and incomplete fixes. It does not fix a wrong approach or a misread requirement; fix the prompt, spec, or model choice instead.
 
@@ -66,14 +66,15 @@ Effort controls how much the model verifies, tests edge cases, and uses its own 
 | `low`    | Fast work where the user stays in the loop: brainstorming, sketches, easy or mechanical changes, and a first implementation of a detailed spec that the root will review |
 | `medium` | Regular feature implementation with a clear spec                                                                                                                         |
 | `high`   | Work where verification or edge cases matter: brownfield bug fixes, review, and the verify-and-test pass after a lower-effort implementation                             |
+| `xhigh`  | Rare. Hard problems with many hidden edge cases, such as storage engines, parsers, sanitizers, concurrency, and performance work, when `high` clearly falls short        |
 
 Guidance for delegation:
 
-- A detailed spec makes effort levels converge. With a precise prompt, `low` or `medium` implementation is usually enough; save higher effort for verification
+- A detailed spec makes effort levels converge. With a precise prompt, `medium` implementation is usually enough; save higher effort for verification
 - A delegate has no user in the loop. When it must make judgment calls on its own, such as choosing between two valid readings of the data, `high` does that better than `low`
 - Give the delegate a way to check its work (tests, a reference implementation, a repro) before raising effort
-- Pattern that works well: implement at `low` or `medium`, review in the root, then run a fresh Opus 5.5 pass at `high` to verify and test edge cases
-- If Opus 5.5 at `high` hits the same problem twice, the approach is probably wrong; return the decision to the root, optionally with an Astra second opinion, instead of raising effort
+- Pattern that works well: implement at `medium`, review in the root, then run a fresh Opus 5.5 pass at `high` to verify and test edge cases
+- If Opus 5.5 at `xhigh` hits the same problem twice, the approach is probably wrong; return the decision to the root, optionally with an Astra second opinion, instead of raising effort
 
 ## Run delegates through homebased
 
