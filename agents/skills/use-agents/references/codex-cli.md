@@ -99,7 +99,7 @@ Mode: <read-only analysis|implementation>
 
 ## Run a fresh read-only delegate
 
-Use Astra only for a high-level design or architecture decision: `low` for a focused decision, `high` for a broad or high-risk one. Use Luna at `max` for a bounded read-only review with a concrete checklist:
+Use Astra only as a read-only advisor for a second opinion on a big design or architecture decision: `low` for a focused question, `high` for a broad or high-risk one. The root keeps the decision. Use Luna at `max` for a bounded read-only review with a concrete checklist:
 
 ```sh
 codex --ask-for-approval never exec \

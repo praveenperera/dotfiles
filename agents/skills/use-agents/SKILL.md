@@ -20,13 +20,13 @@ The root thread keeps scope, design decisions, integration, and acceptance. Give
 
 ## Roster
 
-| Model                                          | Use for                                                                                                                                                                               | Launch                                                                                                                                     |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Claude Opus 5.5                                | Best all-around agent. Diagnosis, brownfield bug fixes, implementation that needs judgment, front-end design, review, and verification                                                | Claude Agent tool with `model: opus`, or [claude-cli.md](references/claude-cli.md) with `claude-opus-5-5` when a specific effort is needed |
-| GPT-6 Luna (`gpt-6-luna`) at `max`             | Implementation after the design is decided: bounded features, tests, fixtures, migrations, renames, repeated transforms, and boilerplate that follows an existing pattern             | [codex-native.md](references/codex-native.md) in Codex; [codex-cli.md](references/codex-cli.md) elsewhere                                  |
-| GPT-6 Astra (`gpt-6-astra`) at `low` or `high` | Reserved for big high-level decisions: architecture, domain and API design, and hard tradeoffs with long-term cost. `low` for a focused decision, `high` for a broad or high-risk one | Same as Luna                                                                                                                               |
-| Grok 4.6 (`grok-4.6`)                          | Implementation when quality matters more than usage; X and live web research                                                                                                          | [grok-cli.md](references/grok-cli.md); `ask-grok` skill for questions and X lookups                                                        |
-| Grok 4.5 (`grok-4.5`)                          | Implementation, and the default Grok for long or high-volume work because it has better usage limits                                                                                  | [grok-cli.md](references/grok-cli.md) with `--model grok-4.5`                                                                              |
+| Model                                          | Use for                                                                                                                                                                                                                    | Launch                                                                                                                                     |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Claude Opus 5.5                                | Best all-around agent. Makes design and architecture decisions for most tasks. Diagnosis, brownfield bug fixes, implementation that needs judgment, front-end design, review, and verification                             | Claude Agent tool with `model: opus`, or [claude-cli.md](references/claude-cli.md) with `claude-opus-5-5` when a specific effort is needed |
+| GPT-6 Luna (`gpt-6-luna`) at `max`             | Implementation after the design is decided: bounded features, tests, fixtures, migrations, renames, repeated transforms, and boilerplate that follows an existing pattern                                                  | [codex-native.md](references/codex-native.md) in Codex; [codex-cli.md](references/codex-cli.md) elsewhere                                  |
+| GPT-6 Astra (`gpt-6-astra`) at `low` or `high` | Advisor and second opinion only, read-only. Consult it on a big architecture or design decision, or when the root is stuck. The root keeps the decision. `low` for a focused question, `high` for a broad or high-risk one | Same as Luna                                                                                                                               |
+| Grok 4.6 (`grok-4.6`)                          | Implementation when quality matters more than usage; X and live web research                                                                                                                                               | [grok-cli.md](references/grok-cli.md); `ask-grok` skill for questions and X lookups                                                        |
+| Grok 4.5 (`grok-4.5`)                          | Implementation, and the default Grok for long or high-volume work because it has better usage limits                                                                                                                       | [grok-cli.md](references/grok-cli.md) with `--model grok-4.5`                                                                              |
 
 Do not use these unless the user names them: Claude Fable (any version), GPT-6 Sol, GPT-5.6 Sol, and Grok 4.7.
 
@@ -47,11 +47,11 @@ Send work to **Opus 5.5** when any of these are true:
 - the work is review, verification, or edge-case testing of code another agent wrote
 - a Luna pass failed twice on the same defect
 
-A common split: Astra or the root decides the design, Luna Max implements it in bounded passes, and a fresh Opus 5.5 run at `high` reviews and tests the result. Luna cannot replace diagnosis, architecture, or final acceptance.
+A common split: the root or Opus 5.5 decides the design (with an optional Astra second opinion on a big decision), Luna Max implements it in bounded passes, and a fresh Opus 5.5 run at `high` reviews and tests the result. Luna cannot replace diagnosis, architecture, or final acceptance.
 
 ## Route inside one provider
 
-- **OpenAI only:** Astra `low` or `high` for design decisions, Luna Max for implementation and tests. For review, use a fresh Luna Max run with a read-only sandbox and a concrete checklist; escalate a hard or high-risk question to Astra
+- **OpenAI only:** the root decides the design, Luna Max implements and tests, and Astra `low` or `high` gives a read-only second opinion on big or hard decisions. For review, use a fresh Luna Max run with a read-only sandbox and a concrete checklist
 - **Claude only:** Opus 5.5 for everything; vary effort by task (see below). Use lower effort for mechanical passes and `high` for review and verification
 - **Grok only:** Grok 4.5 for bulk and long implementation, Grok 4.6 for work where quality matters or a 4.5 pass fell short. Keep design decisions in the root
 
@@ -73,7 +73,7 @@ Guidance for delegation:
 - A delegate has no user in the loop. When it must make judgment calls on its own, such as choosing between two valid readings of the data, `high` does that better than `low`
 - Give the delegate a way to check its work (tests, a reference implementation, a repro) before raising effort
 - Pattern that works well: implement at `low` or `medium`, review in the root, then run a fresh Opus 5.5 pass at `high` to verify and test edge cases
-- If Opus 5.5 at `high` hits the same problem twice, the approach is probably wrong; return the decision to the root or to Astra instead of raising effort
+- If Opus 5.5 at `high` hits the same problem twice, the approach is probably wrong; return the decision to the root, optionally with an Astra second opinion, instead of raising effort
 
 Sources: [Spending your effort](https://claude.dev/blog/spending-your-effort/) (Thariq Shihipar, 2026-09-25) and [What a task costs on Opus 5.5](https://claude.dev/blog/what-a-task-costs-on-opus-5-5/) (Addy Osmani, 2026-09-25).
 
