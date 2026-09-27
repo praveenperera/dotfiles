@@ -9,7 +9,7 @@ command -v codex
 codex --version
 codex login status
 codex exec --help
-codex debug models | rg 'gpt-6-astra|gpt-5\.6-sol|gpt-5\.6-luna'
+codex debug models | rg 'gpt-6-astra|gpt-6-luna'
 ```
 
 Do not modify login or global configuration automatically. If authentication or the requested model is unavailable, report the exact failure.
@@ -20,7 +20,7 @@ Run from the repository root:
 
 ```sh
 delegate_run_id="$(date +%Y%m%d-%H%M%S)-$$"
-delegate_dir="_scratch/subagent-workflow/$delegate_run_id"
+delegate_dir="_scratch/use-agents/$delegate_run_id"
 mkdir -p "$delegate_dir/prompts" "$delegate_dir/raw" "$delegate_dir/repository"
 
 git status --short > "$delegate_dir/repository/baseline-status.txt"
@@ -99,14 +99,14 @@ Mode: <read-only analysis|implementation>
 
 ## Run a fresh read-only delegate
 
-Use Astra at `medium` by default or `low` for focused analysis; use `high` or above only when the user explicitly requests that effort. Use Sol at `high` for a per-phase review in a multi-phase goal. Use Luna at `max` for a bounded read with a cheap check, and at `low` for high-volume exact mechanical reads. Honor an active user choice of Luna `max`:
+Use Astra only for a high-level design or architecture decision: `low` for a focused decision, `high` for a broad or high-risk one. Use Luna at `max` for a bounded read-only review with a concrete checklist:
 
 ```sh
 codex --ask-for-approval never exec \
   --cd "$PWD" \
   --ephemeral \
   --model gpt-6-astra \
-  --config 'model_reasoning_effort="medium"' \
+  --config 'model_reasoning_effort="low"' \
   --sandbox read-only \
   --output-last-message "$delegate_dir/raw/final.md" \
   - \
@@ -117,18 +117,18 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-For a Sol phase review, change the model to `gpt-6-sol`, effort to `high`, and keep the sandbox read-only. For bounded work, change the model to `gpt-6-luna` and effort to `max`. Use `low` for bulk exact transformations only when no user directive requires `max`. Do not increase Astra to `high` or above without an explicit user request for that effort.
+For a Luna review, change the model to `gpt-6-luna` and effort to `max`, and keep the sandbox read-only.
 
 ## Run a fresh implementation delegate
 
-Use workspace-write only after assigning an exact owned scope. The Astra command below is for a hard fix coupled to its diagnosis. Use Luna `max` for ordinary bounded implementation. Use [Fable 5.1](claude-cli.md) only after the user opts in:
+Use workspace-write only after assigning an exact owned scope. Luna `max` is the implementation worker; do not send implementation to Astra:
 
 ```sh
 codex --ask-for-approval never exec \
   --cd "$PWD" \
   --ephemeral \
-  --model gpt-6-astra \
-  --config 'model_reasoning_effort="medium"' \
+  --model gpt-6-luna \
+  --config 'model_reasoning_effort="max"' \
   --sandbox workspace-write \
   --output-last-message "$delegate_dir/raw/final.md" \
   - \

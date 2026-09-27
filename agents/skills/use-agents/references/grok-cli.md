@@ -7,13 +7,13 @@ Confirm the installed CLI, authentication, model availability, and exact flags:
 ```sh
 command -v grok
 grok --version
-grok models | rg 'grok-4\.6'
+grok models | rg 'grok-4\.[56]'
 grok --help
 grok inspect
 grok inspect --json
 ```
 
-Save both `grok inspect` forms with the run artifacts. They name loaded permission sources and hooks. Do not modify login or global configuration automatically. If authentication, always-approve mode, the requested sandbox, or `grok-4.6` is unavailable, report the exact failure instead of substituting another model or running without a sandbox.
+Save both `grok inspect` forms with the run artifacts. They name loaded permission sources and hooks. Do not modify login or global configuration automatically. If authentication, always-approve mode, the requested sandbox, or the requested Grok model is unavailable, report the exact failure instead of substituting another model or running without a sandbox.
 
 ## Permission preflight invariant
 
@@ -37,6 +37,8 @@ Use the run directory, baseline capture, prompt contract, and postflight capture
 
 Grok headless mode starts a fresh session by default. Do not resume a prior session for an independent pass. Always pass `--no-subagents`; the orchestrator owns decomposition and integration.
 
+Use `grok-4.5` by default for long or high-volume work because it has better usage limits. Use `grok-4.6` when quality matters more than usage. Do not use `grok-4.7`, the CLI default, unless the user names it; always pass `--model`.
+
 Use `high` reasoning by default. Use `xhigh` only when the user requests it or when a consequential pass has evidence that the added cost and latency are useful. Do not silently lower the effort.
 
 ## Run a fresh read-only delegate
@@ -51,7 +53,7 @@ grok \
   --prompt-file "$delegate_dir/prompts/task.md" \
   --cwd "$PWD" \
   --session-id "$delegate_session_id" \
-  --model grok-4.6 \
+  --model grok-4.5 \
   --reasoning-effort high \
   --always-approve \
   --sandbox read-only \
@@ -95,7 +97,7 @@ grok \
   --prompt-file "$delegate_dir/prompts/task.md" \
   --cwd "$PWD" \
   --session-id "$delegate_session_id" \
-  --model grok-4.6 \
+  --model grok-4.5 \
   --reasoning-effort high \
   --always-approve \
   --sandbox workspace \

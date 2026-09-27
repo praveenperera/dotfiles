@@ -2,7 +2,7 @@
 
 ## Select the model and transport
 
-Launch Fable only after the user opts in; a root suggestion is not enough. Use a native Claude Agent tool when it exposes the requested model. Verify that a `fable` alias resolves to Fable 5.1; do not assume an older alias or a client name identifies the version. For the CLI, use the explicit model ID `claude-fable-5-1`. Use `claude-opus-5` only for a selected Opus pass. Default both to `high` effort.
+Use Opus 5.5. The native Claude Agent tool with `model: opus` selects the model but inherits the session effort; use the CLI when the task needs a specific effort. For the CLI, use the explicit model ID `claude-opus-5-5` and pick the effort from the effort table in [SKILL.md](../SKILL.md). Do not use Fable unless the user names it.
 
 Check the installed CLI before using its flags:
 
@@ -19,7 +19,7 @@ Use the same scope, completion conditions, and evidence requirements as other de
 Use the run directory and baseline capture in [codex-cli.md](codex-cli.md). Write the task to `$delegate_dir/prompts/task.md` before starting print mode:
 
 ```sh
-claude -p --model claude-fable-5-1 --effort high \
+claude -p --model claude-opus-5-5 --effort high \
   --permission-mode plan \
   --permission-prompts none \
   --disallowedTools 'Edit,Write,NotebookEdit,Agent,Task' \
@@ -46,5 +46,5 @@ Inspect the diff and exact model identity before accepting the result. Complete 
 
 ## Sources
 
-- [Fable 5.1 model documentation](https://platform.claude.com/docs/en/models/fable-5-1/overview)
-- Installed `claude --help`, checked on 2026-09-04
+- [What a task costs on Opus 5.5](https://claude.dev/blog/what-a-task-costs-on-opus-5-5/)
+- Installed `claude --help`, checked on 2026-09-27

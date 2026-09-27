@@ -32,7 +32,7 @@ Decompose a large change into bounded passes after the root agent decides the de
 
 ## Use internal subagents
 
-If you are Codex, spawn with [codex-native.md](../subagent-workflow/references/codex-native.md). If you are not Codex, use the [Codex CLI delegation reference](../subagent-workflow/references/codex-cli.md).
+If you are Codex, spawn with [codex-native.md](../use-agents/references/codex-native.md). If you are not Codex, use the [Codex CLI delegation reference](../use-agents/references/codex-cli.md).
 
 Select GPT-6.0 Luna with `max` reasoning when the tool needs an explicit model choice. If the configured worker already uses Luna Max, do not add redundant overrides. Start a fresh worker with only the task-local context unless continuity is necessary.
 
