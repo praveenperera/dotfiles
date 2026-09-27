@@ -55,8 +55,6 @@ Load the Luna Max fix-pass section of `providers.md` for helper and direct invoc
 
 When the orchestrator is itself a Codex Astra session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Give it the same prompt contract and still save its final report under the scratch directory. Prefer a fresh worker over continuity unless the same owned scope needs an immediate repair follow-up.
 
-Use dangerous bypass mode only when the user explicitly approved that automation mode or the environment is already externally sandboxed.
-
 ## Post-Pass Checks
 
 After each fresh agent exits, inspect worktree status, diff statistics, and whitespace errors, then run the project-specific verification from `AGENTS.md`, `justfile`, package scripts, or CI config. Treat the Luna report as evidence, not proof. If the agent skipped verification, the orchestrator must run it before continuing.

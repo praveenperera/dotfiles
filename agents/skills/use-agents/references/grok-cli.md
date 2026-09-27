@@ -13,23 +13,22 @@ grok inspect
 grok inspect --json
 ```
 
-Save both `grok inspect` forms with the run artifacts. They name loaded permission sources and hooks. Do not modify login or global configuration automatically. If authentication, always-approve mode, the requested sandbox, or the requested Grok model is unavailable, report the exact failure instead of substituting another model or running without a sandbox.
+Save both `grok inspect` forms with the run artifacts. They name loaded permission sources and hooks. Do not modify login or global configuration automatically. If authentication, always-approve mode, or the requested Grok model is unavailable, report the exact failure instead of substituting another model.
 
 ## Permission preflight invariant
 
 A headless Grok pass may start only when all of the following hold. This is the permission boundary. It is not a complete command blacklist.
 
 1. The command uses `--always-approve`. Grok documents that flag as the automation mode. Do not use `dontAsk`: in observed runs, one unapproved `run_terminal_command` call ended the full session as `cancelled` instead of letting Grok recover with an allowed tool.
-2. `--sandbox` is `read-only` for analysis or `workspace` for implementation. Never use sandbox `off`.
-3. Always-approve is not locked off in `requirements.toml`. CLI `--always-approve` wins over `~/.grok/config.toml`.
-4. No shell `ask` rule is loaded. Open every permission source named by `grok inspect`. If any `permissions.ask` entry or native ask rule targets Bash, stop. Those rules still prompt under always-approve and can cancel a headless session. Do not edit the source files. A matching `--deny` for that exact command is valid explicit handling, because deny wins over ask; otherwise reject the pass.
-5. The command includes deny rules for this repository's publication and external-mutation tools. Inspect the repository for those tools (git hosting CLIs, deploy wrappers, package publish scripts, messaging CLIs). Add a deny for each one. Omit only the exact actions that the user separately authorizes. If that inventory is not reliable, do not use Grok.
+2. Always-approve is not locked off in `requirements.toml`. CLI `--always-approve` wins over `~/.grok/config.toml`.
+3. No shell `ask` rule is loaded. Open every permission source named by `grok inspect`. If any `permissions.ask` entry or native ask rule targets Bash, stop. Those rules still prompt under always-approve and can cancel a headless session. Do not edit the source files. A matching `--deny` for that exact command is valid explicit handling, because deny wins over ask; otherwise reject the pass.
+4. The command includes deny rules for this repository's publication and external-mutation tools. Inspect the repository for those tools (git hosting CLIs, deploy wrappers, package publish scripts, messaging CLIs). Add a deny for each one. Omit only the exact actions that the user separately authorizes. If that inventory is not reliable, do not use Grok.
 
 Increased tool permission does not expand the delegate's authority. Keep the prompt's owned paths and external-state limits.
 
 Prefix rules match only at the start of a wrapper-peeled command. `Bash(git push:*)` becomes prefix `git push` and does not match `git -C <path> push`. Grok peels `env`, `timeout`, `nice`, and similar process wrappers; it does not peel `git -C`, `git -c`, or `sudo`. Write those flag forms explicitly. Do not add a long list of network tools and then treat a clean git diff as proof that nothing external ran.
 
-The copy-paste commands below are the standard git, gh, and sudo backstop, including the git `-C` and `-c` publication forms. Append the repository-specific denies from step 5. Do not treat this list as complete.
+The copy-paste commands below are the standard git, gh, and sudo backstop, including the git `-C` and `-c` publication forms. Append the repository-specific denies from step 4. Do not treat this list as complete.
 
 ## Use the shared evidence directory and prompt
 
@@ -43,7 +42,7 @@ Use `high` reasoning by default. Use `xhigh` only when the user requests it or w
 
 ## Run a fresh read-only delegate
 
-Use always-approve so inspection commands do not trigger a headless permission cancellation. Pair it with the read-only OS sandbox so the repository cannot be changed:
+Use always-approve so inspection commands do not trigger a headless permission cancellation. The prompt keeps the pass read-only, and the postflight capture shows any repository change:
 
 ```sh
 delegate_session_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
@@ -56,7 +55,6 @@ grok \
   --model grok-4.5 \
   --reasoning-effort high \
   --always-approve \
-  --sandbox read-only \
   --no-subagents \
   --disable-web-search \
   --verbatim \
@@ -87,7 +85,7 @@ Keep the raw NDJSON. It records tool failures that the plain final output can om
 
 ## Run a fresh implementation delegate
 
-Use always-approve with the workspace sandbox. Grok can inspect, edit, and run the required verification without interactive permission prompts. Keep the standard publication denies and append denies for the repository's actual publication tools:
+Use always-approve. Grok can inspect, edit, and run the required verification without interactive permission prompts. Keep the standard publication denies and append denies for the repository's actual publication tools:
 
 ```sh
 delegate_session_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
@@ -100,7 +98,6 @@ grok \
   --model grok-4.5 \
   --reasoning-effort high \
   --always-approve \
-  --sandbox workspace \
   --no-subagents \
   --disable-web-search \
   --verbatim \
@@ -125,7 +122,7 @@ grok export "$delegate_session_id" "$delegate_dir/raw/transcript.md" \
   2> "$delegate_dir/raw/export-stderr.txt"
 ```
 
-The workspace sandbox limits writes to the working directory, Grok state, and temporary directories. It does not enforce the prompt's narrower owned scope. If a formatter or verification command can modify files outside owned scope, run it independently after integration instead of asking Grok to run it.
+Grok does not enforce the prompt's owned scope. If a formatter or verification command can modify files outside owned scope, run it independently after integration instead of asking Grok to run it.
 
 ## Inspect and integrate
 

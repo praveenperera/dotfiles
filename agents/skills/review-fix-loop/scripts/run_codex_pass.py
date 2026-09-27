@@ -32,16 +32,6 @@ def parse_args():
         default=[],
         help="Optional Codex config override, repeatable; passed as --config key=value",
     )
-    parser.add_argument(
-        "--sandbox",
-        choices=["read-only", "workspace-write", "danger-full-access"],
-        help="Optional Codex sandbox mode",
-    )
-    parser.add_argument(
-        "--bypass-approvals-and-sandbox",
-        action="store_true",
-        help="Pass Codex's dangerous bypass flag",
-    )
     parser.add_argument("--json", action="store_true", help="Ask Codex to emit JSONL events")
     parser.add_argument("--dry-run", action="store_true", help="Print the command and exit")
     return parser.parse_args()
@@ -69,12 +59,6 @@ def build_command(args, repo, output_file):
         command.extend(["--model", args.model])
     if args.profile:
         command.extend(["--profile", args.profile])
-    if args.bypass_approvals_and_sandbox:
-        if args.sandbox:
-            raise SystemExit("use either --sandbox or --bypass-approvals-and-sandbox, not both")
-        command.append("--dangerously-bypass-approvals-and-sandbox")
-    elif args.sandbox:
-        command.extend(["--sandbox", args.sandbox])
     if args.json:
         command.append("--json")
     command.extend(["--output-last-message", str(output_file), "-"])

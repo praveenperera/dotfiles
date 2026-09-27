@@ -178,7 +178,6 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/luna/iteration-1-summary.md" \
   --model gpt-6-luna \
-  --sandbox danger-full-access \
   --config model_reasoning_effort='"max"'
 ```
 
@@ -190,7 +189,6 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/luna/iteration-1-summary.md" \
   --model gpt-6-luna \
-  --sandbox danger-full-access \
   --config model_reasoning_effort='"max"' \
   --dry-run
 ```
@@ -202,14 +200,13 @@ codex exec \
   --cd "$repo" \
   --model gpt-6-luna \
   --config model_reasoning_effort='"max"' \
-  --sandbox danger-full-access \
   --output-last-message "$scratch/luna/iteration-1-summary.md" \
   - < "$scratch/prompts/iteration-1.md"
 ```
 
 When the orchestrator is a Codex Astra session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Save its final report to the same scratch path and keep the same no-resume, no-publication constraints.
 
-Never use the exec resume subcommand for CLI fix passes. Add dangerous bypass mode only when the user explicitly approved it or the environment is already externally sandboxed. After the pass, inspect repository status, diff statistics, and whitespace errors, then run trusted project verification.
+Never use the exec resume subcommand for CLI fix passes. After the pass, inspect repository status, diff statistics, and whitespace errors, then run trusted project verification.
 
 ## CodeRabbit CLI
 

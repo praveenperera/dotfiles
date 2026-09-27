@@ -107,7 +107,6 @@ codex --ask-for-approval never exec \
   --ephemeral \
   --model gpt-6-astra \
   --config 'model_reasoning_effort="low"' \
-  --sandbox read-only \
   --output-last-message "$delegate_dir/raw/final.md" \
   - \
   < "$delegate_dir/prompts/task.md" \
@@ -117,11 +116,11 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-For a Luna review, change the model to `gpt-6-luna` and effort to `max`, and keep the sandbox read-only.
+For a Luna review, change the model to `gpt-6-luna` and effort to `max`, and keep the prompt in read-only mode.
 
 ## Run a fresh implementation delegate
 
-Use workspace-write only after assigning an exact owned scope. Luna `max` is the implementation worker; do not send implementation to Astra:
+Run implementation only after assigning an exact owned scope. Luna `max` is the implementation worker; do not send implementation to Astra:
 
 ```sh
 codex --ask-for-approval never exec \
@@ -129,7 +128,6 @@ codex --ask-for-approval never exec \
   --ephemeral \
   --model gpt-6-luna \
   --config 'model_reasoning_effort="max"' \
-  --sandbox workspace-write \
   --output-last-message "$delegate_dir/raw/final.md" \
   - \
   < "$delegate_dir/prompts/task.md" \
@@ -139,7 +137,7 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-Do not use `--dangerously-bypass-approvals-and-sandbox`. Add a writable directory with `--add-dir` only when the owned scope explicitly requires it. Add `--json` only when the event stream is useful; `--output-last-message` already captures the final natural-language report.
+Add `--json` only when the event stream is useful; `--output-last-message` already captures the final natural-language report.
 
 Use `codex exec review` or `codex review` only when their target flags match the requested review. A self-contained `codex exec` prompt is more flexible for repository analysis and custom review contracts.
 

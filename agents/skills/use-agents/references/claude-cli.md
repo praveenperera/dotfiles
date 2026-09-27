@@ -32,7 +32,7 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-Run from the repository directory. Add only necessary context directories with `--add-dir`. Plan mode and tool denies are permission controls, not a proof of OS-level isolation. Keep the task read-only, inspect the effective tool permissions, and check the resulting repository state. If strict filesystem isolation is required, use an available sandbox or isolated copy.
+Run from the repository directory. Add only necessary context directories with `--add-dir`. Plan mode and tool denies are permission controls, not a proof of OS-level isolation. Keep the task read-only, inspect the effective tool permissions, and check the resulting repository state.
 
 Provide the diff, relevant paths, and user constraints without telling the reviewer which conclusion to reach. Do not send prior review verdicts into an independent review.
 

@@ -51,7 +51,7 @@ A common split: the root or Opus 5.5 decides the design (with an optional Astra 
 
 ## Route inside one provider
 
-- **OpenAI only:** the root decides the design, Luna Max implements and tests, and Astra `low` or `high` gives a read-only second opinion on big or hard decisions. For review, use a fresh Luna Max run with a read-only sandbox and a concrete checklist
+- **OpenAI only:** the root decides the design, Luna Max implements and tests, and Astra `low` or `high` gives a read-only second opinion on big or hard decisions. For review, use a fresh read-only Luna Max run with a concrete checklist
 - **Claude only:** Opus 5.5 for everything; vary effort by task (see below). Use lower effort for mechanical passes and `high` for review and verification
 - **Grok only:** Grok 4.5 for bulk and long implementation, Grok 4.6 for work where quality matters or a 4.5 pass fell short. Keep design decisions in the root
 
@@ -92,4 +92,4 @@ Read only the reference for the transport in use:
 - [codex-native.md](references/codex-native.md): Codex `collaboration.spawn_agent` for Luna and Astra
 - [codex-cli.md](references/codex-cli.md): `codex exec` for Luna and Astra outside Codex; shared prompt template and evidence capture
 - [claude-cli.md](references/claude-cli.md): Claude CLI for Opus 5.5 with an explicit effort
-- [grok-cli.md](references/grok-cli.md): Grok headless runs, permission preflight, and sandboxing
+- [grok-cli.md](references/grok-cli.md): Grok headless runs and permission preflight
