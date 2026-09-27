@@ -20,10 +20,11 @@
 
 - NEVER USE THE RESET USAGE TOOL. NEVER RESET USAGE.
 - Use `fork_turns="none"` for Codex subagents by default, and give each subagent a self-contained prompt. Use `fork_turns="all"` only when the user explicitly requests a full-history fork.
-- Astra is the smartest and best for high-level thinking, Sol is best for normal root work and review, and Luna `max` is best for bounded implementation after the design is settled.
-- Prefer Sol `high` as root, Luna `max` for bounded implementation. The actual root owns scope, integration, and acceptance. For a larger task, use one fresh read-only Sol review of the related change set; add another only when a second risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
-- Reserve Astra for complex planning, architecture, and difficult review: `medium` by default, `low` for focused work, and `high` or above only on explicit user request or when stuggling with a solution.
-- Use Astra or Opus 5 for overall front-end design; Sol can implement and extend established designs. Use Astra to simplification and code removal from the root's complexity-check list. Fable 5.1 is opt-in only; the root may suggest it. Opus defaults to `medium`.
+- Use `$use-agents` for model routing and effort levels. The root owns scope, design decisions, integration, and acceptance.
+- Opus 5.5 is the best all-around delegate: diagnosis, brownfield bug fixes, implementation that needs judgment, front-end design, review, and verification. Opus defaults to `medium`; use `high` for review and verification, `xhigh` only for rare hard problems, and never `max`.
+- Use Luna `max` for bounded implementation after the design is settled. For a larger task, use one fresh Opus 5.5 `high` review of the related change set; add another only when a second risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
+- Astra is a read-only advisor for big architecture or design decisions, or when the root is stuck: `low` for a focused question, `high` for a broad or high-risk one. The root keeps the decision.
+- Fable, GPT-6 Sol, and GPT-5.6 Sol are opt-in only; the root may suggest them.
 - Infer intent and scope from the request, complete the work that is already authorized before asking a clarifying question, and do not add unsolicited warnings, disclaimers, or approval flows.
 - The user's instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
 - Default to `$homebased` for self-contained agent work that can run unattended while the root ends this turn, such as implementation with verification, a broad review, or multi-source research. A task is small enough for a native subagent only when its scope is narrow and the root can check and integrate its result in this turn. When the boundary is unclear, prefer `$homebased` if the worker does not need live coordination.

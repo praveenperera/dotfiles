@@ -622,6 +622,10 @@ mod tests {
             spec.source == agents_dir.join("AGENTS.md")
                 && spec.target == home.join(".config/opencode/AGENTS.md")
         }));
+        // the whole claude dir is linked, which deploys claude/CLAUDE.md to ~/.claude/CLAUDE.md
+        assert!(specs.iter().any(|spec| {
+            spec.source == dotfiles_dir.join("claude") && spec.target == home.join(".claude")
+        }));
         assert!(!specs
             .iter()
             .any(|spec| spec.target == home.join(".codex/config.base.toml")));

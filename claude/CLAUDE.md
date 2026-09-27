@@ -1,46 +1,73 @@
 # Workflow
 
-- Ship production-quality changes. Model the domain first, make impossible states impossible with typed domain models, and prefer the proper owner or abstraction over caller-specific conditionals. Repeated fixes in one area signal that the model may be wrong; revisit it and remove shortcuts or resulting tech debt before finishing.
+- Ship production-quality changes. For changes to domain state, public interfaces, or ownership, model the domain first and use typed models to exclude invalid states. Prefer the proper owner or abstraction over caller-specific conditionals. Small local changes should follow established patterns without a separate architecture exercise. Repeated fixes in one area signal that the model may be wrong; revisit it and remove resulting shortcuts before finishing.
+- Encode recurring corrections as types, tests, lints, scripts, or runtime checks instead of repeating instructions.
 
 # General
 
 - The code explains what; comments explain why. Comment non-obvious decisions, constraints, and tradeoffs. Start inline comments lowercase and higher-level doc comments with a capital letter; do not end comments with periods or make them depend on conversation context. Document every public API in libraries.
 - Report to the user only in ASD-STE100 Simplified Technical English.
-- For commits, follow `$HOME/.agents/commit-message-guide.md`; use Praveen Perera when an author is needed, and never add AI co-authors or generated-by notes.
+- At the end of a long run, list what needs my input first, then the summary.
+- Mark anything you couldn't confirm, and say where you looked.
+- Always give times in central US time zone
+- For commits, follow `$HOME/.agents/commit-message-guide.md`; use Praveen Perera when an author is needed, and never add Claude/Codex/AI co-authors or generated-by notes.
 - Minimize nesting in functions.
+- Prefer ReScript for new JavaScript-targeting application logic when practical. When TypeScript is required, use the Effect library for stronger type safety: model expected errors and dependencies explicitly, and validate external data with Effect Schema instead of unchecked type assertions.
 - Do not leave deprecated code in place by default. Remove it, or ask whether the change must preserve the old path.
-- Put ad hoc files the user may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory and create it if needed.
-- In public-facing copy, include only reader-visible content. Omit implementation notes, workflow state, reasoning, conversation context, and edit instructions.
-- Preserve unrelated user changes. Use hunk staging for commits and never undo unrelated edits.
+- Put ad hoc files the user may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory and create it if needed. Those directories are wiped weekly; do not keep needed files there. Keep durable notes in `~/code/research`.
+- In public-facing copy, include only reader-visible content. Omit implementation notes, source labels, workflow state, reasoning, conversation context, and edit instructions.
+- Preserve unrelated user or agent changes. Use hunk staging for commits and never undo unrelated edits.
 
-# Rust
+# Claude Code Specific
 
+- When a step doesn't need my input, keep going. Put status notes in the same message as your next action. Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository.
+- For long multi-step runs, keep a checklist in `_scratch/TASKS.md`. Tick each item when it's done, and add anything new you find.
+- The user's instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
+- Use the `use-agents` skill for model routing and effort levels. The root owns scope, design decisions, integration, and acceptance.
+- Opus 5.5 defaults to `medium`; use `high` for review and verification, `xhigh` only for rare hard problems, and never `max`. Use Luna `max` for bounded implementation after the design is settled. Astra is a read-only advisor for big architecture or design decisions, or when the root is stuck. Fable, GPT-6 Sol, and GPT-5.6 Sol are opt-in only; the root may suggest them.
+- For a larger task, use one fresh Opus 5.5 `high` review of the related change set; add another only when a second risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
+- Default to the `homebased` skill for self-contained agent work that can run unattended while the root ends this turn, such as implementation with verification, a broad review, or multi-source research. When the boundary is unclear, prefer `homebased` if the worker does not need live coordination.
+- Always use `homebased` when using a non-Claude model.
+- Use the Agent tool for a small task only when its scope is narrow and the root can check and integrate its result in this turn, or when non-overlapping owned scopes can run at the same time. Give each subagent a self-contained prompt. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work.
+- Never add `Claude-Session:` trailers to commit messages.
+
+# Rust Project Specific
+
+- Unless asked, do not set an MSRV for new Rust projects; default to stable.
+- `info` and `error` logs may start with uppercase letters.
 - In log and `println!` macros, prefer inline variable capture such as `warn!("person id={id} ...")` over positional placeholders.
 - For unfamiliar crates or external libraries, inspect documentation or source instead of guessing. Check `target/doc/`, run `cargo doc -p <crate-name>`, inspect `~/.cargo/registry/src`, or use `btx` to look at the code directly.
-- Fix clippy lints directly instead of silencing them. Run `cargo fix --allow-dirty` only when the working tree and command scope make it safe from unrelated changes.
+- When clippy reports autofixable issues, run `cargo fix --allow-dirty` only when the working tree and command scope make it safe from unrelated changes; otherwise apply the fixes manually. Fix remaining lints directly instead of silencing them with `allow` or `warn` unless there is a specific reason.
 - Prefer `eyre`, or `color-eyre` for CLIs, over `anyhow`.
-- Use the Rust 2018+ module layout instead of `mod.rs` for regular modules.
+- Use the Rust 2018+ module layout instead of `mod.rs` for regular modules, use edition 2024 not 2021 for new projects.
 - Use if-let chains with `&&` when they preserve semantics and reduce nesting.
 - Avoid redundant closures; use `.map(func)` instead of `.map(|value| func(value))`.
-- Prefer tuple structs for simple wrappers and structs with methods when they encapsulate shared state.
+- Prefer tuple structs over named-field structs for simple wrappers, such as `struct Foo(Arc<Inner>)`.
+- Prefer structs with methods over freestanding functions when they encapsulate shared state.
 - Use named imports instead of wildcard imports.
+- Add a blank line after a multi-line construct before the next statement or block, regardless of its closing syntax. Also use blank lines to separate distinct logical phases in a function. A related single-line statement can stay with the block that follows it when separation would add noise. Keep a short, single-phase body together, and do not add a blank line only before the final expression.
 - Keep test-only functions, types, and modules out of production code paths. Put them under `mod tests` or a dedicated `mod test_support`, and use `#[cfg(test)]` only to gate those modules.
+- Prefer turso + toasty orm with compile-time typed checked queries over raw sqlite
+- On the Linux container `code`, keep Cargo build output off tmpfs. Do not set `CARGO_TARGET_DIR` to a `/tmp` path; use the configured disk-backed target directory. Use a separate disk-backed target directory for isolated concurrent work instead of cleaning a shared target directory while another build may run
 
 # Docker image builds
 
-- Default to the global `rb` skill for container image builds. Prefer `rb build --project <name> -- [buildx args…]` over local `docker build` and `docker buildx build`.
-- Use local Docker only when the user asks for a local build, or when `rb` is unavailable and the user accepts that fallback.
-- Load `$rb` / the `rb` skill before inventing a build command. Do not print control-plane tokens or project SSH private keys.
+- On mac use `rb` to run create docker images if in a project that uses another builder like `sht` use that by default
+- If on code/ai5090 or another linux box just build the docker image directly on the machine
 - Publish public images to Docker Hub
 
 # Verification
 
 - After implementation changes, run the repository's formatter and linter. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists.
+- Run the checks appropriate to the change. Reuse reliable results for unchanged code; repeat or broaden checks only for new changes, failures, missing evidence, or unresolved concerns.
+- Never give local only 127.0.0.1 links always use host mode so links work on LAN and tailscale
 
 # Testing
 
 - Add or update tests when they protect user-visible behavior, reproduce a bug, cover compatibility or migration risk, or lock down a non-obvious invariant.
-- Do not add tests that only restate edited literals or implementation details.
+- Do not write tests for reversible, low-impact changes that only restate edited literals or mirror the implementation.
 - For static configuration or list changes, prefer compile or lint verification unless selection, fallback, parsing, migration, or filtering behavior needs coverage.
 
-DO NOT ADD "Claude-Session: .." to commit messages
+# Skills
+
+- Reuse skill instructions that are already present in the active conversation context across user turns. Do not reread or check the same `SKILL.md` or its required references only because a new user turn started.
