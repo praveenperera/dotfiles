@@ -43,8 +43,3 @@ Use a native writer with explicit owned paths when available. For CLI implementa
 Keep commits, staging, publication, messages, external writes, and nested delegation outside the worker's scope. If a needed command is denied, report the exact command; the root can run an already-authorized check or adjust the scoped invocation. Do not change global permissions.
 
 Inspect the diff and exact model identity before accepting the result. Complete required checks on the integrated code without repeating reliable checks on unchanged code. A final message or zero process exit alone does not establish completion.
-
-## Sources
-
-- [What a task costs on Opus 5.5](https://claude.dev/blog/what-a-task-costs-on-opus-5-5/)
-- Installed `claude --help`, checked on 2026-09-27

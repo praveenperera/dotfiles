@@ -170,9 +170,3 @@ Inspect exit status, stdout, stderr, final message, baseline, and postflight art
 Prefer a new ephemeral invocation when an independent perspective or clean repair context matters. Choose the number and kind of follow-ups from the task's evidence, risk, and expected value.
 
 Use `codex exec resume <session>` only when continuity is essential and the first run was intentionally persisted without `--ephemeral`.
-
-## Current command sources
-
-- [Codex CLI developer commands](https://learn.chatgpt.com/docs/developer-commands?surface=cli#codex-exec)
-- [Codex non-interactive mode](https://learn.chatgpt.com/docs/noninteractive)
-- the locally installed `codex exec --help` and `codex debug models` output
