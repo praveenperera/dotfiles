@@ -20,12 +20,12 @@
 
 # Claude Code Specific
 
-- When a step doesn't need my input, keep going. Put status notes in the same message as your next action. Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository.
-- For long multi-step runs, keep a checklist in `_scratch/TASKS.md`. Tick each item when it's done, and add anything new you find.
+- When a step doesn't need my input, keep going. Put status notes in the same message as your next action. Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository that I have not already approved.
+- For long multi-step runs, keep a checklist in `_scratch/<task-name>/TASKS.md` so concurrent runs do not share one file. Tick each item when it's done, and add anything new you find.
 - The user's instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
 - Use the `use-agents` skill for model routing and effort levels. The root owns scope, design decisions, integration, and acceptance.
 - Opus 5.5 defaults to `medium`; use `high` for review and verification, `xhigh` only for rare hard problems, and never `max`. Use Luna `max` for bounded implementation after the design is settled. Astra is a read-only advisor for big architecture or design decisions, or when the root is stuck. Fable, GPT-6 Sol, and GPT-5.6 Sol are opt-in only; the root may suggest them.
-- For a larger task, use one fresh Opus 5.5 `high` review of the related change set; add another only when a second risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
+- For a larger task, use one fresh Opus 5.5 `high` review of the related change set; add another only when a second risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks. The Agent tool uses the session effort, so run a review that needs an explicit effort, such as `high`, through the Claude CLI with `homebased`.
 - Default to the `homebased` skill for self-contained agent work that can run unattended while the root ends this turn, such as implementation with verification, a broad review, or multi-source research. When the boundary is unclear, prefer `homebased` if the worker does not need live coordination.
 - Always use `homebased` when using a non-Claude model.
 - Use the Agent tool for a small task only when its scope is narrow and the root can check and integrate its result in this turn, or when non-overlapping owned scopes can run at the same time. Give each subagent a self-contained prompt. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work.
