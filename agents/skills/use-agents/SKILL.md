@@ -57,7 +57,7 @@ A common split: Astra or the root decides the design, Luna Max implements it in 
 
 ## Opus 5.5 effort levels
 
-Opus 5.5 has `low`, `medium`, `high`, `xhigh`, and `max`. The default is `medium`. A level spends more thinking on Opus 5.5 than the same level did on Opus 5, so do not carry over Opus 5 habits.
+Use only `low`, `medium`, and `high` for Opus 5.5. Never use `xhigh` or `max`. The default is `medium`. A level spends more thinking on Opus 5.5 than the same level did on Opus 5, so do not carry over Opus 5 habits.
 
 Effort controls how much the model verifies, tests edge cases, and uses its own judgment. It is not a general quality dial. Higher effort reduces failures from missed edge cases, untested bugs, and incomplete fixes. It does not fix a wrong approach or a misread requirement; fix the prompt, spec, or model choice instead.
 
@@ -66,8 +66,6 @@ Effort controls how much the model verifies, tests edge cases, and uses its own 
 | `low`    | Fast work where the user stays in the loop: brainstorming, sketches, easy or mechanical changes, and a first implementation of a detailed spec that the root will review |
 | `medium` | Regular feature implementation with a clear spec                                                                                                                         |
 | `high`   | Work where verification or edge cases matter: brownfield bug fixes, review, and the verify-and-test pass after a lower-effort implementation                             |
-| `xhigh`  | Hard problems with many hidden edge cases, such as storage engines, parsers, sanitizers, concurrency, and performance work, or when `high` stalls                        |
-| `max`    | Only fully unattended end-to-end work or security vulnerability hunting in critical code. Expect tens of minutes to over an hour                                         |
 
 Guidance for delegation:
 
@@ -75,9 +73,18 @@ Guidance for delegation:
 - A delegate has no user in the loop. When it must make judgment calls on its own, such as choosing between two valid readings of the data, `high` does that better than `low`
 - Give the delegate a way to check its work (tests, a reference implementation, a repro) before raising effort
 - Pattern that works well: implement at `low` or `medium`, review in the root, then run a fresh Opus 5.5 pass at `high` to verify and test edge cases
-- If Opus 5.5 at `xhigh` hits the same problem twice, the approach is probably wrong; return the decision to the root or to Astra instead of raising effort to `max`
+- If Opus 5.5 at `high` hits the same problem twice, the approach is probably wrong; return the decision to the root or to Astra instead of raising effort
 
 Sources: [Spending your effort](https://claude.dev/blog/spending-your-effort/) (Thariq Shihipar, 2026-09-25) and [What a task costs on Opus 5.5](https://claude.dev/blog/what-a-task-costs-on-opus-5-5/) (Addy Osmani, 2026-09-25).
+
+## Run delegates through homebased
+
+Use the `homebased` skill to launch delegates. The daemon runs the child, streams its output, and sends a `HOMEBASED_EVENT` back to this session when the task ends, so the root can end its turn instead of running a wait or poll loop.
+
+- **External agents** (Grok CLI, Claude CLI from Codex, Codex CLI from Claude): always use `homebased`
+- **Internal agents** (Codex native spawn, Claude Agent tool): `homebased` is also useful for self-contained work that can run unattended, such as implementation with verification or a broad review, because it removes wait loops. Keep a native subagent for small tasks that the root checks and integrates in the same turn
+
+The transport references below still give the model flags, permission rules, prompt contract, and evidence capture to put in the homebased spec.
 
 ## Transport references
 

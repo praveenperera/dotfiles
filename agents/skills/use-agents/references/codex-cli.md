@@ -145,7 +145,7 @@ Use `codex exec review` or `codex review` only when their target flags match the
 
 ## Handle duration without polling
 
-For a run expected to exceed two minutes, use Claude Code's runtime-managed background execution or a detached supervisor that records a durable job ID, start time, deadline, process identity, terminal status, and exit code in the run directory. Register the runtime completion event when available.
+For a run expected to exceed two minutes, submit it through the `homebased` skill. The daemon records the task lifecycle and sends a `HOMEBASED_EVENT` when the run ends. Use Claude Code's runtime-managed background execution only when homebased is unavailable.
 
 Do not keep an agent active only to poll. On the next wake, reconcile the status file and process identity before trusting a notification. Treat the Codex final message as an artifact, not the source of truth.
 
