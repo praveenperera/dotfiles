@@ -75,8 +75,6 @@ Guidance for delegation:
 - Pattern that works well: implement at `low` or `medium`, review in the root, then run a fresh Opus 5.5 pass at `high` to verify and test edge cases
 - If Opus 5.5 at `high` hits the same problem twice, the approach is probably wrong; return the decision to the root, optionally with an Astra second opinion, instead of raising effort
 
-Sources: [Spending your effort](https://claude.dev/blog/spending-your-effort/) (Thariq Shihipar, 2026-09-25) and [What a task costs on Opus 5.5](https://claude.dev/blog/what-a-task-costs-on-opus-5-5/) (Addy Osmani, 2026-09-25).
-
 ## Run delegates through homebased
 
 Use the `homebased` skill to launch delegates. The daemon runs the child, streams its output, and sends a `HOMEBASED_EVENT` back to this session when the task ends, so the root can end its turn instead of running a wait or poll loop.
