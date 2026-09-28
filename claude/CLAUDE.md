@@ -40,7 +40,6 @@
 - When clippy reports autofixable issues, run `cargo fix --allow-dirty` only when the working tree and command scope make it safe from unrelated changes; otherwise apply the fixes manually. Fix remaining lints directly instead of silencing them with `allow` or `warn` unless there is a specific reason.
 - Prefer `eyre`, or `color-eyre` for CLIs, over `anyhow`.
 - Use the Rust 2018+ module layout instead of `mod.rs` for regular modules, use edition 2024 not 2021 for new projects.
-- Use if-let chains with `&&` when they preserve semantics and reduce nesting.
 - Avoid redundant closures; use `.map(func)` instead of `.map(|value| func(value))`.
 - Prefer tuple structs over named-field structs for simple wrappers, such as `struct Foo(Arc<Inner>)`.
 - Prefer structs with methods over freestanding functions when they encapsulate shared state.
@@ -61,13 +60,10 @@
 - After implementation changes, run the repository's formatter and linter. For Rust, run `just fmt` and `just clippy`; fall back to `cargo fmt` and `cargo clippy` when no justfile exists.
 - Run the checks appropriate to the change. Reuse reliable results for unchanged code; repeat or broaden checks only for new changes, failures, missing evidence, or unresolved concerns.
 - Never give local only 127.0.0.1 links always use host mode so links work on LAN and tailscale
+- Prefer integration tests over lots of small unit tests
 
 # Testing
 
 - Add or update tests when they protect user-visible behavior, reproduce a bug, cover compatibility or migration risk, or lock down a non-obvious invariant.
 - Do not write tests for reversible, low-impact changes that only restate edited literals or mirror the implementation.
 - For static configuration or list changes, prefer compile or lint verification unless selection, fallback, parsing, migration, or filtering behavior needs coverage.
-
-# Skills
-
-- Reuse skill instructions that are already present in the active conversation context across user turns. Do not reread or check the same `SKILL.md` or its required references only because a new user turn started.
