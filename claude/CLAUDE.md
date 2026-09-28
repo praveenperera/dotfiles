@@ -6,7 +6,6 @@
 # General
 
 - The code explains what; comments explain why. Comment non-obvious decisions, constraints, and tradeoffs. Start inline comments lowercase and higher-level doc comments with a capital letter; do not end comments with periods or make them depend on conversation context. Document every public API in libraries.
-- Report to the user only in ASD-STE100 Simplified Technical English.
 - At the end of a long run, list what needs my input first, then the summary.
 - Mark anything you couldn't confirm, and say where you looked.
 - Always give times in central US time zone
