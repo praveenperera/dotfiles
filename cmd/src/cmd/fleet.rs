@@ -3,9 +3,11 @@ use eyre::{eyre, Result, WrapErr};
 use std::process::{Command, Stdio};
 use xshell::{cmd, Shell};
 
-use crate::command_exists;
+use crate::{command_exists, dotfiles_dir};
 
 const HOST: &str = "praveen@ai5090";
+/// Checks out the Homebased skill at the installed Homebased release
+const HOMEBASED_SKILL_SYNC: &str = "bin/homebased-skill-sync";
 const UPDATE_COMMAND: &str = "/home/praveen/.local/bin/fleet-update";
 
 /// Terminal type for ssh and tmux when the caller has no usable one
@@ -25,7 +27,9 @@ pub enum FleetCmd {
 
     /// Pull ~/code/dotfiles, then update Codex, Claude Code, Grok Build, and
     /// installed Homebased on ai5090 and code; update Homebased on the calling
-    /// machine too if it is installed and was not updated remotely
+    /// machine too if it is installed and was not updated remotely. Each
+    /// Homebased update also checks out the Homebased skill at the matching
+    /// release tag
     ///
     /// Without --all, this uses no sudo and changes no system packages;
     /// running Homebased daemons restart after their update
@@ -98,6 +102,12 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
 
     if !updated_by_remote_script(sh) && command_exists(sh, "homebased") {
         run_attached("homebased", &["update"])?;
+
+        let sync = dotfiles_dir()?.join(HOMEBASED_SKILL_SYNC);
+        let sync = sync
+            .to_str()
+            .ok_or_else(|| eyre!("non-UTF-8 path {}", sync.display()))?;
+        run_attached(sync, &[])?;
     }
 
     Ok(())

@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Checks out the homebased skill at the tag that matches the installed
+# homebased binary, so agents never read docs for features the binary lacks.
+# agents/skills/homebased links into this managed clone, and the fleet update
+# paths run this script right after `homebased update`
+#
+# Keep this compatible with macOS bash 3.2: no associative arrays, mapfile, or
+# case-changing expansions
+set -Eeuo pipefail
+
+readonly DEFAULT_REPO_URL="https://github.com/avencera/homebased.git"
+# tests override the URL to use a local bare repo
+readonly REPO_URL="${HOMEBASED_SKILL_REPO_URL:-${DEFAULT_REPO_URL}}"
+readonly CLONE_DIR="${HOMEBASED_SKILL_SRC:-${HOME}/.local/share/homebased/skill-src}"
+readonly SKILL_PATH=".agents/skills/homebased"
+
+die() {
+    echo "homebased-skill-sync: $*" >&2
+    exit 1
+}
+
+installed_tag() {
+    local raw
+    local version
+
+    raw="$(homebased --version)" || die "homebased --version failed"
+    version="${raw#homebased }"
+    if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        die "unexpected homebased --version output: ${raw}"
+    fi
+    echo "v${version}"
+}
+
+create_clone() {
+    mkdir -p "$(dirname -- "${CLONE_DIR}")"
+    git clone --quiet --filter=blob:none --no-checkout --sparse \
+        "${REPO_URL}" "${CLONE_DIR}"
+    git -C "${CLONE_DIR}" sparse-checkout set "${SKILL_PATH}"
+}
+
+# only a clone this script created may be force-checked out, so anything else
+# at the path is refused and left in place
+require_managed_clone() {
+    local origin
+
+    if [[ ! -d "${CLONE_DIR}/.git" ]]; then
+        die "${CLONE_DIR} exists but is not a homebased skill clone; move it aside"
+    fi
+    origin="$(git -C "${CLONE_DIR}" config --get remote.origin.url || true)"
+    if [[ "${origin}" != "${REPO_URL}" ]]; then
+        die "${CLONE_DIR} has origin '${origin}', expected ${REPO_URL}; move it aside"
+    fi
+}
+
+# a fresh --no-checkout clone can have HEAD at the tag with no files, so the
+# skill file must exist before the network is skipped
+at_tag() {
+    local tag="$1"
+    local head
+    local target
+
+    [[ -f "${CLONE_DIR}/${SKILL_PATH}/SKILL.md" ]] || return 1
+    head="$(git -C "${CLONE_DIR}" rev-parse -q --verify 'HEAD^{commit}')" || return 1
+    target="$(git -C "${CLONE_DIR}" rev-parse -q --verify "refs/tags/${tag}^{commit}")" \
+        || return 1
+    [[ "${head}" == "${target}" ]]
+}
+
+checkout_tag() {
+    local tag="$1"
+
+    git -C "${CLONE_DIR}" fetch --quiet --force origin \
+        "refs/tags/${tag}:refs/tags/${tag}" \
+        || die "could not fetch ${tag} from ${REPO_URL}"
+    git -C "${CLONE_DIR}" -c advice.detachedHead=false \
+        checkout --quiet --force --detach "${tag}"
+}
+
+main() {
+    local tag
+
+    if ! command -v homebased > /dev/null; then
+        echo "Skipping Homebased skill: homebased is not installed"
+        return 0
+    fi
+    tag="$(installed_tag)"
+
+    if [[ -e "${CLONE_DIR}" ]]; then
+        require_managed_clone
+    else
+        create_clone
+    fi
+
+    if ! at_tag "${tag}"; then
+        checkout_tag "${tag}"
+    fi
+
+    [[ -f "${CLONE_DIR}/${SKILL_PATH}/SKILL.md" ]] \
+        || die "${tag} has no ${SKILL_PATH}/SKILL.md"
+    echo "Homebased skill at ${tag}"
+}
+
+main "$@"
