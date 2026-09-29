@@ -1,0 +1,4 @@
+interface:
+  display_name: "Use Sol"
+  short_description: "Route bounded implementation work to Sol 6.1"
+  default_prompt: "Use $use-sol to delegate this implementation to Sol 6.1."

@@ -9,7 +9,7 @@ command -v codex
 codex --version
 codex login status
 codex exec --help
-codex debug models | rg 'gpt-6-astra|gpt-6-luna'
+codex debug models | rg 'gpt-6-astra|gpt-6\.1-sol'
 ```
 
 Do not modify login or global configuration automatically. If authentication or the requested model is unavailable, report the exact failure.
@@ -99,14 +99,14 @@ Mode: <read-only analysis|implementation>
 
 ## Run a fresh read-only delegate
 
-Use Astra only as a read-only advisor for a second opinion on a big design or architecture decision: `low` for a focused question, `high` for a broad or high-risk one. The root keeps the decision. Use Luna at `max` for a bounded read-only review with a concrete checklist:
+Use Sol 6.1 at `high` for read-only review, audits, and investigation, or `xhigh` for a deep audit of a large or high-risk change:
 
 ```sh
 codex --ask-for-approval never exec \
   --cd "$PWD" \
   --ephemeral \
-  --model gpt-6-astra \
-  --config 'model_reasoning_effort="low"' \
+  --model gpt-6.1-sol \
+  --config 'model_reasoning_effort="high"' \
   --output-last-message "$delegate_dir/raw/final.md" \
   - \
   < "$delegate_dir/prompts/task.md" \
@@ -116,18 +116,18 @@ delegate_exit_status=$?
 printf '%s\n' "$delegate_exit_status" > "$delegate_dir/raw/exit-status.txt"
 ```
 
-For a Luna review, change the model to `gpt-6-luna` and effort to `max`, and keep the prompt in read-only mode.
+Use Astra only as a read-only advisor for a second opinion on a big design or architecture decision. Change the model to `gpt-6-astra` and effort to `low` for a focused question or `high` for a broad or high-risk one, and keep the prompt in read-only mode. The root keeps the decision.
 
 ## Run a fresh implementation delegate
 
-Run implementation only after assigning an exact owned scope. Luna `max` is the implementation worker; do not send implementation to Astra:
+Run implementation only after assigning an exact owned scope. Sol 6.1 is the implementation worker; use `high` by default and `low` for easy mechanical work, following the effort table in [SKILL.md](../SKILL.md). Do not send implementation to Astra:
 
 ```sh
 codex --ask-for-approval never exec \
   --cd "$PWD" \
   --ephemeral \
-  --model gpt-6-luna \
-  --config 'model_reasoning_effort="max"' \
+  --model gpt-6.1-sol \
+  --config 'model_reasoning_effort="high"' \
   --output-last-message "$delegate_dir/raw/final.md" \
   - \
   < "$delegate_dir/prompts/task.md" \

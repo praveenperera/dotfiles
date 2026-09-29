@@ -59,6 +59,5 @@ claude/.last-update-result.json
 /claude/daemon
 # claude/skills is mostly symlinks into agents/skills; track only real Claude-only skills
 /claude/skills/*
-!/claude/skills/use-luna-max/
 *.log
 /claude/state

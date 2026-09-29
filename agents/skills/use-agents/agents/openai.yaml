@@ -1,4 +1,4 @@
 interface:
   display_name: "Use Agents"
-  short_description: "Route work to Opus 5.5, Luna Max, Astra, or Grok"
+  short_description: "Route work to Sol 6.1, Opus 5.5, Astra, or Grok"
   default_prompt: "Use $use-agents to delegate this task to the models I prefer."

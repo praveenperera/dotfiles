@@ -1,40 +1,47 @@
 ---
-name: use-luna-max
-description: Route implementation, tests, and mechanical repository work to internal GPT-6.0 Luna subagents at max reasoning. Use only when the user explicitly says "use Luna", "use Luna sub-agents", "use Luna Max", or invokes $use-luna-max. Do not infer this skill from a task that merely looks suitable for delegation.
+name: use-sol
+description: Route implementation, tests, investigation, and mechanical repository work to GPT-6.1 Sol subagents at low or high reasoning. Use only when the user explicitly says "use Sol", "use Sol sub-agents", "use Sol 6.1", or invokes $use-sol. Do not infer this skill from a task that merely looks suitable for delegation.
 ---
 
-# Use Luna Max
+# Use Sol
 
 ## Enforce the invocation gate
 
-Activate this workflow only when the user asks to use Luna for implementation or explicitly invokes this skill. A statement that Luna is the current root, a model comparison, or a request to edit this skill does not activate it. Keep it active for the rest of the session until the user cancels it.
+Activate this workflow only when the user asks to use Sol for implementation or explicitly invokes this skill. A statement that Sol is the current root, a model comparison, or a request to edit this skill does not activate it. Keep it active for the rest of the session until the user cancels it.
 
-While active, send implementation work to Luna. Keep design and acceptance in the root thread. Do not silently substitute another model if Luna is unavailable.
+While active, send implementation work to Sol 6.1. Keep design and acceptance in the root thread. Do not silently substitute another model if Sol 6.1 is unavailable.
 
 ## Route suitable work
 
-Send Luna Max work that has a decided approach, a tight scope, and a cheap correctness check:
+Send Sol work that has a decided approach, a tight scope, and a cheap correctness check.
 
-- easy, bounded implementation that follows an existing design
-- tests and test extensions, including fixtures and table cases
-- mechanical edits such as renames, signature changes, import moves, and API migrations
+At `low` reasoning:
+
+- mechanical edits such as renames, signature changes, import moves, and API migrations along a decided pattern
+- fixtures, table test cases, and boilerplate that follows an established repository pattern
 - inventories, classifications, and repeated transforms across many files
-- boilerplate that follows an established repository pattern
+
+At `high` reasoning:
+
+- bounded implementation that follows an existing design
+- new tests and test extensions that need edge-case judgment
+- bug investigation and root-cause analysis that report findings without editing
 
 Keep these responsibilities in the root thread:
 
 - architecture, domain modeling, and API or UI surface design
-- product intent, tradeoff analysis, and high-taste judgment
-- subtle debugging, security judgment, and broad investigation
+- product intent, tradeoff analysis, and high-taste judgment, including front-end and UI design
+- security judgment and the decision on what an investigation found
+- long unattended builds and heavy rewrites, which Sol can grind on without progress
 - review, integration, verification, and final acceptance
 
-Decompose a large change into bounded passes after the root agent decides the design. Do not ask Luna to discover the architecture or correct an ambiguous instruction.
+Decompose a large change into bounded passes after the root agent decides the design. Do not ask Sol to discover the architecture or correct an ambiguous instruction.
 
 ## Use internal subagents
 
 If you are Codex, spawn with [codex-native.md](../use-agents/references/codex-native.md). If you are not Codex, use the [Codex CLI delegation reference](../use-agents/references/codex-cli.md).
 
-Select GPT-6.0 Luna with `max` reasoning when the tool needs an explicit model choice. If the configured worker already uses Luna Max, do not add redundant overrides. Start a fresh worker with only the task-local context unless continuity is necessary.
+Select GPT-6.1 Sol (`gpt-6.1-sol`) with the reasoning level from the list above when the tool needs an explicit model choice. Use `xhigh` only for a deep audit, and do not use `max`. If a `low` pass fails its check or needs a judgment call, rerun it at `high`. If the configured worker already uses Sol 6.1, do not add redundant overrides. Start a fresh worker with only the task-local context unless continuity is necessary.
 
 Give each worker a self-contained contract with:
 
@@ -53,7 +60,7 @@ Do not give two writing workers overlapping scope. Use read-only workers for par
 
 ## Review and verify
 
-Treat Luna's report as evidence, not proof.
+Treat Sol's report as evidence, not proof.
 
 After each pass:
 
@@ -67,7 +74,7 @@ The root agent owns correctness and the integrated result.
 
 ## Send repair passes
 
-Send each concrete defect back to Luna while this workflow is active. Give the defect location, why it is wrong, the required end state, the owned scope, and the verification command. Do not prescribe a diff.
+Send each concrete defect back to Sol while this workflow is active. Give the defect location, why it is wrong, the required end state, the owned scope, and the verification command. Do not prescribe a diff.
 
 Use a follow-up on the same worker when its context remains useful. Start a fresh worker when independent reasoning or a clean context is more valuable. Inspect and verify every repair.
 

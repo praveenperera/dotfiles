@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run a review-fix prompt in a fresh Codex exec session.
 
-Intended default for review-fix-loop repairs: --model gpt-6-luna with
-model_reasoning_effort='"max"'.
+Intended default for review-fix-loop repairs: --model gpt-6.1-sol with
+model_reasoning_effort='"high"'.
 """
 
 import argparse

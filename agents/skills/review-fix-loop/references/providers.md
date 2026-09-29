@@ -46,7 +46,7 @@ Begin the prompt with:
 Review this PR or diff without changing code or external state. Return only actionable, evidence-backed findings in the requested normalized format.
 ```
 
-For each broad GLM final-review stage, create `final-neutral-glm-<iteration>.md` and `final-neutral-glm-<iteration>.jsonl` from the neutral packet above. After a Luna repair, use separately named `targeted-validation-glm-<iteration>` prompt and raw artifacts; they may contain the finding and repair being checked, but the result is targeted validation and not an independent final review. Recompute the fingerprint after targeted validation and run a fresh broad GLM final-review stage on the new neutral packet before any later provider.
+For each broad GLM final-review stage, create `final-neutral-glm-<iteration>.md` and `final-neutral-glm-<iteration>.jsonl` from the neutral packet above. After a Sol repair, use separately named `targeted-validation-glm-<iteration>` prompt and raw artifacts; they may contain the finding and repair being checked, but the result is targeted validation and not an independent final review. Recompute the fingerprint after targeted validation and run a fresh broad GLM final-review stage on the new neutral packet before any later provider.
 
 Invoke OpenCode with its read-only plan agent:
 
@@ -123,7 +123,7 @@ Never start `claude --print` before the prompt is available. Keep plan mode so t
 
 ## Codex Review
 
-Default Codex (Astra) reasoning effort to `high`. Use `xhigh` only when the user explicitly requests Codex xhigh.
+Run Codex review with GPT-6.1 Sol (`model="gpt-6.1-sol"`) and default its reasoning effort to `high`. Use `xhigh` only when the user explicitly requests Codex xhigh.
 
 Choose exactly one target mode that represents the code under review:
 
@@ -141,6 +141,7 @@ prompt_file="$scratch/prompts/final-neutral-codex-review-$target_mode-$iteration
 raw_file="$scratch/raw/final-neutral-codex-review-$target_mode-$iteration.txt"
 
 codex review \
+  --config model='"gpt-6.1-sol"' \
   --config model_reasoning_effort='"high"' \
   --base "$base_branch" \
   - < "$prompt_file" \
@@ -151,6 +152,7 @@ For a worktree-only target, use the supported uncommitted mode instead:
 
 ```bash
 codex review \
+  --config model='"gpt-6.1-sol"' \
   --config model_reasoning_effort='"high"' \
   --uncommitted \
   - < "$prompt_file" \
@@ -166,9 +168,9 @@ raw_file="$scratch/raw/codex-xhigh-final-neutral-review-$target_mode-$iteration.
 
 Codex review is a provider input, not a fixing session. Normalize only actionable findings and retain the command target and raw artifact as evidence.
 
-## Fresh Luna Max Fix Pass
+## Fresh Sol Fix Pass
 
-Run every fix pass with GPT-6.0 Luna at `max` reasoning. Do not use Astra for ordinary fixes.
+Run every fix pass with GPT-6.1 Sol at `high` reasoning. Do not use Astra for fixes.
 
 Prefer the bundled helper:
 
@@ -176,9 +178,9 @@ Prefer the bundled helper:
 python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --repo "$repo" \
   --prompt-file "$scratch/prompts/iteration-1.md" \
-  --output-file "$scratch/luna/iteration-1-summary.md" \
-  --model gpt-6-luna \
-  --config model_reasoning_effort='"max"'
+  --output-file "$scratch/sol/iteration-1-summary.md" \
+  --model gpt-6.1-sol \
+  --config model_reasoning_effort='"high"'
 ```
 
 Use dry-run when checking argument construction:
@@ -187,24 +189,24 @@ Use dry-run when checking argument construction:
 python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --repo "$repo" \
   --prompt-file "$scratch/prompts/iteration-1.md" \
-  --output-file "$scratch/luna/iteration-1-summary.md" \
-  --model gpt-6-luna \
-  --config model_reasoning_effort='"max"' \
+  --output-file "$scratch/sol/iteration-1-summary.md" \
+  --model gpt-6.1-sol \
+  --config model_reasoning_effort='"high"' \
   --dry-run
 ```
 
-If the helper cannot be used, invoke a fresh Luna Max session directly:
+If the helper cannot be used, invoke a fresh Sol session directly:
 
 ```bash
 codex exec \
   --cd "$repo" \
-  --model gpt-6-luna \
-  --config model_reasoning_effort='"max"' \
-  --output-last-message "$scratch/luna/iteration-1-summary.md" \
+  --model gpt-6.1-sol \
+  --config model_reasoning_effort='"high"' \
+  --output-last-message "$scratch/sol/iteration-1-summary.md" \
   - < "$scratch/prompts/iteration-1.md"
 ```
 
-When the orchestrator is a Codex Astra session with internal subagent tools, an equivalent fresh Luna Max internal worker is allowed. Save its final report to the same scratch path and keep the same no-resume, no-publication constraints.
+When the orchestrator is a Codex session with internal subagent tools, an equivalent fresh Sol internal worker is allowed. Save its final report to the same scratch path and keep the same no-resume, no-publication constraints.
 
 Never use the exec resume subcommand for CLI fix passes. After the pass, inspect repository status, diff statistics, and whitespace errors, then run trusted project verification.
 
@@ -243,7 +245,7 @@ greptile review --agent --no-color --layout comments --context 15 > "$scratch/ra
 greptile review --json --no-color > "$scratch/raw/greptile.json"
 ```
 
-Greptile normally reviews committed branch state against a base branch. Do not claim it saw uncommitted fixes unless installed help and a small controlled check establish that behavior. Its `--resume` flag resumes a Greptile review and must never be confused with a Luna Max fix pass.
+Greptile normally reviews committed branch state against a base branch. Do not claim it saw uncommitted fixes unless installed help and a small controlled check establish that behavior. Its `--resume` flag resumes a Greptile review and must never be confused with a Sol fix pass.
 
 ## Greptile Hosted Reviews
 
