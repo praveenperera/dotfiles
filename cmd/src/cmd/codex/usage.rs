@@ -1,7 +1,8 @@
 use super::*;
 use crate::fsutil;
 use crate::runtime;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::hash_map::Entry;
+use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
 
 const DOUBLED_PLAN_TYPES: &[KnownPlanType] = &[KnownPlanType::Prolite];
@@ -673,18 +674,36 @@ fn usage_history_rows(
         .collect()
 }
 
-fn deduped_history_samples(history: &UsageHistory) -> Vec<&UsageHistorySample> {
-    let mut seen = HashSet::new();
+// dedupe per local day so unchanged usage still appears on days after it last changed,
+// otherwise every later sample collapses into the first one and falls outside the window
+fn deduped_history_samples(history: &UsageHistory) -> Vec<DedupedHistorySample<'_>> {
     let mut samples = history.samples.iter().collect::<Vec<_>>();
     samples.sort_by_key(|sample| sample.captured_at);
-    samples
-        .into_iter()
-        .filter(|sample| seen.insert(sample.dedupe_key()))
-        .collect()
+
+    let mut first_index = HashMap::<_, usize>::new();
+    let mut deduped = Vec::<DedupedHistorySample>::new();
+    for sample in samples {
+        let captured_day = sample.captured_at.with_timezone(&Local).date_naive();
+        match first_index.entry((captured_day, sample.dedupe_key())) {
+            Entry::Occupied(entry) => deduped[*entry.get()].repeats += 1,
+            Entry::Vacant(entry) => {
+                entry.insert(deduped.len());
+                deduped.push(DedupedHistorySample { sample, repeats: 0 });
+            }
+        }
+    }
+
+    deduped
+}
+
+struct DedupedHistorySample<'a> {
+    sample: &'a UsageHistorySample,
+    // later identical samples from the same local day folded into this one
+    repeats: usize,
 }
 
 fn usage_history_sample_entries(
-    samples: Vec<&UsageHistorySample>,
+    samples: Vec<DedupedHistorySample>,
     now: chrono::DateTime<Utc>,
     days: usize,
     verbose: bool,
@@ -701,7 +720,7 @@ fn usage_history_sample_entries(
     let mut today_rows = Vec::new();
     let mut older_rows = Vec::new();
     for sample in samples {
-        let row = UsageHistoryRow::from(sample);
+        let row = UsageHistoryRow::from(&sample);
         if row.captured_day < earliest_day || row.captured_day > today {
             continue;
         }
@@ -736,7 +755,7 @@ fn usage_history_sample_entries(
 }
 
 fn usage_history_summary_entries(
-    samples: Vec<&UsageHistorySample>,
+    samples: Vec<DedupedHistorySample>,
     now: chrono::DateTime<Utc>,
     days: usize,
 ) -> Vec<UsageHistoryEntry> {
@@ -746,7 +765,7 @@ fn usage_history_summary_entries(
         .unwrap_or(today);
     let mut day_samples = BTreeMap::<chrono::NaiveDate, Vec<&UsageHistorySample>>::new();
 
-    for sample in samples {
+    for DedupedHistorySample { sample, .. } in samples {
         let captured_day = sample.captured_at.with_timezone(&Local).date_naive();
         if captured_day < earliest_day || captured_day > today {
             continue;
@@ -858,13 +877,14 @@ impl UsageHistoryEntry {
     }
 }
 
-impl From<&UsageHistorySample> for UsageHistoryRow {
-    fn from(sample: &UsageHistorySample) -> Self {
+impl From<&DedupedHistorySample<'_>> for UsageHistoryRow {
+    fn from(deduped: &DedupedHistorySample<'_>) -> Self {
+        let sample = deduped.sample;
         let captured_at = sample.captured_at.with_timezone(&Local);
         Self {
             captured_day: captured_at.date_naive(),
             day_label: format_history_day(captured_at),
-            captured_at: format_history_timestamp(captured_at),
+            captured_at: format_history_row_timestamp(captured_at, deduped.repeats),
             label: sample.email.clone().unwrap_or_else(|| sample.label.clone()),
             five_hour: sample
                 .five_hour
@@ -909,6 +929,14 @@ fn format_history_day(captured_at: chrono::DateTime<Local>) -> String {
 
 fn format_history_timestamp(captured_at: chrono::DateTime<Local>) -> String {
     captured_at.format("%a %-I:%M %p").to_string()
+}
+
+fn format_history_row_timestamp(captured_at: chrono::DateTime<Local>, repeats: usize) -> String {
+    let timestamp = format_history_timestamp(captured_at);
+    match repeats {
+        0 => timestamp,
+        repeats => format!("{timestamp} +{repeats}"),
+    }
 }
 
 fn format_history_window(window: &UsageHistoryWindow) -> String {
