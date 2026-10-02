@@ -26,6 +26,16 @@ chmod 755 ~/.local/bin/aws-secrets-credentials
 
 The current setup does not use `~/.aws/credentials`.
 
+## Values in `~/.secrets.zsh` used by agent skills
+
+The `run-auto` skill sends ntfy notifications to the topic in `RUN_AUTO_NTFY_TOPIC`. Anyone who knows the topic can read and post to it, so keep it out of Git:
+
+```sh
+export RUN_AUTO_NTFY_TOPIC="..."
+```
+
+Subscribe to the same topic in the ntfy app on the phone. Agents on `code` and `ai5090` need the value too. Run `just sync-agent-secrets` from the homelab repository to copy it there.
+
 ## Values in `~/.secrets.zsh` used by `cmd`
 
 Keep these entries as Zsh exports:

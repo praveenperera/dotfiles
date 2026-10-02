@@ -24,6 +24,22 @@ Make every decision yourself. Do not end a turn with a question, an options list
 
 Work outside the current folder or repository when the task needs it. These overrides do not lift the safety boundary: do not delete data the task does not own, force-push, publish, deploy, or spend money. When the best path needs one of those, take the best path that avoids it, log the blocked option with result `blocked`, and keep working on everything else.
 
+## Notify the user with ntfy
+
+Send a push notification with [notify.sh](scripts/notify.sh) at these points only:
+
+- `blocked`: the run cannot finish without the user, or a blocked option leaves the result materially worse
+- `important`: the user should know before they return, such as a risk to data they care about, a cost, or a result that changes the plan
+- `done`: the run has stopped, whether the goal is met or every remaining path is blocked
+
+```sh
+~/.agents/skills/run-auto/scripts/notify.sh done "<repo>: <task-slug> finished" "<one-line result>. Log: <decision log path>"
+```
+
+Keep each message short. Name the repository and task, state the outcome or the decision needed, and give the decision log path. Do not include secrets, tokens, or private data. Do not notify for routine progress.
+
+The script reads the topic from `RUN_AUTO_NTFY_TOPIC`, falling back to `~/.secrets.zsh`. Sending these notifications is an allowed exception to the publish rule. When the script fails, log the failure and keep working.
+
 ## Decide hard calls with Astra
 
 When two options remain close after you have weighed the evidence, or you are stuck, ask Astra at `low` effort for a read-only second opinion through the [use-agents](../use-agents/SKILL.md) routing. Give it the goal, the options, the evidence so far, and the constraint that the answer must pick one. Then decide yourself and log the decision with Astra's input as evidence. Astra advises; the root decides.
@@ -57,7 +73,7 @@ Do not stop because a single approach failed. Change direction and log the pivot
 
 ## Report on return
 
-Close the decision log. Then report in this order:
+Close the decision log and send the `done` notification. Then report in this order:
 
 1. anything that needs the user's input, including blocked options
 2. the final result and the evidence that verifies it
