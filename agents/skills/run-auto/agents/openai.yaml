@@ -1,0 +1,7 @@
+interface:
+  display_name: "Run Auto"
+  short_description: "Finish a task unattended with a decision log"
+  default_prompt: "Use $run-auto to finish this task without asking me, and keep a decision log."
+
+policy:
+  allow_implicit_invocation: false
