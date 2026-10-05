@@ -2,7 +2,7 @@
 
 Every fix pass must be a new GPT-6.1 Sol agent. Do not resume a prior fix session, even if the previous pass was close to correct. Every pass consumes the orchestrator's single global fix budget, regardless of which reviewer or verification failure triggered it.
 
-Use Sol with `high` reasoning for every fix pass. Do not use Astra for fixes. Use Codex `xhigh` only when the user explicitly requests it for Codex review.
+Use Sol with `low` reasoning for every fix pass. Do not use Astra for fixes. Use Codex `xhigh` only when the user explicitly requests it for Codex review.
 
 ## Prompt Template
 
@@ -51,7 +51,7 @@ Do not grant fresh fix agents permission to commit, push, resolve PR threads, la
 
 ## Invocation
 
-Load the Sol fix-pass section of `providers.md` for helper and direct invocation commands. Prefer the bundled helper with `--model gpt-6.1-sol` and `model_reasoning_effort='"high"'`, and dry-run it when checking argument construction. Never use a resume or continuation option.
+Load the Sol fix-pass section of `providers.md` for helper and direct invocation commands. Prefer the bundled helper with `--model gpt-6.1-sol` and `model_reasoning_effort='"low"'`, and dry-run it when checking argument construction. Never use a resume or continuation option.
 
 When the orchestrator is itself a Codex session with internal subagent tools, an equivalent fresh Sol internal worker is allowed. Give it the same prompt contract and still save its final report under the scratch directory. Prefer a fresh worker over continuity unless the same owned scope needs an immediate repair follow-up.
 

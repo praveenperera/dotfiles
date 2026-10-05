@@ -1,6 +1,6 @@
 ---
 name: use-sol
-description: Route implementation, tests, investigation, and mechanical repository work to GPT-6.1 Sol subagents at low or high reasoning. Use only when the user explicitly says "use Sol", "use Sol sub-agents", "use Sol 6.1", or invokes $use-sol. Do not infer this skill from a task that merely looks suitable for delegation.
+description: Route implementation, tests, and mechanical repository work to GPT-6.1 Sol subagents at low reasoning. Use only when the user explicitly says "use Sol", "use Sol sub-agents", "use Sol 6.1", or invokes $use-sol. Do not infer this skill from a task that merely looks suitable for delegation.
 ---
 
 # Use Sol
@@ -13,19 +13,13 @@ While active, send implementation work to Sol 6.1. Keep design and acceptance in
 
 ## Route suitable work
 
-Send Sol work that has a decided approach, a tight scope, and a cheap correctness check.
+Send Sol `low` work that has a decided approach, a tight scope, and a cheap correctness check:
 
-At `low` reasoning:
-
-- mechanical edits such as renames, signature changes, import moves, and API migrations along a decided pattern
-- fixtures, table test cases, and boilerplate that follows an established repository pattern
+- easy, bounded implementation that follows an existing design
+- tests and test extensions, including fixtures and table cases
+- mechanical edits such as renames, signature changes, import moves, and API migrations
 - inventories, classifications, and repeated transforms across many files
-
-At `high` reasoning:
-
-- bounded implementation that follows an existing design
-- new tests and test extensions that need edge-case judgment
-- bug investigation and root-cause analysis that report findings without editing
+- boilerplate that follows an established repository pattern
 
 Keep these responsibilities in the root thread:
 
@@ -41,7 +35,7 @@ Decompose a large change into bounded passes after the root agent decides the de
 
 If you are Codex, spawn with [codex-native.md](../use-agents/references/codex-native.md). If you are not Codex, use the [Codex CLI delegation reference](../use-agents/references/codex-cli.md).
 
-Select GPT-6.1 Sol (`gpt-6.1-sol`) with the reasoning level from the list above when the tool needs an explicit model choice. Use `xhigh` only for a deep audit, and do not use `max`. If a `low` pass fails its check or needs a judgment call, rerun it at `high`. If the configured worker already uses Sol 6.1, do not add redundant overrides. Start a fresh worker with only the task-local context unless continuity is necessary.
+Select GPT-6.1 Sol (`gpt-6.1-sol`) with `low` reasoning when the tool needs an explicit model choice. If a `low` pass fails its check or needs a judgment call, rerun it at `high`; do not use `max`. If the configured worker already uses Sol 6.1 at the required effort, do not add redundant overrides. Start a fresh worker with only the task-local context unless continuity is necessary.
 
 Give each worker a self-contained contract with:
 

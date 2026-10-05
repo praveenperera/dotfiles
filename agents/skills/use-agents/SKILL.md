@@ -34,11 +34,11 @@ Do not use these unless the user names them: Claude Fable (any version), GPT-6 L
 
 Send work to **Sol 6.1** by default. It matches Opus 5.5 on scoped work at a fraction of the cost, and it is the more thorough reviewer: it digs into a change until it finds what is wrong, and it catches regressions that Opus and Fable miss. Use it for:
 
-- implementation with a decided approach, a tight scope, and a cheap correctness check (tests, type check, lint, build)
-- tests, mechanical edits, migrations, inventories, and repeated transforms
-- bug investigation, root-cause analysis, and mapping what code a change must touch and why
-- review, audits, and verification of code that Opus or another agent wrote
-- browser and computer-use tasks
+- at `low`: implementation with a decided approach, a tight scope, and a cheap correctness check (tests, type check, lint, build)
+- at `low`: tests, mechanical edits, migrations, inventories, and repeated transforms
+- at `high`: bug investigation, root-cause analysis, and mapping what code a change must touch and why
+- at `high`: review, audits, and verification of code that Opus or another agent wrote
+- at `high`: browser and computer-use tasks
 
 Send work to **Opus 5.5** when any of these are true:
 
@@ -48,23 +48,23 @@ Send work to **Opus 5.5** when any of these are true:
 - the spec has gaps that the delegate must fill sensibly
 - a Sol pass failed twice on the same defect
 
-A common split: the root decides the design (with an optional Astra second opinion on a big decision), Sol 6.1 implements scoped passes or Opus 5.5 implements judgment-heavy ones, and a fresh Sol 6.1 run at `high` reviews and tests the result. When Opus wrote the code, a Sol review is the default second pair of eyes. Neither delegate replaces the root's diagnosis, architecture, or final acceptance.
+A common split: the root decides the design (with an optional Astra second opinion on a big decision), Sol 6.1 at `low` implements bounded passes or Opus 5.5 implements judgment-heavy ones, and a fresh Sol 6.1 run at `high` reviews and tests the result. When Opus wrote the code, a Sol review is the default second pair of eyes. Neither delegate replaces the root's diagnosis, architecture, or final acceptance.
 
 ## Sol 6.1 effort levels
 
-Use `high` by default and drop to `low` for the easy work below. Do not use `max`; it is much slower and did not score better than `xhigh`.
+Use `low` for implementation after the design is decided and `high` for investigation and review. Do not use `max`; it is much slower and did not score better than `xhigh`.
 
-| Effort  | Use for                                                                                                                                                                                                                                                                                                          |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `low`   | Easy work that follows the prompt literally and that a cheap check proves: renames, signature changes, import moves, API migrations along a decided pattern, fixtures and table test cases, boilerplate that follows an existing pattern, inventories, classifications, repeated transforms, and focused lookups |
-| `high`  | The default: bounded features, new tests, bug investigation and root-cause analysis, codebase triage, review, and fix passes                                                                                                                                                                                     |
-| `xhigh` | Deep audit of a large or high-risk change                                                                                                                                                                                                                                                                        |
+| Effort  | Use for                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `low`   | Implementation after the design is decided, where following the prompt literally gives the right result and a cheap check proves it: bounded features, tests, fixtures and table test cases, migrations, renames, signature changes, import moves, boilerplate that follows an existing pattern, inventories, classifications, repeated transforms, focused lookups, and review-fix-loop fix passes |
+| `high`  | Bug investigation and root-cause analysis, codebase triage, review, audits, verification, and computer use                                                                                                                                                                                                                                                                                          |
+| `xhigh` | Deep audit of a large or high-risk change                                                                                                                                                                                                                                                                                                                                                           |
 
 If a `low` pass fails its check or needs a judgment call, rerun it at `high` instead of sending repair passes at `low`.
 
 ## Route inside one provider
 
-- **OpenAI only:** the root decides the design, Sol 6.1 implements, tests, and reviews, and Astra `low` or `high` gives a read-only second opinion on big or hard decisions. Keep front-end and UI design decisions in the root
+- **OpenAI only:** the root decides the design, Sol 6.1 `low` implements and tests, a fresh Sol 6.1 `high` run reviews, and Astra `low` or `high` gives a read-only second opinion on big or hard decisions. Keep front-end and UI design decisions in the root
 - **Claude only:** Opus 5.5 for everything; vary effort by task (see below). Use lower effort for mechanical passes and `high` for review and verification
 - **Grok only:** Grok 4.5 for bulk and long implementation, Grok 4.6 for work where quality matters or a 4.5 pass fell short. Keep design decisions in the root
 

@@ -18,7 +18,7 @@ Before review, make a deterministic `target_fingerprint` for the exact target. W
 ## Run constraints
 
 - Set one `max_total_fix_passes` in preflight (default 3 unless the user changes it). Count every fresh Sol pass that may alter source, tests, configuration, or generated files, including verification and optional-gate repairs; never reset it across providers or stages. If the next repair exceeds the budget, stop editing and report the findings or failures.
-- Reviewers use `high` effort; fixes use GPT-6.1 Sol `high`. The Codex reviewer runs GPT-6.1 Sol; use `xhigh` only on explicit request. Never use Astra for fixes.
+- Reviewers use `high` effort; fixes use GPT-6.1 Sol `low`. The Codex reviewer runs GPT-6.1 Sol; use `xhigh` only on explicit request. Never use Astra for fixes.
 - For security, persistence, migration, or concurrency work, record invariants and a compact state or migration matrix before fixing. Use it for failure modes, rollback, compatibility, recovery, and test coverage.
 - Review architecture, ownership, and state transitions before platform callers. If two passes touch one subsystem, stop adding caller conditions; recheck the model and move the invariant to its proper owner.
 - Choose tests by risk: cover the user-visible failure and affected security, data-loss, rollback, migration, compatibility, or concurrency invariants. Do not test only edited literals or implementation details.

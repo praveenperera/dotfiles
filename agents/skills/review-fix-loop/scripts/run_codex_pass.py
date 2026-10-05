@@ -2,7 +2,7 @@
 """Run a review-fix prompt in a fresh Codex exec session.
 
 Intended default for review-fix-loop repairs: --model gpt-6.1-sol with
-model_reasoning_effort='"high"'.
+model_reasoning_effort='"low"'.
 """
 
 import argparse

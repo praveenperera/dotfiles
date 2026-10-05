@@ -110,6 +110,7 @@ Invoke Claude in print mode with plan permissions and save stdout and stderr sep
 prompt=$(< "$scratch/prompts/final-neutral-opus-$iteration.md")
 claude --print \
   --model opus \
+  --effort high \
   --permission-mode plan \
   --no-session-persistence \
   --add-dir "$repo" \
@@ -170,7 +171,7 @@ Codex review is a provider input, not a fixing session. Normalize only actionabl
 
 ## Fresh Sol Fix Pass
 
-Run every fix pass with GPT-6.1 Sol at `high` reasoning. Do not use Astra for fixes.
+Run every fix pass with GPT-6.1 Sol at `low` reasoning. Do not use Astra for fixes.
 
 Prefer the bundled helper:
 
@@ -180,7 +181,7 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/sol/iteration-1-summary.md" \
   --model gpt-6.1-sol \
-  --config model_reasoning_effort='"high"'
+  --config model_reasoning_effort='"low"'
 ```
 
 Use dry-run when checking argument construction:
@@ -191,7 +192,7 @@ python3 agents/skills/review-fix-loop/scripts/run_codex_pass.py \
   --prompt-file "$scratch/prompts/iteration-1.md" \
   --output-file "$scratch/sol/iteration-1-summary.md" \
   --model gpt-6.1-sol \
-  --config model_reasoning_effort='"high"' \
+  --config model_reasoning_effort='"low"' \
   --dry-run
 ```
 
@@ -201,7 +202,7 @@ If the helper cannot be used, invoke a fresh Sol session directly:
 codex exec \
   --cd "$repo" \
   --model gpt-6.1-sol \
-  --config model_reasoning_effort='"high"' \
+  --config model_reasoning_effort='"low"' \
   --output-last-message "$scratch/sol/iteration-1-summary.md" \
   - < "$scratch/prompts/iteration-1.md"
 ```

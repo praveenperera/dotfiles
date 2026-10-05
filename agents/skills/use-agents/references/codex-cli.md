@@ -120,14 +120,14 @@ Use Astra only as a read-only advisor for a second opinion on a big design or ar
 
 ## Run a fresh implementation delegate
 
-Run implementation only after assigning an exact owned scope. Sol 6.1 is the implementation worker; use `high` by default and `low` for easy mechanical work, following the effort table in [SKILL.md](../SKILL.md). Do not send implementation to Astra:
+Run implementation only after assigning an exact owned scope. Sol 6.1 at `low` is the implementation worker; see the effort table in [SKILL.md](../SKILL.md). Do not send implementation to Astra:
 
 ```sh
 codex --ask-for-approval never exec \
   --cd "$PWD" \
   --ephemeral \
   --model gpt-6.1-sol \
-  --config 'model_reasoning_effort="high"' \
+  --config 'model_reasoning_effort="low"' \
   --output-last-message "$delegate_dir/raw/final.md" \
   - \
   < "$delegate_dir/prompts/task.md" \
