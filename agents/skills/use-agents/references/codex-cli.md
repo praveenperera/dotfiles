@@ -88,6 +88,7 @@ Mode: <read-only analysis|implementation>
 - Do not commit, stage, push, open or modify pull requests, deploy, post messages, or change external state.
 - Do not use a priority service tier unless the user explicitly requested it.
 - Stop and report rather than expanding authority.
+- Do not wait inside a command that may run longer than a few minutes. Write `RESUME.md` under `_scratch/` with the task id, what each outcome means, and your next steps; submit the command as a homebased `task` with `thread` set to your parent task's thread; then report `blocked` with `WAITING <task-id>` and exit.
 
 ## Final report
 

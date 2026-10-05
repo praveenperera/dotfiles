@@ -30,6 +30,7 @@
 - The user's instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
 - Default to `$homebased` for self-contained agent work that can run unattended while the root ends this turn, such as implementation with verification, a broad review, or multi-source research. A task is small enough for a native subagent only when its scope is narrow and the root can check and integrate its result in this turn. When the boundary is unclear, prefer `$homebased` if the worker does not need live coordination.
 - Always use `$homebased` when using a non-Codex model.
+- Do not let a delegate wait inside a long build, test run, or CI watch. Its brief must tell it to hand the command to `$homebased`, write `RESUME.md`, report `blocked`, and exit; `$use-agents` gives the protocol and how to resume each provider.
 - Spawn a native subagent for such a small task when a self-contained `fork_turns="none"` prompt drops unused parent context, or when non-overlapping owned scopes can run at the same time and be integrated in this turn. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work. Only the root may spawn unless the user or the root's contract authorizes nested delegation.
 
 # Rust Project Specific

@@ -98,6 +98,21 @@ Use the `homebased` skill to launch delegates. The daemon runs the child, stream
 
 The transport references below still give the model flags, permission rules, prompt contract, and evidence capture to put in the homebased spec.
 
+## Long commands inside a delegate
+
+A delegate must not wait inside a long build, test suite, CI watch, benchmark, or training run. Waiting uses its turn and context budget, and if the delegate dies or is cancelled, everything it learned dies with it. The homebased worker rules forbid submitting tasks unless the prompt allows it, so every brief for a delegate that may run such a command must grant that permission and include this handoff:
+
+1. Write `RESUME.md` under the repository's `_scratch/` directory, never the repository root, with the task id, what each outcome means, and the next steps for each outcome
+2. Submit the command as a homebased `task` workload with `thread` set to the root's id, which `homebased --json task show "$HOMEBASED_TASK_ID"` prints
+3. Report `blocked` with the summary `WAITING <task-id>` and exit
+
+When the event for the waited task arrives, the root resumes the delegate with that outcome:
+
+- **Codex (Sol, Astra):** `homebased task followup <delegate-task-id>`. The thread resumes with its context intact
+- **Claude (Opus):** submit a new Claude task with the original brief, the outcome, and an instruction to continue from `RESUME.md`. Homebased runs Claude with `--no-session-persistence` and rejects `--resume` and `--continue`, so the old session cannot resume, and `RESUME.md` is the only thing that carries progress forward
+
+Keep this rule in a shared brief file that each delegate prompt includes, so new delegates get it without the root restating it. A delegate that is already running gets it through `homebased message send --worker` (Claude only); a running Codex delegate cannot take messages, so add the rule to its next brief or follow-up.
+
 ## Transport references
 
 Read only the reference for the transport in use:

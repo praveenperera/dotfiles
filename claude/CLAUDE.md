@@ -29,6 +29,7 @@
 - For a larger task, use one fresh Sol 6.1 `high` review of the related change set; add another only when a second risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
 - Default to the `homebased` skill for self-contained agent work that can run unattended while the root ends this turn, such as implementation with verification, a broad review, or multi-source research. When the boundary is unclear, prefer `homebased` if the worker does not need live coordination.
 - Always use `homebased` when using a non-Claude model.
+- Do not let a delegate wait inside a long build, test run, or CI watch. Its brief must tell it to hand the command to `homebased`, write `RESUME.md`, report `blocked`, and exit; the `use-agents` skill gives the protocol and how to resume each provider.
 - Use the Agent tool for a small task only when its scope is narrow and the root can check and integrate its result in this turn, or when non-overlapping owned scopes can run at the same time. Give each subagent a self-contained prompt. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work.
 - Never add `Claude-Session:` trailers to commit messages.
 
