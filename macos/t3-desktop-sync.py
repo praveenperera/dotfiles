@@ -1,5 +1,7 @@
 #!/usr/bin/python3
-"""Keep the Mac T3 Code background service at the installed desktop version"""
+"""Keep the Mac T3 Code background service at the installed desktop version
+and keep the desktop app off its local server so the service alone owns T3
+Connect"""
 
 import argparse
 import fcntl
@@ -8,6 +10,7 @@ import os
 import plistlib
 import re
 import shutil
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -21,6 +24,7 @@ from zoneinfo import ZoneInfo
 LABEL = "dev.praveen.t3-desktop-sync"
 SERVICE = "com.t3tools.t3code.service"
 APP = Path("/Applications/T3 Code (Alpha).app")
+DESKTOP_SETTINGS = Path(".t3/userdata/desktop-settings.json")
 # a crashed server leaves its sessions marked running until it starts again, so
 # a busy service still updates once this much time has passed
 MAX_DEFER_SECONDS = 6 * 60 * 60
@@ -91,7 +95,7 @@ def running_turns(home):
     return count
 
 
-def defer_for_turns(home):
+def defer_for_turns(home, action):
     """Return True while running agent turns should postpone a restart"""
     marker = home / "Library/Caches" / LABEL / "deferred-since"
     busy = running_turns(home)
@@ -103,11 +107,11 @@ def defer_for_turns(home):
         since = float(marker.read_text())
     except (OSError, ValueError):
         marker.write_text(str(now))
-        log(f"Deferring the T3 Code service restart while {busy} agent sessions run")
+        log(f"Deferring {action} while {busy} agent sessions run")
         return True
     if now - since < MAX_DEFER_SECONDS:
         return True
-    log(f"Restarting the T3 Code service after deferring for {int(now - since)}s")
+    log(f"Proceeding with {action} after deferring for {int(now - since)}s")
     marker.unlink(missing_ok=True)
     return False
 
@@ -137,7 +141,7 @@ def sync(home, app):
         return
     # the update and service install below restart the service and every agent
     # turn in it
-    if defer_for_turns(home):
+    if defer_for_turns(home, "the T3 Code service restart"):
         return
 
     # execute the target release's updater so a stale launcher cannot block repair
@@ -165,6 +169,78 @@ def sync(home, app):
     log(f"T3 Code service updated to {target}")
 
 
+def app_processes(app):
+    """Return (pid, command) for every running process of the desktop app"""
+    listing = subprocess.run(
+        ["ps", "-axo", "pid=,command="],
+        check=True,
+        timeout=30,
+        capture_output=True,
+        text=True,
+    ).stdout
+    prefix = f"{app}/Contents/"
+    processes = []
+    for line in listing.splitlines():
+        pid, _, command = line.strip().partition(" ")
+        if command.startswith(prefix):
+            processes.append((int(pid), command))
+    return processes
+
+
+def app_main_pid(app):
+    executable = read_plist(app / "Contents/Info.plist").get("CFBundleExecutable")
+    main = f"{app}/Contents/MacOS/{executable}"
+    return next((pid for pid, command in app_processes(app) if command == main), None)
+
+
+def quit_app(app, pid):
+    # SIGTERM takes the app's own quit path, which stops its server cleanly
+    os.kill(pid, signal.SIGTERM)
+    deadline = time.monotonic() + 90
+    while app_processes(app) and time.monotonic() < deadline:
+        time.sleep(1)
+    for leftover, _ in app_processes(app):
+        os.kill(leftover, signal.SIGKILL)
+
+
+def enforce_service_only(home, app):
+    """Turn off the desktop local server so it cannot take over T3 Connect
+
+    The desktop server and the service share one managed tunnel. The tunnel
+    follows the newest server, and a server that stops releases it, which
+    leaves the other with "Tunnel not found"
+    """
+    path = home / DESKTOP_SETTINGS
+    settings = json.loads(path.read_text()) if path.exists() else {}
+    if not isinstance(settings, dict):
+        raise TypeError("Invalid T3 Code desktop settings")
+    if settings.get("localEnvironmentEnabled") is False:
+        return
+
+    # the app keeps its settings in memory and overwrites this file when it
+    # saves, so a running app must quit before the change can stick
+    main_pid = app_main_pid(app) if app.exists() else None
+    if main_pid is not None:
+        if defer_for_turns(home, "turning off the desktop local server"):
+            return
+        log("Quitting T3 Code to turn off its local server")
+        quit_app(app, main_pid)
+
+    settings["localEnvironmentEnabled"] = False
+    temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    temporary.parent.mkdir(parents=True, exist_ok=True)
+    temporary.write_text(json.dumps(settings, indent=2) + "\n")
+    temporary.replace(path)
+    log("Turned off the T3 Code desktop local server")
+    if main_pid is None:
+        return
+
+    # the stopped desktop server released the shared tunnel
+    run(["launchctl", "kickstart", "-k", f"gui/{os.getuid()}/{SERVICE}"])
+    run(["open", "-a", str(app)])
+    log("Restarted the T3 Code service and reopened the desktop app")
+
+
 def check(home, app):
     # launchd serializes its own runs; this lock also covers manual invocations
     lock_dir = home / "Library/Caches" / LABEL
@@ -175,6 +251,7 @@ def check(home, app):
         except BlockingIOError:
             return
         sync(home, app)
+        enforce_service_only(home, app)
 
 
 def install(home, app):
@@ -210,7 +287,7 @@ def install(home, app):
     subprocess.run(["launchctl", "bootout", target], capture_output=True, check=False)
     run(["launchctl", "enable", target])
     run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist)])
-    log("Automatic T3 Code service checks enabled every five minutes")
+    log("Automatic T3 Code service and desktop checks enabled every five minutes")
 
 
 def main():

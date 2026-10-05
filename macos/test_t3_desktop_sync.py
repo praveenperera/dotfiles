@@ -28,12 +28,25 @@ class DesktopSyncTests(unittest.TestCase):
         self.state = self.home / ".t3/runtime/service-state.json"
         self.unit = self.home / "Library/LaunchAgents" / f"{sync.SERVICE}.plist"
         self.info = self.app / "Contents/Info.plist"
+        self.settings = self.home / sync.DESKTOP_SETTINGS
         self.configure("0.0.43", "0.0.42")
+        self.write_settings({"localEnvironmentEnabled": False})
+
+    def write_settings(self, settings):
+        self.settings.parent.mkdir(parents=True, exist_ok=True)
+        self.settings.write_text(json.dumps(settings))
+
+    def read_settings(self):
+        return json.loads(self.settings.read_text())
 
     def configure(self, desktop, active, pending=False, launcher=None):
         for path in [self.info, self.unit, self.state]:
             path.parent.mkdir(parents=True, exist_ok=True)
-        self.info.write_bytes(plistlib.dumps({"CFBundleShortVersionString": desktop}))
+        self.info.write_bytes(
+            plistlib.dumps(
+                {"CFBundleShortVersionString": desktop, "CFBundleExecutable": "T3 Code"}
+            )
+        )
         runtime = self.install_runtime(active)
         self.unit.write_bytes(
             plistlib.dumps(
@@ -171,6 +184,59 @@ class DesktopSyncTests(unittest.TestCase):
             with patch.object(sync, "run") as run, self.assertRaises(ValueError):
                 sync.check(self.home, self.app)
             run.assert_not_called()
+
+    def test_closed_app_gets_local_server_turned_off(self):
+        self.configure("0.0.43", "0.0.43")
+        for settings in [None, {"serverExposureMode": "network-accessible"}]:
+            with self.subTest(settings=settings):
+                if settings is None:
+                    self.settings.unlink()
+                else:
+                    self.write_settings(settings)
+                with (
+                    patch.object(sync, "app_processes", return_value=[]),
+                    patch.object(sync, "run") as run,
+                ):
+                    sync.check(self.home, self.app)
+                run.assert_not_called()
+                expected = {**(settings or {}), "localEnvironmentEnabled": False}
+                self.assertEqual(self.read_settings(), expected)
+
+    def test_running_app_quits_before_local_server_is_turned_off(self):
+        # the app overwrites the file from memory, so it must stop first
+        self.configure("0.0.43", "0.0.43")
+        self.write_settings({"localEnvironmentEnabled": True})
+        main = f"{self.app}/Contents/MacOS/T3 Code"
+        running = [[(41, main), (42, f"{self.app}/Contents/Frameworks/Helper")], []]
+        with (
+            patch.object(sync, "app_processes", side_effect=lambda _app: running[0]),
+            patch.object(
+                sync.os, "kill", side_effect=lambda *_: running.pop(0)
+            ) as kill,
+            patch.object(sync, "run") as run,
+        ):
+            sync.check(self.home, self.app)
+        kill.assert_called_once_with(41, sync.signal.SIGTERM)
+        self.assertFalse(self.read_settings()["localEnvironmentEnabled"])
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(commands[0][:3], ["launchctl", "kickstart", "-k"])
+        self.assertTrue(commands[0][3].endswith(f"/{sync.SERVICE}"))
+        self.assertEqual(commands[1], ["open", "-a", str(self.app)])
+
+    def test_running_turns_keep_app_local_server_until_idle(self):
+        self.configure("0.0.43", "0.0.43")
+        self.write_settings({"localEnvironmentEnabled": True})
+        self.set_sessions("running")
+        main = f"{self.app}/Contents/MacOS/T3 Code"
+        with (
+            patch.object(sync, "app_processes", return_value=[(41, main)]),
+            patch.object(sync.os, "kill") as kill,
+            patch.object(sync, "run") as run,
+        ):
+            sync.check(self.home, self.app)
+        kill.assert_not_called()
+        run.assert_not_called()
+        self.assertTrue(self.read_settings()["localEnvironmentEnabled"])
 
     def test_version_order_is_numeric(self):
         self.assertGreater(sync.Version.parse("0.0.100"), sync.Version.parse("0.0.99"))
