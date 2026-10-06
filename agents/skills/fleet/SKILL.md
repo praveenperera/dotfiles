@@ -1,6 +1,6 @@
 ---
 name: fleet
-description: Choose and use Praveen's machines for remote coding agents, builds, and GPU training. Use for Mac mini, ai5090.local, code.local, or homelab access and workload placement. Do not use for ordinary local coding that needs no machine choice.
+description: Choose and use Praveen's machines for remote coding agents, builds, and GPU training. Use when a task names the Mac mini, ai5090.local, code.local, or the homelab, or must decide which machine runs a workload. Do not use for ordinary local coding, or for verification and follow-ups that run locally with no machine choice.
 ---
 
 # Fleet
