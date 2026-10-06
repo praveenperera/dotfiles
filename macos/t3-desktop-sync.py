@@ -25,6 +25,9 @@ LABEL = "dev.praveen.t3-desktop-sync"
 SERVICE = "com.t3tools.t3code.service"
 APP = Path("/Applications/T3 Code (Alpha).app")
 DESKTOP_SETTINGS = Path(".t3/userdata/desktop-settings.json")
+SERVER_SETTINGS = Path(".t3/userdata/settings.json")
+CLAUDE_INSTANCE = "claudeAgent"
+CLAUDE_HOME = Path(".claude")
 # a crashed server leaves its sessions marked running until it starts again, so
 # a busy service still updates once this much time has passed
 MAX_DEFER_SECONDS = 6 * 60 * 60
@@ -241,6 +244,45 @@ def enforce_service_only(home, app):
     log("Restarted the T3 Code service and reopened the desktop app")
 
 
+def enforce_shared_claude_login(home):
+    """Point the service's Claude at the login file that SSH sessions use
+
+    Over SSH the login keychain is locked, so `claude` keeps its login in
+    ~/.claude/.credentials.json. The service runs in the GUI session, where
+    `claude` reads the keychain copy instead, and the two drift until the
+    keychain copy can no longer refresh. An explicit CLAUDE_CONFIG_DIR makes
+    `claude` look up a different keychain item, miss it, and fall back to the
+    shared file
+    """
+    path = home / SERVER_SETTINGS
+    settings = json.loads(path.read_text()) if path.exists() else {}
+    if not isinstance(settings, dict):
+        raise TypeError("Invalid T3 Code server settings")
+
+    config = settings
+    for key, default in [
+        ("providerInstances", {}),
+        (CLAUDE_INSTANCE, {"driver": CLAUDE_INSTANCE, "enabled": True}),
+        ("config", {}),
+    ]:
+        config = config.setdefault(key, default)
+        if not isinstance(config, dict):
+            raise TypeError(f"Invalid T3 Code Claude settings at {key}")
+
+    # a configured home is a deliberate choice, such as a separate account
+    home_path = config.get("homePath")
+    if isinstance(home_path, str) and home_path.strip():
+        return
+
+    config["homePath"] = str(home / CLAUDE_HOME)
+    # the server watches this directory and reloads settings without a restart
+    temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    temporary.parent.mkdir(parents=True, exist_ok=True)
+    temporary.write_text(json.dumps(settings, indent=2) + "\n")
+    temporary.replace(path)
+    log("Pointed T3 Code Claude at the shared ~/.claude login")
+
+
 def check(home, app):
     # launchd serializes its own runs; this lock also covers manual invocations
     lock_dir = home / "Library/Caches" / LABEL
@@ -252,6 +294,7 @@ def check(home, app):
             return
         sync(home, app)
         enforce_service_only(home, app)
+        enforce_shared_claude_login(home)
 
 
 def install(home, app):

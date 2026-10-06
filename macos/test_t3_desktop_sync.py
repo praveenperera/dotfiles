@@ -31,6 +31,16 @@ class DesktopSyncTests(unittest.TestCase):
         self.settings = self.home / sync.DESKTOP_SETTINGS
         self.configure("0.0.43", "0.0.42")
         self.write_settings({"localEnvironmentEnabled": False})
+        self.server_settings = self.home / sync.SERVER_SETTINGS
+        self.server_settings.write_text(
+            json.dumps(
+                {
+                    "providerInstances": {
+                        "claudeAgent": {"config": {"homePath": "/shared"}}
+                    }
+                }
+            )
+        )
 
     def write_settings(self, settings):
         self.settings.parent.mkdir(parents=True, exist_ok=True)
@@ -251,6 +261,40 @@ class DesktopSyncTests(unittest.TestCase):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             sync.check(self.home, self.app)
             run.assert_not_called()
+
+    def test_claude_uses_shared_login_unless_home_is_chosen(self):
+        # the service reads a stale keychain login unless pointed at ~/.claude
+        self.configure("0.0.43", "0.0.43")
+        shared = str(self.home / ".claude")
+        cases = [
+            (
+                {"providers": {"grok": {"enabled": True}}},
+                {
+                    "providers": {"grok": {"enabled": True}},
+                    "providerInstances": {
+                        "claudeAgent": {
+                            "driver": "claudeAgent",
+                            "enabled": True,
+                            "config": {"homePath": shared},
+                        }
+                    },
+                },
+            ),
+            (
+                {"providerInstances": {"claudeAgent": {"config": {"homePath": "/w"}}}},
+                {"providerInstances": {"claudeAgent": {"config": {"homePath": "/w"}}}},
+            ),
+        ]
+        for before, expected in cases:
+            with self.subTest(before=before):
+                self.server_settings.write_text(json.dumps(before))
+                with (
+                    patch.object(sync, "app_processes", return_value=[]),
+                    patch.object(sync, "run"),
+                ):
+                    sync.check(self.home, self.app)
+                written = json.loads(self.server_settings.read_text())
+                self.assertEqual(written, expected)
 
     def test_service_tool_paths_survive_update(self):
         config = sync.read_plist(self.unit)
