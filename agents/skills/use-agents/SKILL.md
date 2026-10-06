@@ -98,6 +98,16 @@ Use the `homebased` skill to launch delegates. The daemon runs the child, stream
 
 The transport references below still give the model flags, permission rules, prompt contract, and evidence capture to put in the homebased spec.
 
+## Fan out and report once
+
+When work splits into many parallel workers, such as coverage slices, a race between identical briefs, or a batch of measurements, give the user one report instead of a stream of status updates:
+
+1. Before launching, state the done condition and the report the fan-out must return. For a race, declare the selection rule up front: first pass, rank all, or best of.
+2. Launch every worker at once. Each brief stands alone and names its slice, how to verify, and the exact commits and method when it measures. Each worker reports `PASS`, `ISSUES`, or `BLOCKED` with evidence, and lists every issue it can prove, not only the first.
+3. When the user asks one coordinator to run the fan-out, such as a Sol `high` agent that starts the `low` workers, that coordinator drains the workers and sends the single report. Grant it nested delegation in its brief.
+4. Drop a result that lacks the commits or method its brief named and respawn that worker once. A second miss is a gap, and a gap is never a pass. If a worker drops out, continue without it and note it.
+5. Report one compact table of results, one-line evidenced issues, gaps and dropouts, and the race rule when used. Do not paste raw worker output.
+
 ## Long commands inside a delegate
 
 A delegate must not wait inside a long build, test suite, CI watch, benchmark, or training run. Waiting uses its turn and context budget, and if the delegate dies or is cancelled, everything it learned dies with it. The homebased worker rules forbid submitting tasks unless the prompt allows it, so every brief for a delegate that may run such a command must grant that permission and include this handoff:

@@ -1,6 +1,7 @@
 ---
 name: review-fix-loop
-description: Run a bounded multi-provider review and local repair loop for a pull request, branch, or local diff.
+description: Run a bounded multi-provider review and local repair loop for a pull request, branch, or local diff, or a review-only panel that returns one combined verdict without fixing. Use when the user invokes $review-fix-loop or /review-fix-loop.
+disable-model-invocation: true
 ---
 
 # Review Fix Loop
@@ -36,6 +37,20 @@ Run enabled stages in this order:
 4. **Codex:** Start only after Opus is clean.
 
 If any final reviewer finds an actionable issue, stop later stages, spend one fix pass, verify, and restart the enabled sequence from its first stage under the snapshot invariant. A user may disable a provider; remove only that stage and preserve the relative order of the rest. Do not silently substitute a provider, model, credential, or skill. If an enabled dependency is unavailable, stop and request authorization to skip or substitute it.
+
+## Review-only panel
+
+Use this mode when the user asks for a panel, an adversarial or multi-model review, or a verdict without fixes. It replaces the provider order and fix loop; it never edits code.
+
+1. Make the target fingerprint and one neutral packet as above. Add one paragraph that states the change's intent, derived from the user's request, commit messages, and any PR description. If the intent is unclear, ask before reviewing.
+2. Send the same packet to every enabled final reviewer in parallel, each in a fresh read-only session. The adversarial signal comes from model diversity, so give every reviewer the same prompt; do not assign personas.
+3. Save each raw result, then normalize and deduplicate findings. Record which providers raised each one. A finding raised independently by two or more providers is the strongest signal; a lone finding still gets read and weighed.
+4. Judge every finding as the lead reviewer, not a neutral aggregator, and place it in one bucket with a one-line reason:
+   - **Act on:** a real correctness, security, data, or maintainability problem given the change's goals; it would block a merge
+   - **Consider:** a legitimate point whose cost may not be worth paying now
+   - **Noted:** valid but not actionable at this stage
+   - **Dismissed:** wrong, out of scope, or missing context
+5. Report the intent, each reviewer with its exact model and finding count, the four buckets, and where the providers agreed or disagreed. Do not apply any fix unless the user then asks for the loop.
 
 ## Compact workflow
 

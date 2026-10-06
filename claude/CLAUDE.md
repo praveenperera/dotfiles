@@ -68,4 +68,5 @@
 
 - Add or update tests when they protect user-visible behavior, reproduce a bug, cover compatibility or migration risk, or lock down a non-obvious invariant.
 - Do not write tests for reversible, low-impact changes that only restate edited literals or mirror the implementation.
+- Before keeping a test, ask whether it would still pass if every function it calls returned nothing. If it would, rewrite it to assert a concrete result for a concrete input, or delete it.
 - For static configuration or list changes, prefer compile or lint verification unless selection, fallback, parsing, migration, or filtering behavior needs coverage.
