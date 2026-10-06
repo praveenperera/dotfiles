@@ -1,0 +1,6 @@
+interface:
+  display_name: "How"
+  short_description: "Trace how a subsystem works end to end"
+  default_prompt: "Use $how to trace how this subsystem works from entry point to observable result."
+policy:
+  allow_implicit_invocation: false

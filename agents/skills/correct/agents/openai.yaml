@@ -1,0 +1,6 @@
+interface:
+  display_name: "Correct"
+  short_description: "Make repeated agent mistakes impossible"
+  default_prompt: "Use $correct to find the mistakes agents keep repeating here and enforce a fix for each."
+policy:
+  allow_implicit_invocation: false

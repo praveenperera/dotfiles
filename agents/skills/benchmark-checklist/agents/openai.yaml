@@ -1,0 +1,6 @@
+interface:
+  display_name: "Benchmark Checklist"
+  short_description: "Vet a performance or eval number before reporting it"
+  default_prompt: "Use $benchmark-checklist to vet this performance or eval number before we report it."
+policy:
+  allow_implicit_invocation: false
