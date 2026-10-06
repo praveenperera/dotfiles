@@ -1,6 +1,7 @@
 ---
 name: "yeet"
 description: "Publish local changes to GitHub by confirming scope, committing intentionally, pushing the branch, and opening a draft PR through the GitHub app from this plugin, with `gh` used only as a fallback where connector coverage is insufficient."
+disable-model-invocation: true
 ---
 
 # GitHub Publish Changes

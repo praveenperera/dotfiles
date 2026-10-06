@@ -6,6 +6,7 @@ description: >-
   summaries, UI mockups, annotated diffs, and focused review notes. Use
   when asked to recap completed work, visualize a PR or diff, produce a
   visual recap, or run /visual-recap.
+disable-model-invocation: true
 ---
 
 # Visual Recap

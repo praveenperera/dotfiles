@@ -1,6 +1,7 @@
 ---
 name: architect
 description: Resolve an unsettled durable domain, ownership, API, or schema design before implementation. Use when competing designs or repeated caller workarounds require a decision with migration or compatibility cost. Do not use for routine implementation, established patterns, or review that only checks an existing design.
+disable-model-invocation: true
 ---
 
 # Architect

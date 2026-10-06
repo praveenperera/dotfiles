@@ -1,6 +1,7 @@
 ---
 name: slopstation
 description: Deploy, update, archive, or troubleshoot sites and Workers on slopstation.net with Wrangler.
+disable-model-invocation: true
 ---
 
 # Slopstation

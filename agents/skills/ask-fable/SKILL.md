@@ -1,6 +1,7 @@
 ---
 name: ask-fable
 description: Ask the Fable model a question through the installed Claude CLI and return its response. Use when the user says "ask Fable," "consult Fable," "get Fable's opinion," or otherwise explicitly asks Codex to send a task to Fable.
+disable-model-invocation: true
 ---
 
 # Ask Fable

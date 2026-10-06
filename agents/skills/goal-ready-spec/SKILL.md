@@ -1,6 +1,7 @@
 ---
 name: goal-ready-spec
 description: Create or revise a guarded, auditable implementation spec for Codex or another agent. Use only when the user explicitly invokes $goal-ready-spec or specifically asks to make a spec goal-ready.
+disable-model-invocation: true
 ---
 
 # Goal-Ready Spec

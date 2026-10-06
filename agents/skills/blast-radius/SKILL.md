@@ -1,6 +1,7 @@
 ---
 name: blast-radius
 description: Investigate a concrete failure path outside a change's direct callers. Use when the user requests a compatibility or change-impact assessment, or initial inspection identifies a specific cross-boundary safety assumption that needs proof. Do not use for general review, migration keywords alone, or hypothetical risk.
+disable-model-invocation: true
 ---
 
 # Blast radius

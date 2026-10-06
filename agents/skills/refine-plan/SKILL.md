@@ -1,6 +1,7 @@
 ---
 name: refine-plan
 description: Refine an implementation plan or spec through evidence-first investigation and focused user decisions until no material ambiguity remains or the user ends the refinement.
+disable-model-invocation: true
 ---
 
 # Refine Plan

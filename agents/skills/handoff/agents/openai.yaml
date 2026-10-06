@@ -2,3 +2,5 @@ interface:
   display_name: "Handoff"
   short_description: "Create a concise, resumable agent handoff"
   default_prompt: "Use $handoff to capture the current work for a fresh agent to resume."
+policy:
+  allow_implicit_invocation: false

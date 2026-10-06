@@ -1,6 +1,7 @@
 ---
 name: show-me-your-work
 description: Keep an evidence-linked, append-only decision log for long-running, multi-phase, experimental, or unattended work. Use when the user wants a reviewable trail, asks the agent to work while away, or needs to understand why a run changed direction. Do not use for short tasks with no meaningful decisions.
+disable-model-invocation: true
 ---
 
 # Show me your work

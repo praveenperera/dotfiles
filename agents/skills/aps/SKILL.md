@@ -1,6 +1,7 @@
 ---
 name: aps
-description: Search academic papers, citation graphs, authors, and local paper collections with the aps CLI. Use for scholarly research and repeatable literature scans, not general web search.
+description: Search academic papers, citation graphs, authors, and local paper collections with the aps CLI. Use when the user invokes $aps or /aps for papers, citations, authors, or a literature scan. Not for general web search.
+disable-model-invocation: true
 ---
 
 # aps - Academic Paper Search

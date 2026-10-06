@@ -1,6 +1,7 @@
 ---
 name: technical-writing
 description: Draft or materially restructure RFCs, ADRs, READMEs, runbooks, pull request descriptions, or similar technical documents when reader tasks or structure need deliberate design. Do not use for small factual, typo, label, or isolated paragraph edits, product marketing, or creative writing.
+disable-model-invocation: true
 ---
 
 # Technical writing

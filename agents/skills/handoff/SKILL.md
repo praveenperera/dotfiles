@@ -1,6 +1,7 @@
 ---
 name: handoff
 description: Create a concise, durable handoff document that lets a fresh agent resume the current work without relying on conversation history.
+disable-model-invocation: true
 ---
 
 # Handoff

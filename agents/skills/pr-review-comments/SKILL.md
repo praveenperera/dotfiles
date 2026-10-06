@@ -1,6 +1,7 @@
 ---
 name: pr-review-comments
 description: Fetch and analyze GitHub PR conversations, review submissions, and thread-aware code feedback using the prc CLI. Use for PR comment summaries, unresolved or outdated thread inspection, requested changes, and code-linked review context. Accepts PR numbers, PR URLs, or owner/repo format.
+disable-model-invocation: true
 ---
 
 # PR Review Comments

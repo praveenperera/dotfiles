@@ -1,6 +1,7 @@
 ---
 name: reflect
 description: Review completed or difficult work, identify durable lessons, and propose the smallest skill, instruction, test, lint, or tooling changes that prevent repeated mistakes. Use when the user asks what was learned, why work needed repeated loops, how to avoid a recurrence, or to reflect on a task.
+disable-model-invocation: true
 ---
 
 # Reflect

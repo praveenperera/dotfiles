@@ -2,3 +2,5 @@ interface:
   display_name: "Slopstation"
   short_description: "Archive and deploy slopstation.net sites"
   default_prompt: "Use $slopstation to archive and deploy this site on a slopstation.net subdomain."
+policy:
+  allow_implicit_invocation: false

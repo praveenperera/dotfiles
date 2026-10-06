@@ -1,6 +1,7 @@
 ---
 name: create-verification-skill
 description: Create a durable project-local skill that drives a real application and captures evidence. Use when the user asks for a reusable verification workflow, or the same missing harness blocks repeated tasks and its creation is in scope. Do not use for one failed tool, ordinary tests, one-off verification, or libraries covered by tests.
+disable-model-invocation: true
 ---
 
 # Create a verification skill

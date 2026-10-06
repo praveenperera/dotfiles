@@ -1,6 +1,7 @@
 ---
 name: use-sol
 description: Route implementation, tests, and mechanical repository work to GPT-6.1 Sol subagents at low reasoning. Use only when the user explicitly says "use Sol", "use Sol sub-agents", "use Sol 6.1", or invokes $use-sol. Do not infer this skill from a task that merely looks suitable for delegation.
+disable-model-invocation: true
 ---
 
 # Use Sol

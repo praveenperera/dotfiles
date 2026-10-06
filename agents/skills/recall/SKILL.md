@@ -1,6 +1,7 @@
 ---
 name: recall
 description: Reconstruct recent work on a named topic from local Codex conversation history, repository state, and linked work records. Use for catch-up, recent-work summaries, resuming a topic across chats, or finding where the user left off. Do not use when a supplied handoff already contains current verified state.
+disable-model-invocation: true
 ---
 
 # Recall
@@ -11,7 +12,7 @@ Build a current-state brief from history. A transcript records what happened. Li
 
 Default to the active workspace and the last seven days. Use the topic, workspace, and time range that the user gives. Never search another workspace without a clear request.
 
-Route one known session to the product's resume mechanism when available. Use `handoff` when the task is to prepare future resumption. Use this skill when context must be rebuilt across records.
+Route one known session to the product's resume mechanism when available. Use [handoff](../handoff/SKILL.md) when the task is to prepare future resumption. Use this skill when context must be rebuilt across records.
 
 ## Search local Codex history
 
