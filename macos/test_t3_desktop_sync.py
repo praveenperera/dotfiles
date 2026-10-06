@@ -296,6 +296,22 @@ class DesktopSyncTests(unittest.TestCase):
                 written = json.loads(self.server_settings.read_text())
                 self.assertEqual(written, expected)
 
+    def test_rewritten_settings_keep_private_permissions(self):
+        # umask defaults would leave a rewritten settings file world-readable
+        self.configure("0.0.43", "0.0.43")
+        self.write_settings({"localEnvironmentEnabled": True})
+        self.settings.chmod(0o600)
+        self.server_settings.unlink()
+        with (
+            patch.object(sync, "app_processes", return_value=[]),
+            patch.object(sync, "run"),
+        ):
+            sync.check(self.home, self.app)
+        self.assertFalse(self.read_settings()["localEnvironmentEnabled"])
+        for path in [self.settings, self.server_settings]:
+            with self.subTest(path=path.name):
+                self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+
     def test_service_tool_paths_survive_update(self):
         config = sync.read_plist(self.unit)
         config["EnvironmentVariables"] = {"PATH": "/existing/provider/bin"}

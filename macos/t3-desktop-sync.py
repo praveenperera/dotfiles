@@ -12,6 +12,7 @@ import re
 import shutil
 import signal
 import sqlite3
+import stat
 import subprocess
 import sys
 import time
@@ -60,6 +61,22 @@ def log(message):
 def read_plist(path):
     with path.open("rb") as source:
         return plistlib.load(source)
+
+
+def write_json(path, value):
+    """Replace a JSON file atomically without loosening its permissions
+
+    The temporary file is created private and given the original's mode, so
+    a private settings file never becomes readable through umask defaults
+    """
+    mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o600
+    temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    temporary.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w") as output:
+        output.write(json.dumps(value, indent=2) + "\n")
+    os.chmod(temporary, mode)
+    temporary.replace(path)
 
 
 def run(command, *, env=None):
@@ -230,10 +247,7 @@ def enforce_service_only(home, app):
         quit_app(app, main_pid)
 
     settings["localEnvironmentEnabled"] = False
-    temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    temporary.parent.mkdir(parents=True, exist_ok=True)
-    temporary.write_text(json.dumps(settings, indent=2) + "\n")
-    temporary.replace(path)
+    write_json(path, settings)
     log("Turned off the T3 Code desktop local server")
     if main_pid is None:
         return
@@ -276,10 +290,7 @@ def enforce_shared_claude_login(home):
 
     config["homePath"] = str(home / CLAUDE_HOME)
     # the server watches this directory and reloads settings without a restart
-    temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    temporary.parent.mkdir(parents=True, exist_ok=True)
-    temporary.write_text(json.dumps(settings, indent=2) + "\n")
-    temporary.replace(path)
+    write_json(path, settings)
     log("Pointed T3 Code Claude at the shared ~/.claude login")
 
 
