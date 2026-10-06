@@ -1,6 +1,0 @@
-interface:
-  display_name: "Visual Recap"
-  short_description: "Turn completed work into a standalone HTML recap"
-  default_prompt: "Use $visual-recap to turn this completed work into a standalone HTML recap."
-policy:
-  allow_implicit_invocation: false
