@@ -1,6 +1,6 @@
 ---
 name: use-agents
-description: Model roster and routing notes for delegating work to Sol 6.1, Opus 5.5, Astra, and Grok subagents. Use when the user says "use agents", "use subagents", names which providers or models to delegate to (for example "only OpenAI agents", "mostly Sol and Opus"), or invokes $use-agents.
+description: Model roster and routing notes for delegating work to Sonnet 5.5, Haiku 5.5, Opus 5.5, Astra, and Grok subagents. Use when the user says "use agents", "use subagents", names which providers or models to delegate to (for example "only Claude agents", "mostly Sonnet and Opus"), or invokes $use-agents.
 ---
 
 # Use Agents
@@ -10,7 +10,7 @@ This skill is informational. It describes the models Praveen uses, what each is 
 ## Apply the user's mix
 
 - With no stated mix, use the default routing below
-- "Only OpenAI", "only Claude", or "only Grok" restricts every delegate to that provider; route inside it with the provider sections below
+- "Only Claude" or "only Grok" restricts every delegate to that provider; route inside it with the provider sections below
 - "Mostly X and Y" or "prefer X" makes those the default workers; use another model only when the task needs a strength the preferred models lack, and say why
 - A named model and effort level always wins over these defaults
 - Keep the selection for the rest of the session until the user changes it
@@ -20,53 +20,62 @@ The root thread keeps scope, design decisions, integration, and acceptance. Give
 
 ## Roster
 
-| Model                                          | Use for                                                                                                                                                                                                                                                                                                | Launch                                                                                                                                     |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| GPT-6.1 Sol (`gpt-6.1-sol`) at `low` or `high` | Default delegate for most work. Scoped implementation after the design is decided, tests, fixtures, migrations, renames, and repeated transforms. Bug investigation and root-cause analysis, codebase analysis and triage, deep code review and audits, dead-code and cleanup audits, and computer use | [codex-native.md](references/codex-native.md) in Codex; [codex-cli.md](references/codex-cli.md) elsewhere                                  |
-| Claude Opus 5.5                                | Usual root. As a delegate: long unattended builds and heavy rewrites, implementation that needs judgment and must be merge-ready, front-end and UI design, game feel, and work where the delegate must ask for help or change course instead of following a process into a dead end                    | Claude Agent tool with `model: opus`, or [claude-cli.md](references/claude-cli.md) with `claude-opus-5-5` when a specific effort is needed |
-| GPT-6 Astra (`gpt-6-astra`) at `low` or `high` | Advisor and second opinion only, read-only. Consult it on a big architecture or design decision, or when the root is stuck. The root keeps the decision. `low` for a focused question, `high` for a broad or high-risk one                                                                             | Same as Sol                                                                                                                                |
-| Grok 4.6 (`grok-4.6`)                          | Implementation when quality matters more than usage; X and live web research                                                                                                                                                                                                                           | [grok-cli.md](references/grok-cli.md); `ask-grok` skill for questions and X lookups                                                        |
-| Grok 4.5 (`grok-4.5`)                          | Implementation, and the default Grok for long or high-volume work because it has better usage limits                                                                                                                                                                                                   | [grok-cli.md](references/grok-cli.md) with `--model grok-4.5`                                                                              |
+| Model                                          | Use for                                                                                                                                                                                                                                                                             | Launch                                                                                                                                         |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Sonnet 5.5 (`claude-sonnet-5-5`)        | Default delegate for most work. Scoped implementation after the design is decided, tests, and migrations. Bug investigation and root-cause analysis, codebase analysis and triage, code review and audits, dead-code and cleanup audits, verification, and computer use             | Claude Agent tool with `model: sonnet`, or [claude-cli.md](references/claude-cli.md) with `claude-sonnet-5-5` when a specific effort is needed |
+| Claude Haiku 5.5 (`claude-haiku-5-5`)          | Mechanical and high-volume work with a cheap check: renames, signature changes, import moves, fixtures and table test cases, boilerplate that follows an existing pattern, inventories, classifications, repeated transforms, and focused lookups                                   | Claude Agent tool with `model: haiku`, or [claude-cli.md](references/claude-cli.md) with `claude-haiku-5-5`                                    |
+| Claude Opus 5.5 (`claude-opus-5-5`)            | Usual root. As a delegate: long unattended builds and heavy rewrites, implementation that needs judgment and must be merge-ready, front-end and UI design, game feel, and work where the delegate must ask for help or change course instead of following a process into a dead end | Claude Agent tool with `model: opus`, or [claude-cli.md](references/claude-cli.md) with `claude-opus-5-5` when a specific effort is needed     |
+| GPT-6 Astra (`gpt-6-astra`) at `low` or `high` | Advisor and second opinion only, read-only. Consult it on a big architecture or design decision, or when the root is stuck. The root keeps the decision. `low` for a focused question, `high` for a broad or high-risk one                                                          | [codex-native.md](references/codex-native.md) in Codex; [codex-cli.md](references/codex-cli.md) elsewhere                                      |
+| Grok 4.6 (`grok-4.6`)                          | Implementation when quality matters more than usage; X and live web research                                                                                                                                                                                                        | [grok-cli.md](references/grok-cli.md); `ask-grok` skill for questions and X lookups                                                            |
+| Grok 4.5 (`grok-4.5`)                          | Implementation, and the default Grok for long or high-volume work because it has better usage limits                                                                                                                                                                                | [grok-cli.md](references/grok-cli.md) with `--model grok-4.5`                                                                                  |
 
-Do not use these unless the user names them: Claude Fable (any version), GPT-6 Luna, GPT-5.6 Sol, and Grok 4.7.
+Do not use these unless the user names them: Claude Fable (any version) and Grok 4.7.
 
-## Sol 6.1 versus Opus 5.5
+Run Claude delegates through the Claude CLI with `homebased` by default; see [Run delegates through homebased](#run-delegates-through-homebased). The CLI also sets an explicit effort. The Claude Agent tool selects the model but inherits the session effort, so keep it for short tasks where the session effort is acceptable.
 
-Send work to **Sol 6.1** by default. It matches Opus 5.5 on scoped work at a fraction of the cost, and it is the more thorough reviewer: it digs into a change until it finds what is wrong, and it catches regressions that Opus and Fable miss. Use it for:
+## Sonnet 5.5, Haiku 5.5, or Opus 5.5
 
-- at `low`: implementation with a decided approach, a tight scope, and a cheap correctness check (tests, type check, lint, build)
-- at `low`: tests, mechanical edits, migrations, inventories, and repeated transforms
+Send work to **Sonnet 5.5** by default. Use it for:
+
+- at `medium`: implementation with a decided approach, a tight scope, and a cheap correctness check (tests, type check, lint, build)
+- at `medium`: tests, migrations, and review-fix-loop fix passes
 - at `high`: bug investigation, root-cause analysis, and mapping what code a change must touch and why
 - at `high`: review, audits, and verification of code that Opus or another agent wrote
 - at `high`: browser and computer-use tasks
 
+Send work to **Haiku 5.5** when following the prompt literally gives the right result and a cheap check proves it: renames, fixtures, boilerplate, inventories, classifications, repeated transforms, and focused lookups. Do not send it work that needs judgment about design, naming, or what to leave out.
+
+Haiku is priced at $0.10/$0.50 per MTok only while the prompt stays under 100K tokens; above that it costs five times as much ($0.50/$2.50), and its compaction is set at 100K to stay under the line. So prefer many small Haiku agents over one long one: split the work into slices that each finish well under 100K tokens, such as one directory, file group, or batch of items per agent, and fan them out in parallel. Give each brief only the context its slice needs. A Haiku run that keeps hitting compaction is a sign the slice is too big; split it further instead of letting it run on.
+
 Send work to **Opus 5.5** when any of these are true:
 
-- the work is a long unattended build, a large port, or a heavy rewrite; Sol follows its process rules even when they stop all progress, and it does not ask for help
-- the code must be merge-ready and the task needs judgment about names, API shape, or what to leave out; Sol's first drafts are harder to justify merging
-- the work involves front-end, UI, visual design, or game feel; Sol has poor taste and fills UIs with unnecessary text
+- the work is a long unattended build, a large port, or a heavy rewrite
+- the code must be merge-ready and the task needs judgment about names, API shape, or what to leave out
+- the work involves front-end, UI, visual design, or game feel
 - the spec has gaps that the delegate must fill sensibly
-- a Sol pass failed twice on the same defect
+- the work is a deep audit of a large or high-risk change; use Opus at `high`
+- a Sonnet pass failed twice on the same defect
 
-A common split: the root decides the design (with an optional Astra second opinion on a big decision), Sol 6.1 at `low` implements bounded passes or Opus 5.5 implements judgment-heavy ones, and a fresh Sol 6.1 run at `high` reviews and tests the result. When Opus wrote the code, a Sol review is the default second pair of eyes. Neither delegate replaces the root's diagnosis, architecture, or final acceptance.
+A common split: the root decides the design (with an optional Astra second opinion on a big decision), Haiku 5.5 handles mechanical passes, Sonnet 5.5 at `medium` implements bounded passes or Opus 5.5 implements judgment-heavy ones, and a fresh Sonnet 5.5 run at `high` reviews and tests the result. When Opus wrote the code, a Sonnet review is the default second pair of eyes. No delegate replaces the root's diagnosis, architecture, or final acceptance.
 
-## Sol 6.1 effort levels
+## Sonnet 5.5 and Haiku 5.5 effort levels
 
-Use `low` for implementation after the design is decided and `high` for investigation and review. Do not use `max`; it is much slower and did not score better than `xhigh`.
+Sonnet 5.5 defaults to `high`, and its levels are recalibrated from Sonnet 5, so do not carry over Sonnet 5 habits. Haiku 5.5 defaults to `medium`. Do not use `xhigh` or `max` on Sonnet; send a deep audit of a large or high-risk change to Opus 5.5 at `high` instead. Do not use `max` on Haiku.
 
-| Effort  | Use for                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `low`   | Implementation after the design is decided, where following the prompt literally gives the right result and a cheap check proves it: bounded features, tests, fixtures and table test cases, migrations, renames, signature changes, import moves, boilerplate that follows an existing pattern, inventories, classifications, repeated transforms, focused lookups, and review-fix-loop fix passes |
-| `high`  | Bug investigation and root-cause analysis, codebase triage, review, audits, verification, and computer use                                                                                                                                                                                                                                                                                          |
-| `xhigh` | Deep audit of a large or high-risk change                                                                                                                                                                                                                                                                                                                                                           |
+| Model  | Effort   | Use for                                                                                                |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------ |
+| Sonnet | `medium` | Implementation after the design is decided, tests, migrations, and fix passes                          |
+| Sonnet | `high`   | Bug investigation and root-cause analysis, codebase triage, review, audits, verification, computer use |
+| Haiku  | `low`    | Focused lookups, inventories, and classifications                                                      |
+| Haiku  | `medium` | Mechanical edits and repeated transforms                                                               |
 
-If a `low` pass fails its check or needs a judgment call, rerun it at `high` instead of sending repair passes at `low`.
+If a Haiku pass fails its check or needs a judgment call, rerun it on Sonnet at `medium` instead of sending repair passes to Haiku. If a Sonnet `medium` pass fails the same way, rerun it at `high`.
 
 ## Route inside one provider
 
-- **OpenAI only:** the root decides the design, Sol 6.1 `low` implements and tests, a fresh Sol 6.1 `high` run reviews, and Astra `low` or `high` gives a read-only second opinion on big or hard decisions. Keep front-end and UI design decisions in the root
-- **Claude only:** Opus 5.5 for everything; vary effort by task (see below). Use lower effort for mechanical passes and `high` for review and verification
+- **Claude only:** the default routing above without Astra or Grok. Keep big design decisions in the root
 - **Grok only:** Grok 4.5 for bulk and long implementation, Grok 4.6 for work where quality matters or a 4.5 pass fell short. Keep design decisions in the root
+- **OpenAI only:** Astra is the only OpenAI model in the roster and it is advisory, so there is no implementation worker. Report that instead of substituting another provider
 
 ## Opus 5.5 effort levels
 
@@ -86,15 +95,18 @@ Guidance for delegation:
 - A detailed spec makes effort levels converge. With a precise prompt, `medium` implementation is usually enough; save higher effort for verification
 - A delegate has no user in the loop. When it must make judgment calls on its own, such as choosing between two valid readings of the data, `high` does that better than `low`
 - Give the delegate a way to check its work (tests, a reference implementation, a repro) before raising effort
-- Pattern that works well: implement at `medium`, review in the root, then run a fresh Sol 6.1 pass at `high` to verify and test edge cases
+- Pattern that works well: implement at `medium`, review in the root, then run a fresh Sonnet 5.5 pass at `high` to verify and test edge cases
 - If Opus 5.5 at `xhigh` hits the same problem twice, the approach is probably wrong; return the decision to the root, optionally with an Astra second opinion, instead of raising effort
 
 ## Run delegates through homebased
 
-Use the `homebased` skill to launch delegates. The daemon runs the child, streams its output, and sends a `HOMEBASED_EVENT` back to this session when the task ends, so the root can end its turn instead of running a wait or poll loop.
+Use the `homebased` skill to launch every delegate that is not a short task. This includes Sonnet, Haiku, and Opus. The daemon runs the child, streams its output, and sends a `HOMEBASED_EVENT` back to this session when the task ends, so the root can end its turn instead of running a wait or poll loop.
 
-- **External agents** (Grok CLI, Claude CLI from Codex, Codex CLI from Claude): always use `homebased`
-- **Internal agents** (Codex native spawn, Claude Agent tool): `homebased` is also useful for self-contained work that can run unattended, such as implementation with verification or a broad review, because it removes wait loops. Keep a native subagent for small tasks that the root checks and integrates in the same turn
+- **Default:** `homebased` for implementation with verification, investigation, review, audits, research, and any fan-out
+- **Short tasks only:** use a native subagent (Claude Agent tool, Codex native spawn) when the scope is narrow and the root checks and integrates the result in the same turn, such as a focused lookup or a small edit
+- **External agents** (Grok CLI, Codex CLI for Astra, Claude CLI from Codex): always `homebased`, whatever the task size
+
+When it is unclear whether a task is short, use `homebased`.
 
 The transport references below still give the model flags, permission rules, prompt contract, and evidence capture to put in the homebased spec.
 
@@ -104,7 +116,7 @@ When work splits into many parallel workers, such as coverage slices, a race bet
 
 1. Before launching, state the done condition and the report the fan-out must return. For a race, declare the selection rule up front: first pass, rank all, or best of.
 2. Launch every worker at once. Each brief stands alone and names its slice, how to verify, and the exact commits and method when it measures. Each worker reports `PASS`, `ISSUES`, or `BLOCKED` with evidence, and lists every issue it can prove, not only the first.
-3. When the user asks one coordinator to run the fan-out, such as a Sol `high` agent that starts the `low` workers, that coordinator drains the workers and sends the single report. Grant it nested delegation in its brief.
+3. When the user asks one coordinator to run the fan-out, such as a Sonnet `high` agent that starts Haiku workers, that coordinator drains the workers and sends the single report. Grant it nested delegation in its brief.
 4. Drop a result that lacks the commits or method its brief named and respawn that worker once. A second miss is a gap, and a gap is never a pass. If a worker drops out, continue without it and note it.
 5. Report one compact table of results, one-line evidenced issues, gaps and dropouts, and the race rule when used. Do not paste raw worker output.
 
@@ -116,18 +128,15 @@ A delegate must not wait inside a long build, test suite, CI watch, benchmark, o
 2. Submit the command as a homebased `task` workload with `thread` set to the root's id, which `homebased --json task show "$HOMEBASED_TASK_ID"` prints
 3. Report `blocked` with the summary `WAITING <task-id>` and exit
 
-When the event for the waited task arrives, the root resumes the delegate with that outcome:
+When the event for the waited task arrives, the root resumes the delegate with that outcome. For Claude delegates (Opus, Sonnet, Haiku), submit a new Claude task with the original brief, the outcome, and an instruction to continue from `RESUME.md`. Homebased runs Claude with `--no-session-persistence` and rejects `--resume` and `--continue`, so the old session cannot resume, and `RESUME.md` is the only thing that carries progress forward.
 
-- **Codex (Sol, Astra):** `homebased task followup <delegate-task-id>`. The thread resumes with its context intact
-- **Claude (Opus):** submit a new Claude task with the original brief, the outcome, and an instruction to continue from `RESUME.md`. Homebased runs Claude with `--no-session-persistence` and rejects `--resume` and `--continue`, so the old session cannot resume, and `RESUME.md` is the only thing that carries progress forward
-
-Keep this rule in a shared brief file that each delegate prompt includes, so new delegates get it without the root restating it. A delegate that is already running gets it through `homebased message send --worker` (Claude only); a running Codex delegate cannot take messages, so add the rule to its next brief or follow-up.
+Keep this rule in a shared brief file that each delegate prompt includes, so new delegates get it without the root restating it. A running Claude delegate gets it through `homebased message send --worker`; for other providers, add the rule to the next brief.
 
 ## Transport references
 
-Read only the reference for the transport in use:
+Read [delegate-run.md](references/delegate-run.md) for the shared run directory, prompt contract, and postflight capture, then only the reference for the transport in use:
 
-- [codex-native.md](references/codex-native.md): Codex `collaboration.spawn_agent` for Sol and Astra
-- [codex-cli.md](references/codex-cli.md): `codex exec` for Sol and Astra outside Codex; shared prompt template and evidence capture
-- [claude-cli.md](references/claude-cli.md): Claude CLI for Opus 5.5 with an explicit effort
+- [claude-cli.md](references/claude-cli.md): Claude CLI for Sonnet 5.5, Haiku 5.5, or Opus 5.5 with an explicit effort
+- [codex-native.md](references/codex-native.md): Codex `collaboration.spawn_agent` for Astra
+- [codex-cli.md](references/codex-cli.md): `codex exec` for Astra outside Codex
 - [grok-cli.md](references/grok-cli.md): Grok headless runs and permission preflight

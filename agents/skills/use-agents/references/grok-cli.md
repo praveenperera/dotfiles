@@ -32,7 +32,7 @@ The copy-paste commands below are the standard git, gh, and sudo backstop, inclu
 
 ## Use the shared evidence directory and prompt
 
-Use the run directory, baseline capture, prompt contract, and postflight capture from [codex-cli.md](codex-cli.md). Put the complete prompt in `$delegate_dir/prompts/task.md`.
+Use the run directory, baseline capture, prompt contract, and postflight capture from [delegate-run.md](delegate-run.md). Put the complete prompt in `$delegate_dir/prompts/task.md`.
 
 Grok headless mode starts a fresh session by default. Do not resume a prior session for an independent pass. Always pass `--no-subagents`; the orchestrator owns decomposition and integration.
 
