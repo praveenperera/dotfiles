@@ -11,6 +11,7 @@ __pycache__/
 
 # .claude machine-specific files
 /claude/.credentials.json
+/claude/.claude.json
 claude/*.jsonl
 claude/*.db
 claude/config.json
