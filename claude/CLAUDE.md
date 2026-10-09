@@ -25,10 +25,10 @@
 
 # Delegation
 
-- The root owns scope, design decisions, integration, and acceptance.
-- Conserve my weekly plan usage limits by using Sonnet 5.5 and Haiku 5.5 subagents where they don't sacrifice quality. Name the model on every subagent so it does not inherit Opus, and never run a subagent at `xhigh` or `max` effort.
-- Haiku 5.5 is cheap only while its prompt stays under 100K tokens, so split Haiku work into slices that each finish well under that.
-- Default to the `homebased` skill for any non-trivial agent work, and always use it for non-Claude models. Use the Agent tool only when the scope is narrow and you can check and integrate the result in this turn; when unsure, use `homebased`.
+- The root owns scope, design decisions, integration, and acceptance. It reads the code it will change and its delegates' conclusions; other reading goes to subagents.
+- Delegate exploration to `Explore` subagents: reading or searching outside the files you will edit, other repositories, vendored or minified code, logs, and transcripts. Search directly only for a single lookup where you already know the file and symbol; once a second search looks likely, delegate.
+- Conserve my weekly plan usage limits: name the model on every subagent so it does not inherit Opus, and never run one at `xhigh` or `max` effort. Default to Haiku 5.5, including for large or minified files; past 100K prompt tokens it costs 5x its base rate but stays about 4x cheaper than Sonnet 5.5. Haiku auto-compacts at 256K (`modelSettings` in `settings.json`), so split Haiku work into slices under 100K when the work divides naturally, and into slices under 256K when one run would otherwise compact. Use Sonnet 5.5 only when the work needs judgment Haiku lacks, not because the input is large.
+- Choose the runner by how long the work runs, not by whether to delegate: use the Agent tool for work that finishes in this turn, including all exploration, and `homebased` for long or unattended work and for every non-Claude model. When unsure which runner fits, use `homebased`.
 - Do not let a delegate wait inside a long build, test run, or CI watch. Its brief must tell it to submit the command through `homebased`, report `waiting`, and exit, as the `homebased` skill describes.
 - For a larger task, run one fresh review of the related change set; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
 
