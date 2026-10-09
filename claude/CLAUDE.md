@@ -19,7 +19,13 @@
 - When a step doesn't need my input, keep going. Put status notes in the same message as your next action. Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository that I have not already approved.
 - For long multi-step runs, keep a checklist in `_scratch/<task-name>/TASKS.md` so concurrent runs do not share one file. Tick each item when it's done, and add anything new you find.
 - The user's instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
-- Load the `use-agents` skill before spawning any subagent or delegating work; it owns model routing, effort levels, when to use `homebased`, and the long-command handoff. The root owns scope, design decisions, integration, and acceptance. Default to use homebased for any non trivial agent work.
+- The root owns scope, design decisions, integration, and acceptance. Minimize usage by using Sonnet 5.5 and Haiku 5.5 subagents where they don't sacrifice quality, and name the model on every subagent so it does not inherit Opus.
+- Set an effort level on every subagent, chosen to minimize cost without sacrificing quality. Never use `max` or `xhigh`. Prefer a stronger model at lower effort over a weaker model at higher effort; Sonnet 5.5 at `medium` beats Haiku 5.5 at `high`.
+- Haiku 5.5 is cheap only while its prompt stays under 100K tokens, so split Haiku work into slices that each finish well under that.
+- Use Claude Fable and Grok 4.7 only when I name them. When I name models, providers, or effort levels for delegation, keep that choice for the rest of the session; if one is unavailable, say so instead of substituting.
+- For a larger task, run one fresh review of the related change set; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
+- Default to the `homebased` skill for any non-trivial agent work, and always use it for non-Claude models. Use the Agent tool only when the scope is narrow and you can check and integrate the result in this turn; when unsure, use `homebased`.
+- Do not let a delegate wait inside a long build, test run, or CI watch. Its brief must tell it to submit the command through `homebased`, report `waiting`, and exit, as the `homebased` skill describes.
 
 # Rust Project Specific
 

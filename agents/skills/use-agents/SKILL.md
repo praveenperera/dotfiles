@@ -1,6 +1,7 @@
 ---
 name: use-agents
-description: Model roster and routing notes for delegating work to Sonnet 5.5, Haiku 5.5, Opus 5.5, Astra, and Grok subagents. Use before spawning any subagent or delegating work, and when the user says "use agents", "use subagents", names which providers or models to delegate to (for example "only Claude agents", "mostly Sonnet and Opus"), or invokes $use-agents.
+description: Model roster and routing notes for delegating work to Sonnet 5.5, Haiku 5.5, Opus 5.5, Astra, and Grok subagents. Use when the user says "use agents", "use subagents", names which providers or models to delegate to (for example "only Claude agents", "mostly Sonnet and Opus"), or invokes $use-agents.
+disable-model-invocation: true
 ---
 
 # Use Agents
