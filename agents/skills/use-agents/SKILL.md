@@ -1,6 +1,6 @@
 ---
 name: use-agents
-description: Model roster and routing notes for delegating work to Sonnet 5.5, Haiku 5.5, Opus 5.5, Astra, and Grok subagents. Use when the user says "use agents", "use subagents", names which providers or models to delegate to (for example "only Claude agents", "mostly Sonnet and Opus"), or invokes $use-agents.
+description: Model roster and routing notes for delegating work to Sonnet 5.5, Haiku 5.5, Opus 5.5, Astra, and Grok subagents. Use before spawning any subagent or delegating work, and when the user says "use agents", "use subagents", names which providers or models to delegate to (for example "only Claude agents", "mostly Sonnet and Opus"), or invokes $use-agents.
 ---
 
 # Use Agents
@@ -45,6 +45,8 @@ Send work to **Sonnet 5.5** by default. Use it for:
 
 Send work to **Haiku 5.5** when following the prompt literally gives the right result and a cheap check proves it: renames, fixtures, boilerplate, inventories, classifications, repeated transforms, and focused lookups. Do not send it work that needs judgment about design, naming, or what to leave out.
 
+Save Opus for hard work. Removals, cleanups, harness or tooling deletions, history tidying, docs, and other mechanical changes go to Haiku 5.5, or Sonnet 5.5 at `medium` when they need judgment about what to keep, even when they touch many files.
+
 Haiku is priced at $0.10/$0.50 per MTok only while the prompt stays under 100K tokens; above that it costs five times as much ($0.50/$2.50), and its compaction is set at 100K to stay under the line. So prefer many small Haiku agents over one long one: split the work into slices that each finish well under 100K tokens, such as one directory, file group, or batch of items per agent, and fan them out in parallel. Give each brief only the context its slice needs. A Haiku run that keeps hitting compaction is a sign the slice is too big; split it further instead of letting it run on.
 
 Send work to **Opus 5.5** when any of these are true:
@@ -56,7 +58,7 @@ Send work to **Opus 5.5** when any of these are true:
 - the work is a deep audit of a large or high-risk change; use Opus at `high`
 - a Sonnet pass failed twice on the same defect
 
-A common split: the root decides the design (with an optional Astra second opinion on a big decision), Haiku 5.5 handles mechanical passes, Sonnet 5.5 at `medium` implements bounded passes or Opus 5.5 implements judgment-heavy ones, and a fresh Sonnet 5.5 run at `high` reviews and tests the result. When Opus wrote the code, a Sonnet review is the default second pair of eyes. No delegate replaces the root's diagnosis, architecture, or final acceptance.
+A common split: the root decides the design (with an optional Astra second opinion on a big decision), Haiku 5.5 handles mechanical passes, Sonnet 5.5 at `medium` implements bounded passes or Opus 5.5 implements judgment-heavy ones, and a fresh Sonnet 5.5 run at `high` reviews and tests the result. When Opus wrote the code, a Sonnet review is the default second pair of eyes. For a larger task, run one fresh review of the related change set; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks. No delegate replaces the root's diagnosis, architecture, or final acceptance.
 
 ## Sonnet 5.5 and Haiku 5.5 effort levels
 
@@ -103,7 +105,7 @@ Guidance for delegation:
 Use the `homebased` skill to launch every delegate that is not a short task. This includes Sonnet, Haiku, and Opus. The daemon runs the child, streams its output, and sends a `HOMEBASED_EVENT` back to this session when the task ends, so the root can end its turn instead of running a wait or poll loop.
 
 - **Default:** `homebased` for implementation with verification, investigation, review, audits, research, and any fan-out
-- **Short tasks only:** use a native subagent (Claude Agent tool, Codex native spawn) when the scope is narrow and the root checks and integrates the result in the same turn, such as a focused lookup or a small edit
+- **Short tasks only:** use a native subagent (Claude Agent tool, Codex native spawn) when the scope is narrow and the root checks and integrates the result in the same turn, such as a focused lookup or a small edit, or when non-overlapping owned scopes can run at the same time. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work
 - **External agents** (Grok CLI, Codex CLI for Astra, Claude CLI from Codex): always `homebased`, whatever the task size
 
 When it is unclear whether a task is short, use `homebased`.
