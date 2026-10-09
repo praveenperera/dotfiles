@@ -2,6 +2,7 @@
 
 - Ship production-quality changes. For changes to domain state, public interfaces, or ownership, model the domain first and use typed models to exclude invalid states. Prefer the proper owner or abstraction over caller-specific conditionals. Small local changes should follow established patterns without a separate architecture exercise. Repeated fixes in one area signal that the model may be wrong; revisit it and remove resulting shortcuts before finishing.
 - Encode recurring corrections as types, tests, lints, scripts, or runtime checks instead of repeating instructions.
+- For performance work, profile and measure the end-to-end payoff first (same output or accuracy within limits, plus a measured speedup on a fixed input set); add harness or proof machinery only for risks that check can't catch, and time-box it.
 
 # General
 
@@ -25,6 +26,7 @@
 - Use the `use-agents` skill for model routing and effort levels. The root owns scope, design decisions, integration, and acceptance.
 - Opus 5.5 is the usual root. Default to GPT-6.1 Sol as the subagent for most work. Use Sol `low` for bounded implementation after the design is settled, tests, and mechanical work such as renames, migrations, fixtures, boilerplate, inventories, and repeated transforms. Use Sol `high` for bug investigation and root-cause analysis, codebase triage, review, audits, verification, and computer use. Use `xhigh` for a deep audit; never use `max`.
 - Use Opus 5.5 subagents for long unattended builds and heavy rewrites, merge-ready implementation that needs judgment, and front-end, UI, or design work. Opus 5.5 defaults to `medium`; use `high` when edge cases matter, `xhigh` only for rare hard problems, and never `max`. The Agent tool uses the session effort, so run Opus work that needs an explicit effort through the Claude CLI with `homebased`.
+- Save Opus for kernels and hard work. Removals, cleanups, harness or tooling deletions, history tidying, docs, and other mechanical changes go to Sol 6.1 `low`, even when they touch many files.
 - Astra is a read-only advisor for big architecture or design decisions, or when the root is stuck. Fable, GPT-6 Luna, and GPT-5.6 Sol are opt-in only; the root may suggest them.
 - For a larger task, use one fresh Sol 6.1 `high` review of the related change set; add another only when a second risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
 - Default to the `homebased` skill for self-contained agent work that can run unattended while the root ends this turn, such as implementation with verification, a broad review, or multi-source research. When the boundary is unclear, prefer `homebased` if the worker does not need live coordination.
