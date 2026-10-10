@@ -85,7 +85,10 @@ jobs:
     runs-on: macos-latest
     needs: create-release
     steps:
+      # build the version-bump commit so the binary reports the release tag's version
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.create-release.outputs.tag }}
 
       - name: Create dummy secrets directory
         run: |
@@ -135,7 +138,10 @@ jobs:
       image: ghcr.io/cross-rs/x86_64-unknown-linux-musl:latest
     needs: create-release
     steps:
+      # build the version-bump commit so the binary reports the release tag's version
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.create-release.outputs.tag }}
 
       - name: Create dummy secrets directory
         run: |
