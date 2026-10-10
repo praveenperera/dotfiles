@@ -11,7 +11,7 @@ Use the Mac mini to coordinate work. Use `code.local` for remote development, im
 
 | Machine | Address / SSH user | Role |
 | --- | --- | --- |
-| Mac mini (`Praveens-Mac-mini.local`) | Local macOS, `praveen` | Main workstation, local agents, and macOS work |
+| Mac mini (`main`, via Tailscale) | Local macOS, `praveen` | Main workstation, local agents, and macOS work |
 | `ai5090.local` | `192.168.1.20`, `praveen` | Ubuntu Incus host; host administration only |
 | `code.local` | `192.168.1.18`, `praveen` | Incus container on ai5090; coding agents, compilation, AI development, image builds, training jobs, GPU workloads, datasets, and checkpoints |
 | `server.local` | `192.168.1.50`, `root` | Separate Proxmox host for the service containers below |

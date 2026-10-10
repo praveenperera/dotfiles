@@ -13,7 +13,7 @@ use std::io::{self, IsTerminal, Write};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -1378,6 +1378,7 @@ fn workspace_connect(display: &str) -> Result<()> {
     let display_session = format!("{RESERVED_PREFIX}display_{display}_{raw_id}");
     let record = wait_for_remote_display(
         &mini,
+        &mut child,
         &display_session,
         tty,
         connection_id.clone(),
@@ -1407,6 +1408,7 @@ fn invoking_tty() -> Result<PathBuf> {
 
 fn wait_for_remote_display(
     mini: &SshDestination,
+    connection: &mut Child,
     display_session: &str,
     source_tty: PathBuf,
     id: ConnectionId,
@@ -1416,6 +1418,17 @@ fn wait_for_remote_display(
         "#{socket_path}\t#{pid}\t#{session_id}\t#{window_id}\t#{pane_id}\t#{pane_current_path}";
     let mut last_error = None;
     for _ in 0..50 {
+        // a connection that already ended will never publish its display, so stop polling
+        if let Some(status) = connection
+            .try_wait()
+            .wrap_err("managed Mini connection failed")?
+        {
+            require_success(status, "managed Mini workspace connection")?;
+            return Err(eyre!(
+                "managed Mini connection ended before its display was published"
+            ));
+        }
+
         match remote_tmux_output(
             &mini.alias,
             [
@@ -2082,7 +2095,9 @@ fn remote_tmux_status<const N: usize>(destination: &str, args: [&str; N]) -> Res
 
 fn remote_tmux_output<const N: usize>(destination: &str, args: [&str; N]) -> Result<String> {
     let remote = remote_command("tmux", &args);
+    // queries run without a terminal, so fail fast instead of waiting on prompts or unreachable hosts
     let output = Command::new("ssh")
+        .args(["-o", "BatchMode=yes", "-o", "ConnectTimeout=5"])
         .arg(destination)
         .arg(remote)
         .output()

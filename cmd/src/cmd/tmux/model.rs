@@ -55,7 +55,7 @@ impl MachineId {
 
     pub(super) fn ssh_alias(self) -> Option<&'static str> {
         match self {
-            Self::Mini => Some("praveen@Praveens-Mac-mini.local"),
+            Self::Mini => Some("praveen@main"),
             Self::Code => Some("code"),
         }
     }
@@ -253,7 +253,7 @@ mod tests {
         );
         assert_eq!(
             SshDestination::approved(MachineId::Mini).unwrap().alias,
-            "praveen@Praveens-Mac-mini.local"
+            "praveen@main"
         );
     }
 }
