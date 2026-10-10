@@ -1390,7 +1390,9 @@ fn workspace_connect(display: &str) -> Result<()> {
 }
 
 fn invoking_tty() -> Result<PathBuf> {
+    // `output()` gives the child a null stdin by default, and `tty` reports the stdin terminal
     let output = Command::new("tty")
+        .stdin(Stdio::inherit())
         .output()
         .wrap_err("failed to identify invoking TTY")?;
     if !output.status.success() {
