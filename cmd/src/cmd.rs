@@ -23,6 +23,7 @@ pub mod skill;
 pub mod sync;
 pub mod terraform;
 pub mod tmux;
+pub mod update;
 pub mod vault;
 
 use eyre::Result;
@@ -43,6 +44,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
 
     match flags.subcommand {
         MainCmd::Release(args) => bootstrap::release(sh, args),
+        MainCmd::Update(flags) => update::run_with_flags(sh, flags),
         MainCmd::Config => bootstrap::config(sh),
 
         MainCmd::Bootstrap { mode } => {

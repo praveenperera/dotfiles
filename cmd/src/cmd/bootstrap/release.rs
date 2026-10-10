@@ -118,7 +118,7 @@ fn release_cmd(sh: &Shell) -> Result<()> {
     Ok(())
 }
 
-fn install_built_cmd(sh: &Shell, built_cmd: &Path) -> Result<()> {
+pub(super) fn install_built_cmd(sh: &Shell, built_cmd: &Path) -> Result<()> {
     let bin_dir = fsutil::home_dir()?.join(".local/bin");
     install_built_cmd_in_bin_dir(sh, built_cmd, &bin_dir)
 }

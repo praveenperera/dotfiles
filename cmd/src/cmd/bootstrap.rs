@@ -236,6 +236,10 @@ pub fn release(sh: &Shell, args: crate::cmd::main_cmd::ReleaseArgs) -> Result<()
     release::release(sh, args)
 }
 
+pub fn install_cmd_binary(sh: &Shell, binary: &std::path::Path) -> Result<()> {
+    release::install_built_cmd(sh, binary)
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;

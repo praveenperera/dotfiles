@@ -36,6 +36,7 @@ toml = "0.8"
 # utils
 rand = "0.10"
 convert_case = "0.11"
+semver = "1.0"
 
 # encryption
 age = "0.11"

@@ -517,6 +517,7 @@ dependencies = [
  "rand 0.10.3",
  "reqwest",
  "rust_decimal",
+ "semver",
  "serde",
  "serde_json",
  "serde_yaml",

@@ -72,6 +72,9 @@ pub enum MainCmd {
     /// Release/update cmd binary, or release a local project
     Release(#[command(flatten)] ReleaseArgs),
 
+    /// Download the latest cmd release from GitHub if it is newer
+    Update(#[command(flatten)] crate::cmd::update::Update),
+
     /// Configure dotfiles
     #[command(visible_alias = "cfg")]
     Config,

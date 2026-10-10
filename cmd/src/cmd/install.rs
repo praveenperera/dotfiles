@@ -38,8 +38,16 @@ struct GithubReleaseTool {
 }
 
 #[derive(Debug, Deserialize)]
-struct LatestRelease {
-    tag_name: String,
+pub(crate) struct LatestRelease {
+    pub(crate) tag_name: String,
+    #[serde(default)]
+    pub(crate) assets: Vec<ReleaseAsset>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct ReleaseAsset {
+    pub(crate) name: String,
+    pub(crate) browser_download_url: String,
 }
 
 const GITHUB_RELEASE_TOOLS: &[GithubReleaseTool] = &[
@@ -60,7 +68,7 @@ pub fn run_with_flags(sh: &Shell, flags: Install) -> Result<()> {
     let target = current_release_target()?;
     let tag = match flags.tag {
         Some(tag) => tag,
-        None => crate::runtime::block_on(fetch_latest_release_tag(tool.repo))??,
+        None => crate::runtime::block_on(fetch_latest_release(tool.repo))??.tag_name,
     };
     let dest_dir = flags.to.unwrap_or(fsutil::home_dir()?.join(".local/bin"));
 
@@ -163,7 +171,7 @@ fn release_asset_url(repo: &str, crate_name: &str, tag: &str, target: &str) -> S
     format!("https://github.com/{repo}/releases/download/{tag}/{crate_name}-{tag}-{target}.tar.gz")
 }
 
-async fn fetch_latest_release_tag(repo: &str) -> Result<String> {
+pub(crate) async fn fetch_latest_release(repo: &str) -> Result<LatestRelease> {
     let client = reqwest::Client::builder()
         .user_agent("cmd-install")
         .build()?;
@@ -184,11 +192,10 @@ async fn fetch_latest_release_tag(repo: &str) -> Result<String> {
         ));
     }
 
-    let latest: LatestRelease = response.json().await?;
-    Ok(latest.tag_name)
+    Ok(response.json().await?)
 }
 
-fn ensure_release_dependencies(sh: &Shell) -> Result<()> {
+pub(crate) fn ensure_release_dependencies(sh: &Shell) -> Result<()> {
     for command in ["curl", "tar"] {
         if !command_exists(sh, command) {
             return Err(eyre!("need {command} (command not found)"));
@@ -198,7 +205,7 @@ fn ensure_release_dependencies(sh: &Shell) -> Result<()> {
     Ok(())
 }
 
-fn download_release_asset(url: &str, archive_path: &Path) -> Result<()> {
+pub(crate) fn download_release_asset(url: &str, archive_path: &Path) -> Result<()> {
     let mut command = Command::new("curl");
     command
         .arg("--fail")
@@ -226,7 +233,7 @@ fn download_release_asset(url: &str, archive_path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<()> {
+pub(crate) fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<()> {
     let status = Command::new("tar")
         .arg("-C")
         .arg(dest_dir)
@@ -245,7 +252,7 @@ fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn find_release_binary(root: &Path, crate_name: &str) -> Result<PathBuf> {
+pub(crate) fn find_release_binary(root: &Path, crate_name: &str) -> Result<PathBuf> {
     let direct_binary = root.join(crate_name);
     if direct_binary.is_file() {
         return Ok(direct_binary);
