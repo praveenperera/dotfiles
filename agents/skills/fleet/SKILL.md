@@ -19,6 +19,7 @@ Use the Mac mini to coordinate work. Use `code.local` for remote development, im
 | `bitcoin.local` | `192.168.1.10`, `root` | Bitcoin Knots, electrs, and mempool |
 | `unifi.local` | `192.168.1.12`, `root` | UniFi Network and its database |
 | `misc.local` | `192.168.1.14`, `root` | General services; currently a Docker registry |
+| `lookout.local` | `192.168.1.15`, `root` | Dashboards and watchers: freezerwatch (freezer temperature alerts) |
 
 These are configured roles and addresses, not proof that a machine is online. Confirm the current machine; do not assume the shell is on the Mac mini.
 
