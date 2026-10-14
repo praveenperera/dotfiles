@@ -21,6 +21,7 @@ mod project_root;
 pub mod secrets;
 pub mod skill;
 pub mod sync;
+pub mod t3;
 pub mod terraform;
 pub mod tmux;
 pub mod update;
@@ -125,5 +126,6 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             let cache_flags = cache::Cache { subcommand };
             cache::run_with_flags(sh, cache_flags)
         }
+        MainCmd::T3 { subcommand } => t3::run_with_flags(t3::T3 { subcommand }),
     }
 }

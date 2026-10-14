@@ -169,6 +169,7 @@ const CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] = &[
     ("claude", ".claude"),
     ("agents/AGENTS.md", ".codex/AGENTS.md"),
     ("codex/keybindings.json", ".codex/keybindings.json"),
+    ("codex/hooks.json", ".codex/hooks.json"),
     ("agents/AGENTS.md", ".config/opencode/AGENTS.md"),
     ("opencode", ".config/opencode"),
 ];

@@ -58,6 +58,16 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd t3 import --hook claude"
+          }
+        ]
+      }
     ]
   },
   "statusLine": {

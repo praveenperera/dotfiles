@@ -235,6 +235,13 @@ pub enum MainCmd {
         #[command(subcommand)]
         subcommand: crate::cmd::cache::CacheCmd,
     },
+
+    /// T3 Code operations
+    #[command(arg_required_else_help = true)]
+    T3 {
+        #[command(subcommand)]
+        subcommand: crate::cmd::t3::T3Cmd,
+    },
 }
 
 #[derive(Debug, Clone, Subcommand)]
