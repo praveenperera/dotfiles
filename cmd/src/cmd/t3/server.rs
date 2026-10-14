@@ -192,6 +192,11 @@ impl Drop for Client {
     }
 }
 
+pub struct BoundThread {
+    pub id: String,
+    pub deleted: bool,
+}
+
 pub struct NewThread {
     pub id: String,
     pub project_id: String,
@@ -209,8 +214,13 @@ pub struct Db(Connection);
 
 impl Db {
     /// T3 thread already bound to this provider session, imported or native.
-    /// A fresh binding with no thread yet is another import in flight
-    pub fn thread_for_session(&self, session: &Session) -> Result<Option<String>> {
+    /// A fresh binding with no thread yet is another import in flight. Deleted
+    /// threads only count when `include_deleted` is set, and live ones win
+    pub fn thread_for_session(
+        &self,
+        session: &Session,
+        include_deleted: bool,
+    ) -> Result<Option<BoundThread>> {
         // T3's Claude adapter still reads the older `sessionId` cursor key
         let session_key = match session.provider {
             Provider::Claude => {
@@ -226,19 +236,30 @@ impl Db {
         self.0
             .query_row(
                 &format!(
-                    "SELECT runtime.thread_id
+                    "SELECT runtime.thread_id, thread.deleted_at IS NOT NULL
                      FROM provider_session_runtime AS runtime
                      LEFT JOIN projection_threads AS thread
                        ON thread.thread_id = runtime.thread_id
                      WHERE runtime.provider_name = ?1
                        AND json_valid(runtime.resume_cursor_json)
                        AND {session_key} = ?2
-                       AND (thread.deleted_at IS NULL AND thread.thread_id IS NOT NULL
+                       AND (thread.thread_id IS NOT NULL AND (thread.deleted_at IS NULL OR ?4)
                             OR thread.thread_id IS NULL AND runtime.last_seen_at > ?3)
+                     ORDER BY thread.deleted_at IS NOT NULL
                      LIMIT 1"
                 ),
-                params![session.provider.instance_id(), session.id, in_flight_since],
-                |row| row.get(0),
+                params![
+                    session.provider.instance_id(),
+                    session.id,
+                    in_flight_since,
+                    include_deleted
+                ],
+                |row| {
+                    Ok(BoundThread {
+                        id: row.get(0)?,
+                        deleted: row.get(1)?,
+                    })
+                },
             )
             .optional()
             .map_err(Into::into)

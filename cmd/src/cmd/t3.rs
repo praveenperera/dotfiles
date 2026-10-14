@@ -87,6 +87,9 @@ enum Outcome {
     AlreadyInT3 {
         thread_id: String,
     },
+    Deleted {
+        thread_id: String,
+    },
     Skipped(&'static str),
 }
 
@@ -120,6 +123,9 @@ impl Outcome {
             Self::AlreadyInT3 { thread_id } => {
                 format!("{source} is already T3 thread {thread_id}")
             }
+            Self::Deleted { thread_id } => {
+                format!("skipped {source}: its T3 thread {thread_id} was deleted")
+            }
             Self::Skipped(reason) => format!("skipped {source}: {reason}"),
         }
     }
@@ -142,26 +148,39 @@ fn import(args: ImportArgs) -> Result<()> {
         })?,
     };
 
-    let outcome = import_session(&session, args.dry_run)?;
+    // naming a session by hand is how a deleted import comes back
+    let outcome = import_session(&session, args.dry_run, true)?;
     let line = outcome.describe(&session);
     match outcome {
         Outcome::Imported { .. } => println!("{}", line.green()),
-        Outcome::Skipped(_) => println!("{}", line.yellow()),
+        Outcome::Skipped(_) | Outcome::Deleted { .. } => println!("{}", line.yellow()),
         Outcome::Planned { .. } | Outcome::AlreadyInT3 { .. } => println!("{line}"),
     }
 
     Ok(())
 }
 
-fn import_session(session: &Session, dry_run: bool) -> Result<Outcome> {
+fn import_session(session: &Session, dry_run: bool, revive_deleted: bool) -> Result<Outcome> {
     if !session.has_prompt {
         return Ok(Outcome::Skipped("no user prompt"));
     }
 
     let server = Server::locate()?;
     let db = server.db(dry_run)?;
-    if let Some(thread_id) = db.thread_for_session(session)? {
-        return Ok(Outcome::AlreadyInT3 { thread_id });
+    // Codex fires SessionEnd again whenever T3 itself finishes running an
+    // imported thread, so a thread deleted in T3 must not reappear on its own
+    match db.thread_for_session(session, !revive_deleted)? {
+        Some(thread) if thread.deleted => {
+            return Ok(Outcome::Deleted {
+                thread_id: thread.id,
+            })
+        }
+        Some(thread) => {
+            return Ok(Outcome::AlreadyInT3 {
+                thread_id: thread.id,
+            })
+        }
+        None => {}
     }
 
     let target = Target::resolve(&db, &session.cwd)?;
@@ -352,7 +371,7 @@ fn hook_outcome(provider: Provider) -> Result<String> {
         return Ok(Outcome::Skipped("not an interactive CLI session").describe(&session));
     }
 
-    Ok(import_session(&session, false)?.describe(&session))
+    Ok(import_session(&session, false, false)?.describe(&session))
 }
 
 fn append_log(line: &str) -> Result<()> {
