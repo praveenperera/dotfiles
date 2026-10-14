@@ -12,6 +12,9 @@ use crate::fsutil;
 const DISCOVERY_WINDOW: Duration = Duration::from_secs(14 * 24 * 60 * 60);
 const TITLE_MAX_CHARS: usize = 80;
 
+/// Originators of terminal sessions: stock `codex` and the tmux wrapper in `cmd codex`
+const CODEX_TUI_ORIGINATORS: &[&str] = &["codex-tui", crate::cmd::codex::app_server::CLIENT_NAME];
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum Provider {
     Claude,
@@ -270,8 +273,10 @@ fn read_codex(path: &Path) -> Result<Session> {
     // the TUI now runs through the shared app-server, so its rollouts say source
     // "vscode" like T3 and Codex Desktop do, and only the originator tells them
     // apart. Older TUI builds wrote source "cli"
-    let interactive = str_field(&meta, "originator") == Some("codex-tui")
-        || str_field(&meta, "source") == Some("cli");
+    let interactive = matches!(
+        str_field(&meta, "originator"),
+        Some(originator) if CODEX_TUI_ORIGINATORS.contains(&originator)
+    ) || str_field(&meta, "source") == Some("cli");
     let title = codex_thread_name(&id)
         .and_then(short_title)
         .or_else(|| first_prompt.clone().and_then(short_title));

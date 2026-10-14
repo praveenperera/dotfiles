@@ -33,6 +33,10 @@ const WRITER_CONFLICT_SUFFIX: &str = " already has an active writer";
 #[cfg(unix)]
 const MAX_UNIX_SOCKET_PATH_BYTES: usize = 103;
 
+/// Client name this integration registers with the app-server. Codex records it
+/// as the originator of threads the tmux TUI starts
+pub(crate) const CLIENT_NAME: &str = "dotfiles_tmux";
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub(crate) enum SessionControl {
@@ -1343,7 +1347,7 @@ async fn connect_initialized(socket_path: &Path) -> Result<AppServerSocket> {
             "id": 1,
             "params": {
                 "clientInfo": {
-                    "name": "dotfiles_tmux",
+                    "name": CLIENT_NAME,
                     "title": "Dotfiles tmux integration",
                     "version": env!("CARGO_PKG_VERSION")
                 }
