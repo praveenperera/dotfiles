@@ -10,6 +10,8 @@ const USAGE_HISTORY_SCHEMA_VERSION: u32 = 2;
 pub(super) const USAGE_HISTORY_RETENTION_DAYS: i64 = 14;
 const PREVIOUS_DAY_HISTORY_ROWS: usize = 3;
 const DEFAULT_USAGE_HISTORY_DAYS: usize = 2;
+pub(super) const CODEX_USAGE_HISTORY_FILE: &str = "codex-usage-history.json";
+pub(super) const CLAUDE_USAGE_HISTORY_FILE: &str = "claude-usage-history.json";
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct UsageHistoryOptions {
@@ -264,22 +266,28 @@ fn apply_plan_limit_override(
 }
 
 pub(super) fn usage_history_cache_path() -> Result<PathBuf> {
+    usage_history_cache_path_for(CODEX_USAGE_HISTORY_FILE)
+}
+
+pub(super) fn usage_history_cache_path_for(file_name: &str) -> Result<PathBuf> {
     Ok(usage_history_cache_path_from_env(
         std::env::var_os("XDG_CACHE_HOME"),
         fsutil::home_dir()?,
+        file_name,
     ))
 }
 
 fn usage_history_cache_path_from_env(
     xdg_cache_home: Option<std::ffi::OsString>,
     home: PathBuf,
+    file_name: &str,
 ) -> PathBuf {
     let base = xdg_cache_home
         .filter(|value| !value.is_empty())
         .map(PathBuf::from)
         .unwrap_or(home.join(".cache"));
 
-    base.join("cmd").join("codex-usage-history.json")
+    base.join("cmd").join(file_name)
 }
 
 pub(super) fn load_usage_history(path: &Path) -> UsageHistory {
@@ -344,12 +352,16 @@ pub(super) fn prune_usage_history(history: &mut UsageHistory, cutoff: chrono::Da
 }
 
 pub(super) fn spawn_usage_history_prune() {
-    let Ok(path) = usage_history_cache_path() else {
-        return;
-    };
+    let paths = [CODEX_USAGE_HISTORY_FILE, CLAUDE_USAGE_HISTORY_FILE]
+        .into_iter()
+        .filter_map(|file_name| usage_history_cache_path_for(file_name).ok())
+        .collect::<Vec<_>>();
 
     std::thread::spawn(move || {
-        let _ = prune_usage_history_file(&path, Utc::now());
+        let now = Utc::now();
+        for path in paths {
+            let _ = prune_usage_history_file(&path, now);
+        }
     });
 }
 
@@ -1563,6 +1575,7 @@ mod tests {
         let path = usage_history_cache_path_from_env(
             Some(std::ffi::OsString::from("/tmp/cache")),
             PathBuf::from("/home/praveen"),
+            CODEX_USAGE_HISTORY_FILE,
         );
 
         assert_eq!(
@@ -1573,7 +1586,11 @@ mod tests {
 
     #[test]
     fn usage_history_cache_path_falls_back_to_home_cache() {
-        let path = usage_history_cache_path_from_env(None, PathBuf::from("/home/praveen"));
+        let path = usage_history_cache_path_from_env(
+            None,
+            PathBuf::from("/home/praveen"),
+            CODEX_USAGE_HISTORY_FILE,
+        );
 
         assert_eq!(
             path,

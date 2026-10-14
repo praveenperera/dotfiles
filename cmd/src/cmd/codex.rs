@@ -1,5 +1,6 @@
 pub(crate) mod app_server;
 mod auth;
+mod claude_usage;
 mod fs;
 mod ops;
 mod table;
@@ -31,10 +32,13 @@ use std::time::Duration;
 use xshell::Shell;
 
 use auth::*;
+use claude_usage::*;
 use fs::*;
 use ops::*;
 use table::*;
 use usage::*;
+
+pub use ops::{combined_usage, combined_usage_history};
 
 #[derive(Debug, Clone, Args)]
 pub struct Codex {

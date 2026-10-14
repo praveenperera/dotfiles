@@ -118,6 +118,8 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             pack::run_with_flags(sh, pack_flags)
         }
         MainCmd::Codex { .. } => codex::run_with_args(sh, &args[1..]),
+        MainCmd::Usage => codex::combined_usage(),
+        MainCmd::UsageHistory { days, verbose } => codex::combined_usage_history(days, verbose),
         MainCmd::Sync { subcommand } => {
             let sync_flags = sync::Sync { subcommand };
             sync::run_with_flags(sh, sync_flags)

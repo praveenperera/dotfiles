@@ -180,6 +180,21 @@ pub enum MainCmd {
         subcommand: crate::cmd::codex::CodexCmd,
     },
 
+    /// Show Codex and Claude Code usage together
+    Usage,
+
+    /// Show saved Codex and Claude Code usage samples
+    #[command(visible_alias = "uh")]
+    UsageHistory {
+        /// Number of local calendar days to show
+        #[arg(short, long, default_value_t = 2)]
+        days: usize,
+
+        /// Show every saved sample instead of daily summaries
+        #[arg(short, long)]
+        verbose: bool,
+    },
+
     /// Crate operations (crates.io)
     #[command(arg_required_else_help = true)]
     Crate {

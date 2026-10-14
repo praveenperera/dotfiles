@@ -883,36 +883,158 @@ pub(super) fn enrich_active_profiles_with_global_auth(
     Ok(())
 }
 
-pub(super) fn usage() -> Result<()> {
+/// Current usage for one provider, with run rates against its saved history
+pub(super) struct CurrentUsageReport {
+    label: String,
+    usage: ProfileUsageState,
+    rates: UsageRunRates,
+    sample: Option<UsageHistorySample>,
+    history_path: Option<PathBuf>,
+}
+
+impl CurrentUsageReport {
+    pub(super) fn new(
+        label: String,
+        usage: ProfileUsageState,
+        captured_at: chrono::DateTime<Utc>,
+        history_path: Option<PathBuf>,
+    ) -> Self {
+        let sample = usage_history_sample(&label, &usage, captured_at);
+        let rates = match (&sample, &history_path) {
+            (Some(sample), Some(path)) => usage_run_rates(&load_usage_history(path), sample),
+            _ => UsageRunRates::default(),
+        };
+
+        Self {
+            label,
+            usage,
+            rates,
+            sample,
+            history_path,
+        }
+    }
+
+    // record after printing so the rates above compare against the previous sample
+    fn record(self) {
+        record_usage_sample_best_effort(self.history_path, self.sample);
+    }
+}
+
+fn codex_usage_report(
+    captured_at: chrono::DateTime<Utc>,
+) -> Result<(CurrentUsageReport, RateLimitResetCreditSummary)> {
     let loader = ProfileUsageLoader::new()?;
     let auth_path = auth_path()?;
     let (label, usage) = current_usage_view(&loader, &auth_path)?;
     let reset_credits = RateLimitResetCreditLoader::new()
         .map(|loader| current_reset_credits_view(&loader, &auth_path))
         .unwrap_or_default();
-    let captured_at = Utc::now();
-    let sample = usage_history_sample(&label, &usage, captured_at);
-    let rates = sample
-        .as_ref()
-        .and_then(|sample| {
-            let path = usage_history_cache_path().ok()?;
-            let history = load_usage_history(&path);
-            Some(usage_run_rates(&history, sample))
-        })
-        .unwrap_or_default();
+    let report =
+        CurrentUsageReport::new(label, usage, captured_at, usage_history_cache_path().ok());
 
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
+    Ok((report, reset_credits))
+}
+
+pub(super) fn usage() -> Result<()> {
+    let captured_at = Utc::now();
+    let (report, reset_credits) = codex_usage_report(captured_at)?;
+
+    let mut stdout = io::stdout().lock();
     print_current_usage_table(
         &mut stdout,
-        &label,
-        &usage,
+        &report.label,
+        &report.usage,
         captured_at.with_timezone(&Local),
-        rates,
+        report.rates,
         &reset_credits,
     )?;
 
-    record_usage_sample_best_effort(usage_history_cache_path(), sample);
+    report.record();
+
+    Ok(())
+}
+
+/// Shows Codex and Claude Code usage together, fetching both at once
+pub fn combined_usage() -> Result<()> {
+    spawn_usage_history_prune();
+
+    let captured_at = Utc::now();
+    let (codex, claude) = std::thread::scope(|scope| {
+        let claude = scope.spawn(|| claude_usage_report(captured_at));
+        let codex = codex_usage_report(captured_at);
+        let claude = claude
+            .join()
+            .unwrap_or_else(|_| Err(eyre!("Claude usage fetch panicked")));
+
+        (codex, claude)
+    });
+
+    let captured_local = captured_at.with_timezone(&Local);
+    let mut stdout = io::stdout().lock();
+    writeln!(stdout, "Time: {}", captured_local.format("%-I:%M %p"))?;
+    writeln!(stdout)?;
+
+    match &codex {
+        Ok((report, reset_credits)) => print_provider_usage_section(
+            &mut stdout,
+            "Codex",
+            &report.label,
+            &report.usage,
+            captured_local,
+            report.rates,
+            Some(reset_credits),
+        )?,
+        Err(err) => print_provider_usage_error(&mut stdout, "Codex", err)?,
+    }
+
+    writeln!(stdout)?;
+    match &claude {
+        Ok(report) => print_provider_usage_section(
+            &mut stdout,
+            "Claude",
+            &report.label,
+            &report.usage,
+            captured_local,
+            report.rates,
+            None,
+        )?,
+        Err(err) => print_provider_usage_error(&mut stdout, "Claude", err)?,
+    }
+
+    let both_failed = codex.is_err() && claude.is_err();
+    if let Ok((report, _)) = codex {
+        report.record();
+    }
+    if let Ok(report) = claude {
+        report.record();
+    }
+
+    if both_failed {
+        return Err(eyre!("No usage available for Codex or Claude"));
+    }
+
+    Ok(())
+}
+
+/// Shows saved Codex and Claude Code usage samples one provider after the other
+pub fn combined_usage_history(days: usize, verbose: bool) -> Result<()> {
+    let options = UsageHistoryOptions { days, verbose };
+    let now = Utc::now();
+    let providers = [
+        ("Codex", CODEX_USAGE_HISTORY_FILE),
+        ("Claude", CLAUDE_USAGE_HISTORY_FILE),
+    ];
+
+    let mut stdout = io::stdout().lock();
+    for (index, (provider, file_name)) in providers.into_iter().enumerate() {
+        if index > 0 {
+            writeln!(stdout)?;
+        }
+
+        writeln!(stdout, "{}", provider.bold())?;
+        let path = usage_history_cache_path_for(file_name)?;
+        print_saved_usage_history(&mut stdout, &path, now, options)?;
+    }
 
     Ok(())
 }
@@ -945,8 +1067,8 @@ pub(super) fn usage_history(options: UsageHistoryOptions) -> Result<()> {
     Ok(())
 }
 
-fn record_usage_sample_best_effort(path: Result<PathBuf>, sample: Option<UsageHistorySample>) {
-    if let (Some(sample), Ok(path)) = (sample, path) {
+fn record_usage_sample_best_effort(path: Option<PathBuf>, sample: Option<UsageHistorySample>) {
+    if let (Some(sample), Some(path)) = (sample, path) {
         let _ = record_usage_sample(&path, sample);
     }
 }
@@ -1340,7 +1462,7 @@ mod tests {
             now,
         );
 
-        record_usage_sample_best_effort(Ok(path.clone()), sample);
+        record_usage_sample_best_effort(Some(path.clone()), sample);
 
         let history = load_usage_history(&path);
         let mut output = Vec::new();

@@ -54,29 +54,74 @@ pub(super) fn print_current_usage_table(
     rates: UsageRunRates,
     reset_credits: &RateLimitResetCreditSummary,
 ) -> io::Result<()> {
+    let time = captured_at.format("%-I:%M %p").to_string();
+    writeln!(writer, "Time: {time}   {}", format_usage_run_rates(rates))?;
+    writeln!(writer)?;
+    print_reset_credits_table(writer, reset_credits, captured_at)?;
+    writeln!(writer)?;
+    print_usage_limits_table(writer, label, usage, captured_at)
+}
+
+/// Prints one provider's block in the combined usage view, with the shared time line left to
+/// the caller
+pub(super) fn print_provider_usage_section(
+    writer: &mut impl Write,
+    provider: &str,
+    label: &str,
+    usage: &ProfileUsageState,
+    captured_at: chrono::DateTime<Local>,
+    rates: UsageRunRates,
+    reset_credits: Option<&RateLimitResetCreditSummary>,
+) -> io::Result<()> {
+    writeln!(
+        writer,
+        "{}   {}",
+        provider.bold(),
+        format_usage_run_rates(rates)
+    )?;
+
+    if let Some(reset_credits) = reset_credits {
+        print_reset_credits_table(writer, reset_credits, captured_at)?;
+        writeln!(writer)?;
+    }
+
+    print_usage_limits_table(writer, label, usage, captured_at)
+}
+
+pub(super) fn print_provider_usage_error(
+    writer: &mut impl Write,
+    provider: &str,
+    err: &eyre::Report,
+) -> io::Result<()> {
+    writeln!(writer, "{}   {}", provider.bold(), format!("{err:#}").red())
+}
+
+fn format_usage_run_rates(rates: UsageRunRates) -> String {
+    format!(
+        "5H rate: {}   Week rate: {}",
+        format_hourly_run_rate(rates.five_hour),
+        format_daily_run_rate(rates.weekly)
+    )
+}
+
+fn print_usage_limits_table(
+    writer: &mut impl Write,
+    label: &str,
+    usage: &ProfileUsageState,
+    captured_at: chrono::DateTime<Local>,
+) -> io::Result<()> {
     let current_local = captured_at;
     let current_utc = captured_at.with_timezone(&Utc);
-    let time = current_local.format("%-I:%M %p").to_string();
     let five_hour =
         current_usage_window_compact(usage, UsageWindowKind::FiveHour, current_local, current_utc);
     let weekly =
         current_usage_window_compact(usage, UsageWindowKind::Weekly, current_local, current_utc);
-    let five_hour_rate = format_hourly_run_rate(rates.five_hour);
-    let weekly_rate = format_daily_run_rate(rates.weekly);
 
     let widths = CurrentUsageTableWidths {
         label: "EMAIL".len().max(label.len()),
         five_hour: "5 HOUR LIMIT".len().max(five_hour.len()),
         weekly: "WEEKLY LIMIT".len().max(weekly.len()),
     };
-
-    writeln!(
-        writer,
-        "Time: {time}   5H rate: {five_hour_rate}   Week rate: {weekly_rate}"
-    )?;
-    writeln!(writer)?;
-    print_reset_credits_table(writer, reset_credits, current_local)?;
-    writeln!(writer)?;
 
     writeln!(
         writer,
