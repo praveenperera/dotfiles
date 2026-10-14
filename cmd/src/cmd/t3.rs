@@ -362,7 +362,11 @@ fn hook_outcome(provider: Provider) -> Result<String> {
     let transcript = field("transcript_path", "transcriptPath").map(PathBuf::from);
     let session = match (transcript, field("session_id", "sessionId")) {
         (Some(path), _) if path.is_file() => Session::read(provider, &path)?,
-        (_, Some(id)) => Session::find_by_id(&id, Some(provider))?,
+        // ephemeral sessions end without ever writing a transcript
+        (_, Some(id)) => match Session::find_by_id(&id, Some(provider)) {
+            Ok(session) => session,
+            Err(_) => return Ok(format!("skipped session {id}: no transcript")),
+        },
         _ => return Err(eyre!("hook payload has no transcript_path or session_id")),
     };
 
