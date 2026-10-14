@@ -1,8 +1,9 @@
+mod picker;
 mod server;
 mod transcript;
 
 use std::fs::OpenOptions;
-use std::io::{Read, Write};
+use std::io::{IsTerminal, Read, Write};
 use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -30,7 +31,8 @@ pub enum T3Cmd {
 
 #[derive(Debug, Clone, Args)]
 pub struct ImportArgs {
-    /// Session id or transcript path [default: newest interactive session in --cwd]
+    /// Session id or transcript path [default: pick from sessions in --cwd with
+    /// fzf, or the newest one without a terminal]
     session: Option<String>,
 
     /// Only consider sessions from this CLI
@@ -141,12 +143,16 @@ fn import(args: ImportArgs) -> Result<()> {
     let session = match args.session.as_deref() {
         Some(value) if Path::new(value).is_file() => Session::read_path(Path::new(value))?,
         Some(id) => Session::find_by_id(id, args.provider)?,
-        None => Session::newest_in(&cwd, args.provider)?.ok_or_else(|| {
-            eyre!(
-                "no interactive Claude or Codex session from the last 14 days ran in {}",
-                cwd.display()
-            )
-        })?,
+        None if std::io::stdin().is_terminal() && std::io::stderr().is_terminal() => {
+            match pick_session(&cwd, args.provider)? {
+                Some(session) => session,
+                None => return Ok(()),
+            }
+        }
+        None => Session::recent_in(&cwd, args.provider)?
+            .next()
+            .map(|(_, session)| session)
+            .ok_or_else(|| no_sessions(&cwd))?,
     };
 
     // naming a session by hand is how a deleted import comes back
@@ -159,6 +165,39 @@ fn import(args: ImportArgs) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn no_sessions(cwd: &Path) -> eyre::Report {
+    eyre!(
+        "no interactive Claude or Codex session from the last 14 days ran in {}",
+        cwd.display()
+    )
+}
+
+/// Every recent session in `cwd`, so the picker can always toggle between CLIs
+fn pick_session(cwd: &Path, start: Option<Provider>) -> Result<Option<Session>> {
+    // the in-T3 marker is a hint, so a stopped server only loses the marker
+    let db = Server::locate().and_then(|server| server.db(true)).ok();
+    let entries: Vec<_> = Session::all_recent_in(cwd, None)?
+        .into_iter()
+        .map(|(modified, session)| {
+            let in_t3 = db
+                .as_ref()
+                .is_some_and(|db| matches!(db.thread_for_session(&session, false), Ok(Some(_))));
+
+            picker::Entry {
+                modified,
+                session,
+                in_t3,
+            }
+        })
+        .collect();
+
+    if entries.is_empty() {
+        return Err(no_sessions(cwd));
+    }
+
+    picker::pick(entries, start)
 }
 
 fn import_session(session: &Session, dry_run: bool, revive_deleted: bool) -> Result<Outcome> {

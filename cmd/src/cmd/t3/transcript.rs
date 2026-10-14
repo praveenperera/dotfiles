@@ -1,6 +1,7 @@
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, SystemTime};
 
 use eyre::{eyre, Context, Result};
@@ -94,30 +95,84 @@ impl Session {
         ))
     }
 
-    /// Newest interactive session that ran in `cwd`
-    pub fn newest_in(cwd: &Path, provider: Option<Provider>) -> Result<Option<Self>> {
-        let mut candidates = Vec::new();
-        if provider != Some(Provider::Codex) {
-            candidates.extend(claude_transcripts_for(cwd)?);
-        }
-
-        if provider != Some(Provider::Claude) {
-            candidates.extend(codex_rollouts_for(cwd)?);
-        }
-
-        candidates.sort_by_key(|(_, modified, _)| *modified);
-        while let Some((provider, _, path)) = candidates.pop() {
-            let Ok(session) = Session::read(provider, &path) else {
-                continue;
-            };
-
-            if session.interactive && session.has_prompt && same_dir(&session.cwd, cwd) {
-                return Ok(Some(session));
-            }
-        }
-
-        Ok(None)
+    /// Interactive sessions that ran in `cwd`, newest first. Transcripts are
+    /// parsed as the iterator advances, so taking only the first stays cheap
+    pub fn recent_in(
+        cwd: &Path,
+        provider: Option<Provider>,
+    ) -> Result<impl Iterator<Item = (SystemTime, Self)>> {
+        let cwd = cwd.to_owned();
+        Ok(candidates_in(&cwd, provider)?
+            .into_iter()
+            .filter_map(move |candidate| usable(&cwd, candidate)))
     }
+
+    /// Every result of `recent_in`, parsed across threads. Parsing whole
+    /// transcripts is most of the picker's startup time
+    pub fn all_recent_in(
+        cwd: &Path,
+        provider: Option<Provider>,
+    ) -> Result<Vec<(SystemTime, Self)>> {
+        let candidates = candidates_in(cwd, provider)?;
+        let workers = std::thread::available_parallelism()
+            .map_or(4, std::num::NonZero::get)
+            .min(candidates.len());
+
+        // transcript sizes vary widely, so workers pull the next file from a
+        // shared index instead of taking fixed chunks
+        let next = AtomicUsize::new(0);
+        let mut parsed: Vec<(usize, (SystemTime, Self))> = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..workers)
+                .map(|_| {
+                    scope.spawn(|| {
+                        let mut found = Vec::new();
+                        loop {
+                            let index = next.fetch_add(1, Ordering::Relaxed);
+                            let Some(candidate) = candidates.get(index) else {
+                                break found;
+                            };
+
+                            if let Some(session) = usable(cwd, candidate.clone()) {
+                                found.push((index, session));
+                            }
+                        }
+                    })
+                })
+                .collect();
+
+            handles
+                .into_iter()
+                .flat_map(|handle| handle.join().unwrap_or_default())
+                .collect()
+        });
+
+        parsed.sort_by_key(|(index, _)| *index);
+        Ok(parsed.into_iter().map(|(_, session)| session).collect())
+    }
+}
+
+type Candidate = (Provider, SystemTime, PathBuf);
+
+/// Transcripts modified within the discovery window, newest first
+fn candidates_in(cwd: &Path, provider: Option<Provider>) -> Result<Vec<Candidate>> {
+    let mut candidates = Vec::new();
+    if provider != Some(Provider::Codex) {
+        candidates.extend(claude_transcripts_for(cwd)?);
+    }
+
+    if provider != Some(Provider::Claude) {
+        candidates.extend(codex_rollouts_for(cwd)?);
+    }
+
+    candidates.sort_by_key(|(_, modified, _)| std::cmp::Reverse(*modified));
+    Ok(candidates)
+}
+
+fn usable(cwd: &Path, (provider, modified, path): Candidate) -> Option<(SystemTime, Session)> {
+    let session = Session::read(provider, &path).ok()?;
+    let usable = session.interactive && session.has_prompt && same_dir(&session.cwd, cwd);
+
+    usable.then_some((modified, session))
 }
 
 pub fn same_dir(left: &Path, right: &Path) -> bool {
