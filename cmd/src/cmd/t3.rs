@@ -3,6 +3,7 @@ mod transcript;
 
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
+use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -383,9 +384,11 @@ fn append_log(line: &str) -> Result<()> {
     std::fs::create_dir_all(&dir)?;
 
     let stamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S %Z");
+    // titles can quote a prompt, so the log stays private
     let mut log = OpenOptions::new()
         .create(true)
         .append(true)
+        .mode(0o600)
         .open(dir.join("t3-import.log"))?;
 
     writeln!(log, "{stamp} {line}")?;

@@ -59,6 +59,25 @@ impl Server {
             .filter(|path| path.ends_with("t3"))
             .ok_or_else(|| eyre!("T3 server pid {} is not a running t3 binary", state.pid))?;
 
+        // the pid comes from a file, and the binary is run with admin rights, so
+        // only T3's own downloaded releases are trusted
+        let versions = userdata
+            .parent()
+            .map(|home| home.join("runtime/versions"))
+            .and_then(|dir| fs::canonicalize(dir).ok());
+
+        let trusted = match (versions, fs::canonicalize(&bin)) {
+            (Some(versions), Ok(real)) => real.starts_with(versions),
+            _ => false,
+        };
+
+        if !trusted {
+            bail!(
+                "refusing to run {}: not a T3 release under runtime/versions",
+                bin.display()
+            );
+        }
+
         Ok(Self {
             userdata,
             origin: state.origin,
