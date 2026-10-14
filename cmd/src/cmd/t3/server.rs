@@ -66,22 +66,20 @@ impl Server {
             .map(|home| home.join("runtime/versions"))
             .and_then(|dir| fs::canonicalize(dir).ok());
 
+        // the resolved path is what gets run, so a symlink swapped after the
+        // check cannot redirect it
         let trusted = match (versions, fs::canonicalize(&bin)) {
-            (Some(versions), Ok(real)) => real.starts_with(versions),
-            _ => false,
-        };
-
-        if !trusted {
-            bail!(
+            (Some(versions), Ok(real)) if real.starts_with(&versions) => real,
+            _ => bail!(
                 "refusing to run {}: not a T3 release under runtime/versions",
                 bin.display()
-            );
-        }
+            ),
+        };
 
         Ok(Self {
             userdata,
             origin: state.origin,
-            bin,
+            bin: trusted,
         })
     }
 
