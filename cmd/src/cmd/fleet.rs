@@ -26,10 +26,10 @@ pub enum FleetCmd {
     DotfilesUp,
 
     /// Pull ~/code/dotfiles, then update Codex, Claude Code, Grok Build, and
-    /// installed Homebased on ai5090 and code; update Homebased on the calling
-    /// machine too if it is installed and was not updated remotely. Each
-    /// Homebased update also checks out the Homebased skill at the matching
-    /// release tag
+    /// installed Homebased on ai5090 and code; update Homebased and
+    /// codemode-mcp on the calling machine too if they are installed and it
+    /// was not updated remotely. Each Homebased update also checks out the
+    /// Homebased skill at the matching release tag
     ///
     /// Without --all, this uses no sudo and changes no system packages;
     /// running Homebased daemons restart after their update
@@ -100,7 +100,11 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
     let (program, args) = update_argv(local, mode);
     run_attached(program, &args)?;
 
-    if !updated_by_remote_script(sh) && command_exists(sh, "homebased") {
+    if updated_by_remote_script(sh) {
+        return Ok(());
+    }
+
+    if command_exists(sh, "homebased") {
         run_attached("homebased", &["update"])?;
 
         let sync = dotfiles_dir()?.join(HOMEBASED_SKILL_SYNC);
@@ -108,6 +112,11 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
             .to_str()
             .ok_or_else(|| eyre!("non-UTF-8 path {}", sync.display()))?;
         run_attached(sync, &[])?;
+    }
+
+    // a Mac-only launchd service; it skips the restart when already current
+    if command_exists(sh, "codemode-mcp") {
+        run_attached("codemode-mcp", &["update"])?;
     }
 
     Ok(())
