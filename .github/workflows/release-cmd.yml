@@ -12,12 +12,11 @@ env:
 
 jobs:
   create-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -71,22 +70,17 @@ jobs:
           git push origin HEAD --tags
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          release_name: CMD Binary ${{ steps.tag.outputs.tag }}
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: gh release create "$TAG" --title "CMD Binary $TAG" --notes ""
 
   build-macos:
     runs-on: macos-latest
     needs: create-release
     steps:
       # build the version-bump commit so the binary reports the release tag's version
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.create-release.outputs.tag }}
 
@@ -96,7 +90,7 @@ jobs:
           mkdir -p secrets
 
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -120,26 +114,22 @@ jobs:
       - name: Package
         run: |
           cd cmd
-          tar -czvf ${{ env.BIN }}-macos-arm64.tar.gz -C target/aarch64-apple-darwin/release ${{ env.BIN }}
+          tar -czvf ${{ env.BIN }}-${{ needs.create-release.outputs.tag }}-macos-arm64.tar.gz -C target/aarch64-apple-darwin/release ${{ env.BIN }}
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v3
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: cmd/${{ env.BIN }}-macos-arm64.tar.gz
-          asset_name: ${{ env.BIN }}-${{ needs.create-release.outputs.tag }}-macos-arm64.tar.gz
-          asset_content_type: application/gzip
+          tag_name: ${{ needs.create-release.outputs.tag }}
+          files: cmd/${{ env.BIN }}-${{ needs.create-release.outputs.tag }}-macos-arm64.tar.gz
 
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: ghcr.io/cross-rs/x86_64-unknown-linux-musl:latest
     needs: create-release
     steps:
       # build the version-bump commit so the binary reports the release tag's version
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.create-release.outputs.tag }}
 
@@ -149,7 +139,7 @@ jobs:
           mkdir -p secrets
 
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -173,14 +163,10 @@ jobs:
       - name: Package
         run: |
           cd cmd
-          tar -czvf ${{ env.BIN }}-linux-musl.tar.gz -C target/x86_64-unknown-linux-musl/release ${{ env.BIN }}
+          tar -czvf ${{ env.BIN }}-${{ needs.create-release.outputs.tag }}-linux-musl.tar.gz -C target/x86_64-unknown-linux-musl/release ${{ env.BIN }}
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v3
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: cmd/${{ env.BIN }}-linux-musl.tar.gz
-          asset_name: ${{ env.BIN }}-${{ needs.create-release.outputs.tag }}-linux-musl.tar.gz
-          asset_content_type: application/gzip
+          tag_name: ${{ needs.create-release.outputs.tag }}
+          files: cmd/${{ env.BIN }}-${{ needs.create-release.outputs.tag }}-linux-musl.tar.gz
