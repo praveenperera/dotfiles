@@ -92,6 +92,20 @@ class DesktopSyncTests(unittest.TestCase):
                 [(str(index), status) for index, status in enumerate(statuses)],
             )
 
+    def set_runs(self, *statuses):
+        database = self.home / ".t3/userdata/statev2.sqlite"
+        database.parent.mkdir(parents=True, exist_ok=True)
+        with closing(sqlite3.connect(database)) as db, db:
+            db.execute(
+                "create table if not exists orchestration_v2_projection_runs"
+                " (run_id text primary key, status text not null)"
+            )
+            db.execute("delete from orchestration_v2_projection_runs")
+            db.executemany(
+                "insert into orchestration_v2_projection_runs values (?, ?)",
+                [(str(index), status) for index, status in enumerate(statuses)],
+            )
+
     def test_equal_older_and_pending_do_not_update(self):
         for desktop, active, pending in [
             ("0.0.43", "0.0.43", False),
@@ -149,6 +163,32 @@ class DesktopSyncTests(unittest.TestCase):
             sync.check(self.home, self.app)
             run.assert_not_called()
         self.assertEqual(log.call_count, 1)
+
+    def test_running_v2_run_defers_update(self):
+        self.set_runs("running", "succeeded")
+        with patch.object(sync, "run") as run:
+            sync.check(self.home, self.app)
+            run.assert_not_called()
+
+    def test_every_live_v2_status_counts(self):
+        for status in ["preparing", "starting", "running", "waiting"]:
+            with self.subTest(status=status):
+                self.set_runs(status, "succeeded", "failed")
+                self.assertEqual(sync.running_turns(self.home), 1)
+        self.set_runs("succeeded", "failed", "interrupted")
+        self.assertEqual(sync.running_turns(self.home), 0)
+
+    def test_frozen_v1_state_is_ignored_next_to_v2(self):
+        self.set_sessions("running", "starting")
+        self.set_runs("succeeded")
+        self.assertEqual(sync.running_turns(self.home), 0)
+        with (
+            patch.object(sync.shutil, "which", return_value="/fake/npx"),
+            patch.object(sync, "run") as run,
+            self.assertRaisesRegex(RuntimeError, "did not activate"),
+        ):
+            sync.check(self.home, self.app)
+        self.assertTrue(run.called)
 
     def test_idle_service_clears_deferral_and_updates(self):
         self.set_sessions("starting")

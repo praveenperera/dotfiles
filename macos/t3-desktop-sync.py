@@ -24,7 +24,7 @@ from zoneinfo import ZoneInfo
 
 LABEL = "dev.praveen.t3-desktop-sync"
 SERVICE = "com.t3tools.t3code.service"
-APP = Path("/Applications/T3 Code (Alpha).app")
+APP = Path("/Applications/T3 Code (Beta).app")
 DESKTOP_SETTINGS = Path(".t3/userdata/desktop-settings.json")
 SERVER_SETTINGS = Path(".t3/userdata/settings.json")
 CLAUDE_INSTANCE = "claudeAgent"
@@ -100,18 +100,31 @@ def installed_launcher(home, launcher):
 
 
 def running_turns(home):
-    """Count agent sessions that a service restart would interrupt"""
-    database = home / ".t3/userdata/state.sqlite"
+    """Count agent runs that a service restart would interrupt"""
+    userdata = home / ".t3/userdata"
+    # T3 0.1.0 copies state.sqlite into statev2.sqlite once and never writes
+    # state.sqlite again, so it only holds live data on older installs. A
+    # crashed V2 server leaves runs non-terminal until it starts again and
+    # reconciles them, which the defer cap bounds. These four statuses are the
+    # ones T3's own isBlockingRun treats as live
+    database = userdata / "statev2.sqlite"
+    query = (
+        "select count(*) from orchestration_v2_projection_runs"
+        " where status in ('preparing', 'starting', 'running', 'waiting')"
+    )
+    if not database.exists():
+        database = userdata / "state.sqlite"
+        query = (
+            "select count(*) from projection_thread_sessions"
+            " where status in ('running', 'starting')"
+        )
     if not database.exists():
         return 0
     # the desktop and the service share this database, so both count
     with closing(
         sqlite3.connect(f"{database.as_uri()}?mode=ro", uri=True, timeout=5)
     ) as db:
-        (count,) = db.execute(
-            "select count(*) from projection_thread_sessions"
-            " where status in ('running', 'starting')"
-        ).fetchone()
+        (count,) = db.execute(query).fetchone()
     return count
 
 
