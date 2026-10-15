@@ -2,19 +2,14 @@ mod picker;
 mod server;
 mod transcript;
 
-use std::fs::OpenOptions;
-use std::io::{IsTerminal, Read, Write};
-use std::os::unix::fs::OpenOptionsExt;
-use std::os::unix::process::CommandExt;
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use eyre::{eyre, Context, Result};
-use serde_json::Value;
+use eyre::{eyre, Result};
 
-use crate::fsutil;
 use server::{Db, NewThread, Server};
 use transcript::{same_dir, Provider, Session};
 
@@ -43,36 +38,14 @@ pub struct ImportArgs {
     #[arg(long)]
     cwd: Option<PathBuf>,
 
-    /// Read a SessionEnd hook payload on stdin, log the result, and always exit 0
-    #[arg(
-        long,
-        value_name = "PROVIDER",
-        conflicts_with_all = ["session", "provider", "cwd", "dry_run"]
-    )]
-    hook: Option<Provider>,
-
     /// Show what would be imported without changing T3
     #[arg(long)]
     dry_run: bool,
-
-    /// Run the hook import in this process instead of a detached child
-    #[arg(long, hide = true, requires = "hook")]
-    foreground: bool,
 }
 
 pub fn run_with_flags(flags: T3) -> Result<()> {
     match flags.subcommand {
-        T3Cmd::Import(args) => match args.hook {
-            Some(provider) if args.foreground => {
-                run_hook(provider);
-                Ok(())
-            }
-            Some(provider) => {
-                detach_hook(provider);
-                Ok(())
-            }
-            None => import(args),
-        },
+        T3Cmd::Import(args) => import(args),
     }
 }
 
@@ -88,9 +61,6 @@ enum Outcome {
         new_project: bool,
     },
     AlreadyInT3 {
-        thread_id: String,
-    },
-    Deleted {
         thread_id: String,
     },
     Skipped(&'static str),
@@ -126,9 +96,6 @@ impl Outcome {
             Self::AlreadyInT3 { thread_id } => {
                 format!("{source} is already T3 thread {thread_id}")
             }
-            Self::Deleted { thread_id } => {
-                format!("skipped {source}: its T3 thread {thread_id} was deleted")
-            }
             Self::Skipped(reason) => format!("skipped {source}: {reason}"),
         }
     }
@@ -155,12 +122,11 @@ fn import(args: ImportArgs) -> Result<()> {
             .ok_or_else(|| no_sessions(&cwd))?,
     };
 
-    // naming a session by hand is how a deleted import comes back
-    let outcome = import_session(&session, args.dry_run, true)?;
+    let outcome = import_session(&session, args.dry_run)?;
     let line = outcome.describe(&session);
     match outcome {
         Outcome::Imported { .. } => println!("{}", line.green()),
-        Outcome::Skipped(_) | Outcome::Deleted { .. } => println!("{}", line.yellow()),
+        Outcome::Skipped(_) => println!("{}", line.yellow()),
         Outcome::Planned { .. } | Outcome::AlreadyInT3 { .. } => println!("{line}"),
     }
 
@@ -183,7 +149,7 @@ fn pick_session(cwd: &Path, start: Option<Provider>) -> Result<Option<Session>> 
         .map(|(modified, session)| {
             let in_t3 = db
                 .as_ref()
-                .is_some_and(|db| matches!(db.thread_for_session(&session, false), Ok(Some(_))));
+                .is_some_and(|db| matches!(db.thread_for_session(&session), Ok(Some(_))));
 
             picker::Entry {
                 modified,
@@ -200,27 +166,15 @@ fn pick_session(cwd: &Path, start: Option<Provider>) -> Result<Option<Session>> 
     picker::pick(entries, start)
 }
 
-fn import_session(session: &Session, dry_run: bool, revive_deleted: bool) -> Result<Outcome> {
+fn import_session(session: &Session, dry_run: bool) -> Result<Outcome> {
     if !session.has_prompt {
         return Ok(Outcome::Skipped("no user prompt"));
     }
 
     let server = Server::locate()?;
     let db = server.db(dry_run)?;
-    // Codex fires SessionEnd again whenever T3 itself finishes running an
-    // imported thread, so a thread deleted in T3 must not reappear on its own
-    match db.thread_for_session(session, !revive_deleted)? {
-        Some(thread) if thread.deleted => {
-            return Ok(Outcome::Deleted {
-                thread_id: thread.id,
-            })
-        }
-        Some(thread) => {
-            return Ok(Outcome::AlreadyInT3 {
-                thread_id: thread.id,
-            })
-        }
-        None => {}
+    if let Some(thread_id) = db.thread_for_session(session)? {
+        return Ok(Outcome::AlreadyInT3 { thread_id });
     }
 
     let target = Target::resolve(&db, &session.cwd)?;
@@ -345,91 +299,4 @@ fn linked_worktree_main(dir: &Path) -> Option<PathBuf> {
     )?;
     let main = Path::new(&common).parent()?.to_owned();
     (!same_dir(&main, dir)).then_some(main)
-}
-
-/// Claude kills SessionEnd hooks after 1.5s by default, and a cold t3 start can
-/// take longer, so the payload moves to a child in its own process group
-fn detach_hook(provider: Provider) {
-    let spawned = (|| -> Result<()> {
-        let mut payload = Vec::new();
-        std::io::stdin().read_to_end(&mut payload)?;
-
-        let mut child = Command::new(std::env::current_exe()?)
-            .args(["t3", "import", "--foreground", "--hook", provider.label()])
-            .stdin(Stdio::piped())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .process_group(0)
-            .spawn()?;
-
-        child
-            .stdin
-            .take()
-            .ok_or_else(|| eyre!("child has no stdin"))?
-            .write_all(&payload)?;
-
-        Ok(())
-    })();
-
-    if let Err(error) = spawned {
-        let _ = append_log(&format!("{} error: {error:#}", provider.label()));
-    }
-}
-
-/// Hooks run after the CLI has exited, so results go to a log instead of the terminal
-fn run_hook(provider: Provider) {
-    let line = match hook_outcome(provider) {
-        Ok(line) => line,
-        Err(error) => format!("error: {error:#}"),
-    };
-
-    let _ = append_log(&format!("{} {line}", provider.label()));
-}
-
-fn hook_outcome(provider: Provider) -> Result<String> {
-    let mut input = String::new();
-    std::io::stdin().read_to_string(&mut input)?;
-    let payload: Value = serde_json::from_str(&input).wrap_err("parse hook payload")?;
-
-    let field = |snake: &str, camel: &str| {
-        payload
-            .get(snake)
-            .or_else(|| payload.get(camel))
-            .and_then(Value::as_str)
-            .map(str::to_owned)
-    };
-
-    let transcript = field("transcript_path", "transcriptPath").map(PathBuf::from);
-    let session = match (transcript, field("session_id", "sessionId")) {
-        (Some(path), _) if path.is_file() => Session::read(provider, &path)?,
-        // ephemeral sessions end without ever writing a transcript
-        (_, Some(id)) => match Session::find_by_id(&id, Some(provider)) {
-            Ok(session) => session,
-            Err(_) => return Ok(format!("skipped session {id}: no transcript")),
-        },
-        _ => return Err(eyre!("hook payload has no transcript_path or session_id")),
-    };
-
-    // SDK, `-p`, `exec`, and T3's own sessions fire the same hook
-    if !session.interactive {
-        return Ok(Outcome::Skipped("not an interactive CLI session").describe(&session));
-    }
-
-    Ok(import_session(&session, false, false)?.describe(&session))
-}
-
-fn append_log(line: &str) -> Result<()> {
-    let dir = fsutil::home_dir()?.join(".cache/cmd");
-    std::fs::create_dir_all(&dir)?;
-
-    let stamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S %Z");
-    // titles can quote a prompt, so the log stays private
-    let mut log = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .mode(0o600)
-        .open(dir.join("t3-import.log"))?;
-
-    writeln!(log, "{stamp} {line}")?;
-    Ok(())
 }
