@@ -1570,7 +1570,15 @@ fn workspace_shutdown() -> Result<()> {
 }
 
 fn workspace_restore() -> Result<()> {
-    let workspace = saved_workspace_id()?;
+    // resurrect runs this after every server restore, including on machines that never
+    // attached a workspace or whose snapshot lacked it, so there is nothing to rebuild
+    let Some(workspace) = try_saved_workspace_id()? else {
+        return Ok(());
+    };
+    if !local_session_exists(&workspace)? {
+        return Ok(());
+    }
+
     let state_lock = StateLock::acquire()?;
     let mut state = load_state()?;
     state.stopped = false;
@@ -2123,6 +2131,16 @@ fn local_tmux_status<const N: usize>(args: [&str; N]) -> Result<ExitStatus> {
         .wrap_err("failed to run tmux")
 }
 
+fn local_session_exists(session: &str) -> Result<bool> {
+    let status = Command::new("tmux")
+        .args(["has-session", "-t", &format!("={session}")])
+        .stderr(Stdio::null())
+        .status()
+        .wrap_err("failed to run tmux")?;
+
+    Ok(status.success())
+}
+
 fn local_tmux_output<const N: usize>(args: [&str; N]) -> Result<String> {
     let output = Command::new("tmux").args(args).output()?;
     if !output.status.success() {
@@ -2315,9 +2333,19 @@ fn save_workspace_id(workspace: &str) -> Result<()> {
 }
 
 fn saved_workspace_id() -> Result<String> {
-    let workspace = fs::read_to_string(state_dir()?.join("workspace-id"))?;
+    try_saved_workspace_id()?
+        .ok_or_else(|| eyre!("no saved workspace; run `cmd tmux workspace attach` first"))
+}
+
+fn try_saved_workspace_id() -> Result<Option<String>> {
+    let workspace = match fs::read_to_string(state_dir()?.join("workspace-id")) {
+        Ok(workspace) => workspace,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error).wrap_err("failed to read saved workspace id"),
+    };
+
     validate_name("saved workspace id", &workspace)?;
-    Ok(workspace)
+    Ok(Some(workspace))
 }
 
 #[cfg(test)]
