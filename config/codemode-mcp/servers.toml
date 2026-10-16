@@ -19,6 +19,7 @@ aliases = ["1password"]
 
 [servers.onepassword.tools.authenticate]
 output_schema = { type = "object", required = ["account_id"], properties = { account_id = { type = "string" } } }
+
 [servers.onepassword.tools.list_environments]
 output_schema = { type = "object", required = ["environments"], properties = { environments = { type = "array", items = { type = "object", properties = { id = { type = "string" }, name = { type = "string" } } } } } }
 
@@ -79,6 +80,7 @@ url = "https://mcp.context7.com/mcp"
 # both answer with prose meant for reading, so scripts get a str
 [servers.context7.tools.resolve-library-id]
 output = "text"
+
 [servers.context7.tools.query-docs]
 output = "text"
 
@@ -100,8 +102,10 @@ sensitive = false
 
 [servers.calendar.tools.create_event]
 policy = "ask"
+
 [servers.calendar.tools.update_event]
 policy = "ask"
+
 [servers.calendar.tools.delete_event]
 policy = "ask"
 grant = "per_call"
@@ -113,10 +117,13 @@ sensitive = false
 
 [servers.reminders.tools.create_reminder]
 policy = "ask"
+
 [servers.reminders.tools.update_reminder]
 policy = "ask"
+
 [servers.reminders.tools.complete_reminder]
 policy = "ask"
+
 [servers.reminders.tools.delete_reminder]
 policy = "ask"
 grant = "per_call"
@@ -135,8 +142,10 @@ sensitive = false
 
 [servers.xcode.tools.RunCodeSnippet]
 policy = "ask"
+
 [servers.xcode.tools.InvokeDebuggerCommand]
 policy = "ask"
+
 [servers.xcode.tools.XcodeRM]
 policy = "ask"
 grant = "per_call"
@@ -157,10 +166,13 @@ policy = "ask"
 aliases = ["email", "mail"]
 [servers.gmail.tools.draft_gmail_message]
 grant = "per_call"
+
 [servers.gmail.tools.manage_gmail_label]
 grant = "per_call"
+
 [servers.gmail.tools.modify_gmail_message_labels]
 grant = "per_call"
+
 [servers.gmail.tools.batch_modify_gmail_message_labels]
 grant = "per_call"
 
