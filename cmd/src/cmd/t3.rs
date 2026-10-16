@@ -1,3 +1,4 @@
+mod background;
 mod picker;
 mod server;
 mod transcript;
@@ -8,8 +9,9 @@ use std::process::Command;
 
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use eyre::{eyre, Result};
+use eyre::{bail, eyre, Result};
 
+use background::BackgroundAgent;
 use server::{Db, NewThread, Server};
 use transcript::{same_dir, Provider, Session};
 
@@ -41,6 +43,11 @@ pub struct ImportArgs {
     /// Show what would be imported without changing T3
     #[arg(long)]
     dry_run: bool,
+
+    /// Stop the Claude background agent holding the session even mid-turn,
+    /// cancelling its current run
+    #[arg(long, short)]
+    force: bool,
 }
 
 pub fn run_with_flags(flags: T3) -> Result<()> {
@@ -122,7 +129,7 @@ fn import(args: ImportArgs) -> Result<()> {
             .ok_or_else(|| no_sessions(&cwd))?,
     };
 
-    let outcome = import_session(&session, args.dry_run)?;
+    let outcome = import_session(&session, args.dry_run, args.force)?;
     let line = outcome.describe(&session);
     match outcome {
         Outcome::Imported { .. } => println!("{}", line.green()),
@@ -166,14 +173,26 @@ fn pick_session(cwd: &Path, start: Option<Provider>) -> Result<Option<Session>> 
     picker::pick(entries, start)
 }
 
-fn import_session(session: &Session, dry_run: bool) -> Result<Outcome> {
+fn import_session(session: &Session, dry_run: bool, force: bool) -> Result<Outcome> {
     if !session.has_prompt {
         return Ok(Outcome::Skipped("no user prompt"));
+    }
+
+    let agent = BackgroundAgent::holding(session)?;
+    if let Some(agent) = agent.as_ref().filter(|agent| agent.busy && !force) {
+        bail!(
+            "claude session {} is mid-turn in background agent {}; let it finish or pass --force to stop it",
+            session.id,
+            agent.id
+        );
     }
 
     let server = Server::locate()?;
     let db = server.db(dry_run)?;
     if let Some(thread_id) = db.thread_for_session(session)? {
+        // a thread imported while the agent ran fails every turn until it stops,
+        // so importing again repairs it
+        release(agent.as_ref(), dry_run)?;
         return Ok(Outcome::AlreadyInT3 { thread_id });
     }
 
@@ -190,6 +209,7 @@ fn import_session(session: &Session, dry_run: bool) -> Result<Outcome> {
         .clone()
         .unwrap_or_else(|| format!("{} CLI session", session.provider.label()));
 
+    release(agent.as_ref(), dry_run)?;
     if dry_run {
         return Ok(Outcome::Planned {
             title,
@@ -237,6 +257,39 @@ fn import_session(session: &Session, dry_run: bool) -> Result<Outcome> {
         title,
         root: target.root,
     })
+}
+
+/// Stop the background agent holding the session so T3 can resume it. A busy
+/// agent only gets here under --force, and stopping it cancels its run
+fn release(agent: Option<&BackgroundAgent>, dry_run: bool) -> Result<()> {
+    let Some(agent) = agent else {
+        return Ok(());
+    };
+
+    if dry_run {
+        let cancel = if agent.busy {
+            " and cancel its current run"
+        } else {
+            ""
+        };
+
+        println!("would stop claude background agent {}{cancel}", agent.id);
+        return Ok(());
+    }
+
+    agent.stop()?;
+    let cancelled = if agent.busy {
+        " and cancelled its current run"
+    } else {
+        ""
+    };
+
+    println!(
+        "stopped claude background agent {}{cancelled} so T3 can resume it",
+        agent.id
+    );
+
+    Ok(())
 }
 
 /// Where the T3 thread lives. Claude resumes by cwd, so the thread must run in
