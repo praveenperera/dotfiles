@@ -48,6 +48,17 @@
   },
   "model": "opus",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/praveen/.claude/scripts/require-agent-model.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
