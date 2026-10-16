@@ -82,6 +82,12 @@ output = "text"
 [servers.context7.tools.query-docs]
 output = "text"
 
+# Superlogical's Rex community server; signs in with OAuth through dynamic
+# client registration, so run `codemode-mcp oauth login superlogical` once
+[servers.superlogical]
+url = "https://www.superlogical.com/rex/community-mcp"
+oauth = true
+
 # Calendar and Reminders through EventKit, covering every account the Mac's
 # apps show. macOS asks once for each, on the Mac, the first time the daemon
 # starts the adapter. Reads run freely; every change asks on the phone, and a
