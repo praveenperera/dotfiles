@@ -62,3 +62,5 @@ claude/.last-update-result.json
 /claude/skills/*
 *.log
 /claude/state
+claude/daemon.lock
+claude/daemon.status.json
