@@ -1,0 +1,159 @@
+# Upstream servers for the codemode-mcp gateway, kept in dotfiles so they are
+# versioned. The gateway's ~/.config/codemode-mcp/config.toml includes this
+# file and keeps what belongs to that Mac alone: public_origin, the [secrets]
+# peers, the 1Password account id and personal env values
+
+# Disabled at install so the 1Password app does not prompt while unattended.
+# To enable: uncomment this block, run `codemode-mcp service restart`, then
+# `codemode-mcp op warm` and accept the prompts on the Mac
+# 1Password Environments: every call needs a phone passkey approval. Read
+# tools accept a 15 or 60 minute session grant; writes ask on every call
+[servers.onepassword]
+command = "/Applications/1Password.app/Contents/MacOS/1password-mcp"
+policy = "ask"
+# authenticate grants the scopes the other tools check, for the life of the
+# connection; it runs before the first call on each one, inside that call's
+# approval, so nothing prompts on the Mac until a call is approved
+setup = [{ tool = "authenticate" }]
+aliases = ["1password"]
+
+[servers.onepassword.tools.authenticate]
+output_schema = { type = "object", required = ["account_id"], properties = { account_id = { type = "string" } } }
+[servers.onepassword.tools.list_environments]
+output_schema = { type = "object", required = ["environments"], properties = { environments = { type = "array", items = { type = "object", properties = { id = { type = "string" }, name = { type = "string" } } } } } }
+
+# shapes from the response structs in the 1password-mcp binary; the three
+# tools without one answer with prose, kept as text
+[servers.onepassword.tools.list_variables]
+output_schema = { type = "object", required = ["variableNames"], properties = { variableNames = { type = "array", items = { type = "string" } } } }
+[servers.onepassword.tools.list_local_env_files]
+output_schema = { type = "object", required = ["localEnvFiles"], properties = { localEnvFiles = { type = "array", items = { type = "object", required = ["id", "mountPath", "isEnabled"], properties = { id = { type = "string" }, mountPath = { type = "string" }, isEnabled = { type = "boolean" } } } } } }
+
+[servers.onepassword.tools.create_environment]
+grant = "per_call"
+output_schema = { type = "object", required = ["environmentId"], properties = { environmentId = { type = "string" } } }
+[servers.onepassword.tools.rename_environment]
+grant = "per_call"
+output = "text"
+[servers.onepassword.tools.append_variables]
+grant = "per_call"
+output = "text"
+[servers.onepassword.tools.create_local_env_file]
+grant = "per_call"
+output = "text"
+
+# `codemode-mcp op warm` runs these on the Mac so the 1Password app's own
+# prompts appear there first
+[servers.onepassword.warm]
+calls = [{ tool = "authenticate" }, { tool = "list_environments" }]
+
+[servers.openai_docs]
+url = "https://developers.openai.com/mcp"
+
+# result types; see docs/operations.md
+[servers.openai_docs.tools.fetch_openai_doc]
+output = "text"
+
+[servers.openai_docs.tools.search_openai_docs]
+output_schema = { type = "object", required = ["hits", "nbHits", "page"], properties = { nbHits = { type = "integer" }, page = { type = "integer" }, nextCursor = { type = ["string", "null"] }, hits = { type = "array", items = { type = "object", required = ["url", "url_without_anchor", "type", "anchor", "content", "hierarchy", "objectID"], properties = { url = { type = "string" }, url_without_anchor = { type = "string" }, type = { type = "string" }, anchor = { type = "string" }, content = { type = ["string", "null"] }, objectID = { type = "string" }, hierarchy = { type = "object", required = ["lvl0", "lvl1"], properties = { lvl0 = { type = "string" }, lvl1 = { type = "string" }, lvl2 = { type = ["string", "null"] }, lvl3 = { type = ["string", "null"] }, lvl4 = { type = ["string", "null"] }, lvl5 = { type = ["string", "null"] }, lvl6 = { type = ["string", "null"] } } } } } } } }
+
+[servers.openai_docs.tools.list_openai_docs]
+output_schema = { type = "object", required = ["hits", "nbHits", "page"], properties = { nbHits = { type = "integer" }, page = { type = "integer" }, nextCursor = { type = ["string", "null"] }, hits = { type = "array", items = { type = "object", required = ["url", "url_without_anchor", "type", "anchor", "content", "hierarchy", "objectID"], properties = { url = { type = "string" }, url_without_anchor = { type = "string" }, type = { type = "string" }, anchor = { type = "string" }, content = { type = ["string", "null"] }, objectID = { type = "string" }, hierarchy = { type = "object", required = ["lvl0", "lvl1"], properties = { lvl0 = { type = "string" }, lvl1 = { type = "string" }, lvl2 = { type = ["string", "null"] }, lvl3 = { type = ["string", "null"] }, lvl4 = { type = ["string", "null"] }, lvl5 = { type = ["string", "null"] }, lvl6 = { type = ["string", "null"] } } } } } } } }
+
+[servers.openai_docs.tools.list_api_endpoints]
+output_schema = { type = "object", required = ["baseUrls", "paths", "total", "urls"], properties = { baseUrls = { type = "array", items = { type = "string" } }, paths = { type = "array", items = { type = "string" } }, urls = { type = "array", items = { type = "string" } }, total = { type = "integer" } } }
+
+
+# Docs servers: read-only, no account. DeepWiki answers questions about any
+# public GitHub repo; Cloudflare docs searches developers.cloudflare.com;
+# Context7 serves current docs for libraries by version, anonymous until a key
+# is added as an op:// reference
+[servers.deepwiki]
+url = "https://mcp.deepwiki.com/mcp"
+
+[servers.cloudflare_docs]
+url = "https://docs.mcp.cloudflare.com/mcp"
+
+[servers.context7]
+url = "https://mcp.context7.com/mcp"
+# both answer with prose meant for reading, so scripts get a str
+[servers.context7.tools.resolve-library-id]
+output = "text"
+[servers.context7.tools.query-docs]
+output = "text"
+
+# Calendar and Reminders through EventKit, covering every account the Mac's
+# apps show. macOS asks once for each, on the Mac, the first time the daemon
+# starts the adapter. Reads run freely; every change asks on the phone, and a
+# session grant covers that session's later changes. Not `sensitive`, so
+# titles and times reach the usage log like any other result
+[servers.calendar]
+command = "/Users/praveen/.local/bin/codemode-mcp"
+args = ["adapter", "calendar"]
+sensitive = false
+
+[servers.calendar.tools.create_event]
+policy = "ask"
+[servers.calendar.tools.update_event]
+policy = "ask"
+[servers.calendar.tools.delete_event]
+policy = "ask"
+grant = "per_call"
+
+[servers.reminders]
+command = "/Users/praveen/.local/bin/codemode-mcp"
+args = ["adapter", "reminders"]
+sensitive = false
+
+[servers.reminders.tools.create_reminder]
+policy = "ask"
+[servers.reminders.tools.update_reminder]
+policy = "ask"
+[servers.reminders.tools.complete_reminder]
+policy = "ask"
+[servers.reminders.tools.delete_reminder]
+policy = "ask"
+grant = "per_call"
+
+# Xcode's own MCP bridge (Xcode 26.3 or later). Xcode approves the daemon as
+# one agent for every client: the first XcodeOpenWorkspace or XcodeNewProject
+# asks on the Mac to approve it and that project's folder, and other tools
+# fail until then. Builds, tests, runs and project edits are
+# allowed like a shell's; running a code snippet or an lldb command, and
+# removing files, ask on the phone. Not `sensitive`, so file contents reach
+# the usage log
+[servers.xcode]
+command = "/usr/bin/xcrun"
+args = ["mcpbridge"]
+sensitive = false
+
+[servers.xcode.tools.RunCodeSnippet]
+policy = "ask"
+[servers.xcode.tools.InvokeDebuggerCommand]
+policy = "ask"
+[servers.xcode.tools.XcodeRM]
+policy = "ask"
+grant = "per_call"
+
+# Gmail through the open-source workspace-mcp server on the Gmail API.
+# Google's own Gmail MCP server only answers projects in the Workspace
+# Developer Preview Program. `gmail:drafts` asks Google for read, labels and
+# compose scopes only, so the server has no send or filter tools and its
+# token cannot send mail. It signs in itself through `start_google_auth`,
+# with its callback on 7683, and keeps the token under codemode's state.
+# Every call asks on the phone: reads accept a 15 or 60 minute session
+# grant, and every change asks each time
+[servers.gmail]
+command = "/opt/homebrew/bin/uvx"
+args = ["--from", "workspace-mcp==2.1.0", "workspace-mcp", "--single-user", "--permissions", "gmail:drafts"]
+env = { GOOGLE_OAUTH_CLIENT_SECRET = "{{ op://Personal/codemode-mcp-gmail-client/password }}", WORKSPACE_MCP_PORT = "7683", WORKSPACE_MCP_CREDENTIALS_DIR = "/Users/praveen/.local/state/codemode-mcp/workspace-mcp" }
+policy = "ask"
+aliases = ["email", "mail"]
+[servers.gmail.tools.draft_gmail_message]
+grant = "per_call"
+[servers.gmail.tools.manage_gmail_label]
+grant = "per_call"
+[servers.gmail.tools.modify_gmail_message_labels]
+grant = "per_call"
+[servers.gmail.tools.batch_modify_gmail_message_labels]
+grant = "per_call"
