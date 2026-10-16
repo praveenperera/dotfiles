@@ -4,15 +4,25 @@ use std::process::Command;
 use std::time::Duration;
 
 use eyre::{bail, eyre, Context, Result};
+use futures::{SinkExt, StreamExt};
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+use tokio_tungstenite::tungstenite::http::HeaderValue;
+use tokio_tungstenite::tungstenite::Message;
 
 use super::transcript::{same_dir, Provider, Session};
 use crate::{fsutil, runtime};
 
 /// Most restrictive mode, for when T3 has no thread to copy the user's choice from
 const FALLBACK_RUNTIME_MODE: &str = "approval-required";
+
+/// Thread commands are only accepted over the v2 orchestration socket
+const ORCHESTRATION_PROTOCOL: u32 = 2;
+
+/// The detached hook child has no terminal, so a hung server must not hold it forever
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// The running T3 server, found through the state file it writes once listening
 #[derive(Debug)]
@@ -84,7 +94,7 @@ impl Server {
     }
 
     pub fn db(&self, read_only: bool) -> Result<Db> {
-        let path = self.userdata.join("state.sqlite");
+        let path = self.userdata.join("statev2.sqlite");
         let flags = if read_only {
             OpenFlags::SQLITE_OPEN_READ_ONLY
         } else {
@@ -133,18 +143,31 @@ pub struct Client {
 }
 
 impl Client {
-    /// Send a client orchestration command through the HTTP API
-    pub fn dispatch(&self, command: Value) -> Result<()> {
-        let url = format!("{}/api/orchestration/dispatch", self.origin);
+    pub fn create_project(&self, root: &Path) -> Result<String> {
+        let project_id = uuid::Uuid::new_v4().to_string();
+        let title = root
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| root.display().to_string());
+
+        let url = format!("{}/api/projects/mutate", self.origin);
         let token = self.token.clone();
+        let mutation = json!({
+            "type": "project.create",
+            "commandId": uuid::Uuid::new_v4().to_string(),
+            "projectId": project_id,
+            "title": title,
+            "workspaceRoot": root,
+            "createWorkspaceRootIfMissing": false,
+        });
+
         let (status, body) = runtime::block_on(async move {
-            // the detached hook child has no terminal, so a hung server must not hold it forever
             let response = reqwest::Client::builder()
-                .timeout(Duration::from_secs(30))
+                .timeout(REQUEST_TIMEOUT)
                 .build()?
                 .post(url)
                 .bearer_auth(token)
-                .json(&command)
+                .json(&mutation)
                 .send()
                 .await?;
 
@@ -154,48 +177,104 @@ impl Client {
         })??;
 
         if !status.is_success() {
-            bail!("T3 rejected the command ({status}): {body}");
+            bail!("T3 rejected project.create ({status}): {body}");
         }
-
-        Ok(())
-    }
-
-    pub fn create_project(&self, root: &Path) -> Result<String> {
-        let project_id = uuid::Uuid::new_v4().to_string();
-        let title = root
-            .file_name()
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_else(|| root.display().to_string());
-
-        self.dispatch(json!({
-            "type": "project.create",
-            "commandId": uuid::Uuid::new_v4().to_string(),
-            "projectId": project_id,
-            "title": title,
-            "workspaceRoot": root,
-            "createWorkspaceRootIfMissing": false,
-            "createdAt": now(),
-        }))?;
 
         Ok(project_id)
     }
 
-    pub fn create_thread(&self, thread: &NewThread) -> Result<()> {
+    /// Create the thread with the CLI session as its provider thread, so T3
+    /// resumes it on the first turn instead of starting a fresh one
+    pub fn create_thread(&self, thread: &NewThread, session: &Session) -> Result<()> {
         self.dispatch(json!({
             "type": "thread.create",
             "commandId": uuid::Uuid::new_v4().to_string(),
             "threadId": thread.id,
             "projectId": thread.project_id,
             "title": thread.title,
+            "createdBy": "user",
+            "creationSource": "server",
             "modelSelection": {
                 "instanceId": thread.provider.instance_id(),
                 "model": thread.model,
             },
             "runtimeMode": thread.runtime_mode,
+            "interactionMode": "default",
             "branch": thread.branch,
             "worktreePath": thread.worktree_path,
-            "createdAt": now(),
+            "importedNativeThread": {
+                "ref": {
+                    "driver": session.provider.instance_id(),
+                    "nativeId": session.id,
+                    "strength": "strong",
+                },
+                "metadata": { "title": thread.title },
+            },
         }))
+    }
+
+    pub fn delete_thread(&self, thread_id: &str) -> Result<()> {
+        self.dispatch(json!({
+            "type": "thread.delete",
+            "commandId": uuid::Uuid::new_v4().to_string(),
+            "threadId": thread_id,
+        }))
+    }
+
+    /// Send one `orchestration.dispatchCommand` request over T3's Effect RPC
+    /// socket, which frames each message as a plain JSON object
+    fn dispatch(&self, command: Value) -> Result<()> {
+        let ws_origin = match self.origin.split_once("://") {
+            Some(("https", rest)) => format!("wss://{rest}"),
+            Some((_, rest)) => format!("ws://{rest}"),
+            None => bail!("T3 origin {} has no scheme", self.origin),
+        };
+
+        let mut request = format!("{ws_origin}/ws?orchestrationProtocol={ORCHESTRATION_PROTOCOL}")
+            .into_client_request()?;
+
+        request.headers_mut().insert(
+            "authorization",
+            HeaderValue::from_str(&format!("Bearer {}", self.token))?,
+        );
+
+        let frame = json!({
+            "_tag": "Request",
+            "id": "1",
+            "tag": "orchestration.dispatchCommand",
+            "payload": command,
+            "headers": [],
+        });
+
+        let command_type = command["type"].as_str().unwrap_or("command").to_owned();
+        let exit = runtime::block_on(async move {
+            tokio::time::timeout(REQUEST_TIMEOUT, async move {
+                let (mut socket, _) = tokio_tungstenite::connect_async(request).await?;
+                socket.send(Message::text(frame.to_string())).await?;
+
+                while let Some(message) = socket.next().await {
+                    let Message::Text(text) = message? else {
+                        continue;
+                    };
+
+                    if let Some(exit) = rpc_exit(&serde_json::from_str(&text)?, "1") {
+                        let _ = socket.close(None).await;
+                        return Ok(exit);
+                    }
+                }
+
+                bail!("T3 closed the socket before answering")
+            })
+            .await
+            .map_err(|_| eyre!("T3 did not answer within {}s", REQUEST_TIMEOUT.as_secs()))?
+        })??;
+
+        if exit.get("_tag").and_then(Value::as_str) != Some("Success") {
+            let detail = exit.get("cause").unwrap_or(&exit);
+            bail!("T3 rejected {command_type}: {detail}");
+        }
+
+        Ok(())
     }
 }
 
@@ -209,6 +288,27 @@ impl Drop for Client {
     }
 }
 
+/// The `exit` of the RPC reply to `request_id`, skipping pings and other traffic.
+/// The JSON codec may batch messages into an array
+fn rpc_exit(message: &Value, request_id: &str) -> Option<Value> {
+    let messages = match message {
+        Value::Array(messages) => messages.as_slice(),
+        single => std::slice::from_ref(single),
+    };
+
+    messages.iter().find_map(
+        |message| match message.get("_tag").and_then(Value::as_str) {
+            Some("Exit")
+                if message.get("requestId").and_then(Value::as_str) == Some(request_id) =>
+            {
+                message.get("exit").cloned()
+            }
+            Some("Defect") => Some(json!({ "_tag": "Failure", "cause": message.get("defect") })),
+            _ => None,
+        },
+    )
+}
+
 pub struct NewThread {
     pub id: String,
     pub project_id: String,
@@ -220,70 +320,52 @@ pub struct NewThread {
     pub runtime_mode: String,
 }
 
-/// T3's state database. The only write is the provider binding, a plain table
-/// outside the event log that T3 itself rewrites whenever a session changes
+/// T3's v2 state database. The only write is the Claude conversation head on a
+/// provider thread this tool just created, which T3 replaces after every turn
 pub struct Db(Connection);
 
 impl Db {
-    /// Id of the live T3 thread already bound to this provider session, imported
-    /// or native. A fresh binding with no thread yet is another import in flight
+    /// Id of the live T3 thread already holding this provider session, whether
+    /// imported by this tool, by T3's own importer, or started natively
     pub fn thread_for_session(&self, session: &Session) -> Result<Option<String>> {
-        // T3's Claude adapter still reads the older `sessionId` cursor key
-        let session_key = match session.provider {
-            Provider::Claude => {
-                "COALESCE(json_extract(runtime.resume_cursor_json, '$.resume'),
-                                          json_extract(runtime.resume_cursor_json, '$.sessionId'))"
-            }
-            Provider::Codex => "json_extract(runtime.resume_cursor_json, '$.threadId')",
-        };
+        let instance = session.provider.instance_id();
 
-        let in_flight_since = (chrono::Utc::now() - chrono::Duration::minutes(5))
-            .to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+        // T3's built-in importer names its threads after the session
+        let builtin_import = format!("import:{instance}:{}", session.id);
 
         self.0
             .query_row(
-                &format!(
-                    "SELECT runtime.thread_id
-                     FROM provider_session_runtime AS runtime
-                     LEFT JOIN projection_threads AS thread
-                       ON thread.thread_id = runtime.thread_id
-                     WHERE runtime.provider_name = ?1
-                       AND json_valid(runtime.resume_cursor_json)
-                       AND {session_key} = ?2
-                       AND (thread.thread_id IS NOT NULL AND thread.deleted_at IS NULL
-                            OR thread.thread_id IS NULL AND runtime.last_seen_at > ?3)
-                     LIMIT 1"
-                ),
-                params![session.provider.instance_id(), session.id, in_flight_since],
+                "SELECT thread.thread_id
+                 FROM orchestration_v2_projection_threads AS thread
+                 WHERE thread.deleted_at IS NULL
+                   AND (thread.thread_id = ?3
+                        OR EXISTS (
+                          SELECT 1 FROM orchestration_v2_projection_provider_threads AS provider
+                          WHERE provider.thread_id = thread.thread_id
+                            AND provider.driver = ?1
+                            AND json_valid(provider.payload_json)
+                            AND json_extract(provider.payload_json, '$.nativeThreadRef.nativeId') = ?2
+                        ))
+                 LIMIT 1",
+                params![instance, session.id, builtin_import],
                 |row| row.get(0),
             )
             .optional()
             .map_err(Into::into)
     }
 
-    pub fn thread_exists(&self, thread_id: &str) -> Result<bool> {
-        Ok(self
-            .0
-            .query_row(
-                "SELECT 1 FROM projection_threads WHERE thread_id = ?1",
-                [thread_id],
-                |_| Ok(()),
-            )
-            .optional()?
-            .is_some())
-    }
-
-    /// Permission mode of the newest T3 thread on this provider, so imports
-    /// follow the user's T3 choice instead of granting a fixed level
+    /// Permission mode of the newest user-created T3 thread on this provider, so
+    /// imports follow the user's T3 choice instead of granting a fixed level
     pub fn runtime_mode(&self, provider: Provider) -> Result<String> {
         let mode: Option<String> = self
             .0
             .query_row(
                 "SELECT runtime_mode
-                 FROM projection_threads
-                 WHERE json_valid(model_selection_json)
-                   AND json_extract(model_selection_json, '$.instanceId') = ?1
+                 FROM orchestration_v2_projection_threads
+                 WHERE provider_instance_id = ?1
                    AND deleted_at IS NULL
+                   AND json_valid(payload_json)
+                   AND json_extract(payload_json, '$.createdBy') = 'user'
                  ORDER BY created_at DESC
                  LIMIT 1",
                 [provider.instance_id()],
@@ -298,10 +380,11 @@ impl Db {
     pub fn latest_model(&self, provider: Provider) -> Result<Option<String>> {
         self.0
             .query_row(
-                "SELECT json_extract(model_selection_json, '$.model')
-                 FROM projection_threads
-                 WHERE json_valid(model_selection_json)
-                   AND json_extract(model_selection_json, '$.instanceId') = ?1
+                "SELECT json_extract(payload_json, '$.modelSelection.model')
+                 FROM orchestration_v2_projection_threads
+                 WHERE provider_instance_id = ?1
+                   AND json_valid(payload_json)
+                   AND json_extract(payload_json, '$.modelSelection.model') IS NOT NULL
                  ORDER BY created_at DESC
                  LIMIT 1",
                 [provider.instance_id()],
@@ -331,50 +414,50 @@ impl Db {
         Ok(None)
     }
 
-    /// Bind a not-yet-visible thread to the CLI session so its first turn
-    /// resumes it, matching the cursor shapes T3's own importer writes
-    pub fn bind(&self, thread: &NewThread, session: &Session) -> Result<()> {
-        let thread_id = &thread.id;
-        let cursor = match session.provider {
-            Provider::Claude => json!({ "threadId": thread_id, "resume": session.id }),
-            Provider::Codex => json!({ "threadId": session.id }),
+    /// Point a freshly imported Claude provider thread at the transcript's last
+    /// message. `thread.create` always leaves the head empty, and with no T3 turns
+    /// behind it the Claude adapter then opens the session with `--session-id`,
+    /// which the CLI rejects for an existing session. A head makes it pass
+    /// `--resume --resume-session-at` instead. The first completed turn clears it
+    pub fn set_claude_head(&self, thread_id: &str, session: &Session) -> Result<()> {
+        let Some(head) = &session.head_message_id else {
+            bail!(
+                "claude session {} has no message to resume from",
+                session.id
+            );
         };
 
-        let instance = session.provider.instance_id();
-        let inserted = self.0.execute(
-            "INSERT INTO provider_session_runtime (
-                thread_id, provider_name, provider_instance_id, adapter_key, runtime_mode,
-                status, last_seen_at, resume_cursor_json, runtime_payload_json
-             )
-             VALUES (?1, ?2, ?2, ?2, ?3, 'stopped', ?4, ?5, ?6)
-             ON CONFLICT (thread_id) DO NOTHING",
+        let head_ref = json!({
+            "driver": session.provider.instance_id(),
+            "nativeId": head,
+            "strength": "weak",
+        });
+
+        // thread.create commits its projections before replying, so the row is there
+        let updated = self.0.execute(
+            "UPDATE orchestration_v2_projection_provider_threads
+             SET payload_json = json_set(payload_json, '$.nativeConversationHeadRef', json(?3))
+             WHERE thread_id = ?1
+               AND driver = ?4
+               AND status = 'not_loaded'
+               AND json_valid(payload_json)
+               AND json_extract(payload_json, '$.nativeThreadRef.nativeId') = ?2
+               AND json_extract(payload_json, '$.nativeConversationHeadRef') IS NULL",
             params![
                 thread_id,
-                instance,
-                thread.runtime_mode,
-                now(),
-                cursor.to_string(),
-                json!({ "cwd": session.cwd }).to_string(),
+                session.id,
+                head_ref.to_string(),
+                session.provider.instance_id()
             ],
         )?;
 
-        if inserted == 0 {
-            bail!("thread {thread_id} already has a provider binding");
+        if updated != 1 {
+            bail!(
+                "T3 thread {thread_id} has no fresh provider thread for claude session {}",
+                session.id
+            );
         }
 
         Ok(())
     }
-
-    pub fn unbind(&self, thread_id: &str) -> Result<()> {
-        self.0.execute(
-            "DELETE FROM provider_session_runtime WHERE thread_id = ?1 AND status = 'stopped'",
-            [thread_id],
-        )?;
-
-        Ok(())
-    }
-}
-
-fn now() -> String {
-    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }

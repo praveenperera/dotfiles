@@ -215,16 +215,21 @@ fn import_session(session: &Session, dry_run: bool) -> Result<Outcome> {
         runtime_mode: db.runtime_mode(session.provider)?,
     };
 
-    // the binding goes in first so the thread never appears without its cursor
-    db.bind(&thread, session)?;
-    if let Err(error) = client.create_thread(&thread) {
+    let created = client.create_thread(&thread, session);
+    if session.provider == Provider::Claude {
         // a timeout or dropped response can follow a committed create, and that
-        // thread still needs its cursor, so only an absent thread gets unbound
-        if matches!(db.thread_exists(&thread.id), Ok(false)) {
-            let _ = db.unbind(&thread.id);
-        }
+        // thread still needs its head, so the head is set whenever the row exists
+        if let Err(error) = db.set_claude_head(&thread.id, session) {
+            // without a head the first turn fails on Claude's session id check,
+            // so a thread that can never run is worse than no import
+            if created.is_ok() {
+                let _ = client.delete_thread(&thread.id);
+            }
 
-        return Err(error);
+            return Err(created.err().unwrap_or(error));
+        }
+    } else {
+        created?;
     }
 
     Ok(Outcome::Imported {

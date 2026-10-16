@@ -50,6 +50,8 @@ pub struct Session {
     pub model: Option<String>,
     pub title: Option<String>,
     pub has_prompt: bool,
+    /// Last message on the Claude main chain, where a resumed turn continues from
+    pub head_message_id: Option<String>,
 }
 
 impl Session {
@@ -225,10 +227,20 @@ fn read_claude(path: &Path) -> Result<Session> {
     let mut custom_title = None;
     let mut ai_title = None;
     let mut first_prompt = None;
+    let mut head_message_id = None;
 
     for record in read_lines(path)? {
         if id.is_none() {
             id = str_field(&record, "sessionId").map(str::to_owned);
+        }
+
+        // sidechains are subagent branches, and system or attachment records are
+        // not messages, so neither can anchor a resume
+        let message = matches!(str_field(&record, "type"), Some("user" | "assistant"));
+        if message && record.get("isSidechain").and_then(Value::as_bool) != Some(true) {
+            if let Some(uuid) = str_field(&record, "uuid") {
+                head_message_id = Some(uuid.to_owned());
+            }
         }
 
         if cwd.is_none() {
@@ -278,6 +290,7 @@ fn read_claude(path: &Path) -> Result<Session> {
         interactive: entrypoint.as_deref() == Some("cli"),
         model,
         has_prompt: first_prompt.is_some(),
+        head_message_id,
         title: custom_title
             .and_then(short_title)
             .or_else(|| ai_title.and_then(short_title))
@@ -344,6 +357,7 @@ fn read_codex(path: &Path) -> Result<Session> {
         model,
         has_prompt: first_prompt.is_some(),
         title,
+        head_message_id: None,
     })
 }
 
