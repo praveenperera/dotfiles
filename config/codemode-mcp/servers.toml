@@ -177,7 +177,23 @@ grant = "per_call"
 grant = "per_call"
 
 # Linear's hosted server; signs in with OAuth through dynamic client
-# registration, so run `codemode-mcp oauth login linear` once
+# registration, so run `codemode-mcp oauth login linear` once. Everything
+# runs freely except deletes, which ask on the phone each time. Not
+# `sensitive`, so issue content reaches the usage log like any other result
 [servers.linear]
 url = "https://mcp.linear.app/mcp"
 oauth = true
+sensitive = false
+
+[servers.linear.tools.delete_attachment]
+policy = "ask"
+grant = "per_call"
+[servers.linear.tools.delete_comment]
+policy = "ask"
+grant = "per_call"
+[servers.linear.tools.delete_diff_comment]
+policy = "ask"
+grant = "per_call"
+[servers.linear.tools.delete_status_update]
+policy = "ask"
+grant = "per_call"
