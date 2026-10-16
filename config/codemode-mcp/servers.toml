@@ -163,3 +163,9 @@ grant = "per_call"
 grant = "per_call"
 [servers.gmail.tools.batch_modify_gmail_message_labels]
 grant = "per_call"
+
+# Linear's hosted server; signs in with OAuth through dynamic client
+# registration, so run `codemode-mcp oauth login linear` once
+[servers.linear]
+url = "https://mcp.linear.app/mcp"
+oauth = true
