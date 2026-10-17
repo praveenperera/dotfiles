@@ -2304,6 +2304,10 @@ mod tests {
         let profile_home = dir.path().join("profiles/a");
         let socket_path = dir.path().join("control.sock");
         let (server_ready_tx, server_ready_rx) = mpsc::sync_channel(1);
+        // the rename is sent only once the root thread is tracked; sent any earlier, the
+        // monitor may pick it before the resolver reply and look the thread up over a
+        // connection this fake server never accepts
+        let (tracked_tx, tracked_rx) = tokio::sync::oneshot::channel::<()>();
         let server_socket_path = socket_path.clone();
         let server = std::thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_current_thread()
@@ -2445,6 +2449,7 @@ mod tests {
                         .unwrap();
                 }
 
+                tracked_rx.await.unwrap();
                 socket
                     .send(Message::Text(
                         json!({
@@ -2478,21 +2483,25 @@ mod tests {
             None,
         )
         .unwrap();
-        let deadline = Instant::now() + Duration::from_secs(2);
-        let current_thread = loop {
+        // generous because the full suite runs many socket tests at once
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let saved_thread = |name: &str| loop {
             let saved =
                 serde_json::from_slice::<SessionMarker>(&std::fs::read(marker.path()).unwrap())
                     .unwrap();
-            if saved
+            if let Some(thread) = saved
                 .current_thread
-                .as_ref()
-                .is_some_and(|thread| thread.name.as_deref() == Some("test"))
+                .filter(|thread| thread.name.as_deref() == Some(name))
             {
-                break saved.current_thread.unwrap();
+                break thread;
             }
-            assert!(Instant::now() < deadline, "monitor did not update marker");
+            assert!(Instant::now() < deadline, "monitor did not save {name:?}");
             std::thread::sleep(Duration::from_millis(10));
         };
+
+        assert_eq!(saved_thread("Initial name").id, "session-1");
+        tracked_tx.send(()).unwrap();
+        let current_thread = saved_thread("test");
 
         assert_eq!(current_thread.id, "session-1");
         assert_eq!(
