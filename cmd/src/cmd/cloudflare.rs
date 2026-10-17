@@ -1,5 +1,3 @@
-use std::ffi::OsString;
-
 use clap::{Args, Parser, Subcommand};
 use eyre::{eyre, Context, Result};
 use reqwest::{Method, RequestBuilder, StatusCode};
@@ -437,11 +435,6 @@ impl CloudflareApi {
 
         parse_response(response, context).await.map(Some)
     }
-}
-
-pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = Cloudflare::parse_from(args);
-    run_with_flags(sh, flags)
 }
 
 pub fn run_with_flags(_sh: &Shell, flags: Cloudflare) -> Result<()> {

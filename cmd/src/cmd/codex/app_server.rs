@@ -2285,8 +2285,8 @@ mod tests {
             let saved =
                 serde_json::from_slice::<SessionMarker>(&std::fs::read(marker.path()).unwrap())
                     .unwrap();
-            if saved.current_thread.is_some() {
-                break saved.current_thread.unwrap();
+            if let Some(thread) = saved.current_thread {
+                break thread;
             }
             assert!(Instant::now() < deadline, "monitor did not update marker");
             std::thread::sleep(Duration::from_millis(10));

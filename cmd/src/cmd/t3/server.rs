@@ -21,7 +21,8 @@ const FALLBACK_RUNTIME_MODE: &str = "approval-required";
 /// Thread commands are only accepted over the v2 orchestration socket
 const ORCHESTRATION_PROTOCOL: u32 = 2;
 
-/// The detached hook child has no terminal, so a hung server must not hold it forever
+/// Upper bound on each project-create and thread-command request, so a hung T3 server fails the
+/// calling command instead of blocking it indefinitely
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// The running T3 server, found through the state file it writes once listening

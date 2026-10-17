@@ -6,7 +6,6 @@ use convert_case::{Case, Casing};
 use eyre::{Context as _, Result};
 use log::{debug, info};
 use serde_json::json;
-use std::ffi::OsString;
 use std::path::PathBuf;
 use xshell::Shell;
 
@@ -61,11 +60,6 @@ pub enum Os {
 }
 
 static RUST_VERSION: &str = "1.85.0";
-
-pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = Generate::parse_from(args);
-    run_with_flags(sh, flags)
-}
 
 pub fn run_with_flags(sh: &Shell, flags: Generate) -> Result<()> {
     match flags.subcommand {
