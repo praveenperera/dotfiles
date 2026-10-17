@@ -38,7 +38,7 @@ use ops::*;
 use table::*;
 use usage::*;
 
-pub use ops::{combined_usage, combined_usage_history};
+pub use ops::{combined_usage, combined_usage_history, combined_usage_json};
 
 #[derive(Debug, Clone, Args)]
 pub struct Codex {
@@ -269,7 +269,8 @@ enum ProfileStyleKind {
     Error,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 enum LimitStyleKind {
     Normal,
     Success,

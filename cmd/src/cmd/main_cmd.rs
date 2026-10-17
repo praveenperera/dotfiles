@@ -152,7 +152,11 @@ pub enum MainCmd {
     },
 
     /// Show Codex and Claude Code usage together
-    Usage,
+    Usage {
+        /// Print the same view as JSON, without saving a history sample
+        #[arg(long)]
+        json: bool,
+    },
 
     /// Show saved Codex and Claude Code usage samples
     #[command(visible_alias = "uh")]

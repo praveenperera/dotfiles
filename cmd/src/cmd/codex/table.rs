@@ -96,6 +96,182 @@ pub(super) fn print_provider_usage_error(
     writeln!(writer, "{}   {}", provider.bold(), format!("{err:#}").red())
 }
 
+/// The combined usage view as `cmd usage --json` prints it
+#[derive(Debug, Serialize)]
+pub(super) struct CombinedUsageJson {
+    /// RFC 3339 capture time
+    captured_at: String,
+    /// The terminal view's "Time:" line, in local time
+    time: String,
+    providers: Vec<ProviderUsageJson>,
+}
+
+impl CombinedUsageJson {
+    pub(super) fn new(
+        captured_at: chrono::DateTime<Local>,
+        providers: Vec<ProviderUsageJson>,
+    ) -> Self {
+        Self {
+            captured_at: captured_at.to_rfc3339(),
+            time: captured_at.format("%-I:%M %p").to_string(),
+            providers,
+        }
+    }
+}
+
+/// One provider's section of the JSON view, carrying the same cells the terminal prints so a
+/// dashboard doesn't re-derive pace, run rates, or reset formatting
+#[derive(Debug, Serialize)]
+pub(super) struct ProviderUsageJson {
+    name: &'static str,
+    error: Option<String>,
+    label: Option<String>,
+    plan_type: Option<String>,
+    rates: Option<UsageRatesJson>,
+    /// Only Codex has reset credits
+    reset_credits: Option<ResetCreditsJson>,
+    five_hour: Option<UsageWindowJson>,
+    weekly: Option<UsageWindowJson>,
+}
+
+#[derive(Debug, Serialize)]
+struct UsageRatesJson {
+    five_hour: String,
+    weekly: String,
+    five_hour_per_hour: Option<f64>,
+    weekly_per_day: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+struct UsageWindowJson {
+    used_percent: f64,
+    /// Used percent minus where steady use would be by now; positive is ahead of pace
+    pace_delta_percent: Option<f64>,
+    /// Unix seconds
+    reset_at: Option<i64>,
+    /// The terminal cell, e.g. "9% (-17%) (3:00 PM)"
+    text: String,
+    style: LimitStyleKind,
+}
+
+#[derive(Debug, Serialize)]
+struct ResetCreditsJson {
+    summary: String,
+    available_count: Option<usize>,
+    expires: Vec<ResetCreditExpiryJson>,
+}
+
+#[derive(Debug, Serialize)]
+struct ResetCreditExpiryJson {
+    /// Unix seconds
+    expires_at: i64,
+    /// The terminal text, e.g. "22 Oct 4:06 PM (5 days)"
+    text: String,
+}
+
+impl ProviderUsageJson {
+    pub(super) fn available(
+        name: &'static str,
+        label: &str,
+        usage: &ProfileUsageState,
+        rates: UsageRunRates,
+        reset_credits: Option<&RateLimitResetCreditSummary>,
+        captured_at: chrono::DateTime<Local>,
+    ) -> Self {
+        let plan_type = match usage {
+            ProfileUsageState::Available(snapshot) => snapshot.plan_type.clone(),
+            _ => None,
+        };
+
+        Self {
+            name,
+            error: None,
+            label: Some(label.to_string()),
+            plan_type,
+            rates: Some(UsageRatesJson {
+                five_hour: format_hourly_run_rate(rates.five_hour),
+                weekly: format_daily_run_rate(rates.weekly),
+                five_hour_per_hour: rates.five_hour,
+                weekly_per_day: rates.weekly.map(|rate| rate * 24.0),
+            }),
+            reset_credits: reset_credits.map(|credits| reset_credits_json(credits, captured_at)),
+            five_hour: usage_window_json(usage, UsageWindowKind::FiveHour, captured_at),
+            weekly: usage_window_json(usage, UsageWindowKind::Weekly, captured_at),
+        }
+    }
+
+    pub(super) fn failed(name: &'static str, err: &eyre::Report) -> Self {
+        Self {
+            name,
+            error: Some(format!("{err:#}")),
+            label: None,
+            plan_type: None,
+            rates: None,
+            reset_credits: None,
+            five_hour: None,
+            weekly: None,
+        }
+    }
+}
+
+fn usage_window_json(
+    usage: &ProfileUsageState,
+    kind: UsageWindowKind,
+    captured_at: chrono::DateTime<Local>,
+) -> Option<UsageWindowJson> {
+    let window = usage_window(usage, kind)?;
+    let captured_utc = captured_at.with_timezone(&Utc);
+
+    Some(UsageWindowJson {
+        used_percent: window.used_percent,
+        pace_delta_percent: displayed_pace_delta_percent(window, captured_utc, kind),
+        reset_at: window.reset_at,
+        // the terminal right-aligns percents for column layout, which a dashboard doesn't need
+        text: current_usage_window_compact(usage, kind, captured_at, captured_utc)
+            .trim_start()
+            .to_string(),
+        style: usage_window_style_at(usage, kind, captured_utc),
+    })
+}
+
+fn reset_credits_json(
+    reset_credits: &RateLimitResetCreditSummary,
+    captured_at: chrono::DateTime<Local>,
+) -> ResetCreditsJson {
+    let summary = reset_credit_rows(reset_credits, captured_at)
+        .into_iter()
+        .next()
+        .map(|row| row.resets)
+        .unwrap_or_else(|| "unavailable".into());
+
+    let RateLimitResetCreditSummary::Available {
+        available_count,
+        credits,
+    } = reset_credits
+    else {
+        return ResetCreditsJson {
+            summary,
+            available_count: None,
+            expires: Vec::new(),
+        };
+    };
+
+    let expires = credits
+        .iter()
+        .filter_map(|credit| credit.expires_at)
+        .map(|expires_at| ResetCreditExpiryJson {
+            expires_at: expires_at.timestamp(),
+            text: format_reset_credit_expiration(expires_at, captured_at),
+        })
+        .collect();
+
+    ResetCreditsJson {
+        summary,
+        available_count: Some(*available_count),
+        expires,
+    }
+}
+
 fn format_usage_run_rates(rates: UsageRunRates) -> String {
     format!(
         "5H rate: {}   Week rate: {}",

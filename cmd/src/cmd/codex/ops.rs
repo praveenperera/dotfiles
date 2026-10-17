@@ -954,12 +954,13 @@ pub(super) fn usage() -> Result<()> {
     Ok(())
 }
 
-/// Shows Codex and Claude Code usage together, fetching both at once
-pub fn combined_usage() -> Result<()> {
-    spawn_usage_history_prune();
+type CodexUsageResult = Result<(CurrentUsageReport, RateLimitResetCreditSummary)>;
 
-    let captured_at = Utc::now();
-    let (codex, claude) = std::thread::scope(|scope| {
+/// Fetches Codex and Claude Code usage at once, with Claude on its own thread
+fn fetch_combined_usage(
+    captured_at: chrono::DateTime<Utc>,
+) -> (CodexUsageResult, Result<CurrentUsageReport>) {
+    std::thread::scope(|scope| {
         let claude = scope.spawn(|| claude_usage_report(captured_at));
         let codex = codex_usage_report(captured_at);
         let claude = claude
@@ -967,7 +968,15 @@ pub fn combined_usage() -> Result<()> {
             .unwrap_or_else(|_| Err(eyre!("Claude usage fetch panicked")));
 
         (codex, claude)
-    });
+    })
+}
+
+/// Shows Codex and Claude Code usage together, fetching both at once
+pub fn combined_usage() -> Result<()> {
+    spawn_usage_history_prune();
+
+    let captured_at = Utc::now();
+    let (codex, claude) = fetch_combined_usage(captured_at);
 
     let captured_local = captured_at.with_timezone(&Local);
     let mut stdout = io::stdout().lock();
@@ -1012,6 +1021,49 @@ pub fn combined_usage() -> Result<()> {
     if both_failed {
         return Err(eyre!("No usage available for Codex or Claude"));
     }
+
+    Ok(())
+}
+
+/// Prints the combined usage view as JSON for the Lookout dashboard
+///
+/// Fetch errors go into the payload rather than the exit status, so the dashboard can show why a
+/// provider is missing
+pub fn combined_usage_json() -> Result<()> {
+    let captured_at = Utc::now();
+    let captured_local = captured_at.with_timezone(&Local);
+    let (codex, claude) = fetch_combined_usage(captured_at);
+
+    let codex = match &codex {
+        Ok((report, reset_credits)) => ProviderUsageJson::available(
+            "Codex",
+            &report.label,
+            &report.usage,
+            report.rates,
+            Some(reset_credits),
+            captured_local,
+        ),
+        Err(err) => ProviderUsageJson::failed("Codex", err),
+    };
+
+    let claude = match &claude {
+        Ok(report) => ProviderUsageJson::available(
+            "Claude",
+            &report.label,
+            &report.usage,
+            report.rates,
+            None,
+            captured_local,
+        ),
+        Err(err) => ProviderUsageJson::failed("Claude", err),
+    };
+
+    // no sample is recorded: a dashboard polling every few minutes would otherwise shrink the
+    // interval the terminal view's run rates are measured over
+    let view = CombinedUsageJson::new(captured_local, vec![codex, claude]);
+    let mut stdout = io::stdout().lock();
+    serde_json::to_writer(&mut stdout, &view)?;
+    writeln!(stdout)?;
 
     Ok(())
 }
