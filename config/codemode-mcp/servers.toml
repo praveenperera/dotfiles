@@ -16,6 +16,9 @@ policy = "ask"
 # approval, so nothing prompts on the Mac until a call is approved
 setup = [{ tool = "authenticate" }]
 aliases = ["1password"]
+# it answers only through the 1Password app on this Mac, so while the owner
+# is away its calls are refused at once instead of hanging after a phone approval
+needs_owner_here = true
 
 [servers.onepassword.tools.authenticate]
 output_schema = { type = "object", required = ["account_id"], properties = { account_id = { type = "string" } } }
@@ -47,6 +50,11 @@ output = "text"
 # prompts appear there first
 [servers.onepassword.warm]
 calls = [{ tool = "authenticate" }, { tool = "list_environments" }]
+
+# writes 1Password values into an env file after one approval anywhere,
+# answering with the variable names only
+[servers.secrets]
+builtin = "secrets"
 
 [servers.openai_docs]
 url = "https://developers.openai.com/mcp"
