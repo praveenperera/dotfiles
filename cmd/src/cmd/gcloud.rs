@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand};
 use eyre::Result;
 use eyre::WrapErr;
-use std::ffi::OsString;
 
 use eyre::eyre;
 use xshell::cmd;
@@ -49,27 +48,51 @@ pub enum GcloudCmd {
     },
 }
 
-type Cluster = (&'static str, Vec<GcloudCluster>);
-
 #[derive(serde::Deserialize)]
 struct GcloudSecrets {
     account: String,
     clusters: Vec<GcloudCluster>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct GcloudCluster {
     name: String,
     region: String,
     project: String,
 }
 
+/// Projects with a `<project>.yaml` file in the embedded secrets dir
+fn projects() -> Vec<&'static str> {
+    SECRETS_DIR
+        .files()
+        .map(|file| file.path())
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "yaml")
+        })
+        .filter_map(|path| path.file_stem()?.to_str())
+        .collect()
+}
+
 fn gcloud_secret(project: &str) -> Result<GcloudSecrets> {
     let file = format!("{project}.yaml");
 
-    let file_yaml = SECRETS_DIR
-        .get_file(&file)
-        .ok_or_else(|| eyre::eyre!("failed to find {file}"))?
+    let Some(file_contents) = SECRETS_DIR.get_file(&file) else {
+        // CI release builds embed an empty secrets dir, so point at the local build instead
+        let projects = projects();
+        if projects.is_empty() {
+            return Err(eyre!(
+                "no secrets for {project}: this binary was built without secrets, build it locally with `./release` in cmd/"
+            ));
+        }
+
+        return Err(eyre!(
+            "no secrets for {project}, available projects: {}",
+            projects.join(", ")
+        ));
+    };
+
+    let file_yaml = file_contents
         .contents_utf8()
         .ok_or_else(|| eyre!("failed to read {file}"))?;
 
@@ -77,24 +100,6 @@ fn gcloud_secret(project: &str) -> Result<GcloudSecrets> {
         .wrap_err_with(|| format!("failed to parse {file}"))?;
 
     Ok(secret)
-}
-
-fn clusters() -> Result<Vec<Cluster>> {
-    let projects = &["sq"];
-
-    let mut clusters = Vec::new();
-
-    for project in projects {
-        let gcloud_secret = gcloud_secret(project)?;
-        clusters.push((*project, gcloud_secret.clusters));
-    }
-
-    Ok(clusters)
-}
-
-pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = Gcloud::parse_from(args);
-    run_with_flags(sh, flags)
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Gcloud) -> Result<()> {
@@ -114,23 +119,21 @@ pub fn run_with_flags(sh: &Shell, flags: Gcloud) -> Result<()> {
 }
 
 pub fn login(sh: &Shell, project: &str) -> Result<()> {
-    let account = gcloud_secret(project)?.account;
+    login_with_secret(sh, &gcloud_secret(project)?)
+}
 
+fn login_with_secret(sh: &Shell, secret: &GcloudSecrets) -> Result<()> {
+    let account = &secret.account;
     cmd!(sh, "gcloud config set account {account}").run()?;
 
     Ok(())
 }
 
 pub fn switch_project(sh: &Shell, project: &str) -> Result<()> {
-    login(sh, project)?;
+    let secret = gcloud_secret(project)?;
+    login_with_secret(sh, &secret)?;
 
-    let clusters = clusters()?;
-    let clusters = clusters
-        .iter()
-        .find(|(p, _)| *p == project)
-        .map(|(_, c)| c)
-        .ok_or_else(|| eyre!("{project} not found in clusters"))?;
-
+    let clusters = &secret.clusters;
     if clusters.is_empty() {
         return Err(eyre!("{project} has no clusters"));
     }
@@ -150,19 +153,11 @@ pub fn switch_project(sh: &Shell, project: &str) -> Result<()> {
 }
 
 pub fn switch_cluster(sh: &Shell, project: &str, cluster_name: &str) -> Result<()> {
-    login(sh, project)?;
+    let secret = gcloud_secret(project)?;
+    login_with_secret(sh, &secret)?;
 
-    let clusters = clusters()?;
-    let clusters = clusters
-        .iter()
-        .find(|(p, _)| *p == project)
-        .map(|(_, c)| c)
-        .ok_or_else(|| eyre!("{project} not found in clusters"))?;
-
-    let cluster = clusters
-        .iter()
-        .find(|c| c.name.contains(cluster_name))
-        .ok_or_else(|| eyre!("cluster {cluster_name} not found in {project}"))?;
+    let cluster = find_cluster(&secret.clusters, cluster_name)
+        .wrap_err_with(|| format!("could not pick a cluster in {project}"))?;
 
     switch_to_single_cluster(sh, cluster)?;
 
@@ -171,6 +166,39 @@ pub fn switch_cluster(sh: &Shell, project: &str, cluster_name: &str) -> Result<(
     cmd!(sh, "gcloud config set container/cluster {cluster_name}").run()?;
 
     Ok(())
+}
+
+/// Picks an exact name match, else the only cluster whose name contains `cluster_name`
+fn find_cluster<'a>(
+    clusters: &'a [GcloudCluster],
+    cluster_name: &str,
+) -> Result<&'a GcloudCluster> {
+    if let Some(cluster) = clusters.iter().find(|cluster| cluster.name == cluster_name) {
+        return Ok(cluster);
+    }
+
+    let matches = clusters
+        .iter()
+        .filter(|cluster| cluster.name.contains(cluster_name))
+        .collect::<Vec<_>>();
+
+    match matches.as_slice() {
+        [cluster] => Ok(cluster),
+        [] => {
+            let names = clusters.iter().map(|cluster| cluster.name.as_str());
+            Err(eyre!(
+                "no cluster matches {cluster_name}, clusters: {}",
+                names.collect::<Vec<_>>().join(", ")
+            ))
+        }
+        _ => {
+            let names = matches.iter().map(|cluster| cluster.name.as_str());
+            Err(eyre!(
+                "{cluster_name} matches more than one cluster: {}",
+                names.collect::<Vec<_>>().join(", ")
+            ))
+        }
+    }
 }
 
 fn switch_to_single_cluster(sh: &Shell, cluster: &GcloudCluster) -> Result<(), eyre::Error> {
@@ -186,4 +214,30 @@ fn switch_to_single_cluster(sh: &Shell, cluster: &GcloudCluster) -> Result<(), e
     .run()?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{find_cluster, GcloudCluster};
+
+    fn cluster(name: &str) -> GcloudCluster {
+        GcloudCluster {
+            name: name.to_string(),
+            region: "us-central1".to_string(),
+            project: "project".to_string(),
+        }
+    }
+
+    #[test]
+    fn find_cluster_prefers_exact_then_unique_substring_and_rejects_ambiguity() {
+        let clusters = [cluster("prod"), cluster("prod-eu"), cluster("staging")];
+
+        assert_eq!(find_cluster(&clusters, "prod").unwrap().name, "prod");
+        assert_eq!(find_cluster(&clusters, "stag").unwrap().name, "staging");
+
+        let ambiguous = find_cluster(&clusters, "pro").unwrap_err().to_string();
+        assert!(ambiguous.contains("prod, prod-eu"), "{ambiguous}");
+
+        assert!(find_cluster(&clusters, "dev").is_err());
+    }
 }
