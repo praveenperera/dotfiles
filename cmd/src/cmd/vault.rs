@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use eyre::{Context as _, OptionExt, Result};
+use eyre::Result;
 use std::ffi::OsString;
 use xshell::Shell;
 
@@ -54,14 +54,12 @@ fn encrypt(sh: &Shell, file: &str) -> Result<()> {
 }
 
 fn decrypt(sh: &Shell, file: &str) -> Result<()> {
-    let file_path = std::fs::canonicalize(file).wrap_err("could not canonicalize input path")?;
-    let parent = file_path
-        .parent()
-        .ok_or_eyre("could not get parent of input file")?;
+    // derived from the input path relative to the cwd, so it lands next to the input
+    let output_file = match file.strip_suffix(".enc") {
+        Some(stem) => stem.to_string(),
+        None => format!("{file}.dec"),
+    };
 
-    let output_file = file.trim_end_matches(".enc");
-    let output_path = parent.join(output_file);
-
-    encrypt::decrypt(sh, file, output_path)?;
+    encrypt::decrypt(sh, file, output_file)?;
     Ok(())
 }

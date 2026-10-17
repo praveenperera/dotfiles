@@ -513,6 +513,7 @@ dependencies = [
  "futures-util",
  "hex",
  "include_dir",
+ "libc",
  "log",
  "rand 0.10.3",
  "reqwest",

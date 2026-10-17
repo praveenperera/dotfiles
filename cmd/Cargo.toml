@@ -46,6 +46,9 @@ hex = "0.4.3"
 # file
 tempfile = "3.10.0"
 
+# signals
+libc = "0.2"
+
 # logging
 env_logger = "0.11.0"
 log = "0.4"

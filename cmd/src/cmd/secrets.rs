@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use std::ffi::OsString;
 use std::path::PathBuf;
 
 use eyre::Result;
@@ -59,12 +58,6 @@ pub enum SecretsCmd {
 
 static SECRET_NAME: &str = "cmd_secrets";
 static SECRETS: [&str; 2] = ["ln.yaml", "sq.yaml"];
-
-pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    use clap::Parser;
-    let flags = Secrets::parse_from(args);
-    run_with_flags(sh, flags)
-}
 
 pub fn run_with_flags(sh: &Shell, flags: Secrets) -> Result<()> {
     match flags.subcommand {
@@ -162,13 +155,5 @@ pub fn update(sh: &Shell, secret: &str) -> Result<()> {
 
 fn update_single_secret(sh: &Shell, secret: &str, secret_path: PathBuf) -> Result<()> {
     let secret_text = std::fs::read_to_string(secret_path)?;
-    let cleaned_field = secret.replace('.', "\\.");
-
-    cmd!(
-        sh,
-        "op item edit {SECRET_NAME} {cleaned_field}={secret_text}"
-    )
-    .run()?;
-
-    Ok(())
+    util::pass_edit(sh, SECRET_NAME, secret, &secret_text)
 }
