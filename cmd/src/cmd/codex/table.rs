@@ -120,26 +120,17 @@ impl CombinedUsageJson {
 }
 
 /// One provider's section of the JSON view, carrying the same cells the terminal prints so a
-/// dashboard doesn't re-derive pace, run rates, or reset formatting
+/// dashboard doesn't re-derive pace or reset formatting
 #[derive(Debug, Serialize)]
 pub(super) struct ProviderUsageJson {
     name: &'static str,
     error: Option<String>,
     label: Option<String>,
     plan_type: Option<String>,
-    rates: Option<UsageRatesJson>,
     /// Only Codex has reset credits
     reset_credits: Option<ResetCreditsJson>,
     five_hour: Option<UsageWindowJson>,
     weekly: Option<UsageWindowJson>,
-}
-
-#[derive(Debug, Serialize)]
-struct UsageRatesJson {
-    five_hour: String,
-    weekly: String,
-    five_hour_per_hour: Option<f64>,
-    weekly_per_day: Option<f64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -174,7 +165,6 @@ impl ProviderUsageJson {
         name: &'static str,
         label: &str,
         usage: &ProfileUsageState,
-        rates: UsageRunRates,
         reset_credits: Option<&RateLimitResetCreditSummary>,
         captured_at: chrono::DateTime<Local>,
     ) -> Self {
@@ -188,12 +178,6 @@ impl ProviderUsageJson {
             error: None,
             label: Some(label.to_string()),
             plan_type,
-            rates: Some(UsageRatesJson {
-                five_hour: format_hourly_run_rate(rates.five_hour),
-                weekly: format_daily_run_rate(rates.weekly),
-                five_hour_per_hour: rates.five_hour,
-                weekly_per_day: rates.weekly.map(|rate| rate * 24.0),
-            }),
             reset_credits: reset_credits.map(|credits| reset_credits_json(credits, captured_at)),
             five_hour: usage_window_json(usage, UsageWindowKind::FiveHour, captured_at),
             weekly: usage_window_json(usage, UsageWindowKind::Weekly, captured_at),
@@ -206,7 +190,6 @@ impl ProviderUsageJson {
             error: Some(format!("{err:#}")),
             label: None,
             plan_type: None,
-            rates: None,
             reset_credits: None,
             five_hour: None,
             weekly: None,

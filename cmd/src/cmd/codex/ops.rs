@@ -1039,7 +1039,6 @@ pub fn combined_usage_json() -> Result<()> {
             "Codex",
             &report.label,
             &report.usage,
-            report.rates,
             Some(reset_credits),
             captured_local,
         ),
@@ -1051,7 +1050,6 @@ pub fn combined_usage_json() -> Result<()> {
             "Claude",
             &report.label,
             &report.usage,
-            report.rates,
             None,
             captured_local,
         ),
@@ -1060,7 +1058,8 @@ pub fn combined_usage_json() -> Result<()> {
 
     // no sample is recorded: a dashboard polling every few minutes would otherwise shrink the
     // interval the terminal view's run rates are measured over
-    let view = CombinedUsageJson::new(captured_local, vec![codex, claude]);
+    // Claude leads on the dashboard, which shows providers in this order
+    let view = CombinedUsageJson::new(captured_local, vec![claude, codex]);
     let mut stdout = io::stdout().lock();
     serde_json::to_writer(&mut stdout, &view)?;
     writeln!(stdout)?;
