@@ -3,6 +3,7 @@ use super::app_server::{
 };
 use super::*;
 use crate::fsutil;
+use rusqlite::{Connection, OpenFlags};
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -11,6 +12,22 @@ use std::time::Duration as StdDuration;
 const SHARED_GROUP_NAME: &str = "shared";
 const STALE_PROCESS_STOP_TIMEOUT: StdDuration = StdDuration::from_secs(2);
 const STALE_PROCESS_POLL_INTERVAL: StdDuration = StdDuration::from_millis(50);
+const SEED_SNAPSHOT_BUSY_TIMEOUT: StdDuration = StdDuration::from_secs(5);
+// a new group is built as `.<group>.creating-<pid>-<random>` beside its final path, and the pid
+// tells a later launch whether the builder is still alive
+const GROUP_STAGING_MARKER: &str = ".creating-";
+// codex keys every row in these databases by thread, so they must live beside the resume group's
+// sessions; names carry a schema version (`state_5`, `memories_v2_1`) that codex bumps over time
+const RESUME_GROUP_DB_FAMILIES: [&str; 7] = [
+    "state",
+    "logs",
+    "thread_history",
+    "goals",
+    "queue",
+    "memories",
+    "memories_v2",
+];
+const SQLITE_SIDECAR_SUFFIXES: [&str; 3] = ["-wal", "-shm", "-journal"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum ThreadWriterRecovery {
@@ -37,6 +54,13 @@ struct SessionMarkerRecord {
 enum GroupKind {
     Config,
     Resume,
+}
+
+/// A versioned Codex runtime SQLite file such as `goals_1.sqlite` or `state_5.sqlite-wal`
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct RuntimeDb<'a> {
+    family: &'a str,
+    sidecar: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,6 +93,12 @@ pub(super) fn validate_group_name(group: &str, kind: &str) -> Result<()> {
     }
     if group.contains('/') || group.contains('\\') {
         return Err(eyre!("{kind} group name cannot contain path separators"));
+    }
+    // stale staging cleanup deletes dirs with this marker, so a real group must never carry it
+    if group.contains(GROUP_STAGING_MARKER) {
+        return Err(eyre!(
+            "{kind} group name cannot contain '{GROUP_STAGING_MARKER}'"
+        ));
     }
 
     Ok(())
@@ -613,12 +643,104 @@ fn prepare_group_home(
     }
 
     let group_home = groups_dir.join(group);
-    stdfs::create_dir_all(&group_home)?;
-    seed_group_home(shared_codex_home, &group_home, kind)?;
+    if !path_exists(&group_home)? {
+        remove_abandoned_group_stagings(groups_dir)?;
+        let staging = stage_group_home(shared_codex_home, groups_dir, group, kind)?;
+        publish_group_home(staging, &group_home)?;
+    }
+
+    seed_group_home(shared_codex_home, &group_home, kind, false)?;
     Ok(group_home)
 }
 
-fn seed_group_home(shared_codex_home: &Path, group_home: &Path, kind: GroupKind) -> Result<()> {
+/// Builds a complete new group, database snapshots included, in a hidden sibling directory
+///
+/// The directory is removed when the returned handle drops, so a failed seed leaves nothing that
+/// a later launch could mistake for a finished group
+fn stage_group_home(
+    shared_codex_home: &Path,
+    groups_dir: &Path,
+    group: &str,
+    kind: GroupKind,
+) -> Result<tempfile::TempDir> {
+    stdfs::create_dir_all(groups_dir)?;
+    let staging = tempfile::Builder::new()
+        .prefix(&group_staging_prefix(group, std::process::id()))
+        .tempdir_in(groups_dir)?;
+    seed_group_home(shared_codex_home, staging.path(), kind, true)?;
+    Ok(staging)
+}
+
+/// Moves a staged group into place with one rename, or discards it when another launch won
+fn publish_group_home(staging: tempfile::TempDir, group_home: &Path) -> Result<()> {
+    // without a no-replace rename, rename(2) still replaces an existing directory when it is
+    // empty; that only happens when nothing has been written into the winner's group yet, so no
+    // launch can be holding a file inside it
+    match stdfs::rename(staging.path(), group_home) {
+        Ok(()) => {
+            let _ = staging.keep();
+            Ok(())
+        }
+        Err(_) if path_exists(group_home)? => Ok(()),
+        Err(err) => Err(err).wrap_err_with(|| {
+            format!(
+                "Failed to publish {} as {}",
+                staging.path().display(),
+                group_home.display()
+            )
+        }),
+    }
+}
+
+fn group_staging_prefix(group: &str, pid: u32) -> String {
+    format!(".{group}{GROUP_STAGING_MARKER}{pid}-")
+}
+
+/// Removes staging directories whose creator process has exited
+///
+/// A creator that is still running owns its directory and may publish it at any moment, so only
+/// directories whose embedded pid no longer runs are removed
+fn remove_abandoned_group_stagings(groups_dir: &Path) -> Result<()> {
+    if !groups_dir.exists() {
+        return Ok(());
+    }
+
+    for entry in stdfs::read_dir(groups_dir)? {
+        let entry = entry?;
+        let Ok(name) = entry.file_name().into_string() else {
+            continue;
+        };
+        let Some(pid) = group_staging_pid(&name) else {
+            continue;
+        };
+
+        // a reused pid keeps the directory until the unrelated process exits, which is safe
+        if process_is_running(pid)? {
+            continue;
+        }
+
+        // another launch may be removing the same directory concurrently
+        match fsutil::remove_existing_path(&entry.path()) {
+            Err(err) if path_exists(&entry.path())? => return Err(err),
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
+fn group_staging_pid(name: &str) -> Option<u32> {
+    let (_, rest) = name.strip_prefix('.')?.rsplit_once(GROUP_STAGING_MARKER)?;
+    let (pid, _) = rest.split_once('-')?;
+    pid.parse().ok()
+}
+
+fn seed_group_home(
+    shared_codex_home: &Path,
+    group_home: &Path,
+    kind: GroupKind,
+    staged: bool,
+) -> Result<()> {
     for entry in stdfs::read_dir(shared_codex_home)? {
         let entry = entry?;
         let file_name = entry.file_name();
@@ -635,7 +757,15 @@ fn seed_group_home(shared_codex_home: &Path, group_home: &Path, kind: GroupKind)
             continue;
         }
 
-        copy_seed_entry(&entry.path(), &target)?;
+        // databases are forked only with the group itself; an existing group that lacks one gets
+        // a fresh database from codex rather than another group's rows for threads it never had
+        match runtime_db(name) {
+            Some(db) if staged && db.seeds_by_snapshot() => {
+                snapshot_sqlite_db(&entry.path(), &target)?;
+            }
+            Some(_) => {}
+            None => copy_seed_entry(&entry.path(), &target)?,
+        }
     }
 
     Ok(())
@@ -661,7 +791,7 @@ pub(super) fn sync_launch_codex_home(
         };
 
         let source = source_root.join(&name);
-        if !path_exists(&source)? {
+        if !path_exists(&source)? && !links_missing_source(&name) {
             continue;
         }
 
@@ -738,12 +868,47 @@ fn is_resume_group_entry(name: &str) -> bool {
             | "worktrees"
             | "memories"
             | "log"
-    ) || name.starts_with("state_5.sqlite")
-        || is_sqlite_log_entry(name)
+    ) || runtime_db(name).is_some()
 }
 
-fn is_sqlite_log_entry(name: &str) -> bool {
-    name.starts_with("logs_") && name.contains(".sqlite")
+fn runtime_db(name: &str) -> Option<RuntimeDb<'_>> {
+    let (base, sidecar) = SQLITE_SIDECAR_SUFFIXES
+        .iter()
+        .find_map(|suffix| name.strip_suffix(suffix))
+        .map_or((name, false), |base| (base, true));
+    let (family, version) = base.strip_suffix(".sqlite")?.rsplit_once('_')?;
+    if version.is_empty() || !version.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+
+    RESUME_GROUP_DB_FAMILIES
+        .contains(&family)
+        .then_some(RuntimeDb { family, sidecar })
+}
+
+// a group database that does not exist yet is still linked so codex creates it inside the group
+// instead of inside the throwaway launch home; sqlite resolves the link and keeps its -wal and
+// -shm beside the real file
+fn links_missing_source(name: &str) -> bool {
+    runtime_db(name).is_some_and(|db| !db.sidecar)
+}
+
+/// Copies a live SQLite database as one consistent snapshot
+///
+/// Copying the main file and its WAL one at a time can capture them at different moments, and
+/// codex would replay the mismatched frames onto the copy when it opens it. The target must sit in
+/// a group that is still staged, since no launch can have opened a database there yet
+fn snapshot_sqlite_db(source: &Path, target: &Path) -> Result<()> {
+    let target_path = target
+        .to_str()
+        .ok_or_else(|| eyre!("Invalid database path: {}", target.display()))?;
+    let connection = Connection::open_with_flags(source, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .wrap_err_with(|| format!("Failed to open {}", source.display()))?;
+    connection.busy_timeout(SEED_SNAPSHOT_BUSY_TIMEOUT)?;
+    connection
+        .execute("VACUUM INTO ?1", [target_path])
+        .wrap_err_with(|| format!("Failed to snapshot {}", source.display()))?;
+    Ok(())
 }
 
 fn copy_auth_file(source: &Path, target: &Path) -> Result<()> {
@@ -883,6 +1048,16 @@ impl GroupKind {
     }
 }
 
+impl RuntimeDb<'_> {
+    fn seeds_by_snapshot(self) -> bool {
+        // a snapshot is self-contained, so the source's sidecars would only corrupt it; thread
+        // history is a projection of the group's rollouts that codex rebuilds from byte zero for
+        // any thread without a checkpoint, while a copied checkpoint that runs ahead of the copied
+        // rollouts fails as "behind durable rollout"
+        !self.sidecar && self.family != "thread_history"
+    }
+}
+
 pub(super) fn delete_profile_home(profile_home: &Path) -> Result<()> {
     if !profile_home.exists() {
         return Err(eyre!("Profile home not found: {}", profile_home.display()));
@@ -894,14 +1069,245 @@ pub(super) fn delete_profile_home(profile_home: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        pids_holding_path, process_is_running, recover_thread_writer, stop_process,
-        ThreadWriterPolicy, ThreadWriterRecovery,
+        group_staging_prefix, pids_holding_path, prepare_resume_group_home, process_is_running,
+        publish_group_home, recover_thread_writer, stage_group_home, stop_process,
+        sync_launch_codex_home, GroupKind, LaunchAuthMode, ThreadWriterPolicy,
+        ThreadWriterRecovery,
     };
+    use rusqlite::Connection;
     use std::fs;
     use std::process::Command;
     use std::thread;
     use std::time::Duration;
     use tempfile::tempdir;
+
+    const THREAD_SCOPED_DBS: [&str; 7] = [
+        "state_6.sqlite",
+        "logs_3.sqlite",
+        "thread_history_1.sqlite",
+        "goals_1.sqlite",
+        "queue_1.sqlite",
+        "memories_1.sqlite",
+        "memories_v2_1.sqlite",
+    ];
+
+    #[test]
+    fn existing_resume_group_gets_its_own_thread_databases_instead_of_the_shared_ones() {
+        let dir = tempdir().unwrap();
+        let shared = dir.path().join(".codex");
+        let group = shared.join("resume-groups").join("shared-work");
+        let launch_home = dir.path().join("launch");
+        let global_auth = shared.join("auth.json");
+
+        fs::create_dir_all(shared.join("plugins")).unwrap();
+        fs::create_dir_all(shared.join("sqlite")).unwrap();
+        fs::create_dir_all(group.join("sessions")).unwrap();
+        fs::write(&global_auth, "auth").unwrap();
+        fs::write(shared.join("config.toml"), "model = \"gpt-5.4\"").unwrap();
+        fs::write(shared.join("models_cache.json"), "{}").unwrap();
+        for name in THREAD_SCOPED_DBS {
+            fs::write(shared.join(name), "shared threads").unwrap();
+        }
+        fs::write(shared.join("thread_history_1.sqlite-wal"), "shared wal").unwrap();
+
+        let resume_home = prepare_resume_group_home(&shared, "shared-work").unwrap();
+        sync_launch_codex_home(
+            &launch_home,
+            &shared,
+            &LaunchAuthMode::GlobalShared { global_auth },
+            &shared,
+            &resume_home,
+        )
+        .unwrap();
+
+        for name in THREAD_SCOPED_DBS {
+            assert!(!group.join(name).exists(), "{name} was seeded from shared");
+            assert_eq!(
+                fs::read_link(launch_home.join(name)).unwrap(),
+                group.join(name)
+            );
+        }
+        assert!(fs::symlink_metadata(launch_home.join("thread_history_1.sqlite-wal")).is_err());
+        for name in ["plugins", "sqlite", "config.toml", "models_cache.json"] {
+            assert_eq!(
+                fs::read_link(launch_home.join(name)).unwrap(),
+                shared.join(name)
+            );
+        }
+
+        let codex = Connection::open(launch_home.join("goals_1.sqlite")).unwrap();
+        codex
+            .execute_batch(
+                "PRAGMA journal_mode = WAL;
+                 CREATE TABLE thread_goals (thread_id TEXT PRIMARY KEY);
+                 INSERT INTO thread_goals VALUES ('group-thread');",
+            )
+            .unwrap();
+
+        assert!(group.join("goals_1.sqlite-wal").exists());
+        assert!(!launch_home.join("goals_1.sqlite-wal").exists());
+        drop(codex);
+
+        let group_goals = Connection::open(group.join("goals_1.sqlite")).unwrap();
+        let thread_id: String = group_goals
+            .query_row("SELECT thread_id FROM thread_goals", [], |row| row.get(0))
+            .unwrap();
+
+        assert_eq!(thread_id, "group-thread");
+        assert_eq!(
+            fs::read_to_string(shared.join("goals_1.sqlite")).unwrap(),
+            "shared threads"
+        );
+    }
+
+    #[test]
+    fn new_resume_group_snapshots_live_databases_and_leaves_thread_history_to_rebuild() {
+        let dir = tempdir().unwrap();
+        let shared = dir.path().join(".codex");
+        fs::create_dir_all(shared.join("sessions")).unwrap();
+
+        // the shared writer stays open with its rows only in the WAL, as during a live session
+        let writer = Connection::open(shared.join("goals_1.sqlite")).unwrap();
+        writer
+            .execute_batch(
+                "PRAGMA journal_mode = WAL;
+                 PRAGMA wal_autocheckpoint = 0;
+                 CREATE TABLE thread_goals (thread_id TEXT PRIMARY KEY);
+                 INSERT INTO thread_goals VALUES ('forked-thread');",
+            )
+            .unwrap();
+        let history = Connection::open(shared.join("thread_history_1.sqlite")).unwrap();
+        history
+            .execute_batch(
+                "PRAGMA journal_mode = WAL;
+                 CREATE TABLE thread_history_projection_state (thread_id TEXT PRIMARY KEY);",
+            )
+            .unwrap();
+
+        assert!(shared.join("goals_1.sqlite-wal").exists());
+
+        let group = prepare_resume_group_home(&shared, "shared-work").unwrap();
+        let seeded = Connection::open(group.join("goals_1.sqlite")).unwrap();
+        let thread_id: String = seeded
+            .query_row("SELECT thread_id FROM thread_goals", [], |row| row.get(0))
+            .unwrap();
+
+        assert_eq!(thread_id, "forked-thread");
+        assert!(!group.join("goals_1.sqlite-wal").exists());
+        assert!(!group.join("goals_1.sqlite-shm").exists());
+        assert!(!group.join("thread_history_1.sqlite").exists());
+        assert!(!group.join("thread_history_1.sqlite-wal").exists());
+        drop(writer);
+        drop(history);
+    }
+
+    #[test]
+    fn failed_snapshot_leaves_no_group_so_the_next_launch_seeds_it() {
+        let dir = tempdir().unwrap();
+        let shared = dir.path().join(".codex");
+        let groups = shared.join("resume-groups");
+        fs::create_dir_all(shared.join("sessions/2026")).unwrap();
+        fs::write(shared.join("sessions/2026/rollout.jsonl"), "rollout").unwrap();
+        fs::write(shared.join("state_5.sqlite"), "not a database").unwrap();
+
+        assert!(prepare_resume_group_home(&shared, "work").is_err());
+        assert_eq!(fs::read_dir(&groups).unwrap().count(), 0);
+
+        fs::remove_file(shared.join("state_5.sqlite")).unwrap();
+        Connection::open(shared.join("state_5.sqlite"))
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE threads (id TEXT);
+                 INSERT INTO threads VALUES ('forked-thread');",
+            )
+            .unwrap();
+
+        let group = prepare_resume_group_home(&shared, "work").unwrap();
+        let thread_id: String = Connection::open(group.join("state_5.sqlite"))
+            .unwrap()
+            .query_row("SELECT id FROM threads", [], |row| row.get(0))
+            .unwrap();
+
+        assert_eq!(thread_id, "forked-thread");
+        assert_eq!(
+            fs::read_to_string(group.join("sessions/2026/rollout.jsonl")).unwrap(),
+            "rollout"
+        );
+        assert_eq!(fs::read_dir(&groups).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn group_published_first_by_another_launch_keeps_its_live_database() {
+        let dir = tempdir().unwrap();
+        let shared = dir.path().join(".codex");
+        let groups = shared.join("resume-groups");
+        let group = groups.join("work");
+        fs::create_dir_all(&shared).unwrap();
+        Connection::open(shared.join("state_5.sqlite"))
+            .unwrap()
+            .execute_batch(
+                "CREATE TABLE threads (id TEXT);
+                 INSERT INTO threads VALUES ('shared-thread');",
+            )
+            .unwrap();
+
+        let staging = stage_group_home(&shared, &groups, "work", GroupKind::Resume).unwrap();
+        let staging_path = staging.path().to_path_buf();
+
+        // the other launch's codex creates the group database through its dangling launch link
+        // while this launch is still snapshotting
+        fs::create_dir_all(&group).unwrap();
+        let live = Connection::open(group.join("state_5.sqlite")).unwrap();
+        live.execute_batch(
+            "PRAGMA journal_mode = WAL;
+             CREATE TABLE threads (id TEXT);
+             INSERT INTO threads VALUES ('live-thread');",
+        )
+        .unwrap();
+
+        publish_group_home(staging, &group).unwrap();
+        assert_eq!(prepare_resume_group_home(&shared, "work").unwrap(), group);
+        live.execute("INSERT INTO threads VALUES ('after-publish')", [])
+            .unwrap();
+
+        let reopened = Connection::open(group.join("state_5.sqlite")).unwrap();
+        let mut query = reopened.prepare("SELECT id FROM threads").unwrap();
+        let thread_ids: Vec<String> = query
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        assert_eq!(thread_ids, ["live-thread", "after-publish"]);
+        assert!(!staging_path.exists());
+        assert_eq!(fs::read_dir(&groups).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn new_group_removes_only_stagings_whose_creator_exited() {
+        let dir = tempdir().unwrap();
+        let shared = dir.path().join(".codex");
+        let groups = shared.join("resume-groups");
+        let mut exited = Command::new("true").spawn().unwrap();
+        let exited_pid = exited.id();
+        exited.wait().unwrap();
+
+        let abandoned = groups.join(format!(
+            "{}abc123",
+            group_staging_prefix("other", exited_pid)
+        ));
+        let running = groups.join(format!(
+            "{}abc123",
+            group_staging_prefix("other", std::process::id())
+        ));
+        fs::create_dir_all(abandoned.join("sessions")).unwrap();
+        fs::create_dir_all(&running).unwrap();
+
+        prepare_resume_group_home(&shared, "work").unwrap();
+
+        assert!(!abandoned.exists());
+        assert!(running.exists());
+    }
 
     #[test]
     fn force_stops_only_the_process_holding_the_thread_lock() {
