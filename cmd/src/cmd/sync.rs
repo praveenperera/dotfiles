@@ -37,24 +37,31 @@ fn icloud_drive() -> Result<PathBuf> {
     Ok(fsutil::home_dir()?.join("Library/Mobile Documents/com~apple~CloudDocs/local_sync"))
 }
 
-fn git_root(sh: &Shell) -> Result<PathBuf> {
-    let output = cmd!(sh, "git rev-parse --show-toplevel").read()?;
-    Ok(PathBuf::from(output.trim()))
+/// The enclosing git root, or `None` outside a repository
+fn git_root(sh: &Shell) -> Option<PathBuf> {
+    let output = cmd!(sh, "git rev-parse --show-toplevel")
+        .ignore_stderr()
+        .read()
+        .ok()?;
+
+    Some(PathBuf::from(output.trim()))
 }
 
 fn icloud_sync(sh: &Shell, path: &str, source: Option<&str>) -> Result<()> {
     let requested_path = expand_user_path(path)?;
-    let root = git_root(sh)?;
+    // only `.`, relative paths and default source names depend on the git root,
+    // so absolute paths (e.g. ~/.codex/config.toml) must work outside a repository
+    let root = git_root(sh);
     let local_path = if requested_path == Path::new(".") {
-        root.clone()
+        require_git_root(root.as_deref(), path)?.to_path_buf()
     } else if requested_path.is_absolute() {
         requested_path
     } else {
-        root.join(requested_path)
+        require_git_root(root.as_deref(), path)?.join(requested_path)
     };
 
     if local_path.is_dir() || should_treat_missing_path_as_dir(path, &local_path, source) {
-        return icloud_sync_dir(sh, &root, &local_path, source);
+        return icloud_sync_dir(sh, root.as_deref(), &local_path, source);
     }
 
     if source.is_some() {
@@ -69,7 +76,21 @@ fn icloud_sync(sh: &Shell, path: &str, source: Option<&str>) -> Result<()> {
     icloud_sync_file(sh, &local_path, &icloud_target)
 }
 
-fn icloud_sync_dir(sh: &Shell, root: &Path, local_path: &Path, source: Option<&str>) -> Result<()> {
+fn require_git_root<'a>(root: Option<&'a Path>, path: &str) -> Result<&'a Path> {
+    root.ok_or_else(|| {
+        eyre!(
+            "`{path}` is relative to the git root, but this is not a git repository\n\
+             run from inside a repository, or pass an absolute path"
+        )
+    })
+}
+
+fn icloud_sync_dir(
+    sh: &Shell,
+    root: Option<&Path>,
+    local_path: &Path,
+    source: Option<&str>,
+) -> Result<()> {
     let target = IcloudDirTarget::resolve(&icloud_drive()?, root, local_path, source)?;
 
     if !sh.path_exists(local_path) && !local_path.is_symlink() {
@@ -221,7 +242,7 @@ struct IcloudDirTarget {
 impl IcloudDirTarget {
     fn resolve(
         icloud_drive: &Path,
-        root: &Path,
+        root: Option<&Path>,
         local_path: &Path,
         source: Option<&str>,
     ) -> Result<Self> {
@@ -231,7 +252,7 @@ impl IcloudDirTarget {
             .to_string_lossy()
             .to_string();
 
-        let category = if local_path == root {
+        let category = if root == Some(local_path) {
             "repos".to_string()
         } else {
             dir_name.strip_prefix('_').unwrap_or(&dir_name).to_string()
@@ -239,7 +260,16 @@ impl IcloudDirTarget {
 
         let source = match source {
             Some(source) => SyncSource::parse(source)?,
-            None => SyncSource::from_git_root(root)?,
+            None => {
+                let root = root.ok_or_else(|| {
+                    eyre!(
+                        "cannot name the shared iCloud source for {} outside a git repository\n\
+                         pass a source name, e.g. `cmd sync icloud <path> <source>`",
+                        local_path.display()
+                    )
+                })?;
+                SyncSource::from_git_root(root)?
+            }
         };
 
         let path = icloud_drive.join(&category).join(source.as_str());
@@ -329,15 +359,18 @@ fn files_match(left: &Path, right: &Path) -> Result<bool> {
     Ok(fs::read(left)? == fs::read(right)?)
 }
 
+/// Merge both directions; the newer file wins, deletions are not propagated
 fn rsync_two_way(sh: &Shell, local: &Path, icloud: &Path) -> Result<()> {
     // trailing slash means "contents of"
     let local_str = format!("{}/", local.display());
     let icloud_str = format!("{}/", icloud.display());
 
+    // --update skips files that are newer on the receiving side, so the older copy
+    // never overwrites the newer one in either pass
     // local → iCloud
-    cmd!(sh, "rsync -a {local_str} {icloud_str}").run()?;
+    cmd!(sh, "rsync -a --update {local_str} {icloud_str}").run()?;
     // iCloud → local
-    cmd!(sh, "rsync -a {icloud_str} {local_str}").run()?;
+    cmd!(sh, "rsync -a --update {icloud_str} {local_str}").run()?;
 
     Ok(())
 }
@@ -370,7 +403,7 @@ mod tests {
     fn directory_sync_uses_git_root_name_by_default() {
         let target = IcloudDirTarget::resolve(
             Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync"),
-            Path::new("~/code/bitcoinppl/cove-wk1"),
+            Some(Path::new("~/code/bitcoinppl/cove-wk1")),
             Path::new("~/code/bitcoinppl/cove-wk1/_plans"),
             None,
         )
@@ -388,7 +421,7 @@ mod tests {
     fn directory_sync_source_overrides_git_root_name() {
         let target = IcloudDirTarget::resolve(
             Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync"),
-            Path::new("~/code/bitcoinppl/cove-wk1"),
+            Some(Path::new("~/code/bitcoinppl/cove-wk1")),
             Path::new("~/code/bitcoinppl/cove-wk1/_plans"),
             Some("cove"),
         )
@@ -406,7 +439,7 @@ mod tests {
     fn git_root_directory_sync_uses_repos_category() {
         let target = IcloudDirTarget::resolve(
             Path::new("~/Library/Mobile Documents/com~apple~CloudDocs/local_sync"),
-            Path::new("~/code/bitcoinppl/cove-wk1"),
+            Some(Path::new("~/code/bitcoinppl/cove-wk1")),
             Path::new("~/code/bitcoinppl/cove-wk1"),
             Some("cove"),
         )

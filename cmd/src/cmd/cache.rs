@@ -268,13 +268,12 @@ fn resolve_cache_root() -> Result<PathBuf> {
 }
 
 fn apply_link(sh: &Shell, plan: &LinkPlan, mode: LinkMode) -> Result<()> {
-    fs::create_dir_all(&plan.cache)?;
-
     let local_meta = fs::symlink_metadata(&plan.local);
     match local_meta {
         Ok(meta) if meta.file_type().is_symlink() => {
             let current = fs::read_link(&plan.local)?;
             if paths_equal(&current, &plan.cache)? {
+                fs::create_dir_all(&plan.cache)?;
                 info!(
                     "{} {} → {}",
                     "Already linked".green(),
@@ -298,6 +297,8 @@ fn apply_link(sh: &Shell, plan: &LinkPlan, mode: LinkMode) -> Result<()> {
                     ));
                 }
                 ExistingSymlink::Replace => {
+                    // created before the old link goes, so a failure keeps the old link
+                    fs::create_dir_all(&plan.cache)?;
                     fsutil::remove_existing_path(&plan.local)?;
                 }
             }
@@ -318,6 +319,9 @@ fn apply_link(sh: &Shell, plan: &LinkPlan, mode: LinkMode) -> Result<()> {
         Err(err) => return Err(err.into()),
     }
 
+    // created only once every check that can refuse has passed, so a refused link
+    // never leaves an empty cache directory behind
+    fs::create_dir_all(&plan.cache)?;
     fsutil::ensure_parent_dir(&plan.local)?;
     create_symlink(&plan.cache, &plan.local)?;
 
@@ -355,6 +359,8 @@ fn prepare_local_dir_for_link(
         NonEmptyLocal::Migrate => {}
     }
 
+    // a missing cache cannot be non-empty, so creating it here cannot precede a refusal
+    fs::create_dir_all(cache)?;
     if !is_empty_dir(cache)? {
         return Err(eyre!(
             "refusing to merge two non-empty directories\n\
@@ -507,10 +513,30 @@ fn paths_equal(left: &Path, right: &Path) -> Result<bool> {
         return Ok(true);
     }
 
-    // compare canonical forms when both exist
-    match (fs::canonicalize(left), fs::canonicalize(right)) {
-        (Ok(a), Ok(b)) => Ok(a == b),
+    // compare canonical forms; a missing cache dir is resolved through its nearest existing
+    // ancestor so a dangling link to it still counts as already linked
+    match (canonicalize_lenient(left), canonicalize_lenient(right)) {
+        (Some(a), Some(b)) => Ok(a == b),
         _ => Ok(false),
+    }
+}
+
+fn canonicalize_lenient(path: &Path) -> Option<PathBuf> {
+    let mut missing = Vec::new();
+    let mut current = path;
+
+    loop {
+        if let Ok(canonical) = fs::canonicalize(current) {
+            return Some(
+                missing
+                    .iter()
+                    .rev()
+                    .fold(canonical, |acc, part| acc.join(part)),
+            );
+        }
+
+        missing.push(current.file_name()?);
+        current = current.parent()?;
     }
 }
 
@@ -652,6 +678,7 @@ mod tests {
         assert!(err.contains("--migrate"));
         assert!(local.is_dir());
         assert!(!local.symlink_metadata().unwrap().file_type().is_symlink());
+        assert!(!plan.cache.exists());
     }
 
     #[test]
@@ -730,6 +757,37 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("refusing to merge"));
+    }
+
+    #[test]
+    fn dangling_link_to_missing_cache_by_another_spelling_counts_as_linked() {
+        let dir = tempdir().unwrap();
+        let sh = Shell::new().unwrap();
+
+        // the link reaches the cache through an aliased root, and the cache dir is gone
+        let cache_root = dir.path().join("cache-root");
+        fs::create_dir_all(&cache_root).unwrap();
+        let cache_alias = dir.path().join("cache-alias");
+        std::os::unix::fs::symlink(&cache_root, &cache_alias).unwrap();
+
+        let local = dir.path().join("project/target");
+        fs::create_dir_all(local.parent().unwrap()).unwrap();
+        std::os::unix::fs::symlink(cache_alias.join("project/rust-target"), &local).unwrap();
+
+        let plan = LinkPlan {
+            local: local.clone(),
+            cache: cache_root.join("project/rust-target"),
+            name: "project".into(),
+            leaf: "rust-target".into(),
+        };
+
+        apply_link(&sh, &plan, default_link_mode()).unwrap();
+
+        assert!(plan.cache.is_dir());
+        assert_eq!(
+            fs::read_link(&local).unwrap(),
+            cache_alias.join("project/rust-target")
+        );
     }
 
     #[test]

@@ -1,5 +1,5 @@
 use clap::{Parser, ValueEnum};
-use eyre::Result;
+use eyre::{eyre, Result};
 use futures::future::join_all;
 use xshell::Shell;
 
@@ -64,9 +64,16 @@ async fn run_async(flags: CrateVersions) -> Result<()> {
 
     if !errors.is_empty() {
         eprintln!("\nErrors:");
-        for error in errors {
+        for error in &errors {
             eprintln!("  {error}");
         }
+
+        // successful lookups are already printed; the error keeps the exit code non-zero
+        return Err(eyre!(
+            "failed to look up {} of {} crates",
+            errors.len(),
+            flags.crates.len()
+        ));
     }
 
     Ok(())

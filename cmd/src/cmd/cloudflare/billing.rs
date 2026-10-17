@@ -84,6 +84,10 @@ pub(super) struct PaygoUsageRecord {
     consumed_unit: String,
     #[serde(rename = "PricingQuantity")]
     pricing_quantity: f64,
+    // the unit PricingQuantity is expressed in, which can differ from ConsumedUnit
+    // (e.g. GB-months consumed, priced as Count)
+    #[serde(rename = "PricingUnit", default)]
+    pricing_unit: Option<String>,
     #[serde(rename = "ContractedCost")]
     contracted_cost: Decimal,
     #[serde(rename = "BillingCurrency")]
@@ -271,7 +275,7 @@ impl BillingReport {
                 .or_insert_with(|| BillingMetric {
                     label: record.service_name.clone(),
                     consumed: Quantity::zero(record.consumed_unit.clone()),
-                    billable: Quantity::zero(record.consumed_unit.clone()),
+                    billable: Quantity::zero(record.pricing_unit().to_string()),
                     cost: Money::zero(record.billing_currency.clone()),
                 });
 
@@ -282,7 +286,7 @@ impl BillingReport {
             )?;
             metric.billable.add(
                 record.pricing_quantity,
-                &record.consumed_unit,
+                record.pricing_unit(),
                 &metric.label,
             )?;
             let cost = Money::from_decimal(
@@ -367,6 +371,14 @@ impl BillingProduct {
 }
 
 impl PaygoUsageRecord {
+    /// Falls back to the consumed unit when Cloudflare omits or blanks PricingUnit
+    fn pricing_unit(&self) -> &str {
+        self.pricing_unit
+            .as_deref()
+            .filter(|unit| !unit.is_empty())
+            .unwrap_or(&self.consumed_unit)
+    }
+
     fn matches_any(&self, selected_products: &[BillingProduct]) -> bool {
         selected_products.is_empty()
             || self.service_family_name.as_deref().is_some_and(|family| {
@@ -402,7 +414,7 @@ impl Quantity {
         ensure_finite(value, metric)?;
         if self.unit != unit {
             return Err(eyre!(
-                "Cloudflare returned mixed consumed units for {metric}: {} and {unit}",
+                "Cloudflare returned mixed units for {metric}: {} and {unit}",
                 self.unit
             ));
         }
@@ -880,6 +892,35 @@ mod tests {
     }
 
     #[test]
+    fn labels_billable_usage_with_the_pricing_unit() {
+        let mut storage = record(
+            "R2 Storage",
+            "R2",
+            12.5,
+            3.0,
+            0.15,
+            date(2026, 7, 16),
+            date(2026, 7, 28),
+        )
+        .with_unit("GB-months");
+        storage.pricing_unit = Some("Count".to_string());
+
+        let report = BillingReport::new(
+            "account-id".to_string(),
+            vec![storage],
+            &[],
+            true,
+            date(2026, 7, 28),
+        )
+        .unwrap();
+
+        let rendered = render_report(&report).unwrap();
+
+        assert!(rendered.contains("Usage: 12.5 GB-months"));
+        assert!(rendered.contains("Billable: 3 Count"));
+    }
+
+    #[test]
     fn billing_help_never_displays_the_api_token() {
         let _lock = ENV_LOCK.lock().unwrap();
         let previous = std::env::var_os(BILLING_API_TOKEN_ENV_VAR);
@@ -1071,6 +1112,7 @@ mod tests {
             consumed_quantity,
             consumed_unit: "requests".to_string(),
             pricing_quantity,
+            pricing_unit: None,
             contracted_cost: contracted_cost.to_string().parse().unwrap(),
             billing_currency: "USD".to_string(),
         }
