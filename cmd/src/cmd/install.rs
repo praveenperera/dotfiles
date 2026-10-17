@@ -10,7 +10,7 @@ use eyre::{eyre, Result, WrapErr};
 use serde::Deserialize;
 use xshell::Shell;
 
-use crate::{command_exists, fsutil};
+use crate::{fsutil, util::has_tool};
 
 #[derive(Debug, Clone, Args)]
 pub struct Install {
@@ -197,7 +197,7 @@ pub(crate) async fn fetch_latest_release(repo: &str) -> Result<LatestRelease> {
 
 pub(crate) fn ensure_release_dependencies(sh: &Shell) -> Result<()> {
     for command in ["curl", "tar"] {
-        if !command_exists(sh, command) {
+        if !has_tool(sh, command) {
             return Err(eyre!("need {command} (command not found)"));
         }
     }

@@ -1,8 +1,7 @@
 use clap::{Parser, Subcommand};
-use std::{ffi::OsString, path::Path};
+use std::path::Path;
 
-use eyre::{Context as _, ContextCompat as _, Result};
-use log::debug;
+use eyre::Result;
 use xshell::Shell;
 
 use crate::encrypt;
@@ -44,12 +43,6 @@ pub enum FileCmd {
     },
 }
 
-pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    debug!("file args: {args:?}");
-    let flags = File::parse_from(args);
-    run_with_flags(sh, flags)
-}
-
 pub fn run_with_flags(sh: &Shell, flags: File) -> Result<()> {
     match flags.subcommand {
         FileCmd::Encrypt { input, output } => encrypt_file(sh, &input, output.as_deref()),
@@ -64,40 +57,31 @@ fn encrypt_file(sh: &Shell, input: &str, output: Option<&str>) -> Result<()> {
         None => format!("{input}.enc"),
     };
 
+    // the output's header names the 1Password key, so only `file init` can create it
     if !sh.path_exists(&output) {
-        return Err(eyre::eyre!(
-            "Output file {output} does not exist. Run `cmd file init {output}` first to create encryption keys."
-        ));
+        let hint = if output.ends_with(".enc") {
+            format!("run `cmd file init {output}` first to create its encryption key")
+        } else {
+            "`cmd file init` only creates .enc files, so use an output ending in .enc".to_string()
+        };
+
+        return Err(eyre::eyre!("output file {output} does not exist, {hint}"));
     }
 
     encrypt::encrypt(sh, input, &output)
 }
 
 fn decrypt_file(sh: &Shell, input: &str, output: Option<&str>) -> Result<()> {
-    let input_path = std::fs::canonicalize(input).wrap_err("could not canonicalize input path")?;
-
-    let parent = input_path
-        .parent()
-        .wrap_err("could not get parent of input file")?;
-
+    // relative to the cwd like any other CLI path, the default lands next to the input
     let output = match output {
         Some(o) => o.to_string(),
-        None => {
-            if input.ends_with(".enc") {
-                input.trim_end_matches(".enc").to_string()
-            } else {
-                format!("{input}.dec")
-            }
-        }
+        None => match input.strip_suffix(".enc") {
+            Some(stem) => stem.to_string(),
+            None => format!("{input}.dec"),
+        },
     };
 
-    let output_path = if Path::new(&output).is_absolute() {
-        Path::new(&output).to_path_buf()
-    } else {
-        parent.join(&output)
-    };
-
-    encrypt::decrypt(sh, input, &output_path)
+    encrypt::decrypt(sh, input, &output)
 }
 
 fn init_file(sh: &Shell, input: &str, prefix: Option<&str>) -> Result<()> {

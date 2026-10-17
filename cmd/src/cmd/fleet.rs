@@ -3,7 +3,7 @@ use eyre::{eyre, Result, WrapErr};
 use std::process::{Command, Stdio};
 use xshell::{cmd, Shell};
 
-use crate::{command_exists, dotfiles_dir};
+use crate::{dotfiles_dir, util::has_tool};
 
 const HOST: &str = "praveen@ai5090";
 /// Checks out the Homebased skill at the installed Homebased release
@@ -104,7 +104,7 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
         return Ok(());
     }
 
-    if command_exists(sh, "homebased") {
+    if has_tool(sh, "homebased") {
         run_attached("homebased", &["update"])?;
 
         let sync = dotfiles_dir()?.join(HOMEBASED_SKILL_SYNC);
@@ -115,7 +115,7 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
     }
 
     // a Mac-only launchd service; it skips the restart when already current
-    if command_exists(sh, "codemode-mcp") {
+    if has_tool(sh, "codemode-mcp") {
         run_attached("codemode-mcp", &["update"])?;
     }
 

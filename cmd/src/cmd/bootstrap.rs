@@ -3,8 +3,6 @@ mod install;
 mod link;
 mod release;
 
-use std::ffi::OsString;
-
 use askama::Template;
 use clap::{Parser, ValueEnum};
 use eyre::Result;
@@ -44,7 +42,7 @@ const MAC_ONLY_TOOLS: &[&str] = &[
 ];
 
 const BREW_CASKS: &[&str] = &[
-    "google-cloud-sdk",
+    "gcloud-cli",
     "visual-studio-code",
     "bettertouchtool",
     "github",
@@ -83,12 +81,10 @@ const TOOLS_FULL: &[&str] = &[
     "tmux",
     "fnm",
     "btop",
-    "htop",
     "eza",
     "pkg-config",
     "zoxide",
     "kubectl",
-    "gpg",
     "tree",
     "shellcheck",
     "elixir",
@@ -198,8 +194,6 @@ const CUSTOM_CONFIG_DIR_ENTRIES: &[ManagedDirEntry] = &[
     },
 ];
 
-const CUSTOM_CONFIG_FILE_TREES: &[ManagedDirEntry] = &[];
-
 const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
     &[("gpg-agent.conf", ".gnupg/gpg-agent.conf")];
 
@@ -207,11 +201,6 @@ const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
 enum SyncSymlinkOutcome {
     Linked,
     SkippedBrokenSource,
-}
-
-pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = Bootstrap::parse_from(args);
-    run_with_flags(sh, flags)
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Bootstrap) -> Result<()> {

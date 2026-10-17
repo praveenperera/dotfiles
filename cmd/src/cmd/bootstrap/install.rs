@@ -1,8 +1,10 @@
+use std::{fs, path::Path};
+
 use colored::Colorize;
 use eyre::Result;
 use xshell::{cmd, Shell};
 
-use crate::{command_exists, fsutil};
+use crate::{fsutil, util::has_tool};
 
 use super::{
     BootstrapMode, BREW_CASKS, CARGO_PKGS, LINUX_TOOLS_FULL, LINUX_TOOLS_MINIMAL, MAC_ONLY_TOOLS,
@@ -21,9 +23,7 @@ pub(super) fn install_linux_tools(sh: &Shell, mode: BootstrapMode) -> Result<()>
                 .arg("-y")
                 .run()?;
 
-            let home = fsutil::home_dir()?;
-            let bat = home.join(".local/bin/bat");
-            cmd!(sh, "ln -s /usr/bin/batcat {bat}").run()?;
+            link_batcat_as_bat()?;
 
             for (url, tool, args) in TOOLS_VIA_SHELL_SCRIPT {
                 install_via_shell_script(sh, url, tool, args)?;
@@ -44,17 +44,53 @@ pub(super) fn install_linux_tools(sh: &Shell, mode: BootstrapMode) -> Result<()>
 
             println!("{}", "installing tools using nix".green());
             cmd!(sh, "nix-env -iA").args(nix_tools).run()?;
-            println!("{}", "installing cargo plugins".green());
-            cmd!(sh, "cargo binstall").args(CARGO_PKGS).run()?;
+            install_cargo_plugins(sh)?;
         }
     }
 
     Ok(())
 }
 
+/// Debian ships bat as `batcat`, so expose it as `bat` in `~/.local/bin`
+fn link_batcat_as_bat() -> Result<()> {
+    let batcat = Path::new("/usr/bin/batcat");
+    let bin_dir = fsutil::home_dir()?.join(".local/bin");
+    let bat = bin_dir.join("bat");
+
+    if fs::read_link(&bat).is_ok_and(|target| target == batcat) {
+        return Ok(());
+    }
+
+    // never replace a bat the user installed some other way
+    if fs::symlink_metadata(&bat).is_ok() {
+        println!(
+            "{}",
+            format!("skipping bat link, {} already exists", bat.display()).yellow()
+        );
+        return Ok(());
+    }
+
+    fs::create_dir_all(&bin_dir)?;
+    std::os::unix::fs::symlink(batcat, &bat)?;
+
+    Ok(())
+}
+
+fn install_cargo_plugins(sh: &Shell) -> Result<()> {
+    println!("{}", "installing cargo plugins".green());
+
+    if !has_tool(sh, "cargo-binstall") {
+        cmd!(sh, "cargo install cargo-binstall").run()?;
+    }
+
+    cmd!(sh, "cargo binstall -y").args(CARGO_PKGS).run()?;
+
+    Ok(())
+}
+
 /// mac only tools
 pub(super) fn install_brew_and_tools(sh: &Shell) -> Result<()> {
-    if !command_exists(sh, "brew") {
+    if !has_tool(sh, "brew") {
         println!("{} {}", "brew not found".blue(), "installing...".green());
 
         cmd!(sh, "/bin/bash -c '$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'")
@@ -93,13 +129,8 @@ pub(super) fn install_brew_and_tools(sh: &Shell) -> Result<()> {
             .run()?;
     }
 
-    println!("{}", "installing cargo plugins".green());
     std::env::set_var("RUSTC_WRAPPER", "sccache");
-    cmd!(sh, "cargo install cargo-binstall").run()?;
-    cmd!(sh, "cargo binstall")
-        .args(CARGO_PKGS)
-        .arg("-y")
-        .run()?;
+    install_cargo_plugins(sh)?;
     cmd!(sh, "brew cleanup").run()?;
     cmd!(sh, "brew autoremove").run()?;
 

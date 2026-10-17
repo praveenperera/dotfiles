@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs;
 use std::io::ErrorKind;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use askama::Template;
@@ -13,11 +14,13 @@ use crate::{fsutil, util::has_tool, CMD_TOOLS};
 
 use super::{
     ManagedDirEntry, Os, OsxDefaults, SyncSymlinkOutcome, Zshrc, CONFIG_FILE_OR_DIR,
-    CUSTOM_CONFIG_DIR_ENTRIES, CUSTOM_CONFIG_FILE_TREES, CUSTOM_CONFIG_OR_DIR, DOTFILES,
-    MAC_ONLY_CUSTOM_CONFIG_OR_DIR,
+    CUSTOM_CONFIG_DIR_ENTRIES, CUSTOM_CONFIG_OR_DIR, DOTFILES, MAC_ONLY_CUSTOM_CONFIG_OR_DIR,
 };
 
 const DOTFILES_GIT_TOOLS_EXTENSION: &str = "dotfiles.dotfiles-git-tools-0.0.1";
+
+/// Tool names that used to be hardlinked to `cmd`. `file` shadowed /usr/bin/file
+const RETIRED_CMD_TOOLS: &[&str] = &["file"];
 
 struct LinkSpec {
     source: PathBuf,
@@ -59,6 +62,9 @@ pub(super) fn create_hardlinks_in_bin_dir(sh: &Shell, bin_dir: &Path) -> Result<
         return Ok(());
     }
 
+    // runs before relinking, while stale links still share the previous binary's inode
+    remove_retired_hardlinks(bin_dir)?;
+
     for (tool, _) in CMD_TOOLS {
         if *tool == "cmd" {
             continue;
@@ -67,6 +73,31 @@ pub(super) fn create_hardlinks_in_bin_dir(sh: &Shell, bin_dir: &Path) -> Result<
         let tool_path = bin_dir.join(tool);
         fsutil::remove_existing_path(&tool_path)?;
         sh.hard_link(&cmd_path, &tool_path)?;
+    }
+
+    Ok(())
+}
+
+/// Removes hardlinks for tools dropped from `CMD_TOOLS`. A retired name is only removed
+/// when it shares an inode with `cmd` or a current tool link, so an unrelated binary
+/// with the same name is never touched
+fn remove_retired_hardlinks(bin_dir: &Path) -> Result<()> {
+    let cmd_inodes = CMD_TOOLS
+        .iter()
+        .filter_map(|(tool, _)| fs::symlink_metadata(bin_dir.join(tool)).ok())
+        .filter(|metadata| metadata.is_file())
+        .map(|metadata| (metadata.dev(), metadata.ino()))
+        .collect::<HashSet<_>>();
+
+    for tool in RETIRED_CMD_TOOLS {
+        let tool_path = bin_dir.join(tool);
+        let Ok(metadata) = fs::symlink_metadata(&tool_path) else {
+            continue;
+        };
+
+        if metadata.is_file() && cmd_inodes.contains(&(metadata.dev(), metadata.ino())) {
+            fs::remove_file(&tool_path)?;
+        }
     }
 
     Ok(())
@@ -204,12 +235,6 @@ fn build_link_specs(home: &Path, dotfiles_dir: &Path) -> Result<Vec<LinkSpec>> {
         }
     }
 
-    for tree in CUSTOM_CONFIG_FILE_TREES {
-        let source_root = dotfiles_dir.join(tree.source);
-        let target_root = home.join(tree.target);
-        push_file_tree_link_specs(&mut specs, &source_root, &target_root)?;
-    }
-
     Ok(specs)
 }
 
@@ -313,33 +338,6 @@ fn parse_vscode_extensions(contents: &str) -> Vec<String> {
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(str::to_owned)
         .collect()
-}
-
-fn push_file_tree_link_specs(
-    specs: &mut Vec<LinkSpec>,
-    source_dir: &Path,
-    target_dir: &Path,
-) -> Result<()> {
-    if !source_dir.exists() {
-        return Ok(());
-    }
-
-    for entry in fs::read_dir(source_dir)? {
-        let entry = entry?;
-        let source_path = entry.path();
-        let target_path = target_dir.join(entry.file_name());
-        let metadata = fs::symlink_metadata(&source_path)?;
-        if metadata.is_dir() && !metadata.file_type().is_symlink() {
-            push_file_tree_link_specs(specs, &source_path, &target_path)?;
-        } else {
-            specs.push(LinkSpec {
-                source: source_path,
-                target: target_path,
-            });
-        }
-    }
-
-    Ok(())
 }
 
 fn prune_managed_dir_entries(home: &Path, dotfiles_dir: &Path) -> Result<()> {
@@ -486,14 +484,45 @@ fn create_and_run_file(sh: &Shell, contents: &str, file: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::path::PathBuf;
 
     use tempfile::tempdir;
 
     use super::{
-        build_link_specs, install_local_vscode_extension, local_vscode_extension_dir,
-        parse_vscode_extensions, prune_managed_dir_entry, ManagedDirEntry, Os,
+        build_link_specs, create_hardlinks_in_bin_dir, parse_vscode_extensions,
+        prune_managed_dir_entry, ManagedDirEntry, Os,
     };
+
+    #[test]
+    fn relinking_retires_stale_file_link_but_keeps_unrelated_file() {
+        let sh = xshell::Shell::new().unwrap();
+
+        // stale install: btx and file still share the previous binary, cmd is a fresh inode
+        let stale = tempdir().unwrap();
+        let bin = stale.path();
+        fs::write(bin.join("old-cmd"), "old").unwrap();
+        fs::hard_link(bin.join("old-cmd"), bin.join("btx")).unwrap();
+        fs::hard_link(bin.join("old-cmd"), bin.join("file")).unwrap();
+        fs::remove_file(bin.join("old-cmd")).unwrap();
+        fs::write(bin.join("cmd"), "new").unwrap();
+
+        create_hardlinks_in_bin_dir(&sh, bin).unwrap();
+
+        assert!(!bin.join("file").exists());
+        assert_eq!(fs::read_to_string(bin.join("btx")).unwrap(), "new");
+
+        // an unrelated `file` that never shared an inode with cmd stays put
+        let unrelated = tempdir().unwrap();
+        let bin = unrelated.path();
+        fs::write(bin.join("cmd"), "new").unwrap();
+        fs::write(bin.join("file"), "someone else's file").unwrap();
+
+        create_hardlinks_in_bin_dir(&sh, bin).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(bin.join("file")).unwrap(),
+            "someone else's file"
+        );
+    }
 
     #[test]
     fn keeps_unmanaged_entries_in_target_dir() {
