@@ -11,6 +11,12 @@ use sha2::{Digest, Sha256};
 const CLAUDE_USAGE_URL: &str = "https://api.anthropic.com/api/oauth/usage";
 const CLAUDE_OAUTH_BETA: &str = "oauth-2025-04-20";
 const CLAUDE_KEYCHAIN_SERVICE: &str = "Claude Code-credentials";
+// cmd's own Claude Code login, kept apart from the one Claude Code sessions use so that
+// refreshing it can never race a session's refresh and sign that session out
+const CMD_CLAUDE_CONFIG_DIR: &str = ".config/cmd/claude";
+// refresh a little early so the token can't lapse between the check and the request
+const REFRESH_MARGIN_MS: i64 = 5 * 60 * 1000;
+const REFRESH_TIMEOUT: Duration = Duration::from_secs(90);
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -72,16 +78,27 @@ pub(super) fn claude_usage_report(
     captured_at: chrono::DateTime<Utc>,
 ) -> Result<CurrentUsageReport> {
     let paths = ClaudePaths::from_env()?;
-    let credentials = paths.read_credentials()?;
+    let mut credentials = paths.read_credentials()?;
+    let refresh_at = captured_at.timestamp_millis() + REFRESH_MARGIN_MS;
     if credentials
         .expires_at
-        .is_some_and(|expires_at| expires_at <= captured_at.timestamp_millis())
+        .is_some_and(|expires_at| expires_at <= refresh_at)
     {
-        return Err(eyre!("Claude Code auth expired. Run claude to refresh it"));
+        credentials = paths.refresh_credentials()?;
     }
 
+    let mut response = runtime::block_on(fetch_claude_usage(&credentials.access_token))??;
+    if response.is_none() && paths.own_login.is_some() {
+        // a token can be revoked before it expires, so a rejection gets one refresh too
+        credentials = paths.refresh_credentials()?;
+        response = runtime::block_on(fetch_claude_usage(&credentials.access_token))??;
+    }
+
+    let Some(response) = response else {
+        return Err(eyre!("Claude Code auth rejected. {}", paths.refresh_hint()));
+    };
+
     let account = paths.read_account();
-    let response = runtime::block_on(fetch_claude_usage(&credentials.access_token))??;
     let label = account.email_address.clone().unwrap_or_else(|| "-".into());
     let usage = ProfileUsageState::Available(ProfileUsageSnapshot {
         user_id: account.account_uuid,
@@ -104,7 +121,8 @@ pub(super) fn claude_usage_report(
     ))
 }
 
-async fn fetch_claude_usage(access_token: &str) -> Result<ClaudeUsageResponse> {
+/// Fetches usage, or `None` when the token is rejected so the caller can refresh it
+async fn fetch_claude_usage(access_token: &str) -> Result<Option<ClaudeUsageResponse>> {
     let http = HttpClient::builder().timeout(USAGE_FETCH_TIMEOUT).build()?;
     let response = http
         .get(CLAUDE_USAGE_URL)
@@ -116,7 +134,7 @@ async fn fetch_claude_usage(access_token: &str) -> Result<ClaudeUsageResponse> {
 
     let status = response.status();
     if status == StatusCode::UNAUTHORIZED {
-        return Err(eyre!("Claude Code auth rejected. Run claude to refresh it"));
+        return Ok(None);
     }
     if !status.is_success() {
         return Err(eyre!("Claude usage request failed: {status}"));
@@ -125,6 +143,7 @@ async fn fetch_claude_usage(access_token: &str) -> Result<ClaudeUsageResponse> {
     response
         .json::<ClaudeUsageResponse>()
         .await
+        .map(Some)
         .wrap_err("Failed to parse Claude usage")
 }
 
@@ -132,33 +151,88 @@ struct ClaudePaths {
     credentials: PathBuf,
     global_config: PathBuf,
     keychain_service: Option<String>,
+    /// Set when reading cmd's own login, the only one cmd ever refreshes
+    own_login: Option<PathBuf>,
 }
 
 impl ClaudePaths {
+    /// Prefers cmd's own login, then `CLAUDE_CONFIG_DIR`, then Claude Code's default login
     fn from_env() -> Result<Self> {
-        match std::env::var_os("CLAUDE_CONFIG_DIR").filter(|dir| !dir.is_empty()) {
-            Some(dir) => {
-                // claude code suffixes the keychain entry with a hash of a custom config dir
-                let suffix = hex::encode(Sha256::digest(dir.as_encoded_bytes()));
-                let dir = PathBuf::from(dir);
-                Ok(Self {
-                    credentials: dir.join(".credentials.json"),
-                    global_config: dir.join(".claude.json"),
-                    keychain_service: macos_keychain_service(format!(
-                        "{CLAUDE_KEYCHAIN_SERVICE}-{}",
-                        &suffix[..8]
-                    )),
-                })
-            }
-            None => {
-                let home = fsutil::home_dir()?;
-                Ok(Self {
-                    credentials: home.join(".claude").join(".credentials.json"),
-                    global_config: home.join(".claude.json"),
-                    keychain_service: macos_keychain_service(CLAUDE_KEYCHAIN_SERVICE.into()),
-                })
-            }
+        let home = fsutil::home_dir()?;
+        let own_login = home.join(CMD_CLAUDE_CONFIG_DIR);
+        if own_login.join(".claude.json").exists() {
+            let mut paths = Self::for_config_dir(own_login.clone());
+            paths.own_login = Some(own_login);
+            return Ok(paths);
         }
+
+        match std::env::var_os("CLAUDE_CONFIG_DIR").filter(|dir| !dir.is_empty()) {
+            Some(dir) => Ok(Self::for_config_dir(PathBuf::from(dir))),
+            None => Ok(Self {
+                credentials: home.join(".claude").join(".credentials.json"),
+                global_config: home.join(".claude.json"),
+                keychain_service: macos_keychain_service(CLAUDE_KEYCHAIN_SERVICE.into()),
+                own_login: None,
+            }),
+        }
+    }
+
+    fn for_config_dir(dir: PathBuf) -> Self {
+        // claude code suffixes the keychain entry with a hash of a custom config dir
+        let suffix = hex::encode(Sha256::digest(dir.as_os_str().as_encoded_bytes()));
+        Self {
+            credentials: dir.join(".credentials.json"),
+            global_config: dir.join(".claude.json"),
+            keychain_service: macos_keychain_service(format!(
+                "{CLAUDE_KEYCHAIN_SERVICE}-{}",
+                &suffix[..8]
+            )),
+            own_login: None,
+        }
+    }
+
+    fn refresh_hint(&self) -> String {
+        match &self.own_login {
+            Some(dir) => format!(
+                "Log cmd in again: CLAUDE_CONFIG_DIR={} claude auth login",
+                dir.display()
+            ),
+            None => format!(
+                "Run claude to refresh it, or give cmd its own login: \
+                 CLAUDE_CONFIG_DIR=~/{CMD_CLAUDE_CONFIG_DIR} claude auth login"
+            ),
+        }
+    }
+
+    /// Has Claude Code refresh cmd's own login, then rereads it
+    ///
+    /// cmd never calls the token endpoint itself: Claude Code refreshes its own token, so cmd
+    /// never presents itself as Claude Code. Only cmd's own login is refreshed, because a
+    /// refresh replaces the refresh token and would sign out a session sharing it
+    fn refresh_credentials(&self) -> Result<ClaudeOauthCredentials> {
+        let Some(dir) = &self.own_login else {
+            return Err(eyre!("Claude Code auth expired. {}", self.refresh_hint()));
+        };
+
+        run_claude_cost(dir).wrap_err_with(|| {
+            format!(
+                "Couldn't refresh cmd's Claude login. {}",
+                self.refresh_hint()
+            )
+        })?;
+
+        let credentials = self.read_credentials()?;
+        if credentials
+            .expires_at
+            .is_some_and(|expires_at| expires_at <= Utc::now().timestamp_millis())
+        {
+            return Err(eyre!(
+                "cmd's Claude login is still expired. {}",
+                self.refresh_hint()
+            ));
+        }
+
+        Ok(credentials)
     }
 
     fn read_credentials(&self) -> Result<ClaudeOauthCredentials> {
@@ -186,6 +260,78 @@ impl ClaudePaths {
             .and_then(|config| config.oauth_account)
             .unwrap_or_default()
     }
+}
+
+/// Runs `/cost` under `dir`, which makes Claude Code refresh that login's token
+///
+/// `/cost` is answered locally from Claude Code's usage request, so it sends nothing to a model
+/// and spends no usage, but that request still refreshes an expiring token first
+fn run_claude_cost(dir: &Path) -> Result<()> {
+    let mut child = std::process::Command::new(claude_binary()?)
+        .args([
+            "-p",
+            "/cost",
+            "--tools",
+            "",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+        ])
+        .env("CLAUDE_CONFIG_DIR", dir)
+        // run inside the config dir so no project CLAUDE.md or settings load
+        .current_dir(dir)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .wrap_err("Failed to start claude")?;
+
+    let deadline = std::time::Instant::now() + REFRESH_TIMEOUT;
+    loop {
+        if let Some(status) = child.try_wait()? {
+            if status.success() {
+                return Ok(());
+            }
+
+            let mut stderr = String::new();
+            if let Some(mut pipe) = child.stderr.take() {
+                let _ = pipe.read_to_string(&mut stderr);
+            }
+            return Err(eyre!("claude exited with {status}: {}", stderr.trim()));
+        }
+
+        if std::time::Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(eyre!(
+                "claude didn't finish within {}s",
+                REFRESH_TIMEOUT.as_secs()
+            ));
+        }
+
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
+/// Finds claude on PATH, falling back to the native installer's location, which isn't on the
+/// PATH a launch agent gets
+fn claude_binary() -> Result<PathBuf> {
+    let on_path = std::env::var_os("PATH")
+        .into_iter()
+        .flat_map(|path| std::env::split_paths(&path).collect::<Vec<_>>())
+        .map(|dir| dir.join("claude"))
+        .find(|candidate| candidate.is_file());
+    if let Some(path) = on_path {
+        return Ok(path);
+    }
+
+    let fallback = fsutil::home_dir()?.join(".local/bin/claude");
+    if fallback.exists() {
+        return Ok(fallback);
+    }
+
+    Err(eyre!(
+        "claude isn't installed, so cmd can't refresh its Claude login"
+    ))
 }
 
 fn parse_claude_credentials(raw: &[u8]) -> Option<ClaudeOauthCredentials> {
