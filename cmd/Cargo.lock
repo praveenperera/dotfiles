@@ -497,7 +497,7 @@ dependencies = [
 
 [[package]]
 name = "cmd"
-version = "0.0.242"
+version = "0.0.243"
 dependencies = [
  "age",
  "askama",
