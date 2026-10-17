@@ -271,6 +271,9 @@ fn run_claude_cost(dir: &Path) -> Result<()> {
         .args([
             "-p",
             "/cost",
+            // /cost doesn't reach a model today; if a future version does, keep it on the cheapest
+            "--model",
+            "haiku",
             "--tools",
             "",
             "--no-session-persistence",
