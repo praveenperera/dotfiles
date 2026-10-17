@@ -8,12 +8,7 @@ use super::*;
 use crate::{fsutil, runtime};
 use sha2::{Digest, Sha256};
 
-// cedar_ember asks for the usage-limit reset grants beside the limits, and skip_spend leaves out
-// the extra-usage spend this view never shows
-const CLAUDE_USAGE_URL: &str =
-    "https://api.anthropic.com/api/oauth/usage?cedar_ember=1&skip_spend=1";
-// the server only reports reset grants to Claude Code's CLI, which it recognises by user agent
-const CLAUDE_CLI_USER_AGENT: &str = "claude-cli/2.1.302 (external, cli)";
+const CLAUDE_USAGE_URL: &str = "https://api.anthropic.com/api/oauth/usage";
 const CLAUDE_OAUTH_BETA: &str = "oauth-2025-04-20";
 const CLAUDE_KEYCHAIN_SERVICE: &str = "Claude Code-credentials";
 
@@ -50,65 +45,6 @@ struct ClaudeOauthAccount {
 struct ClaudeUsageResponse {
     five_hour: Option<ClaudeUsageWindow>,
     seven_day: Option<ClaudeUsageWindow>,
-    // kept raw so a reshaped reset block costs only the reset line, not the whole report
-    cedar_ember: Option<Value>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ClaudeResetStatus {
-    eligible: Option<bool>,
-    ineligible_reason: Option<String>,
-    #[serde(default)]
-    grants: Vec<ClaudeResetGrant>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ClaudeResetGrant {
-    #[serde(default)]
-    resets_left: usize,
-    ends_at: Option<chrono::DateTime<Utc>>,
-    #[serde(default)]
-    paused: bool,
-}
-
-impl ClaudeUsageResponse {
-    /// Maps Claude's usage-limit reset grants onto Codex's reset credits, one credit per reset
-    /// left, each expiring with its grant
-    fn reset_credits(&self) -> RateLimitResetCreditSummary {
-        let Some(status) = self
-            .cedar_ember
-            .clone()
-            .and_then(|block| serde_json::from_value::<ClaudeResetStatus>(block).ok())
-        else {
-            return RateLimitResetCreditSummary::Unavailable;
-        };
-
-        // "surface" means the request didn't look like Claude Code, so no grants were checked
-        if status.eligible == Some(false) && status.ineligible_reason.as_deref() == Some("surface")
-        {
-            return RateLimitResetCreditSummary::Unavailable;
-        }
-
-        let mut credits = status
-            .grants
-            .iter()
-            .filter(|grant| !grant.paused)
-            .flat_map(|grant| {
-                std::iter::repeat_n(
-                    RateLimitResetCredit {
-                        expires_at: grant.ends_at,
-                    },
-                    grant.resets_left,
-                )
-            })
-            .collect::<Vec<_>>();
-        credits.sort_by_key(|credit| credit.expires_at);
-
-        RateLimitResetCreditSummary::Available {
-            available_count: credits.len(),
-            credits,
-        }
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -134,7 +70,7 @@ impl ClaudeUsageWindow {
 
 pub(super) fn claude_usage_report(
     captured_at: chrono::DateTime<Utc>,
-) -> Result<(CurrentUsageReport, RateLimitResetCreditSummary)> {
+) -> Result<CurrentUsageReport> {
     let paths = ClaudePaths::from_env()?;
     let credentials = paths.read_credentials()?;
     if credentials
@@ -146,7 +82,6 @@ pub(super) fn claude_usage_report(
 
     let account = paths.read_account();
     let response = runtime::block_on(fetch_claude_usage(&credentials.access_token))??;
-    let reset_credits = response.reset_credits();
     let label = account.email_address.clone().unwrap_or_else(|| "-".into());
     let usage = ProfileUsageState::Available(ProfileUsageSnapshot {
         user_id: account.account_uuid,
@@ -161,14 +96,12 @@ pub(super) fn claude_usage_report(
             .and_then(ClaudeUsageWindow::into_snapshot),
     });
 
-    let report = CurrentUsageReport::new(
+    Ok(CurrentUsageReport::new(
         label,
         usage,
         captured_at,
         usage_history_cache_path_for(CLAUDE_USAGE_HISTORY_FILE).ok(),
-    );
-
-    Ok((report, reset_credits))
+    ))
 }
 
 async fn fetch_claude_usage(access_token: &str) -> Result<ClaudeUsageResponse> {
@@ -177,7 +110,6 @@ async fn fetch_claude_usage(access_token: &str) -> Result<ClaudeUsageResponse> {
         .get(CLAUDE_USAGE_URL)
         .bearer_auth(access_token)
         .header("anthropic-beta", CLAUDE_OAUTH_BETA)
-        .header(USER_AGENT, CLAUDE_CLI_USER_AGENT)
         .send()
         .await
         .wrap_err("Failed to fetch Claude usage")?;
@@ -324,65 +256,6 @@ mod tests {
                     .unwrap()
                     .timestamp()
             )
-        );
-    }
-
-    #[test]
-    fn claude_reset_grants_become_reset_credits() {
-        let response = serde_json::from_value::<ClaudeUsageResponse>(serde_json::json!({
-            "five_hour": null,
-            "seven_day": null,
-            "cedar_ember": {
-                "eligible": true,
-                "ineligible_reason": null,
-                "grants": [
-                    {
-                        "id": "launch",
-                        "resets_total": 2,
-                        "resets_left": 2,
-                        "ends_at": "2026-10-22T16:00:00+00:00",
-                        "paused": false
-                    },
-                    {
-                        "id": "paused",
-                        "resets_left": 1,
-                        "ends_at": "2026-10-20T16:00:00+00:00",
-                        "paused": true
-                    }
-                ]
-            }
-        }))
-        .unwrap();
-
-        let expires_at = Some(Utc.with_ymd_and_hms(2026, 10, 22, 16, 0, 0).unwrap());
-        assert_eq!(
-            response.reset_credits(),
-            RateLimitResetCreditSummary::Available {
-                available_count: 2,
-                credits: vec![
-                    RateLimitResetCredit { expires_at },
-                    RateLimitResetCredit { expires_at },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    fn claude_reset_credits_are_unavailable_off_the_cli_surface() {
-        let response = serde_json::from_value::<ClaudeUsageResponse>(serde_json::json!({
-            "five_hour": null,
-            "seven_day": null,
-            "cedar_ember": {
-                "eligible": false,
-                "ineligible_reason": "surface",
-                "grants": []
-            }
-        }))
-        .unwrap();
-
-        assert_eq!(
-            response.reset_credits(),
-            RateLimitResetCreditSummary::Unavailable
         );
     }
 

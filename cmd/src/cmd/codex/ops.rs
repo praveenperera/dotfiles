@@ -954,12 +954,12 @@ pub(super) fn usage() -> Result<()> {
     Ok(())
 }
 
-type ProviderUsageResult = Result<(CurrentUsageReport, RateLimitResetCreditSummary)>;
+type CodexUsageResult = Result<(CurrentUsageReport, RateLimitResetCreditSummary)>;
 
 /// Fetches Codex and Claude Code usage at once, with Claude on its own thread
 fn fetch_combined_usage(
     captured_at: chrono::DateTime<Utc>,
-) -> (ProviderUsageResult, ProviderUsageResult) {
+) -> (CodexUsageResult, Result<CurrentUsageReport>) {
     std::thread::scope(|scope| {
         let claude = scope.spawn(|| claude_usage_report(captured_at));
         let codex = codex_usage_report(captured_at);
@@ -998,14 +998,14 @@ pub fn combined_usage() -> Result<()> {
 
     writeln!(stdout)?;
     match &claude {
-        Ok((report, reset_credits)) => print_provider_usage_section(
+        Ok(report) => print_provider_usage_section(
             &mut stdout,
             "Claude",
             &report.label,
             &report.usage,
             captured_local,
             report.rates,
-            Some(reset_credits),
+            None,
         )?,
         Err(err) => print_provider_usage_error(&mut stdout, "Claude", err)?,
     }
@@ -1014,7 +1014,7 @@ pub fn combined_usage() -> Result<()> {
     if let Ok((report, _)) = codex {
         report.record();
     }
-    if let Ok((report, _)) = claude {
+    if let Ok(report) = claude {
         report.record();
     }
 
@@ -1046,11 +1046,11 @@ pub fn combined_usage_json() -> Result<()> {
     };
 
     let claude = match &claude {
-        Ok((report, reset_credits)) => ProviderUsageJson::available(
+        Ok(report) => ProviderUsageJson::available(
             "Claude",
             &report.label,
             &report.usage,
-            Some(reset_credits),
+            None,
             captured_local,
         ),
         Err(err) => ProviderUsageJson::failed("Claude", err),

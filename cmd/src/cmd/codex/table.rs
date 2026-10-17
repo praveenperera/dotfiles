@@ -127,7 +127,7 @@ pub(super) struct ProviderUsageJson {
     error: Option<String>,
     label: Option<String>,
     plan_type: Option<String>,
-    /// Usage-limit resets left, for Codex and Claude alike
+    /// Only Codex has reset credits
     reset_credits: Option<ResetCreditsJson>,
     five_hour: Option<UsageWindowJson>,
     weekly: Option<UsageWindowJson>,
