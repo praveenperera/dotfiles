@@ -1,5 +1,4 @@
 use std::collections::BTreeSet;
-use std::ffi::OsString;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -68,11 +67,6 @@ pub struct SkillInstallSummary {
     pub skipped: Vec<String>,
 }
 
-pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = Skill::parse_from(args);
-    run_with_flags(sh, flags)
-}
-
 pub fn run_with_flags(sh: &Shell, flags: Skill) -> Result<()> {
     match flags.subcommand {
         SkillCmd::Add { agent, skills } => add_skills(sh, agent, &skills),
@@ -114,10 +108,6 @@ fn add_skills(sh: &Shell, agent: Option<AgentTarget>, requested_skills: &[String
     Ok(())
 }
 
-pub fn add_skills_by_name(sh: &Shell, selected_skills: &[String]) -> Result<SkillInstallSummary> {
-    add_skills_by_name_for_agent(sh, AgentTarget::Codex, selected_skills)
-}
-
 pub fn add_skills_by_name_for_agent(
     sh: &Shell,
     agent: AgentTarget,
@@ -148,10 +138,6 @@ pub fn add_skills_by_name_for_agent(
         .collect::<Result<Vec<_>>>()?;
 
     add_skill_sources_for_agent(sh, agent, &sources)
-}
-
-pub fn add_skill_sources(sh: &Shell, sources: &[SkillSource]) -> Result<SkillInstallSummary> {
-    add_skill_sources_for_agent(sh, AgentTarget::Codex, sources)
 }
 
 pub fn add_skill_sources_for_agent(

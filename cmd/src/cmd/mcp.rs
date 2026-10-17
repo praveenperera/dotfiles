@@ -1,5 +1,4 @@
 use std::collections::BTreeSet;
-use std::ffi::OsString;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -10,7 +9,7 @@ use eyre::{eyre, Result, WrapErr};
 use toml::{map::Map, Value};
 use xshell::Shell;
 
-use crate::cmd::agent_target::AgentTarget;
+use crate::cmd::agent_target::{selected_agents, AgentTarget};
 use crate::cmd::project_root::ProjectRoot;
 
 #[derive(Debug, Clone, Parser)]
@@ -23,6 +22,10 @@ pub struct Mcp {
 pub enum McpCmd {
     /// Add project-local MCP servers to the current project
     Add {
+        /// Agent project layout to install into. When omitted, installs for every supported agent
+        #[arg(long, value_enum)]
+        agent: Option<AgentTarget>,
+
         /// MCP names to add. Opens a searchable multi-select picker when omitted
         mcps: Vec<String>,
     },
@@ -52,18 +55,13 @@ pub struct McpServerSource {
     pub value: Value,
 }
 
-pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = Mcp::parse_from(args);
-    run_with_flags(sh, flags)
-}
-
 pub fn run_with_flags(sh: &Shell, flags: Mcp) -> Result<()> {
     match flags.subcommand {
-        McpCmd::Add { mcps } => add_mcps(sh, &mcps),
+        McpCmd::Add { agent, mcps } => add_mcps(sh, agent, &mcps),
     }
 }
 
-fn add_mcps(sh: &Shell, requested_mcps: &[String]) -> Result<()> {
+fn add_mcps(sh: &Shell, agent: Option<AgentTarget>, requested_mcps: &[String]) -> Result<()> {
     let project_mcps_dir = crate::dotfiles_dir()?.join("agents/project-mcps");
     let available_mcps = list_project_mcps(&project_mcps_dir)?;
     let selected_mcps = if requested_mcps.is_empty() {
@@ -77,14 +75,12 @@ fn add_mcps(sh: &Shell, requested_mcps: &[String]) -> Result<()> {
         return Ok(());
     }
 
-    let summary = add_mcps_by_name(sh, &selected_mcps)?;
-    print_mcp_summary(&summary);
+    for agent in selected_agents(agent) {
+        let summary = add_mcps_by_name_for_agent(sh, agent, &selected_mcps)?;
+        print_mcp_summary(agent, &summary);
+    }
 
     Ok(())
-}
-
-pub fn add_mcps_by_name(sh: &Shell, selected_mcps: &[String]) -> Result<McpInstallSummary> {
-    add_mcps_by_name_for_agent(sh, AgentTarget::Codex, selected_mcps)
 }
 
 pub fn add_mcps_by_name_for_agent(
@@ -125,10 +121,6 @@ pub fn project_mcp_names() -> Result<BTreeSet<String>> {
         .into_iter()
         .map(|mcp| mcp.name)
         .collect())
-}
-
-pub fn add_mcp_servers(sh: &Shell, servers: Vec<McpServerSource>) -> Result<McpInstallSummary> {
-    add_mcp_servers_for_agent(sh, AgentTarget::Codex, servers)
 }
 
 pub fn add_mcp_servers_for_agent(
@@ -201,12 +193,20 @@ fn add_claude_mcp_servers(
     Ok(summary)
 }
 
-fn print_mcp_summary(summary: &McpInstallSummary) {
+fn print_mcp_summary(agent: AgentTarget, summary: &McpInstallSummary) {
     if !summary.added.is_empty() {
-        println!("Added MCPs: {}", summary.added.join(", "));
+        println!(
+            "Added MCPs for {}: {}",
+            agent.label(),
+            summary.added.join(", ")
+        );
     }
     if !summary.skipped.is_empty() {
-        println!("Skipped existing MCPs: {}", summary.skipped.join(", "));
+        println!(
+            "Skipped existing MCPs for {}: {}",
+            agent.label(),
+            summary.skipped.join(", ")
+        );
     }
 }
 

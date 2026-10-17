@@ -3,35 +3,6 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Clone, Args)]
-pub struct PrContextArgs {
-    /// GitHub PR URL or repository in format "owner/repo"
-    pub repo_or_url: String,
-
-    /// Pull request number (optional if URL is provided)
-    pub pr_number: Option<u64>,
-
-    /// GitHub token (defaults to GITHUB_TOKEN, GH_TOKEN, or gh auth token)
-    #[arg(short, long)]
-    pub token: Option<String>,
-
-    /// Only include code review threads
-    #[arg(short = 'c', long)]
-    pub code_only: bool,
-
-    /// Only include unresolved review threads
-    #[arg(short = 'u', long)]
-    pub unresolved_only: bool,
-
-    /// Omit nonessential IDs, timestamps, and diff hunks
-    #[arg(short = 'C', long)]
-    pub compact: bool,
-
-    /// Output format
-    #[arg(short = 'f', long, default_value = "markdown")]
-    pub format: crate::pr_context::OutputFormat,
-}
-
-#[derive(Debug, Clone, Args)]
 pub struct ReleaseArgs {
     /// Local project name (e.g., "jju")
     pub project: Option<String>,
@@ -163,7 +134,7 @@ pub enum MainCmd {
 
     /// Fetch PR comments and their code references from GitHub
     #[command(visible_alias = "prc")]
-    PrContext(#[command(flatten)] PrContextArgs),
+    PrContext(#[command(flatten)] crate::pr_context::Args),
 
     /// Clone/update a repo for agent exploration
     #[command(visible_aliases = ["agent", "bc", "btx"])]
@@ -680,7 +651,7 @@ mod tests {
             panic!("expected mcp command");
         };
 
-        assert!(matches!(subcommand, McpCmd::Add { mcps } if mcps.is_empty()));
+        assert!(matches!(subcommand, McpCmd::Add { agent: None, mcps } if mcps.is_empty()));
     }
 
     #[test]
@@ -719,7 +690,33 @@ mod tests {
             panic!("expected mcp command");
         };
 
-        assert!(matches!(subcommand, McpCmd::Add { mcps } if mcps == ["xcodebuildmcp"]));
+        assert!(
+            matches!(subcommand, McpCmd::Add { agent: None, mcps } if mcps == ["xcodebuildmcp"])
+        );
+    }
+
+    #[test]
+    fn parses_mcp_add_for_claude() {
+        let cmd = Cmd::from_args(&[
+            OsString::from("mcp"),
+            OsString::from("add"),
+            OsString::from("--agent"),
+            OsString::from("claude"),
+            OsString::from("xcodebuildmcp"),
+        ])
+        .unwrap();
+
+        let MainCmd::Mcp { subcommand } = cmd.subcommand else {
+            panic!("expected mcp command");
+        };
+
+        assert!(matches!(
+            subcommand,
+            McpCmd::Add {
+                agent: Some(AgentTarget::Claude),
+                mcps
+            } if mcps == ["xcodebuildmcp"]
+        ));
     }
 
     #[test]

@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, HashSet};
-use std::ffi::OsString;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -88,11 +87,6 @@ struct PackProject {
     target_packs: BTreeMap<AgentTarget, Vec<String>>,
     #[serde(default)]
     packs: Vec<String>,
-}
-
-pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
-    let flags = Pack::parse_from(args);
-    run_with_flags(sh, flags)
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Pack) -> Result<()> {

@@ -12,10 +12,8 @@ pub enum OutputFormat {
     Json,
 }
 
-#[derive(Parser, Debug)]
-#[command(name = "pr-context")]
-#[command(about = "Fetches thread-aware PR review context from GitHub")]
-#[command(visible_alias = "prc")]
+/// Arguments shared by `cmd pr-context` and the standalone `pr-context`/`prc` binaries
+#[derive(clap::Args, Debug, Clone)]
 pub struct Args {
     /// GitHub PR URL, repository in format "owner/repo", or just PR number (auto-detects repo from git remote)
     pub repo_or_url: String,
@@ -261,54 +259,26 @@ impl<'a> From<&'a ReviewThread> for CompactReviewThread<'a> {
     }
 }
 
+// command metadata lives here rather than on `Args` because flattening an `Args`
+// into `MainCmd` would otherwise leak its name and alias into the parent command
+#[derive(Parser, Debug)]
+#[command(name = "pr-context")]
+#[command(about = "Fetches thread-aware PR review context from GitHub")]
+#[command(visible_alias = "prc")]
+struct Standalone {
+    #[command(flatten)]
+    args: Args,
+}
+
 pub fn run(_sh: &Shell, args: &[OsString]) -> Result<()> {
-    execute(Args::parse_from(args).into())
+    execute(Standalone::parse_from(args).args)
 }
 
-pub fn run_with_flags(_sh: &Shell, args: crate::cmd::main_cmd::PrContextArgs) -> Result<()> {
-    execute(args.into())
+pub fn run_with_flags(_sh: &Shell, args: Args) -> Result<()> {
+    execute(args)
 }
 
-#[derive(Debug, Clone)]
-struct PrContextOptions {
-    repo_or_url: String,
-    pr_number: Option<u64>,
-    token: Option<String>,
-    code_only: bool,
-    unresolved_only: bool,
-    compact: bool,
-    format: OutputFormat,
-}
-
-impl From<Args> for PrContextOptions {
-    fn from(value: Args) -> Self {
-        Self {
-            repo_or_url: value.repo_or_url,
-            pr_number: value.pr_number,
-            token: value.token,
-            code_only: value.code_only,
-            unresolved_only: value.unresolved_only,
-            compact: value.compact,
-            format: value.format,
-        }
-    }
-}
-
-impl From<crate::cmd::main_cmd::PrContextArgs> for PrContextOptions {
-    fn from(value: crate::cmd::main_cmd::PrContextArgs) -> Self {
-        Self {
-            repo_or_url: value.repo_or_url,
-            pr_number: value.pr_number,
-            token: value.token,
-            code_only: value.code_only,
-            unresolved_only: value.unresolved_only,
-            compact: value.compact,
-            format: value.format,
-        }
-    }
-}
-
-fn execute(options: PrContextOptions) -> Result<()> {
+fn execute(options: Args) -> Result<()> {
     let (owner, repo, number) = parse_input(&options.repo_or_url, options.pr_number)?;
     let mut context = runtime::block_on(fetch_pr_context(&owner, &repo, number, options.token))??;
     context.apply_filters(options.code_only, options.unresolved_only);
