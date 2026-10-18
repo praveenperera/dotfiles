@@ -4,30 +4,25 @@ This directory contains the OpenCode configuration.
 
 ## Bootstrap Setup
 
-After running `bootstrap`, you need to:
+After running `bootstrap`, authenticate with providers:
 
-1. Install dependencies:
-   ```bash
-   cd ~/.config/opencode
-   bun install
-   ```
+```bash
+# Claude Pro/Max
+opencode auth login
+# Select Anthropic -> Claude Pro/Max
 
-2. Authenticate with providers:
-   ```bash
-   # Claude Pro/Max
-   opencode auth login
-   # Select Anthropic -> Claude Pro/Max
-   
-   # ChatGPT Plus/Pro
-   opencode auth login
-   # Select OpenAI -> ChatGPT Plus/Pro (Codex Subscription)
-   ```
+# ChatGPT Plus/Pro
+opencode auth login
+# Select OpenAI -> ChatGPT Plus/Pro (Codex Subscription)
+```
 
 ## Configuration
 
 - `opencode.json` - Main OpenCode config with provider settings
-- `package.json` - Plugin dependencies
-- `bun.lock` - Dependency lockfile
+
+The configuration needs no package manager. Local plugins are `.ts` files under
+`plugins/`, and package plugins install into the OpenCode cache through
+`opencode plugin add`.
 
 ## Agents Configured
 
