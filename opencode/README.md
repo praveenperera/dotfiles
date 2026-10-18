@@ -1,6 +1,6 @@
 # OpenCode Configuration
 
-This directory contains the OpenCode configuration with oh-my-opencode plugin.
+This directory contains the OpenCode configuration.
 
 ## Bootstrap Setup
 
@@ -25,9 +25,8 @@ After running `bootstrap`, you need to:
 
 ## Configuration
 
-- `opencode.json` - Main OpenCode config with plugins and provider settings
-- `oh-my-opencode.json` - oh-my-opencode plugin configuration
-- `package.json` - Plugin dependencies (uses hotfix branch for openai-codex-auth)
+- `opencode.json` - Main OpenCode config with provider settings
+- `package.json` - Plugin dependencies
 - `bun.lock` - Dependency lockfile
 
 ## Agents Configured

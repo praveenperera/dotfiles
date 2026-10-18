@@ -1,9 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "permission": "allow",
-  "plugin": [
-    "opencode-openai-codex-auth"
-  ],
   "tools": {
     "websearch_exa": true
   },
