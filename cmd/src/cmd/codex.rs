@@ -873,7 +873,7 @@ mod tests {
                 limit_multiplier: 1.0,
             }),
             weekly: Some(UsageWindowSnapshot {
-                used_percent: 73.0,
+                used_percent: 76.0,
                 reset_at: Some(
                     Local
                         .with_ymd_and_hms(2026, 4, 2, 0, 30, 0)
@@ -898,7 +898,7 @@ mod tests {
         );
 
         assert_eq!(five_hour, " 42% (-8%) (11:45 AM)");
-        assert_eq!(weekly, " 73% (+2%) (Thu 12:30 AM)");
+        assert_eq!(weekly, " 76% (+2%) (Thu 12:30 AM)");
     }
 
     #[test]

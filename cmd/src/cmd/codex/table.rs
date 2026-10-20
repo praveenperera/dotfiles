@@ -1,8 +1,8 @@
 use super::*;
 use chrono::{Datelike, LocalResult, NaiveDate, NaiveTime, Weekday};
 
-const WEEKDAY_WEEKLY_USAGE_PERCENT: f64 = 90.0 / 5.0;
-const WEEKEND_WEEKLY_USAGE_PERCENT: f64 = 10.0 / 2.0;
+const WEEKDAY_WEEKLY_USAGE_PERCENT: f64 = 80.0 / 5.0;
+const WEEKEND_WEEKLY_USAGE_PERCENT: f64 = 20.0 / 2.0;
 
 pub(super) fn print_compact_profile_table(rows: &[ProfileRow]) {
     let totals = compact_profile_totals(rows);
@@ -1966,17 +1966,17 @@ mod tests {
     }
 
     #[test]
-    fn pace_delta_uses_ten_total_weekend_points_for_weekly_window() {
+    fn pace_delta_uses_twenty_total_weekend_points_for_weekly_window() {
         let reset_at = weekly_pace_reset_at();
         let saturday = local_datetime(2026, 6, 27, 0, 0, 0).with_timezone(&Utc);
         let sunday = local_datetime(2026, 6, 28, 0, 0, 0).with_timezone(&Utc);
         let saturday_window = UsageWindowSnapshot {
-            used_percent: 90.0,
+            used_percent: 80.0,
             reset_at: Some(reset_at),
             limit_multiplier: 10.0,
         };
         let sunday_window = UsageWindowSnapshot {
-            used_percent: 95.0,
+            used_percent: 90.0,
             reset_at: Some(reset_at),
             limit_multiplier: 10.0,
         };
@@ -2197,11 +2197,11 @@ mod tests {
     }
 
     fn weekly_pace_now_at_10_percent() -> chrono::DateTime<Utc> {
-        local_datetime(2026, 6, 22, 13, 20, 0).with_timezone(&Utc)
+        local_datetime(2026, 6, 22, 15, 0, 0).with_timezone(&Utc)
     }
 
     fn weekly_pace_now_at_50_percent() -> chrono::DateTime<Utc> {
-        local_datetime(2026, 6, 24, 18, 40, 0).with_timezone(&Utc)
+        local_datetime(2026, 6, 25, 3, 0, 0).with_timezone(&Utc)
     }
 
     fn weekly_pace_reset_at() -> i64 {
@@ -2209,7 +2209,7 @@ mod tests {
     }
 
     fn weekly_pace_reset_at_for_20_percent() -> i64 {
-        local_datetime(2026, 6, 30, 16, 0, 0).timestamp()
+        local_datetime(2026, 6, 30, 21, 0, 0).timestamp()
     }
 
     fn local_datetime(
