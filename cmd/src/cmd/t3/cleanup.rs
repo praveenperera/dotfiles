@@ -3,7 +3,8 @@ use clap::Args;
 use colored::Colorize;
 use eyre::{bail, Result};
 
-use super::server::Server;
+use super::purge::{self, PurgeArgs, DEFAULT_IDLE_TIMEOUT_MINUTES};
+use super::server::{Server, StaleThread};
 
 #[derive(Debug, Clone, Args)]
 pub struct CleanupArgs {
@@ -14,6 +15,11 @@ pub struct CleanupArgs {
     /// List the threads that would be deleted without changing T3
     #[arg(long)]
     dry_run: bool,
+
+    /// Then stop T3, permanently remove every deleted thread from its
+    /// database, VACUUM it, and start T3 again (see `cmd t3 purge`)
+    #[arg(long)]
+    purge: bool,
 }
 
 pub fn cleanup(args: CleanupArgs) -> Result<()> {
@@ -28,10 +34,24 @@ pub fn cleanup(args: CleanupArgs) -> Result<()> {
     let threads = server.db(true)?.stale_settled_threads(&cutoff)?;
     if threads.is_empty() {
         println!("no settled threads idle since {cutoff}");
+    } else {
+        delete(&server, &threads, &cutoff, args.dry_run)?;
+    }
+
+    if !args.purge {
         return Ok(());
     }
 
-    for thread in &threads {
+    // deleted threads keep their pending cleanup effects for a moment, so the
+    // purge's idle wait lets those finish before it stops T3
+    purge::purge(PurgeArgs {
+        idle_timeout_minutes: DEFAULT_IDLE_TIMEOUT_MINUTES,
+        dry_run: args.dry_run,
+    })
+}
+
+fn delete(server: &Server, threads: &[StaleThread], cutoff: &str, dry_run: bool) -> Result<()> {
+    for thread in threads {
         let project = thread.project.as_deref().unwrap_or("?");
         println!(
             "{}  {}  {project}  {}",
@@ -39,18 +59,13 @@ pub fn cleanup(args: CleanupArgs) -> Result<()> {
         );
     }
 
-    let verb = if args.dry_run {
-        "would delete"
-    } else {
-        "deleting"
-    };
-
+    let verb = if dry_run { "would delete" } else { "deleting" };
     println!(
         "{verb} {} settled threads idle since {cutoff}",
         threads.len()
     );
 
-    if args.dry_run {
+    if dry_run {
         return Ok(());
     }
 
@@ -58,7 +73,7 @@ pub fn cleanup(args: CleanupArgs) -> Result<()> {
     // import's 5 minute token
     let client = server.client("cmd t3 cleanup", "30m")?;
     let mut failed = 0;
-    for thread in &threads {
+    for thread in threads {
         if let Err(error) = client.delete_thread(&thread.id) {
             failed += 1;
             eprintln!(

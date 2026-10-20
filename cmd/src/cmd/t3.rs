@@ -1,6 +1,7 @@
 mod background;
 mod cleanup;
 mod picker;
+mod purge;
 mod server;
 mod transcript;
 
@@ -14,6 +15,7 @@ use eyre::{bail, eyre, Result};
 
 use background::BackgroundAgent;
 use cleanup::CleanupArgs;
+use purge::PurgeArgs;
 use server::{Db, NewThread, Server};
 use transcript::{same_dir, Provider, Session};
 
@@ -29,6 +31,10 @@ pub enum T3Cmd {
 
     /// Delete settled threads that have been idle for a while
     Cleanup(CleanupArgs),
+
+    /// Stop T3, permanently remove deleted threads from its database, VACUUM
+    /// it, and start T3 again
+    Purge(PurgeArgs),
 }
 
 #[derive(Debug, Clone, Args)]
@@ -59,6 +65,7 @@ pub fn run_with_flags(flags: T3) -> Result<()> {
     match flags.subcommand {
         T3Cmd::Import(args) => import(args),
         T3Cmd::Cleanup(args) => cleanup::cleanup(args),
+        T3Cmd::Purge(args) => purge::purge(args),
     }
 }
 

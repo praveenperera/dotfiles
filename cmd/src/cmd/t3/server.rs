@@ -28,15 +28,20 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 /// The running T3 server, found through the state file it writes once listening
 #[derive(Debug)]
 pub struct Server {
-    userdata: PathBuf,
+    pub userdata: PathBuf,
+    pub pid: u32,
+    pub service_managed: bool,
     origin: String,
     bin: PathBuf,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct RuntimeState {
     pid: u32,
     origin: String,
+    #[serde(default)]
+    service_managed: bool,
 }
 
 #[derive(Deserialize)]
@@ -89,13 +94,19 @@ impl Server {
 
         Ok(Self {
             userdata,
+            pid: state.pid,
+            service_managed: state.service_managed,
             origin: state.origin,
             bin: trusted,
         })
     }
 
+    pub fn db_path(&self) -> PathBuf {
+        self.userdata.join("statev2.sqlite")
+    }
+
     pub fn db(&self, read_only: bool) -> Result<Db> {
-        let path = self.userdata.join("statev2.sqlite");
+        let path = self.db_path();
         let flags = if read_only {
             OpenFlags::SQLITE_OPEN_READ_ONLY
         } else {
