@@ -9,6 +9,8 @@ const HOST: &str = "praveen@ai5090";
 /// Checks out the Homebased skill at the installed Homebased release
 const HOMEBASED_SKILL_SYNC: &str = "bin/homebased-skill-sync";
 const UPDATE_COMMAND: &str = "/home/praveen/.local/bin/fleet-update";
+/// Pulls dotfiles on ai5090 and its code container
+const DFU_COMMAND: &str = "/home/praveen/.local/bin/dfu";
 
 /// Terminal type for ssh and tmux when the caller has no usable one
 const FALLBACK_TERM: &str = "xterm-256color";
@@ -84,12 +86,14 @@ pub fn run_with_flags(sh: &Shell, flags: Fleet) -> Result<()> {
     }
 }
 
+// called by path because a non-interactive ssh shell has no ~/.local/bin on PATH
 fn run_dfu(sh: &Shell) -> Result<()> {
     if on_ai5090(sh) {
-        cmd!(sh, "dfu").run()?;
+        sh.cmd(DFU_COMMAND).run()?;
     } else {
-        cmd!(sh, "ssh {HOST} dfu").run()?;
+        cmd!(sh, "ssh -o BatchMode=yes {HOST} {DFU_COMMAND}").run()?;
     }
+
     Ok(())
 }
 
