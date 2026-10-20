@@ -410,6 +410,8 @@ export PATH="/opt/homebrew/bin:$PATH"
 {% if os == Os::MacOS %}
 export RUSTC_WRAPPER=$(which sccache)
 export SCCACHE_CACHE_SIZE="50G"
+# keep the compiler cache off the internal ssd when the cache disk is mounted
+[[ -n $DEV_CACHE_ROOT ]] && export SCCACHE_DIR="$DEV_CACHE_ROOT/sccache/shared"
 export HOMEBREW_NO_AUTO_UPDATE=1
 {% endif %}
 
