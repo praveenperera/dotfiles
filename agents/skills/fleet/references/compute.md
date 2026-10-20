@@ -23,16 +23,7 @@ The host provides the NVIDIA kernel driver. The `code` container provides the us
 
 ## Shared storage
 
-`code` mounts an Incus custom volume at `/shared`:
-
-| Path | Use |
-| --- | --- |
-| `/shared/datasets` | Reusable training data |
-| `/shared/models` | Model files |
-| `/shared/checkpoints` | Checkpoints, separated by project and run |
-| `/shared/artifacts` | Shared outputs |
-
-The host and Mac mini do not mount `/shared`. Create or download large data into `/shared` from `code` when possible. The volume is separate from the container root, so it survives container recreation. Keep ordinary source checkouts in the container home directory.
+`code` keeps active data in `/shared` on the Lexar and finished, read-mostly data in `/data` on the Kingston. Read [storage.md](storage.md) for the layout, where to write new data, and how to move finished data.
 
 Transfer host files through Incus and set container ownership:
 

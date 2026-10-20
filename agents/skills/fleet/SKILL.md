@@ -35,13 +35,14 @@ These are configured roles and addresses, not proof that a machine is online. Co
 
 - For agents and work that must survive a disconnect, remain interactive, or support a later handoff, read [sessions.md](references/sessions.md) and use a named tmux session on the execution machine. Run short, non-interactive checks and routine commands directly without creating a session.
 - For GPU work, shared files, and image builds, also read [compute.md](references/compute.md).
+- For disk layout, where to put datasets, checkpoints, and build output, moving finished data, deduplication, or cleanup on `ai5090` and `code`, read [storage.md](references/storage.md).
 - For compute administration, read `~/code/homelab/ai5090/README.md` and the relevant setup script in `ai5090/scripts/`. Do not rerun provisioning for routine work.
 - For service administration, read the relevant homelab configuration: `main.tf`, `server/etc/avahi/hosts`, `stacks/<name>/`, or `justfile`. Service stacks use `/opt/stack` in their containers.
 
 ## Storage reuse
 
 - Reuse the project's established checkout pattern and keep one writer per checkout. For long-lived agent slots such as `cove-wk1` through `cove-wk4`, use independent clones with private build and scratch directories. Use worktrees only where the project already prefers them.
-- On `code`, use `cp -a --reflink=always -- SOURCE NEW_DESTINATION` for large independent writable copies of fixtures, datasets, models, checkpoints, or SDKs. Run the copy inside the container; keep datasets, models, and checkpoints under `/shared`.
+- On `code`, use `cp -a --reflink=always -- SOURCE NEW_DESTINATION` for large independent writable copies of fixtures, datasets, models, checkpoints, or SDKs. Run the copy inside the container, within one drive: active data under `/shared`, finished data under `/data`. See [storage.md](references/storage.md).
 - On the Linux container `code`, keep Cargo build output off tmpfs. Do not set `CARGO_TARGET_DIR` to a `/tmp` path; use the configured disk-backed target directory. Use a separate disk-backed target directory for isolated concurrent work instead of cleaning a shared target directory while another build may run.
 - Keep pnpm `packageImportMethod: auto`; it tries a CoW clone, then a hard link, and then a full copy. Use `sccache` for Rust compilation when the project configures it.
 - For managed storage, copy conditions, and optional Rust build seeds, read **Reflink workflows** in `ai5090/README.md`.
