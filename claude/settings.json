@@ -102,7 +102,7 @@
       "autoCompactWindow": 425000
     },
     "claude-sonnet-5-5": {
-      "effortLevel": "medium",
+      "effortLevel": "high",
       "autoCompactWindow": 256000
     }
   },
