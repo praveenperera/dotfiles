@@ -25,7 +25,7 @@ These are configured roles and addresses, not proof that a machine is online. Co
 
 ## Boundaries
 
-- Keep `ai5090` small. Use it only for Incus, storage, NVIDIA driver work, and recovery. Do not install coding agents, Docker, or language toolchains on the host. Do not use Nix.
+- Keep `ai5090` small. Use it only for Incus, storage, NVIDIA driver work, recovery, and host maintenance. Claude Code, Codex, and Grok Build stay on the host for maintenance tasks, and `fleet-update` keeps them current; do not use the host for coding work. Do not install Docker or language toolchains on the host. Do not use Nix.
 - `code` is an Incus system container with its own nested Docker daemon and Docker/containerd stores. Never share `/var/lib/docker` or containerd stores.
 - `code` uses the single RTX 5090 with 32 GB VRAM. Incus limits `code` to 28 GiB of RAM and 28 GiB of swap and sets no CPU or GPU limits. Cap nested Docker jobs with `--memory` and `--memory-swap` as in [compute.md](references/compute.md). Check active work before a large job; do not interrupt another job to make room.
 - Do not use service machines as coding workers. Coding or training does not authorize host reconfiguration, stack deployment, or container recreation.
