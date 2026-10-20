@@ -38,12 +38,12 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     debug!("cmd run args: {args:?}");
 
     let flags = Cmd::from_args(args)?;
-    if flags.version {
-        println!("{}", env!("CARGO_PKG_VERSION"));
-        return Ok(());
-    }
 
     match flags.subcommand {
+        MainCmd::Version => {
+            println!("{}", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
         MainCmd::Release(args) => bootstrap::release(sh, args),
         MainCmd::Update(flags) => update::run_with_flags(sh, flags),
         MainCmd::Config => bootstrap::config(sh),

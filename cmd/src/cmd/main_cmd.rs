@@ -23,10 +23,6 @@ pub struct ReleaseArgs {
     arg_required_else_help = true
 )]
 pub struct Cmd {
-    /// Print version information
-    #[arg(long, short = 'V')]
-    pub version: bool,
-
     #[command(subcommand)]
     pub subcommand: MainCmd,
 }
@@ -34,6 +30,12 @@ pub struct Cmd {
 #[derive(Debug, Clone, Subcommand)]
 #[command(subcommand_value_name = "COMMAND")]
 pub enum MainCmd {
+    /// Print the cmd version
+    // a flag-style subcommand, so `-v`, `-V`, and `--version` work even though
+    // a subcommand is otherwise required
+    #[command(long_flag = "version", short_flag = 'v', short_flag_alias = 'V')]
+    Version,
+
     /// Bootstrap dotfiles
     #[command(arg_required_else_help = true)]
     Bootstrap {
@@ -656,6 +658,14 @@ mod tests {
         };
 
         assert!(matches!(subcommand, McpCmd::Add { agent: None, mcps } if mcps.is_empty()));
+    }
+
+    #[test]
+    fn parses_every_version_spelling() {
+        for arg in ["version", "-v", "-V", "--version"] {
+            let cmd = Cmd::from_args(&[OsString::from(arg)]).unwrap();
+            assert!(matches!(cmd.subcommand, MainCmd::Version), "{arg}");
+        }
     }
 
     #[test]
