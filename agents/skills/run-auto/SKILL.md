@@ -24,6 +24,8 @@ Make every decision yourself. Do not end a turn with a question, an options list
 
 Work outside the current folder or repository when the task needs it. These overrides do not lift the safety boundary: do not delete data the task does not own, force-push, publish, deploy, or spend money. When the best path needs one of those, take the best path that avoids it, log the blocked option with result `blocked`, and keep working on everything else.
 
+One exception: when the user's request invokes [ship](../ship/SKILL.md), that invocation authorizes the merge, deploy, and publish steps in its resolved plan, so run them. It still authorizes no force-push and no deletion of data the task does not own.
+
 ## Notify the user with ntfy
 
 Send a push notification with [notify.sh](scripts/notify.sh) at these points only:

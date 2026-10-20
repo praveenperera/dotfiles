@@ -1,0 +1,170 @@
+# Per-repo defaults for /ship, keyed by the origin remote's GitHub owner/repo
+#
+# Keeping this here instead of in each repo leaves work and upstream repos untouched
+#
+# Fields per repo:
+#   steps     default sequence; ship_plan.py sorts it into the canonical order
+#   deploy    commands for the deploy step; <part> is the bump level (patch unless overridden)
+#   deploy_paths, deploy_otherwise
+#             run deploy_otherwise instead of deploy when the work touches none of deploy_paths
+#   publish   commands for the opt-in publish step, kept separate because a published
+#             version cannot be taken back
+#   greptile  true when the Greptile app reviews this repo's PRs
+#   merge     "squash" (default) or "never" when someone else merges
+#   pr_repo   PR target when it differs from origin, such as an upstream for a fork
+#   pr_draft  open PRs as drafts
+#   notes     instructions the commands alone don't capture
+
+# Orgs Praveen owns; a PR target outside these always gets a Sol review
+owners = ["praveenperera", "avencera", "bitcoinppl"]
+
+# Any owned repo without an entry
+[default]
+steps = ["commit", "push", "clean"]
+
+# Any repo whose PR target is outside `owners`, listed or not
+[external]
+steps = ["sol", "commit", "push", "pr", "clean"]
+
+# -- direct to master, then deploy
+
+[repos."praveenperera/homelab"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = ["just deploy <item>"]
+notes = "Run `just deploy <item>` once per stack or item the change touched; see the deploy recipe comment for item names. Never run it without an item, since that opens an fzf picker"
+
+[repos."praveenperera/lookout-hub"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = [
+  "just deploy v<next>",
+  "git -C ~/code/homelab commit -m 'Deploy lookout-hub v<next>' -- stacks/lookout/docker-compose.yml",
+  "test \"$(git -C ~/code/homelab rev-list --count @{u}..HEAD)\" = 1 && git -C ~/code/homelab push",
+]
+notes = "<next> is one more than the lookout-hub image tag in ~/code/homelab/stacks/lookout/docker-compose.yml. The pathspec commit leaves other staged homelab work alone, but it takes each listed file whole: when another task has edits in one of them, commit only this deploy's hunks instead. The push runs only when this commit is the sole unpushed one"
+
+[repos."praveenperera/freezerwatch"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = [
+  "just deploy v<next>",
+  "git -C ~/code/homelab commit -m 'Deploy freezerwatch v<next>' -- stacks/lookout/docker-compose.yml stacks/lookout/freezerwatch.toml",
+  "test \"$(git -C ~/code/homelab rev-list --count @{u}..HEAD)\" = 1 && git -C ~/code/homelab push",
+]
+notes = "<next> is one more than the freezerwatch image tag in ~/code/homelab/stacks/lookout/docker-compose.yml. The pathspec commit leaves other staged homelab work alone, but it takes each listed file whole: when another task has edits in one of them, commit only this deploy's hunks instead. The push runs only when this commit is the sole unpushed one"
+
+[repos."avencera/superalert"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = [
+  "just deploy v<next>",
+  "git -C ~/code/homelab commit -m 'Deploy superalert v<next>' -- stacks/lookout/docker-compose.yml stacks/lookout/superalert.toml",
+  "test \"$(git -C ~/code/homelab rev-list --count @{u}..HEAD)\" = 1 && git -C ~/code/homelab push",
+]
+notes = "<next> is one more than the superalert image tag in ~/code/homelab/stacks/lookout/docker-compose.yml. The pathspec commit leaves other staged homelab work alone, but it takes each listed file whole: when another task has edits in one of them, commit only this deploy's hunks instead. The push runs only when this commit is the sole unpushed one"
+
+[repos."praveenperera/kids"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = ["just deploy"]
+
+[repos."praveenperera/apologetics"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = ["cd <site> && just deploy"]
+notes = "Run once for each site directory the change touched: bereadytoanswer, mormonsarenotchristians, notwhatyouheard, propheciesofjesus"
+
+[repos."praveenperera/dotfiles"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = [
+  "cmd release",
+  "~/.agents/skills/ship/scripts/watch_run.sh release-cmd HEAD",
+  "git pull --ff-only",
+  "cmd fleet update",
+]
+deploy_paths = ["cmd/"]
+deploy_otherwise = ["cmd fleet dfu"]
+notes = "Pushing cmd/** to master triggers release-cmd.yml, which bumps the version and commits it, hence the pull before the fleet update"
+
+# -- tools released through GitHub Actions
+
+[repos."avencera/homebased"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = [
+  "just bump <part>",
+  "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
+  "git push origin master",
+  "just release github",
+  "~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "cmd fleet update",
+]
+notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required"
+
+[repos."praveenperera/cln"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = [
+  "just bump <part>",
+  "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
+  "git push origin master",
+  "just release github",
+  "~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "cln update",
+]
+notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required"
+
+[repos."praveenperera/minid"]
+steps = ["commit", "push", "deploy", "clean", "settle"]
+deploy = [
+  "just bump <part>",
+  "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
+  "git push origin master",
+  "just release github",
+  "~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "just install",
+]
+notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required. Run `just install` on the Mac mini, over ssh when this is another machine"
+
+# -- PR gated
+
+[repos."avencera/codemode-mcp"]
+steps = ["commit", "push", "pr", "greptile", "merge", "deploy", "clean", "settle"]
+greptile = true
+deploy = [
+  "just bump <part>",
+  "just release github",
+  "~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "cmd fleet update",
+]
+notes = "`just bump` commits \"Release vX.Y.Z\" and pushes it itself; `just release github` refuses to run until that commit is on origin"
+
+[repos."avencera/speakrs"]
+steps = ["sol", "commit", "push", "pr", "greptile", "merge", "clean"]
+greptile = true
+publish = ["just publish --dry-run", "just publish"]
+
+[repos."avencera/rustywind"]
+steps = ["sol", "commit", "push", "pr", "greptile", "merge", "clean"]
+greptile = true
+notes = "CodeRabbit also reviews PRs here; address its comments in the greptile step too. Releases follow RELEASE.md by hand, so there is no publish step"
+
+[repos."bitcoinppl/cove"]
+steps = ["sol", "commit", "push", "pr", "greptile", "clean"]
+greptile = true
+notes = "Merge is opt-in: Praveen runs `/ship merge` when he wants it. Stacked PRs merge with `gh stack merge <n> --squash --yes`"
+
+[repos."avencera/rembuild"]
+steps = ["commit", "push", "clean"]
+greptile = true
+deploy = ["just deploy"]
+
+# -- external
+
+[repos."praveenperera/cuda-rust"]
+steps = ["sol", "commit", "push", "pr", "clean"]
+pr_repo = "NVIDIA/cuda-rust"
+pr_draft = true
+merge = "never"
+notes = "origin is the fork; open the PR with `gh pr create --draft --repo NVIDIA/cuda-rust --base main --head praveenperera:<branch>`. NVIDIA maintainers merge"
+
+# -- commit and push only
+
+[repos."praveenperera/research"]
+steps = ["commit", "push", "clean"]
+
+[repos."bitcoinppl/signer-lab"]
+steps = ["commit", "push", "clean"]
