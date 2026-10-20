@@ -72,6 +72,14 @@ class ResolveTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "'deploy' needs 'merge'"):
             MODULE.resolve(CONFIG, "me/app", ["pr", "-merge"])
 
+    def test_minus_confirm_skips_the_go_ahead_without_changing_steps(self):
+        default = MODULE.resolve(CONFIG, "me/app", [])
+        skipped = MODULE.resolve(CONFIG, "me/app", ["-confirm"])
+
+        self.assertTrue(default.confirm)
+        self.assertFalse(skipped.confirm)
+        self.assertEqual(skipped.steps, default.steps)
+
     def test_only_replaces_the_default_but_keeps_prerequisites(self):
         plan = MODULE.resolve(CONFIG, "me/app", ["only", "merge"])
 

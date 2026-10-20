@@ -1,7 +1,7 @@
 ---
 name: ship
-description: Finish the current work with the repository's configured sequence (commit, push, PR, Sol review, Greptile 5/5, merge, deploy, clean up, settle), adjusted by short words such as `+sol`, `-deploy`, `minor`, or `?` for a status check. Use only when the user invokes /ship or $ship.
-argument-hint: "[? | +step | -step | only step... | high | minor | major]"
+description: Finish the current work with the repository's configured sequence (commit, push, PR, Sol review, Greptile 5/5, merge, deploy, clean up, settle), adjusted by short words such as `+sol`, `-deploy`, `minor`, `-confirm` to skip the go-ahead, or `?` for a status check. Use only when the user invokes /ship or $ship.
+argument-hint: "[? | -confirm | +step | -step | only step... | high | minor | major]"
 disable-model-invocation: true
 ---
 
@@ -18,16 +18,17 @@ python3 -I ~/.agents/skills/ship/scripts/ship_plan.py -- "$ARGUMENTS"
 ```
 
 - On a nonzero exit, report the error line and stop. Do not guess what the word meant.
-- Otherwise confirm the plan before changing anything. Show the `ship:` and `plan:` lines, then the concrete actions each step will take in this checkout: the branch, the files or hunks to commit, the PR target, the deploy commands with their placeholders filled, and what clean will remove. Wait for the user's go-ahead. Inside `/run-auto`, log the plan in the decision log and start instead.
+- Otherwise confirm the plan before changing anything. Show the `ship:` and `plan:` lines, then the concrete actions each step will take in this checkout: the branch, the files or hunks to commit, the PR target, the deploy commands with their placeholders filled, and what clean will remove. Wait for the user's go-ahead. When the output has `confirm: skipped`, from `-confirm`, start right after showing the plan instead. Inside `/run-auto`, log the plan in the decision log and start.
+- Questions below still come first, even with `-confirm`: stop and ask, then start once they are answered.
 - Ask instead of assuming when the repository is new to the table, which the `ship:` line shows as `default fallback` or `external fallback`. Ask which steps it should use and what deploy means there, and offer to add its entry to [repos.toml](repos.toml) before running.
 - Also ask when anything is unclear: which changes belong to this task, a placeholder the notes don't settle, or a plan that looks wrong for the work. Put every question in the same message as the plan.
 - Save `--json` output as `_scratch/ship/<task>/plan.json`, where `<task>` is the branch name or a short slug of the work. Record each step's status there as it finishes so a later turn, such as a PR-watch wake-up, resumes at the right step.
 
-Words: a bare or `+` step adds it, `-step` removes it, `only` replaces the default with the steps that follow, `high` or `xhigh` sets the Sol effort, `patch`, `minor`, or `major` sets the bump, and `?` reports status without changing anything. The resolver also accepts dictation variants such as "soul", "reptile", and "XI".
+Words: a bare or `+` step adds it, `-step` removes it, `only` replaces the default with the steps that follow, `high` or `xhigh` sets the Sol effort, `patch`, `minor`, or `major` sets the bump, `-confirm` skips waiting for the go-ahead, and `?` reports status without changing anything. The resolver also accepts dictation variants such as "soul", "reptile", and "XI".
 
 ## Authorization
 
-Invoking `/ship` and confirming its plan is explicit authorization for every step in that plan, including merge, deploy, and publish, and it holds inside `/run-auto`. It authorizes nothing else: no force-push, history rewrite, or `--no-verify`; no step the plan lacks; and no deletion of anything this run did not create.
+Invoking `/ship` and confirming its plan, or invoking it with `-confirm`, is explicit authorization for every step in that plan, including merge, deploy, and publish, and it holds inside `/run-auto`. It authorizes nothing else: no force-push, history rewrite, or `--no-verify`; no step the plan lacks; and no deletion of anything this run did not create.
 
 ## Status mode
 

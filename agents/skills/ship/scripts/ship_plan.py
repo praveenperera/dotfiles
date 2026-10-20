@@ -66,6 +66,7 @@ class Plan:
     external: bool
     pr_repo: str
     mode: str = "run"
+    confirm: bool = True
     steps: list[str] = field(default_factory=list)
     implied: list[str] = field(default_factory=list)
     sol_effort: str = "xhigh"
@@ -173,6 +174,9 @@ def resolve(
 
         if word in STATUS_WORDS:
             plan.mode = "status"
+        elif word in ("-confirm", "+confirm", "confirm"):
+            # `-confirm` starts without waiting for a go-ahead
+            plan.confirm = not word.startswith("-")
         elif word == "only":
             only = True
         elif word in EFFORTS:
@@ -372,6 +376,8 @@ def main() -> int:
 
     if plan.mode == "status":
         print("mode: status only, change nothing")
+    elif not plan.confirm:
+        print("confirm: skipped")
 
     print(f"plan: {plan.summary()}")
 
