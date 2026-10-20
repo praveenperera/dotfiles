@@ -1,4 +1,6 @@
 use std::env;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use clap::Args;
 use colored::Colorize;
@@ -10,39 +12,81 @@ use crate::cmd::{bootstrap, install};
 
 const REPO: &str = "praveenperera/dotfiles";
 
+// release-cmd.yml builds take 3 to 8 minutes; the limit leaves room for a
+// queued runner without hanging forever on a failed build
+const WAIT_POLL_INTERVAL: Duration = Duration::from_secs(15);
+const WAIT_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+
 #[derive(Debug, Clone, Args)]
 pub struct Update {
     /// Reinstall the latest release even if it is not newer
     #[arg(short, long)]
     pub force: bool,
+
+    /// Wait for a release that is still building to publish this platform's
+    /// binary instead of failing
+    #[arg(short, long)]
+    pub wait: bool,
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Update) -> Result<()> {
     let current = Version::parse(env!("CARGO_PKG_VERSION"))?;
-    let release = crate::runtime::block_on(install::fetch_latest_release(REPO))??;
-    let latest = parse_tag(&release.tag_name)?;
+    let started = Instant::now();
+    let mut announced_wait = None;
 
-    if latest <= current && !flags.force {
-        println!(
-            "{} cmd {current} (latest release is {latest})",
-            "Up to date".green()
-        );
-        return Ok(());
-    }
+    // re-fetch the latest release each poll, since a newer push can replace
+    // the one being waited on
+    let (latest, asset) = loop {
+        let release = crate::runtime::block_on(install::fetch_latest_release(REPO))??;
+        let latest = parse_tag(&release.tag_name)?;
 
-    let asset_name = asset_name(&release.tag_name, env::consts::OS, env::consts::ARCH)?;
+        if latest <= current && !flags.force {
+            println!(
+                "{} cmd {current} (latest release is {latest})",
+                "Up to date".green()
+            );
+            return Ok(());
+        }
 
-    // the release is created before its build jobs upload assets, so a fresh tag can be empty
-    let asset = release
-        .assets
-        .iter()
-        .find(|asset| asset.name == asset_name)
-        .ok_or_else(|| {
-            eyre!(
-                "release {} has no {asset_name} asset yet, the build may still be running",
+        let asset_name = asset_name(&release.tag_name, env::consts::OS, env::consts::ARCH)?;
+
+        // the release is created before its build jobs upload assets, so a fresh tag can be empty
+        if let Some(asset) = release
+            .assets
+            .into_iter()
+            .find(|asset| asset.name == asset_name)
+        {
+            break (latest, asset);
+        }
+
+        if !flags.wait {
+            return Err(eyre!(
+                "release {} has no {asset_name} asset yet, the build may still be running; \
+                 rerun with --wait to wait for it",
                 release.tag_name
-            )
-        })?;
+            ));
+        }
+
+        if started.elapsed() >= WAIT_TIMEOUT {
+            return Err(eyre!(
+                "release {} still has no {asset_name} asset after {} minutes, check the \
+                 release-cmd workflow on {REPO}",
+                release.tag_name,
+                WAIT_TIMEOUT.as_secs() / 60
+            ));
+        }
+
+        if announced_wait.as_ref() != Some(&latest) {
+            println!(
+                "{} for the {} build of cmd {latest}",
+                "Waiting".yellow(),
+                asset_name.blue()
+            );
+            announced_wait = Some(latest);
+        }
+
+        thread::sleep(WAIT_POLL_INTERVAL);
+    };
 
     install::ensure_release_dependencies(sh)?;
 

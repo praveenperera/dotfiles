@@ -130,7 +130,13 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
 
     // last, because a just-tagged release has no assets until its build
     // finishes; this also refreshes the btx and prc links to the new binary
-    update::run_with_flags(sh, update::Update { force: false })
+    update::run_with_flags(
+        sh,
+        update::Update {
+            force: false,
+            wait: false,
+        },
+    )
 }
 
 fn require_update_command(on_ai5090: bool) -> Result<()> {
