@@ -97,6 +97,7 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
     let local = on_ai5090(sh);
     require_update_command(local)?;
 
+    clear_stale_session(local, mode.tmux_session())?;
     let (program, args) = update_argv(local, mode);
     run_attached(program, &args)?;
 
@@ -144,6 +145,78 @@ fn require_update_command(on_ai5090: bool) -> Result<()> {
     Err(eyre!(
         "fleet-update is not installed at {UPDATE_COMMAND}; setup-host.sh installs it"
     ))
+}
+
+/// Remove an update session whose panes are not running `fleet-update`
+///
+/// `new-session -A` attaches to any session with the name and ignores the
+/// command, which is how an interrupted run is resumed. tmux-continuum
+/// restores saved sessions after a reboot as plain shells, so a session saved
+/// mid-update would otherwise swallow every later update without running it
+fn clear_stale_session(on_ai5090: bool, session: &str) -> Result<()> {
+    let target = format!("={session}");
+    let panes = tmux_command(
+        on_ai5090,
+        &[
+            "list-panes",
+            "-s",
+            "-t",
+            &target,
+            "-F",
+            "#{pane_start_command}",
+        ],
+    )
+    .stderr(Stdio::null())
+    .output()
+    .wrap_err("failed to run `tmux list-panes`")?;
+
+    // no such session, so `new-session` creates a fresh one
+    if !panes.status.success() {
+        return Ok(());
+    }
+
+    if runs_update(&String::from_utf8_lossy(&panes.stdout)) {
+        return Ok(());
+    }
+
+    eprintln!("tmux session {session} is not running {UPDATE_COMMAND}; replacing it");
+    let status = tmux_command(on_ai5090, &["kill-session", "-t", &target])
+        .status()
+        .wrap_err("failed to run `tmux kill-session`")?;
+
+    if status.success() {
+        return Ok(());
+    }
+
+    Err(eyre!("could not remove stale tmux session {session}"))
+}
+
+/// Whether any pane in `start_commands`, one per line, was started as `fleet-update`
+fn runs_update(start_commands: &str) -> bool {
+    start_commands
+        .lines()
+        .any(|command| command.trim_start_matches('"').starts_with(UPDATE_COMMAND))
+}
+
+/// A non-interactive tmux invocation on ai5090, through ssh when called elsewhere
+fn tmux_command(on_ai5090: bool, args: &[&str]) -> Command {
+    if on_ai5090 {
+        let mut command = Command::new("tmux");
+        command.args(args);
+        return command;
+    }
+
+    // ssh joins its arguments into one line for the remote zsh, which would
+    // expand `=name` into a command path and `#` into a comment
+    let mut command = Command::new("ssh");
+    command
+        .args(["-o", "BatchMode=yes", HOST, "tmux"])
+        .args(args.iter().map(|arg| shell_quote(arg)));
+    command
+}
+
+fn shell_quote(arg: &str) -> String {
+    format!("'{}'", arg.replace('\'', "'\\''"))
 }
 
 fn update_argv(on_ai5090: bool, mode: UpdateMode) -> (&'static str, Vec<&'static str>) {
@@ -246,9 +319,26 @@ fn is_remote_updated_host(hostname: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        fallback_term, is_ai5090_host, is_remote_updated_host, update_argv, UpdateMode,
-        FALLBACK_TERM,
+        fallback_term, is_ai5090_host, is_remote_updated_host, runs_update, shell_quote,
+        update_argv, UpdateMode, FALLBACK_TERM,
     };
+
+    #[test]
+    fn reuses_only_a_session_that_runs_fleet_update() {
+        assert!(runs_update("/home/praveen/.local/bin/fleet-update\n"));
+        assert!(runs_update(
+            "\"/home/praveen/.local/bin/fleet-update\" --all\n"
+        ));
+        // tmux-continuum restores a saved session as a shell with no start command
+        assert!(!runs_update("\n"));
+        assert!(!runs_update("zsh\n"));
+    }
+
+    #[test]
+    fn quotes_tmux_arguments_for_the_remote_shell() {
+        assert_eq!(shell_quote("=fleet-update"), "'=fleet-update'");
+        assert_eq!(shell_quote("it's"), "'it'\\''s'");
+    }
 
     #[test]
     fn sets_a_terminal_type_only_when_tmux_cannot_use_the_current_one() {
