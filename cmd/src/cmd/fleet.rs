@@ -3,7 +3,7 @@ use eyre::{eyre, Result, WrapErr};
 use std::process::{Command, Stdio};
 use xshell::{cmd, Shell};
 
-use crate::{dotfiles_dir, util::has_tool};
+use crate::{cmd::update, dotfiles_dir, util::has_tool};
 
 const HOST: &str = "praveen@ai5090";
 /// Checks out the Homebased skill at the installed Homebased release
@@ -26,10 +26,10 @@ pub enum FleetCmd {
     DotfilesUp,
 
     /// Pull ~/code/dotfiles, then update Codex, Claude Code, Grok Build, and
-    /// installed Homebased on ai5090 and code; update Homebased and
-    /// codemode-mcp on the calling machine too if they are installed and it
-    /// was not updated remotely. Each Homebased update also checks out the
-    /// Homebased skill at the matching release tag
+    /// installed cmd, cln, and Homebased on ai5090 and code; update cmd and
+    /// any installed cln, Homebased, and codemode-mcp on the calling machine
+    /// too if it was not updated remotely. Each Homebased update also checks
+    /// out the Homebased skill at the matching release tag
     ///
     /// Without --all, this uses no sudo and changes no system packages;
     /// running Homebased daemons restart after their update
@@ -105,6 +105,10 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
         return Ok(());
     }
 
+    if has_tool(sh, "cln") {
+        run_attached("cln", &["update"])?;
+    }
+
     if has_tool(sh, "homebased") {
         run_attached("homebased", &["update"])?;
 
@@ -120,7 +124,9 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
         run_attached("codemode-mcp", &["update"])?;
     }
 
-    Ok(())
+    // last, because a just-tagged release has no assets until its build
+    // finishes; this also refreshes the btx and prc links to the new binary
+    update::run_with_flags(sh, update::Update { force: false })
 }
 
 fn require_update_command(on_ai5090: bool) -> Result<()> {
