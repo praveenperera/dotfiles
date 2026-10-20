@@ -12,7 +12,7 @@ Use the Mac mini to coordinate work. Use `code.local` for remote development, im
 | Machine | Address / SSH user | Role |
 | --- | --- | --- |
 | Mac mini (`main`, via Tailscale) | Local macOS, `praveen` | Main workstation, local agents, and macOS work |
-| `ai5090.local` | `192.168.1.20`, `praveen` | Ubuntu Incus host; host administration only |
+| `ai5090.local` | `192.168.1.20`, `praveen` | Ubuntu Incus host; host administration and Homebased maintenance tasks only |
 | `code.local` | `192.168.1.18`, `praveen` | Incus container on ai5090; coding agents, compilation, AI development, image builds, training jobs, GPU workloads, datasets, and checkpoints |
 | `server.local` | `192.168.1.50`, `root` | Separate Proxmox host for the service containers below |
 | `media.local` | `192.168.1.11`, `root` | Plex, Jellyfin, downloads, media automation, and home dashboard |
@@ -25,7 +25,7 @@ These are configured roles and addresses, not proof that a machine is online. Co
 
 ## Boundaries
 
-- Keep `ai5090` small. Use it only for Incus, storage, NVIDIA driver work, recovery, and host maintenance. Claude Code, Codex, and Grok Build stay on the host for maintenance tasks, and `fleet-update` keeps them current; do not use the host for coding work. Do not install Docker or language toolchains on the host. Do not use Nix.
+- Keep `ai5090` small. Use it only for Incus, storage, NVIDIA driver work, recovery, and host maintenance. Claude Code, Codex, and Grok Build stay on the host for maintenance tasks, and `fleet-update` keeps them current; do not use the host for coding work. Homebased runs on the host as a Fleet peer, so a host maintenance task can be submitted there; send coding, builds, and GPU jobs to `code`. Do not install Docker or language toolchains on the host. Do not use Nix.
 - `code` is an Incus system container with its own nested Docker daemon and Docker/containerd stores. Never share `/var/lib/docker` or containerd stores.
 - `code` uses the single RTX 5090 with 32 GB VRAM. Incus limits `code` to 28 GiB of RAM and 28 GiB of swap and sets no CPU or GPU limits. Cap nested Docker jobs with `--memory` and `--memory-swap` as in [compute.md](references/compute.md). Check active work before a large job; do not interrupt another job to make room.
 - Do not use service machines as coding workers. Coding or training does not authorize host reconfiguration, stack deployment, or container recreation.
