@@ -109,11 +109,11 @@ impl Server {
         Ok(Db(conn))
     }
 
-    /// Short-lived admin token, revoked when the returned client drops
-    pub fn client(&self) -> Result<Client> {
+    /// Short-lived admin token labelled `label`, revoked when the returned client drops
+    pub fn client(&self, label: &str, ttl: &str) -> Result<Client> {
         let output = Command::new(&self.bin)
-            .args(["auth", "session", "issue", "--json", "--ttl", "5m"])
-            .args(["--label", "cmd t3 import", "--log-level", "error"])
+            .args(["auth", "session", "issue", "--json", "--ttl", ttl])
+            .args(["--label", label, "--log-level", "error"])
             .output()
             .wrap_err_with(|| format!("run {}", self.bin.display()))?;
 
@@ -321,6 +321,13 @@ pub struct NewThread {
     pub runtime_mode: String,
 }
 
+pub struct StaleThread {
+    pub id: String,
+    pub title: String,
+    pub updated_at: String,
+    pub project: Option<String>,
+}
+
 /// T3's v2 state database. The only write is the Claude conversation head on a
 /// provider thread this tool just created, which T3 replaces after every turn
 pub struct Db(Connection);
@@ -393,6 +400,35 @@ impl Db {
             )
             .optional()
             .map_err(Into::into)
+    }
+
+    /// Live threads that are settled, not archived, and had no activity since
+    /// `cutoff` (an ISO timestamp, which T3 stores in a sortable UTC format),
+    /// oldest first. Settled means a stored `settledAt`, matching T3's own
+    /// settled list, which leaves archived threads out
+    pub fn stale_settled_threads(&self, cutoff: &str) -> Result<Vec<StaleThread>> {
+        let mut statement = self.0.prepare(
+            "SELECT thread.thread_id, thread.title, thread.updated_at, project.title
+             FROM orchestration_v2_projection_threads AS thread
+             LEFT JOIN projection_projects AS project ON project.project_id = thread.project_id
+             WHERE thread.deleted_at IS NULL
+               AND thread.archived_at IS NULL
+               AND json_valid(thread.payload_json)
+               AND json_extract(thread.payload_json, '$.settledAt') IS NOT NULL
+               AND thread.updated_at < ?1
+             ORDER BY thread.updated_at",
+        )?;
+
+        let threads = statement.query_map([cutoff], |row| {
+            Ok(StaleThread {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                updated_at: row.get(2)?,
+                project: row.get(3)?,
+            })
+        })?;
+
+        threads.collect::<Result<_, _>>().map_err(Into::into)
     }
 
     /// Project whose workspace root is exactly `root`

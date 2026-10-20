@@ -1,4 +1,5 @@
 mod background;
+mod cleanup;
 mod picker;
 mod server;
 mod transcript;
@@ -12,6 +13,7 @@ use colored::Colorize;
 use eyre::{bail, eyre, Result};
 
 use background::BackgroundAgent;
+use cleanup::CleanupArgs;
 use server::{Db, NewThread, Server};
 use transcript::{same_dir, Provider, Session};
 
@@ -24,6 +26,9 @@ pub struct T3 {
 pub enum T3Cmd {
     /// Continue a Claude Code or Codex CLI session as a T3 Code thread
     Import(ImportArgs),
+
+    /// Delete settled threads that have been idle for a while
+    Cleanup(CleanupArgs),
 }
 
 #[derive(Debug, Clone, Args)]
@@ -53,6 +58,7 @@ pub struct ImportArgs {
 pub fn run_with_flags(flags: T3) -> Result<()> {
     match flags.subcommand {
         T3Cmd::Import(args) => import(args),
+        T3Cmd::Cleanup(args) => cleanup::cleanup(args),
     }
 }
 
@@ -218,7 +224,7 @@ fn import_session(session: &Session, dry_run: bool, force: bool) -> Result<Outco
         });
     }
 
-    let client = server.client()?;
+    let client = server.client("cmd t3 import", "5m")?;
     let project_id = match &target.project_id {
         Some(project_id) => project_id.clone(),
         None => client.create_project(&target.root)?,
