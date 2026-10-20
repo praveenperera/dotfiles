@@ -12,6 +12,8 @@ __pycache__/
 # .claude machine-specific files
 /claude/.credentials.json
 /claude/.claude.json
+# left behind when a write of .claude.json is interrupted
+/claude/.claude.json.tmp.*
 claude/*.jsonl
 claude/*.db
 claude/config.json
@@ -28,6 +30,8 @@ claude/sessions
 
 # .config/opencode machine-specific files
 opencode/.opencode.json
+# the local OpenCode server password
+opencode/service.json
 opencode/history/
 opencode/sessions/
 opencode/logs/
