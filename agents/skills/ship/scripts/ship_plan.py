@@ -9,6 +9,8 @@ Usage:
   ship_plan.py -- [WORD ...]            plan for the repo in the current directory
   ship_plan.py --repo OWNER/NAME -- ... plan for a named repo
   ship_plan.py --json -- ...            machine-readable plan
+  ship_plan.py --task SLUG -- ...       also save the plan to _scratch/ship/SLUG/plan.json
+  ship_plan.py --task SLUG --done STEP...  record finished steps in that plan
   ship_plan.py --check                  validate repos.toml
 """
 
@@ -260,6 +262,45 @@ def resolve(
     return plan
 
 
+def task_dir(cwd: Path, task: str) -> Path:
+    """The run's scratch directory under the checkout root, named by a path-safe slug"""
+    root = git(cwd, "rev-parse", "--show-toplevel")
+    if root is None:
+        raise PlanError("not inside a git checkout")
+
+    # branch names such as feature/x would otherwise nest directories
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", task).strip("-.")
+    if not slug:
+        raise PlanError(f"task '{task}' has no usable characters")
+
+    return Path(root.strip()) / "_scratch" / "ship" / slug
+
+
+def save_plan(directory: Path, plan: Plan) -> Path:
+    """Write the plan with an empty `done` list; a new invocation starts a new plan"""
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "plan.json"
+    path.write_text(json.dumps({**asdict(plan), "done": []}, indent=2) + "\n")
+    return path
+
+
+def mark_done(directory: Path, steps: list[str]) -> list[str]:
+    """Add finished steps to a saved plan and return its `done` list in plan order"""
+    path = directory / "plan.json"
+    if not path.exists():
+        raise PlanError(f"no saved plan at {path}; run with --task first")
+
+    saved = json.loads(path.read_text())
+    unknown = [step for step in steps if step not in saved["steps"]]
+    if unknown:
+        raise PlanError(f"not in the plan: {', '.join(unknown)}")
+
+    done = set(saved.get("done", [])) | set(steps)
+    saved["done"] = [step for step in saved["steps"] if step in done]
+    path.write_text(json.dumps(saved, indent=2) + "\n")
+    return saved["done"]
+
+
 def check_section(name: str, section: object) -> list[str]:
     if not isinstance(section, dict):
         return [f"{name}: must be a table"]
@@ -334,6 +375,8 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=CONFIG_PATH)
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--task", help="save the plan to _scratch/ship/TASK/plan.json in the checkout")
+    parser.add_argument("--done", nargs="+", metavar="STEP", help="record finished steps in the saved plan; needs --task")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -347,6 +390,21 @@ def main() -> int:
         return 1 if problems else 0
 
     cwd = Path.cwd()
+
+    if args.done:
+        if not args.task:
+            print("ship: --done needs --task", file=sys.stderr)
+            return 2
+
+        try:
+            done = mark_done(task_dir(cwd, args.task), args.done)
+        except PlanError as error:
+            print(f"ship: {error}", file=sys.stderr)
+            return 2
+
+        print(f"done: {', '.join(done)}")
+        return 0
+
     origin = git_remote(cwd, "origin")
     repo = args.repo.lower() if args.repo else origin
     if repo is None:
@@ -366,6 +424,15 @@ def main() -> int:
     except PlanError as error:
         print(f"ship: {error}", file=sys.stderr)
         return 2
+
+    # status mode changes nothing, so it leaves any saved plan alone
+    saved = None
+    if args.task and plan.mode != "status":
+        try:
+            saved = save_plan(task_dir(cwd, args.task), plan)
+        except PlanError as error:
+            print(f"ship: {error}", file=sys.stderr)
+            return 2
 
     if args.json:
         print(json.dumps(asdict(plan), indent=2))
@@ -395,6 +462,9 @@ def main() -> int:
 
     if plan.notes:
         print(f"notes: {plan.notes}")
+
+    if saved:
+        print(f"saved: {saved}")
 
     return 0
 

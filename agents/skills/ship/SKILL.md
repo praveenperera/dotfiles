@@ -11,18 +11,20 @@ disable-model-invocation: true
 
 ## Resolve the plan
 
-Run the resolver from the repository root with the user's words passed as one argument:
+Run the resolver from the repository root with the user's words passed as one argument. `<task>` is the branch name or a short slug of the work:
 
 ```sh
-python3 -I ~/.agents/skills/ship/scripts/ship_plan.py -- "$ARGUMENTS"
+python3 -I ~/.agents/skills/ship/scripts/ship_plan.py --task <task> -- "$ARGUMENTS"
 ```
+
+The same run saves the plan as `_scratch/ship/<task>/plan.json` and prints a `saved:` line, so do not run the resolver again for `--json`. Chain the read-only checks you need for the plan, such as `git status --short` and `git diff --stat`, onto that command.
 
 - On a nonzero exit, report the error line and stop. Do not guess what the word meant.
 - Otherwise show the `ship:` and `plan:` lines, then the concrete actions each step will take in this checkout: the branch, the files or hunks to commit, the PR target, the deploy commands with their placeholders filled, and what clean will remove. Then start in the same turn; the invocation is the go-ahead. Inside `/run-auto`, also log the plan in the decision log.
 - Stop and wait for the go-ahead instead when the output has `confirm: wait for go-ahead`, from the `confirm` word, or when the plan is not obvious for the work, as in the cases below. Put every question in the same message as the plan, and start once they are answered.
 - Ask instead of assuming when the repository is new to the table, which the `ship:` line shows as `default fallback` or `external fallback`. Ask which steps it should use and what deploy means there, and offer to add its entry to [repos.toml](repos.toml) before running.
 - Also ask when anything is unclear: which changes belong to this task, such as unrelated edits or unpushed commits you cannot attribute; a placeholder the notes don't settle; or a plan that looks wrong for the work, such as a deploy for a docs-only change.
-- Save `--json` output as `_scratch/ship/<task>/plan.json`, where `<task>` is the branch name or a short slug of the work. Record each step's status there as it finishes so a later turn, such as a PR-watch wake-up, resumes at the right step.
+- Record finished steps only before the turn ends to wait for a wake-up, such as a PR watch, a `Monitor`, or a homebased task: chain `python3 -I ~/.agents/skills/ship/scripts/ship_plan.py --task <task> --done <step>...` onto the last command before the wait, and resume from the saved plan's `done` list when the thread wakes. A run that finishes in one turn records nothing.
 
 Words: a bare or `+` step adds it, `-step` removes it, `only` replaces the default with the steps that follow, `high` or `xhigh` sets the Sol effort, `patch`, `minor`, or `major` sets the bump, `confirm` waits for the go-ahead before starting, and `?` reports status without changing anything. The resolver also accepts dictation variants such as "soul", "reptile", and "XI".
 
@@ -43,7 +45,7 @@ End with the exact `/ship` command that would finish the work, or say that nothi
 
 ## Track what this run creates
 
-Append one line per created item to `_scratch/ship/<task>/created.txt` as `<kind> <value>`. Kinds: `worktree`, `branch`, `remote-branch`, `scratch`, `tmp`, `process`, `monitor`, `homebased-task`, `container`, `image`, `preview`. The clean step deletes only what this manifest lists. Add items this task created before `/ship` was invoked, such as its worktree, branch, and `_scratch/<task>/`, when the conversation shows that this task created them.
+Append one line per created item to `_scratch/ship/<task>/created.txt` as `<kind> <value>`, in the same command that creates the item, such as `git switch -c <branch> && echo "branch <branch>" >> _scratch/ship/<task>/created.txt`, not as a separate call. Kinds: `worktree`, `branch`, `remote-branch`, `scratch`, `tmp`, `process`, `monitor`, `homebased-task`, `container`, `image`, `preview`. The clean step deletes only what this manifest lists. Add items this task created before `/ship` was invoked, such as its worktree, branch, and `_scratch/<task>/`, when the conversation shows that this task created them; append those in the first command of the run.
 
 ## Steps
 
@@ -82,7 +84,7 @@ Pass when all of these hold for the PR's current head commit:
 
 Until it passes, address each comment with [gh-address-comments](../gh-address-comments/SKILL.md), reply on its thread, push, and comment `@greptileai review` unless a review of the new head is already running. Allow at most 3 such rounds; then stop and report what remains.
 
-To wait, use `watch_pull_request` in a T3 thread and end the turn; resume from `plan.json` when T3 wakes the thread. Elsewhere, poll every 20 to 30 seconds for at most 20 minutes.
+To wait, record the finished steps with `--done`, then use `watch_pull_request` in a T3 thread and end the turn; resume from `plan.json` when T3 wakes the thread. Elsewhere, poll every 20 to 30 seconds for at most 20 minutes.
 
 ### merge
 

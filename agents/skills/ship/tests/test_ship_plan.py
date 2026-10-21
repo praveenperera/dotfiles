@@ -1,8 +1,11 @@
 """Behavior tests for the /ship plan resolver"""
 
 import importlib.util
+import json
+import shutil
 import subprocess
 import sys
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
@@ -172,6 +175,54 @@ class CliTests(unittest.TestCase):
         output = self.run_cli("-settle")
 
         self.assertIn("plan: commit → push → deploy → clean\n", output)
+
+
+class SavedPlanTests(unittest.TestCase):
+    def setUp(self):
+        self.checkout = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.checkout)
+        subprocess.run(["git", "init", "-q", str(self.checkout)], check=True)
+        subprocess.run(
+            ["git", "-C", str(self.checkout), "remote", "add", "origin", "git@github.com:praveenperera/homelab.git"],
+            check=True,
+        )
+
+    def run_cli(self, *arguments):
+        return subprocess.run(
+            [sys.executable, "-I", str(SCRIPT_PATH), *arguments],
+            cwd=self.checkout,
+            capture_output=True,
+            text=True,
+        )
+
+    def saved(self):
+        return json.loads((self.checkout / "_scratch/ship/feature-x/plan.json").read_text())
+
+    def test_one_run_prints_and_saves_the_plan_and_done_steps_keep_plan_order(self):
+        output = self.run_cli("--task", "feature/x", "--", "-settle").stdout
+
+        self.assertIn("plan: commit → push → deploy → clean\n", output)
+        self.assertIn("saved: ", output)
+        self.assertEqual(self.saved()["steps"], ["commit", "push", "deploy", "clean"])
+        self.assertEqual(self.saved()["done"], [])
+
+        self.assertEqual(self.run_cli("--task", "feature/x", "--done", "push", "commit").stdout, "done: commit, push\n")
+        self.assertEqual(self.saved()["done"], ["commit", "push"])
+
+    def test_done_rejects_a_step_outside_the_plan(self):
+        self.run_cli("--task", "feature/x", "--", "-settle")
+        result = self.run_cli("--task", "feature/x", "--done", "merge")
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("not in the plan: merge", result.stderr)
+        self.assertEqual(self.saved()["done"], [])
+
+    def test_status_mode_leaves_the_saved_plan_alone(self):
+        self.run_cli("--task", "feature/x", "--", "-settle")
+        self.run_cli("--task", "feature/x", "--done", "commit")
+        self.run_cli("--task", "feature/x", "--", "?")
+
+        self.assertEqual(self.saved()["done"], ["commit"])
 
 
 if __name__ == "__main__":
