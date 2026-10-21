@@ -13,6 +13,8 @@ readonly DEFAULT_REPO_URL="https://github.com/avencera/homebased.git"
 readonly REPO_URL="${HOMEBASED_SKILL_REPO_URL:-${DEFAULT_REPO_URL}}"
 readonly CLONE_DIR="${HOMEBASED_SKILL_SRC:-${HOME}/.local/share/homebased/skill-src}"
 readonly SKILL_PATH=".agents/skills/homebased"
+DOTFILES_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly DOTFILES_DIR
 
 die() {
     echo "homebased-skill-sync: $*" >&2
@@ -76,6 +78,23 @@ checkout_tag() {
         checkout --quiet --force --detach "${tag}"
 }
 
+# `cmd bootstrap` skips agents/skills/homebased while the clone is missing,
+# so a machine bootstrapped before its first sync never gets these links.
+# Only absent entries are created: anything already there is the user's, and
+# a missing skills dir means that agent is not set up here
+link_agent_skills() {
+    local dir
+    local link
+
+    for dir in "${HOME}/.claude/skills" "${HOME}/.codex/skills"; do
+        link="${dir}/homebased"
+        [[ -d "${dir}" ]] || continue
+        [[ -e "${link}" || -L "${link}" ]] && continue
+        ln -s "${DOTFILES_DIR}/agents/skills/homebased" "${link}"
+        echo "Linked ${link}"
+    done
+}
+
 main() {
     local tag
 
@@ -98,6 +117,7 @@ main() {
     [[ -f "${CLONE_DIR}/${SKILL_PATH}/SKILL.md" ]] \
         || die "${tag} has no ${SKILL_PATH}/SKILL.md"
     echo "Homebased skill at ${tag}"
+    link_agent_skills
 }
 
 main "$@"

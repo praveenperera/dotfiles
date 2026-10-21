@@ -13,6 +13,10 @@ trap 'rm -rf -- "${WORK}"' EXIT
 readonly REMOTE="${WORK}/remote.git"
 readonly CLONE="${WORK}/share/skill-src"
 readonly STUBS="${WORK}/stubs"
+# the script links into ${HOME}, so every run gets a throwaway one
+readonly TEST_HOME="${WORK}/home"
+SKILL_SOURCE="$(cd -- "$(dirname -- "${SCRIPT}")/.." && pwd)/agents/skills/homebased"
+readonly SKILL_SOURCE
 readonly SKILL_FILE="${CLONE}/.agents/skills/homebased/SKILL.md"
 
 # the user's global git config can require signing or rewrite URLs
@@ -80,7 +84,7 @@ STUB
 run_sync() {
     local out="$1"
 
-    HOMEBASED_SKILL_SRC="${CLONE}" HOMEBASED_SKILL_REPO_URL="${REMOTE}" \
+    HOME="${TEST_HOME}" HOMEBASED_SKILL_SRC="${CLONE}" HOMEBASED_SKILL_REPO_URL="${REMOTE}" \
         PATH="${STUBS}:${TEST_PATH}" "${SCRIPT}" > "${out}" 2>&1
 }
 
@@ -168,7 +172,7 @@ check_foreign_dir() {
         fi
 
         status=0
-        HOMEBASED_SKILL_SRC="${foreign}" HOMEBASED_SKILL_REPO_URL="${REMOTE}" \
+        HOME="${TEST_HOME}" HOMEBASED_SKILL_SRC="${foreign}" HOMEBASED_SKILL_REPO_URL="${REMOTE}" \
             PATH="${STUBS}:${TEST_PATH}" "${SCRIPT}" > "${out}" 2>&1 || status=$?
         [[ "${status}" != 0 ]] || fail "a ${kind} directory was accepted"
         grep -qF "${foreign}" "${out}" || fail "the refusal did not name ${foreign}"
@@ -178,9 +182,32 @@ check_foreign_dir() {
     echo "PASS: a foreign directory is refused and left intact"
 }
 
+check_agent_links() {
+    local claude="${TEST_HOME}/.claude/skills"
+    local codex="${TEST_HOME}/.codex/skills"
+
+    rm -rf -- "${TEST_HOME}"
+    mkdir -p "${claude}" "${codex}"
+    expect_sync v1.2.4
+    [[ "$(readlink "${claude}/homebased")" == "${SKILL_SOURCE}" ]] \
+        || fail "the Claude skill link was not created"
+    [[ "$(readlink "${codex}/homebased")" == "${SKILL_SOURCE}" ]] \
+        || fail "the Codex skill link was not created"
+
+    # an existing entry is kept, and a missing agent dir is not created
+    rm -rf -- "${codex}" "${claude}/homebased"
+    ln -s /elsewhere "${claude}/homebased"
+    expect_sync v1.2.4
+    [[ "$(readlink "${claude}/homebased")" == /elsewhere ]] \
+        || fail "an existing Claude entry was replaced"
+    [[ ! -e "${codex}" ]] || fail "a missing Codex skills dir was created"
+    echo "PASS: missing agent skill links are created and existing ones kept"
+}
+
 check_not_installed
 check_bad_version
 check_first_run
 check_repeat_offline
 check_version_bump
+check_agent_links
 check_foreign_dir
