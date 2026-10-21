@@ -66,7 +66,7 @@ class Plan:
     external: bool
     pr_repo: str
     mode: str = "run"
-    confirm: bool = True
+    confirm: bool = False
     steps: list[str] = field(default_factory=list)
     implied: list[str] = field(default_factory=list)
     sol_effort: str = "xhigh"
@@ -117,10 +117,10 @@ def changed_paths(cwd: Path) -> list[str] | None:
     return sorted(set(tracked.split()) | set(untracked.split()))
 
 
-def normalize_step(word: str) -> str:
+def normalize_step(word: str, raw: str) -> str:
     step = STEP_ALIASES.get(word, word)
     if step not in STEPS:
-        raise PlanError(f"unknown word '{word}'; steps are: {', '.join(STEPS)}")
+        raise PlanError(f"unknown word '{raw}'; steps are: {', '.join(STEPS)}")
 
     return step
 
@@ -174,9 +174,9 @@ def resolve(
 
         if word in STATUS_WORDS:
             plan.mode = "status"
-        elif word in ("-confirm", "+confirm", "confirm"):
-            # `-confirm` starts without waiting for a go-ahead
-            plan.confirm = not word.startswith("-")
+        elif word in ("+confirm", "confirm"):
+            # the skill starts on its own unless something is unclear, so this opts into waiting
+            plan.confirm = True
         elif word == "only":
             only = True
         elif word in EFFORTS:
@@ -186,9 +186,9 @@ def resolve(
             plan.bump = word
             bump_word = word
         elif word.startswith("-"):
-            removed.add(normalize_step(word[1:]))
+            removed.add(normalize_step(word[1:], raw))
         else:
-            added.add(normalize_step(word.removeprefix("+")))
+            added.add(normalize_step(word.removeprefix("+"), raw))
 
     if only and not added:
         raise PlanError("'only' needs at least one step")
@@ -376,8 +376,8 @@ def main() -> int:
 
     if plan.mode == "status":
         print("mode: status only, change nothing")
-    elif not plan.confirm:
-        print("confirm: skipped")
+    elif plan.confirm:
+        print("confirm: wait for go-ahead")
 
     print(f"plan: {plan.summary()}")
 
