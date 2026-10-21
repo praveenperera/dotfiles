@@ -6,7 +6,6 @@
 - Put ad hoc files I may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory, creating it if needed. Those directories are wiped weekly, so keep durable notes in `~/code/research`.
 - Mark anything you couldn't confirm, and say where you looked.
 - When you change behavior, update the docs and READMEs that describe it in the same change, so they never describe the old behavior.
-- Treat docs and READMEs as claims, not facts: when they describe a live system, check the system itself, and when the two disagree, trust the system and fix the doc.
 - My instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
 - For performance work, profile and measure the end-to-end payoff first (same output or accuracy within limits, plus a measured speedup on a fixed input set); add harness or proof machinery only for risks that check can't catch, and time-box it.
 - Always give times in the US Central time zone.
