@@ -66,6 +66,15 @@
             "command": "/Users/praveen/.claude/scripts/quiet-monitor.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/praveen/.claude/scripts/no-waiting-background-bash.sh"
+          }
+        ]
       }
     ],
     "Stop": [
