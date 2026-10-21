@@ -57,6 +57,15 @@
             "command": "/Users/praveen/.claude/scripts/require-agent-model.sh"
           }
         ]
+      },
+      {
+        "matcher": "Monitor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/praveen/.claude/scripts/quiet-monitor.sh"
+          }
+        ]
       }
     ],
     "Stop": [

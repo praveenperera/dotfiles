@@ -90,7 +90,7 @@ Merge only after the greptile step passed, when it is in the plan, and required 
 
 ### deploy and publish
 
-Run the plan's commands in order from the repository root: the main checkout after a merge, otherwise the current checkout. Fill each remaining placeholder, such as `<item>`, `<next>`, `<site>`, or `<version>`, from the plan's notes and the repository; never run a command with a placeholder left in it. In a T3 thread, wait on long commands with `Monitor`; elsewhere use [homebased](../homebased/SKILL.md). Verify the result the commands promise, such as a healthy service, a finished release run, or the new installed version.
+Run the plan's commands in order from the repository root: the main checkout after a merge, otherwise the current checkout. Fill each remaining placeholder, such as `<item>`, `<next>`, `<site>`, or `<version>`, from the plan's notes and the repository; never run a command with a placeholder left in it. Run a long command, such as a release watch, a fleet update, or a test suite, as a [homebased](../homebased/SKILL.md) task workload; in a T3 Claude thread, arm `Monitor` with `homebased task wait <id>` so the thread wakes once, when it ends. `watch_run.sh` prints a single line at the end, so it is safe to wait on directly. Verify the result the commands promise, such as a healthy service, a finished release run, or the new installed version.
 
 ### clean
 
