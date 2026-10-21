@@ -2,6 +2,8 @@
 
 - Ship production-quality changes. For changes to domain state, public interfaces, or ownership, model the domain first and use typed models to exclude invalid states. Prefer the proper owner or abstraction over caller-specific conditionals. Small local changes should follow established patterns without a separate architecture exercise. Repeated fixes in one area signal that the model may be wrong; revisit it and remove resulting shortcuts before finishing.
 - Encode recurring corrections as types, tests, lints, scripts, or runtime checks instead of repeating instructions.
+- When you change behavior, update the docs and READMEs that describe it in the same change, so they never describe the old behavior.
+- Treat docs and READMEs as claims, not facts: when they describe a live system, check the system itself, and when the two disagree, trust the system and fix the doc.
 - For performance work, profile and measure the end-to-end payoff first (same output or accuracy within limits, plus a measured speedup on a fixed input set); add harness or proof machinery only for risks that check can't catch, and time-box it.
 
 # General
