@@ -244,10 +244,20 @@ struct QueuedUpdate {
 }
 
 /// Submit the update spec for `machine` through the local Homebased daemon
+///
+/// `--allow-other-thread` lets a Homebased worker, such as an agent running
+/// this update, queue it too: the update belongs to no thread, not the worker's
 fn queue_update(machine: &str) -> Result<QueuedUpdate> {
     let spec = update_spec(machine);
     let mut child = Command::new("homebased")
-        .args(["--json", "task", "submit", "--spec", "-"])
+        .args([
+            "--json",
+            "task",
+            "submit",
+            "--spec",
+            "-",
+            "--allow-other-thread",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
