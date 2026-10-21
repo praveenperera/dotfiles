@@ -28,10 +28,12 @@ pub enum FleetCmd {
     DotfilesUp,
 
     /// Pull ~/code/dotfiles, then update Codex, Claude Code, Grok Build, and
-    /// installed cmd, cln, and Homebased on ai5090 and code; update cmd and
-    /// any installed cln, Homebased, and codemode-mcp on the calling machine
-    /// too if it was not updated remotely. Each Homebased update also checks
-    /// out the Homebased skill at the matching release tag
+    /// installed cmd, cln, Homebased, and codemode-mcp on ai5090 and code;
+    /// update cmd and any installed cln, Homebased, and codemode-mcp on the
+    /// calling machine too if it was not updated remotely. Each Homebased
+    /// update also checks out the Homebased skill at the matching release tag,
+    /// and codemode-mcp on ai5090 and code builds its latest release from
+    /// source
     ///
     /// Without --all, this uses no sudo and changes no system packages;
     /// running Homebased daemons restart after their update
@@ -123,7 +125,8 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
         run_attached(sync, &[])?;
     }
 
-    // a Mac-only launchd service; it skips the restart when already current
+    // on a Mac this installs the signed release and skips the restart when
+    // already current; ai5090 and code build theirs in fleet-update instead
     if has_tool(sh, "codemode-mcp") {
         run_attached("codemode-mcp", &["update"])?;
     }
