@@ -305,8 +305,10 @@ fn purge_db(path: &Path) -> Result<(i64, usize)> {
     tx.commit()?;
 
     // VACUUM rewrites the whole file through the WAL, so the checkpoint is what
-    // hands the space back
-    conn.execute_batch("DROP TABLE temp.purge; VACUUM;")?;
+    // hands the space back. It is also the only way to switch an existing
+    // database to incremental auto_vacuum, which lets T3 return freed pages to
+    // disk on its own afterwards (the same switch `t3 doctor` makes)
+    conn.execute_batch("DROP TABLE temp.purge; PRAGMA auto_vacuum = INCREMENTAL; VACUUM;")?;
     conn.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_| Ok(()))?;
     let integrity: String = conn.query_row("PRAGMA quick_check", [], |row| row.get(0))?;
     if integrity != "ok" {
