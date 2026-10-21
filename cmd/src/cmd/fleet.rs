@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
 use eyre::{eyre, Result, WrapErr};
+use serde_json::{json, Value};
+use std::io::Write as _;
 use std::process::{Command, Stdio};
 use xshell::{cmd, Shell};
 
@@ -14,6 +16,13 @@ const DFU_COMMAND: &str = "/home/praveen/.local/bin/dfu";
 
 /// Terminal type for ssh and tmux when the caller has no usable one
 const FALLBACK_TERM: &str = "xterm-256color";
+
+/// Fleet machines that are often asleep; `fleet update` queues their update
+/// in Homebased, which sends it once the machine answers
+const SLEEPING_MACHINES: &[&str] = &["mba"];
+
+/// Homebased coalesce key, so the updates a sleeping machine missed run once
+const UPDATE_COALESCE_KEY: &str = "fleet-update";
 
 #[derive(Debug, Clone, Parser)]
 pub struct Fleet {
@@ -35,6 +44,10 @@ pub enum FleetCmd {
     /// and codemode-mcp on ai5090 and code builds its latest release from
     /// source
     ///
+    /// The mba is often asleep, so its update is queued in Homebased instead:
+    /// it runs `fleet update --local` there once the mba wakes, and queued
+    /// updates it missed collapse to one
+    ///
     /// Without --all, this uses no sudo and changes no system packages;
     /// running Homebased daemons restart after their update
     Update {
@@ -42,6 +55,12 @@ pub enum FleetCmd {
         /// restart T3 Code
         #[arg(long)]
         all: bool,
+
+        /// Update only this machine: pull ~/code/dotfiles, then update cmd and
+        /// any installed cln, Homebased and its skill, and codemode-mcp; a
+        /// failed step does not stop the rest
+        #[arg(long, conflicts_with = "all")]
+        local: bool,
     },
 }
 
@@ -84,7 +103,8 @@ impl UpdateMode {
 pub fn run_with_flags(sh: &Shell, flags: Fleet) -> Result<()> {
     match flags.subcommand {
         FleetCmd::DotfilesUp => run_dfu(sh),
-        FleetCmd::Update { all } => run_update(sh, UpdateMode::from_all_flag(all)),
+        FleetCmd::Update { local: true, .. } => run_local_update(sh),
+        FleetCmd::Update { all, .. } => run_update(sh, UpdateMode::from_all_flag(all)),
     }
 }
 
@@ -100,6 +120,9 @@ fn run_dfu(sh: &Shell) -> Result<()> {
 }
 
 fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
+    // queued first, so a remote failure below cannot skip a sleeping machine
+    queue_sleeping_updates(sh);
+
     let local = on_ai5090(sh);
     require_update_command(local)?;
 
@@ -111,35 +134,185 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
         return Ok(());
     }
 
+    let mut failures = Vec::new();
+    update_tools(sh, &mut failures);
+    finish(failures)
+}
+
+/// Update only this machine, as a queued update does on a machine that was asleep
+fn run_local_update(sh: &Shell) -> Result<()> {
+    let mut failures = Vec::new();
+    let dotfiles = dotfiles_dir()?;
+    let dotfiles = dotfiles
+        .to_str()
+        .ok_or_else(|| eyre!("non-UTF-8 path {}", dotfiles.display()))?;
+    step(&mut failures, "dotfiles", || {
+        run_attached("git", &["-C", dotfiles, "up"])
+    });
+    update_tools(sh, &mut failures);
+    finish(failures)
+}
+
+/// Update cmd and any installed cln, Homebased, and codemode-mcp on this machine
+///
+/// Each step runs even when an earlier one failed, because they are
+/// independent and an unattended run has nobody to rerun the rest
+fn update_tools(sh: &Shell, failures: &mut Vec<String>) {
     if has_tool(sh, "cln") {
-        run_attached("cln", &["update"])?;
+        step(failures, "cln", || run_attached("cln", &["update"]));
     }
 
     if has_tool(sh, "homebased") {
-        run_attached("homebased", &["update"])?;
+        step(failures, "homebased", || {
+            run_attached("homebased", &["update"])?;
 
-        let sync = dotfiles_dir()?.join(HOMEBASED_SKILL_SYNC);
-        let sync = sync
-            .to_str()
-            .ok_or_else(|| eyre!("non-UTF-8 path {}", sync.display()))?;
-        run_attached(sync, &[])?;
+            let sync = dotfiles_dir()?.join(HOMEBASED_SKILL_SYNC);
+            let sync = sync
+                .to_str()
+                .ok_or_else(|| eyre!("non-UTF-8 path {}", sync.display()))?;
+            run_attached(sync, &[])
+        });
     }
 
     // on a Mac this installs the signed release and skips the restart when
     // already current; ai5090 and code build theirs in fleet-update instead
     if has_tool(sh, "codemode-mcp") {
-        run_attached("codemode-mcp", &["update"])?;
+        step(failures, "codemode-mcp", || {
+            run_attached("codemode-mcp", &["update"])
+        });
     }
 
     // last, because a just-tagged release has no assets until its build
     // finishes; this also refreshes the btx and prc links to the new binary
-    update::run_with_flags(
-        sh,
-        update::Update {
-            force: false,
-            wait: false,
-        },
-    )
+    step(failures, "cmd", || {
+        update::run_with_flags(
+            sh,
+            update::Update {
+                force: false,
+                wait: false,
+            },
+        )
+    });
+}
+
+/// Run one update step, recording its name when it fails
+fn step(failures: &mut Vec<String>, name: &str, run: impl FnOnce() -> Result<()>) {
+    if let Err(error) = run() {
+        eprintln!("{name} update failed: {error:#}");
+        failures.push(name.to_owned());
+    }
+}
+
+fn finish(failures: Vec<String>) -> Result<()> {
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    Err(eyre!("update failed for {}", failures.join(", ")))
+}
+
+/// Queue `fleet update --local` on each sleeping machine other than this one
+///
+/// A failure here only warns: the rest of the fleet still updates
+fn queue_sleeping_updates(sh: &Shell) {
+    if !has_tool(sh, "homebased") {
+        eprintln!("homebased is not installed, so no update is queued for sleeping machines");
+        return;
+    }
+
+    let this_machine = local_fleet_name();
+    for machine in SLEEPING_MACHINES {
+        if this_machine.as_deref() == Some(*machine) {
+            continue;
+        }
+
+        match queue_update(machine) {
+            Ok(queued) if queued.status == "held" => println!(
+                "{machine} is asleep; its update waits as Homebased task {} and runs when it wakes",
+                queued.id
+            ),
+            Ok(queued) => println!("{machine}: update started as Homebased task {}", queued.id),
+            Err(error) => eprintln!("warning: could not queue the update for {machine}: {error:#}"),
+        }
+    }
+}
+
+/// Homebased answer to a queued update
+struct QueuedUpdate {
+    id: String,
+    status: String,
+}
+
+/// Submit the update spec for `machine` through the local Homebased daemon
+fn queue_update(machine: &str) -> Result<QueuedUpdate> {
+    let spec = update_spec(machine);
+    let mut child = Command::new("homebased")
+        .args(["--json", "task", "submit", "--spec", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .wrap_err("failed to run `homebased task submit`")?;
+    child
+        .stdin
+        .take()
+        .ok_or_else(|| eyre!("homebased task submit has no stdin"))?
+        .write_all(spec.to_string().as_bytes())
+        .wrap_err("failed to send the update spec to homebased")?;
+    let output = child
+        .wait_with_output()
+        .wrap_err("failed to wait for `homebased task submit`")?;
+
+    if !output.status.success() {
+        return Err(eyre!("{}", String::from_utf8_lossy(&output.stderr).trim()));
+    }
+
+    let body: Value = serde_json::from_slice(&output.stdout)
+        .wrap_err("homebased task submit printed invalid JSON")?;
+    let field = |name: &str| {
+        body.get(name)
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .ok_or_else(|| eyre!("homebased task submit printed no {name}"))
+    };
+
+    Ok(QueuedUpdate {
+        id: field("id")?,
+        status: field("status")?,
+    })
+}
+
+/// Homebased spec that runs `cmd fleet update --local` on `machine`
+///
+/// It has no thread, so nothing wakes an agent when it ends. cmd updates
+/// itself first, so a machine asleep through a cmd release still runs the
+/// newest update steps. The executor's daemon PATH has ~/.local/bin, where
+/// cmd lives
+fn update_spec(machine: &str) -> Value {
+    json!({
+        "api_version": 1,
+        "name": "fleet update",
+        "cwd": "~/",
+        "machine": machine,
+        "wait_for_machine": true,
+        "coalesce": UPDATE_COALESCE_KEY,
+        "timeout": "1h",
+        "workload": {
+            "type": "task",
+            "command": ["/bin/sh", "-c", "cmd update; exec cmd fleet update --local"]
+        }
+    })
+}
+
+/// This machine's Homebased Fleet name, when Homebased answers
+fn local_fleet_name() -> Option<String> {
+    let output = Command::new("homebased")
+        .args(["--json", "fleet", "machines"])
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    let body: Value = serde_json::from_slice(&output.stdout).ok()?;
+    body.get("local")?.get("name")?.as_str().map(str::to_owned)
 }
 
 fn require_update_command(on_ai5090: bool) -> Result<()> {

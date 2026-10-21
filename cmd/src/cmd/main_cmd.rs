@@ -855,7 +855,13 @@ mod tests {
             panic!("expected fleet command");
         };
 
-        assert!(matches!(subcommand, FleetCmd::Update { all: false }));
+        assert!(matches!(
+            subcommand,
+            FleetCmd::Update {
+                all: false,
+                local: false
+            }
+        ));
     }
 
     #[test]
@@ -871,7 +877,30 @@ mod tests {
             panic!("expected fleet command");
         };
 
-        assert!(matches!(subcommand, FleetCmd::Update { all: true }));
+        assert!(matches!(
+            subcommand,
+            FleetCmd::Update {
+                all: true,
+                local: false
+            }
+        ));
+    }
+
+    #[test]
+    fn fleet_update_local_excludes_all() {
+        let local = Cmd::try_parse_from(["cmd", "fleet", "update", "--local"]).unwrap();
+        let MainCmd::Fleet { subcommand } = local.subcommand else {
+            panic!("expected fleet command");
+        };
+        assert!(matches!(
+            subcommand,
+            FleetCmd::Update {
+                all: false,
+                local: true
+            }
+        ));
+
+        assert!(Cmd::try_parse_from(["cmd", "fleet", "update", "--local", "--all"]).is_err());
     }
 
     #[test]
