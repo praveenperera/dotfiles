@@ -59,6 +59,15 @@
         ]
       },
       {
+        "matcher": "mcp__t3-code__delegate_task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/praveen/.claude/scripts/require-agent-model.sh"
+          }
+        ]
+      },
+      {
         "matcher": "Monitor",
         "hooks": [
           {

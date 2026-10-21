@@ -1,9 +1,31 @@
 #!/usr/bin/env bash
-# PreToolUse hook for Agent: deny calls that leave out `model`, because an
-# unnamed subagent silently inherits the parent's model (usually Opus)
+# PreToolUse hook for Agent and T3's delegate_task: deny calls that leave out
+# `model`, because an unnamed subagent silently inherits the parent's model
+# (usually Opus), and calls at xhigh or max effort, which burn plan usage that
+# a subagent rarely turns into correctness
 set -euo pipefail
 
 input=$(cat)
+
+deny() {
+  jq -n --arg reason "$1" '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: $reason
+    }
+  }'
+  exit 0
+}
+
+effort=$(jq -r '.tool_input.effort // .tool_input.target.options.effort // .tool_input.target.options.reasoningEffort // empty' <<<"$input")
+if [[ "$effort" == xhigh || "$effort" == max ]]; then
+  deny "Run subagents at high effort or below, not $effort. If the user explicitly asked for $effort, tell them this hook blocks it."
+fi
+
+# delegate_task always names its target model, so only the effort applies
+[[ $(jq -r '.tool_name // empty' <<<"$input") == *delegate_task ]] && exit 0
+
 model=$(jq -r '.tool_input.model // empty' <<<"$input")
 agent_type=$(jq -r '.tool_input.subagent_type // empty' <<<"$input")
 
@@ -30,11 +52,4 @@ if [[ -n "$agent_type" ]]; then
   done
 fi
 
-reason="Name the model on this Agent call (haiku, sonnet, or opus), chosen for what the task needs. Leaving it out inherits the parent model."
-jq -n --arg reason "$reason" '{
-  hookSpecificOutput: {
-    hookEventName: "PreToolUse",
-    permissionDecision: "deny",
-    permissionDecisionReason: $reason
-  }
-}'
+deny "Name the model on this Agent call (haiku, sonnet, or opus), chosen for what the task needs. Leaving it out inherits the parent model."
