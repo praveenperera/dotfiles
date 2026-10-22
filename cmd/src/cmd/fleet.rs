@@ -45,8 +45,8 @@ pub enum FleetCmd {
     /// source
     ///
     /// The mba is often asleep, so its update is queued in Homebased instead:
-    /// it runs `fleet update --local` there once the mba wakes, and queued
-    /// updates it missed collapse to one
+    /// it runs `fleet update --local` there once someone has used the mba for
+    /// two minutes, and queued updates it missed collapse to one
     ///
     /// Without --all, this uses no sudo and changes no system packages;
     /// running Homebased daemons restart after their update
@@ -301,6 +301,8 @@ fn queue_update(machine: &str) -> Result<QueuedUpdate> {
 fn update_spec(machine: &str) -> Value {
     json!({
         "api_version": 1,
+        // no session waits on it, so its ending wakes no agent hours later
+        "thread": null,
         "name": "fleet update",
         "cwd": "~/",
         "machine": machine,
