@@ -122,8 +122,7 @@ notes = "`just bump` only edits the version files and `just release github` only
 # -- PR gated
 
 [repos."avencera/codemode-mcp"]
-steps = ["commit", "push", "pr", "greptile", "merge", "deploy", "clean", "settle"]
-greptile = true
+steps = ["commit", "push", "pr", "merge", "deploy", "clean", "settle"]
 deploy = [
   "just bump <part>",
   "just release github",
