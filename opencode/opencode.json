@@ -25,6 +25,11 @@
       "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,web_search_advanced_exa,web_fetch_exa",
       "enabled": true,
       "oauth": {}
+    },
+    "codemode": {
+      "type": "remote",
+      "url": "http://127.0.0.1:7681/mcp",
+      "enabled": true
     }
   }
 }

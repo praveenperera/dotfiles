@@ -24,6 +24,16 @@ The configuration needs no package manager. Local plugins are `.ts` files under
 `plugins/`, and package plugins install into the OpenCode cache through
 `opencode plugin add`.
 
+## MCP Servers
+
+| Server | Type | URL |
+|--------|------|-----|
+| `exa` | remote | `https://mcp.exa.ai/mcp` |
+| `codemode` | remote | `http://127.0.0.1:7681/mcp` |
+
+`codemode` is the local codemode-mcp gateway, the same server Claude Code and
+Codex use.
+
 ## Agents Configured
 
 | Agent | Model | Source |
