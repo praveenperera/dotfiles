@@ -58,3 +58,8 @@
 
 - On macOS, build images with `rb` unless the project uses another builder, such as `sht`. On `code`, `ai5090`, or another Linux box, build directly on the machine.
 - Publish public images to Docker Hub.
+
+# Tools
+
+- `homebased t3` can add projects and start new threads on different Fleet machines.
+- MCP servers available through `codemode-mcp`: `linear`, `gmail`, `zoho_infraops`, `calendar`, `reminders`, `xcode`, `secrets`, `onepassword`, `logins`, `superalert`, `superlogical`, `deepwiki`, `context7`, `cloudflare_docs`, `openai_docs`
