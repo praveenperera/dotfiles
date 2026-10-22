@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Finish the current work with the repository's configured sequence (commit, push, PR, Sol review, Greptile 5/5, merge, deploy, clean up, settle), adjusted by short words such as `+sol`, `-deploy`, `minor`, `confirm` to wait for a go-ahead, or `?` for a status check. Use only when the user invokes /ship or $ship.
+description: Finish the current work with the repository's configured sequence (commit, push, PR, Sol review, Greptile 5/5, merge, deploy, clean up), adjusted by short words such as `+sol`, `+settle` to settle the T3 thread afterward, `-deploy`, `minor`, `confirm` to wait for a go-ahead, or `?` for a status check. Use only when the user invokes /ship or $ship.
 argument-hint: "[? | confirm | +step | -step | only step... | high | minor | major]"
 disable-model-invocation: true
 ---
@@ -26,7 +26,7 @@ The same run saves the plan as `_scratch/ship/<task>/plan.json` and prints a `sa
 - Also ask when anything is unclear: which changes belong to this task, such as unrelated edits or unpushed commits you cannot attribute; a placeholder the notes don't settle; or a plan that looks wrong for the work, such as a deploy for a docs-only change.
 - Record finished steps only before the turn ends to wait for a wake-up, such as a PR watch, a `Monitor`, or a homebased task: chain `python3 -I ~/.agents/skills/ship/scripts/ship_plan.py --task <task> --done <step>...` onto the last command before the wait, and resume from the saved plan's `done` list when the thread wakes. A run that finishes in one turn records nothing.
 
-Words: a bare or `+` step adds it, `-step` removes it, `only` replaces the default with the steps that follow, `high` or `xhigh` sets the Sol effort, `patch`, `minor`, or `major` sets the bump, `confirm` waits for the go-ahead before starting, and `?` reports status without changing anything. The resolver also accepts dictation variants such as "soul", "reptile", and "XI".
+Words: a bare or `+` step adds it, `-step` removes it, `only` replaces the default with the steps that follow, `high` or `xhigh` sets the Sol effort, `patch`, `minor`, or `major` sets the bump, `confirm` waits for the go-ahead before starting, and `?` reports status without changing anything. The resolver also accepts dictation variants such as "soul", "reptile", and "XI", and `s` or `set` for `settle`.
 
 ## Authorization
 
@@ -107,7 +107,7 @@ Never touch stashes, other agents' worktrees or scratch, or anything not in the 
 
 ### settle
 
-Only in a T3 thread, and only when every earlier step succeeded and nothing needs the user, call `t3_thread_organize` with `action: "settle"` and no `threadId` as the last tool call of the turn. T3 applies it when the turn ends. Outside T3, report that settle was skipped.
+Opt-in: no repository includes it by default, so it runs only when the user types `+settle` (or `+s` or `+set`). Only in a T3 thread, and only when every earlier step succeeded and nothing needs the user, call `t3_thread_organize` with `action: "settle"` and no `threadId` as the last tool call of the turn. T3 applies it when the turn ends. Outside T3, report that settle was skipped.
 
 ## Report
 

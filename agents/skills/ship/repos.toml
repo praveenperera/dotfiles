@@ -3,7 +3,8 @@
 # Keeping this here instead of in each repo leaves work and upstream repos untouched
 #
 # Fields per repo:
-#   steps     default sequence; ship_plan.py sorts it into the canonical order
+#   steps     default sequence; ship_plan.py sorts it into the canonical order. Leave
+#             "settle" out: it is opt-in per run with `/ship +settle`
 #   deploy    commands for the deploy step; <part> is the bump level (patch unless overridden)
 #   deploy_paths, deploy_otherwise
 #             run deploy_otherwise instead of deploy when the work touches none of deploy_paths
@@ -29,12 +30,12 @@ steps = ["sol", "commit", "push", "pr", "clean"]
 # -- direct to master, then deploy
 
 [repos."praveenperera/homelab"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = ["just deploy <item>"]
 notes = "Run `just deploy <item>` once per stack or item the change touched; see the deploy recipe comment for item names. Never run it without an item, since that opens an fzf picker"
 
 [repos."praveenperera/lookout-hub"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = [
   "just deploy v<next>",
   "git -C ~/code/homelab commit -m 'Deploy lookout-hub v<next>' -- stacks/lookout/docker-compose.yml",
@@ -43,7 +44,7 @@ deploy = [
 notes = "<next> is one more than the lookout-hub image tag in ~/code/homelab/stacks/lookout/docker-compose.yml. The pathspec commit leaves other staged homelab work alone, but it takes each listed file whole: when another task has edits in one of them, commit only this deploy's hunks instead. The push runs only when this commit is the sole unpushed one"
 
 [repos."praveenperera/freezerwatch"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = [
   "just deploy v<next>",
   "git -C ~/code/homelab commit -m 'Deploy freezerwatch v<next>' -- stacks/lookout/docker-compose.yml stacks/lookout/freezerwatch.toml",
@@ -52,7 +53,7 @@ deploy = [
 notes = "<next> is one more than the freezerwatch image tag in ~/code/homelab/stacks/lookout/docker-compose.yml. The pathspec commit leaves other staged homelab work alone, but it takes each listed file whole: when another task has edits in one of them, commit only this deploy's hunks instead. The push runs only when this commit is the sole unpushed one"
 
 [repos."avencera/superalert"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = [
   "just deploy v<next>",
   "git -C ~/code/homelab commit -m 'Deploy superalert v<next>' -- stacks/lookout/docker-compose.yml stacks/lookout/superalert.toml",
@@ -61,16 +62,16 @@ deploy = [
 notes = "<next> is one more than the superalert image tag in ~/code/homelab/stacks/lookout/docker-compose.yml. The pathspec commit leaves other staged homelab work alone, but it takes each listed file whole: when another task has edits in one of them, commit only this deploy's hunks instead. The push runs only when this commit is the sole unpushed one"
 
 [repos."praveenperera/kids"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = ["just deploy"]
 
 [repos."praveenperera/apologetics"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = ["cd <site> && just deploy"]
 notes = "Run once for each site directory the change touched: bereadytoanswer, mormonsarenotchristians, notwhatyouheard, propheciesofjesus"
 
 [repos."praveenperera/dotfiles"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = [
   "cmd release",
   "~/.agents/skills/ship/scripts/watch_run.sh release-cmd HEAD",
@@ -84,7 +85,7 @@ notes = "Pushing cmd/** to master triggers release-cmd.yml, which bumps the vers
 # -- tools released through GitHub Actions
 
 [repos."avencera/homebased"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = [
   "just bump <part>",
   "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
@@ -96,7 +97,7 @@ deploy = [
 notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required"
 
 [repos."praveenperera/cln"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = [
   "just bump <part>",
   "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
@@ -108,7 +109,7 @@ deploy = [
 notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required"
 
 [repos."praveenperera/minid"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = [
   "just bump <part>",
   "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
@@ -122,7 +123,7 @@ notes = "`just bump` only edits the version files and `just release github` only
 # -- PR gated
 
 [repos."avencera/codemode-mcp"]
-steps = ["commit", "push", "pr", "merge", "deploy", "clean", "settle"]
+steps = ["commit", "push", "pr", "merge", "deploy", "clean"]
 deploy = [
   "just bump <part>",
   "just release github",

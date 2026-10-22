@@ -44,6 +44,8 @@ STEP_ALIASES = {
     "cleanup": "clean",
     "clean-up": "clean",
     "settled": "settle",
+    "s": "settle",
+    "set": "settle",
     "squash": "merge",
 }
 EFFORTS = {"high": "high", "xhigh": "xhigh", "xi": "xhigh", "x-high": "xhigh", "extra-high": "xhigh"}

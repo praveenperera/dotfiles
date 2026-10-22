@@ -29,7 +29,7 @@ steps = ["commit", "push", "clean"]
 steps = ["sol", "commit", "push", "pr", "clean"]
 
 [repos."me/app"]
-steps = ["commit", "push", "deploy", "clean", "settle"]
+steps = ["commit", "push", "deploy", "clean"]
 deploy = ["just bump <part>", "just release"]
 
 [repos."me/gated"]
@@ -57,6 +57,10 @@ class ResolveTests(unittest.TestCase):
         self.assertEqual(plan.steps, ["sol", "commit", "push", "deploy", "clean", "settle"])
         self.assertEqual(plan.sol_effort, "xhigh")
 
+    def test_short_settle_aliases(self):
+        for word in ("+s", "+set", "s", "set"):
+            self.assertEqual(MODULE.resolve(CONFIG, "me/app", [word]).steps[-1], "settle")
+
     def test_merge_on_direct_repo_implies_pr(self):
         plan = MODULE.resolve(CONFIG, "me/app", ["merge"])
 
@@ -70,7 +74,7 @@ class ResolveTests(unittest.TestCase):
     def test_release_after_a_pr_waits_for_the_merge(self):
         plan = MODULE.resolve(CONFIG, "me/app", ["pr"])
 
-        self.assertEqual(plan.steps, ["commit", "push", "pr", "merge", "deploy", "clean", "settle"])
+        self.assertEqual(plan.steps, ["commit", "push", "pr", "merge", "deploy", "clean"])
 
         with self.assertRaisesRegex(MODULE.PlanError, "'deploy' needs 'merge'"):
             MODULE.resolve(CONFIG, "me/app", ["pr", "-merge"])
@@ -167,14 +171,14 @@ class CliTests(unittest.TestCase):
         ).stdout
 
     def test_skill_arguments_arrive_as_one_string(self):
-        output = self.run_cli("soul high -settle")
+        output = self.run_cli("soul high")
 
         self.assertIn("plan: sol 6.1 high review → commit → push → deploy → clean\n", output)
 
     def test_a_lone_removal_word_is_not_parsed_as_an_option(self):
-        output = self.run_cli("-settle")
+        output = self.run_cli("+settle")
 
-        self.assertIn("plan: commit → push → deploy → clean\n", output)
+        self.assertIn("plan: commit → push → deploy → clean → settle\n", output)
 
 
 class SavedPlanTests(unittest.TestCase):
@@ -199,7 +203,7 @@ class SavedPlanTests(unittest.TestCase):
         return json.loads((self.checkout / "_scratch/ship/feature-x/plan.json").read_text())
 
     def test_one_run_prints_and_saves_the_plan_and_done_steps_keep_plan_order(self):
-        output = self.run_cli("--task", "feature/x", "--", "-settle").stdout
+        output = self.run_cli("--task", "feature/x", "--").stdout
 
         self.assertIn("plan: commit → push → deploy → clean\n", output)
         self.assertIn("saved: ", output)
@@ -210,7 +214,7 @@ class SavedPlanTests(unittest.TestCase):
         self.assertEqual(self.saved()["done"], ["commit", "push"])
 
     def test_done_rejects_a_step_outside_the_plan(self):
-        self.run_cli("--task", "feature/x", "--", "-settle")
+        self.run_cli("--task", "feature/x", "--")
         result = self.run_cli("--task", "feature/x", "--done", "merge")
 
         self.assertEqual(result.returncode, 2)
@@ -218,7 +222,7 @@ class SavedPlanTests(unittest.TestCase):
         self.assertEqual(self.saved()["done"], [])
 
     def test_status_mode_leaves_the_saved_plan_alone(self):
-        self.run_cli("--task", "feature/x", "--", "-settle")
+        self.run_cli("--task", "feature/x", "--")
         self.run_cli("--task", "feature/x", "--done", "commit")
         self.run_cli("--task", "feature/x", "--", "?")
 
