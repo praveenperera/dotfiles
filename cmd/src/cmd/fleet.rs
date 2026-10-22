@@ -41,8 +41,7 @@ pub enum FleetCmd {
     /// update cmd and any installed cln, Homebased, and codemode-mcp on the
     /// calling machine too if it was not updated remotely. Each Homebased
     /// update also checks out the Homebased skill at the matching release tag,
-    /// and codemode-mcp on ai5090 and code builds its latest release from
-    /// source
+    /// and codemode-mcp installs its latest release binary
     ///
     /// The mba is often asleep, so its update is queued in Homebased instead:
     /// it runs `fleet update --local` there once someone has used the mba for
