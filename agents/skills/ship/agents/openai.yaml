@@ -3,4 +3,4 @@ interface:
   short_description: "Finish work with this repo's configured ship sequence"
   default_prompt: "Use $ship to finish this work with the repo's default sequence."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

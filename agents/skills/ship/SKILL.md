@@ -1,8 +1,7 @@
 ---
 name: ship
-description: Finish the current work with the repository's configured sequence (commit, push, PR, Sol review, Greptile 5/5, merge, deploy, clean up), adjusted by short words such as `+sol`, `+settle` to settle the T3 thread afterward, `-deploy`, `minor`, `confirm` to wait for a go-ahead, or `?` for a status check. Use only when the user invokes /ship or $ship.
+description: Finish the current work with the repository's configured sequence (commit, push, PR, Sol review, Greptile 5/5, merge, deploy, clean up), adjusted by short words such as `+sol`, `+settle` to settle the T3 thread afterward, `-deploy`, `minor`, `confirm` to wait for a go-ahead, or `?` for a status check. Use when the user invokes /ship or $ship, or when a message directly asks to ship the current work, such as "looks good, ship it" or "ship it but skip deploy". Do not use when "ship" refers to something else, such as a product launch or a question about shipping.
 argument-hint: "[? | confirm | +step | -step | only step... | high | minor | major]"
-disable-model-invocation: true
 ---
 
 # Ship
@@ -19,9 +18,10 @@ python3 -I ~/.agents/skills/ship/scripts/ship_plan.py --task <task> -- "$ARGUMEN
 
 The same run saves the plan as `_scratch/ship/<task>/plan.json` and prints a `saved:` line, so do not run the resolver again for `--json`. Chain the read-only checks you need for the plan, such as `git status --short` and `git diff --stat`, onto that command.
 
-- On a nonzero exit, report the error line and stop. Do not guess what the word meant.
-- Otherwise show the `ship:` and `plan:` lines, then the concrete actions each step will take in this checkout: the branch, the files or hunks to commit, the PR target, the deploy commands with their placeholders filled, and what clean will remove. Then start in the same turn; the invocation is the go-ahead. Inside `/run-auto`, also log the plan in the decision log.
-- Stop and wait for the go-ahead instead when the output has `confirm: wait for go-ahead`, from the `confirm` word, or when the plan is not obvious for the work, as in the cases below. Put every question in the same message as the plan, and start once they are answered.
+- When it exits with `unknown word`, the words were a sentence or a typo rather than resolver words, such as `nice ship`, `looks good, no need to deploy`, or `delpoy`. Read what the user meant, translate it into resolver words (nothing at all for a plain "ship it"), and run the resolver once more with those. When the message asked to ship without `/ship`, skip the first run and translate it directly.
+- On any other nonzero exit, or when the translated words fail too, report the error line and stop.
+- Otherwise show the `ship:` and `plan:` lines, then the concrete actions each step will take in this checkout: the branch, the files or hunks to commit, the PR target, the deploy commands with their placeholders filled, and what clean will remove. After a translation, also show how you read the request, such as `read "no need to deploy" as -deploy`. Then start in the same turn; the invocation is the go-ahead. Inside `/run-auto`, also log the plan in the decision log.
+- Stop and wait for the go-ahead instead when the output has `confirm: wait for go-ahead`, from the `confirm` word, when you are not confident how to translate the request, or when the plan is not obvious for the work, as in the cases below. Put every question in the same message as the plan, and start once they are answered.
 - Ask instead of assuming when the repository is new to the table, which the `ship:` line shows as `default fallback` or `external fallback`. Ask which steps it should use and what deploy means there, and offer to add its entry to [repos.toml](repos.toml) before running.
 - Also ask when anything is unclear: which changes belong to this task, such as unrelated edits or unpushed commits you cannot attribute; a placeholder the notes don't settle; or a plan that looks wrong for the work, such as a deploy for a docs-only change.
 - Record finished steps only before the turn ends to wait for a wake-up, such as a PR watch, a `Monitor`, or a homebased task: chain `python3 -I ~/.agents/skills/ship/scripts/ship_plan.py --task <task> --done <step>...` onto the last command before the wait, and resume from the saved plan's `done` list when the thread wakes. A run that finishes in one turn records nothing.
@@ -30,7 +30,7 @@ Words: a bare or `+` step adds it, `-step` removes it, `only` replaces the defau
 
 ## Authorization
 
-Invoking `/ship` is explicit authorization for every step in its resolved plan, including merge, deploy, and publish, once any open questions are answered and, with `confirm`, the user gives the go-ahead. It holds inside `/run-auto`. It authorizes nothing else: no force-push, history rewrite, or `--no-verify`; no step the plan lacks; and no deletion of anything this run did not create.
+Invoking `/ship`, or a message that directly asks to ship this work, is explicit authorization for every step in its resolved plan, including merge, deploy, and publish, once any open questions are answered and, with `confirm`, the user gives the go-ahead. It holds inside `/run-auto`. It authorizes nothing else: no force-push, history rewrite, or `--no-verify`; no step the plan lacks; and no deletion of anything this run did not create.
 
 ## Status mode
 
@@ -107,7 +107,7 @@ Never touch stashes, other agents' worktrees or scratch, or anything not in the 
 
 ### settle
 
-Opt-in: no repository includes it by default, so it runs only when the user types `+settle` (or `+s` or `+set`). Only in a T3 thread, and only when every earlier step succeeded and nothing needs the user, call `t3_thread_organize` with `action: "settle"` and no `threadId` as the last tool call of the turn. T3 applies it when the turn ends. Outside T3, report that settle was skipped.
+Opt-in: no repository includes it by default, so it runs only when the user asks for it, with `+settle` (or `+s` or `+set`) or a clear request such as "and settle this thread". Only in a T3 thread, and only when every earlier step succeeded and nothing needs the user, call `t3_thread_organize` with `action: "settle"` and no `threadId` as the last tool call of the turn. T3 applies it when the turn ends. Outside T3, report that settle was skipped.
 
 ## Report
 
