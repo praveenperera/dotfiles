@@ -8,6 +8,7 @@
 - When you change behavior, update the docs and READMEs that describe it in the same change, so they never describe the old behavior.
 - My instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
 - For performance work, profile and measure the end-to-end payoff first (same output or accuracy within limits, plus a measured speedup on a fixed input set); add harness or proof machinery only for risks that check can't catch, and time-box it.
+- Before adding complexity for a speculative or vanishingly unlikely race or security edge case, explain the concrete failure mode, likelihood, and complexity cost to me and get my buy-in. Do not silently expand scope for theoretical robustness.
 - Always give times in the US Central time zone.
 - Never give local-only 127.0.0.1 links; use host mode so links work on LAN and Tailscale.
 - In public-facing copy, include only reader-visible content. Omit implementation notes, source labels, workflow state, reasoning, conversation context, and edit instructions.
