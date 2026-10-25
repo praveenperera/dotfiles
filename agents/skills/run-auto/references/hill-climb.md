@@ -9,6 +9,10 @@ Use this loop when the task improves a measurable result.
 
 Never run two timing-sensitive benchmarks on the same GPU or CPU at once.
 
+## Check the gap before climbing
+
+Hill climbing only finishes a design; it can't replace one. Before the first experiment, put the speed-of-light or floor, the current result, and the target or leader side by side. If the target is more than ~1.3x away, or the current design reaches less than ~70% of the floor, plan a rewrite toward a design that can reach it, and climb only once within ~15% of it. Judge a rewrite by its ablation ceiling, not its first end-to-end number, and give it real runway. Skip experiments whose expected gain is below the noise floor.
+
 ## Climb
 
 1. Form one hypothesis per experiment, change one thing, and measure it with the same harness.
