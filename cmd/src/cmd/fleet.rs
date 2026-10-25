@@ -38,8 +38,8 @@ pub enum FleetCmd {
 
     /// Pull ~/code/dotfiles, then update Codex, Claude Code, Grok Build, and
     /// installed cmd, cln, Homebased, and codemode-mcp on ai5090 and code;
-    /// update cmd and any installed cln, Homebased, and codemode-mcp on the
-    /// calling machine too if it was not updated remotely. Each Homebased
+    /// update cmd and any installed cln, aps, Homebased, and codemode-mcp on
+    /// the calling machine too if it was not updated remotely. Each Homebased
     /// update also checks out the Homebased skill at the matching release tag,
     /// and codemode-mcp installs its latest release binary
     ///
@@ -56,7 +56,7 @@ pub enum FleetCmd {
         all: bool,
 
         /// Update only this machine: pull ~/code/dotfiles, then update cmd and
-        /// any installed cln, Homebased and its skill, and codemode-mcp; a
+        /// any installed cln, aps, Homebased and its skill, and codemode-mcp; a
         /// failed step does not stop the rest
         #[arg(long, conflicts_with = "all")]
         local: bool,
@@ -152,13 +152,17 @@ fn run_local_update(sh: &Shell) -> Result<()> {
     finish(failures)
 }
 
-/// Update cmd and any installed cln, Homebased, and codemode-mcp on this machine
+/// Update cmd and any installed cln, aps, Homebased, and codemode-mcp on this machine
 ///
 /// Each step runs even when an earlier one failed, because they are
 /// independent and an unattended run has nobody to rerun the rest
 fn update_tools(sh: &Shell, failures: &mut Vec<String>) {
     if has_tool(sh, "cln") {
         step(failures, "cln", || run_attached("cln", &["update"]));
+    }
+
+    if has_tool(sh, "aps") {
+        step(failures, "aps", || run_attached("aps", &["update"]));
     }
 
     if has_tool(sh, "homebased") {

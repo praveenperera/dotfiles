@@ -82,6 +82,14 @@ const GITHUB_RELEASE_TOOLS: &[GithubReleaseTool] = &[
             install_dir_env: "CLN_INSTALL_DIR",
         },
     },
+    GithubReleaseTool {
+        name: "aps",
+        repo: "praveenperera/aps",
+        crate_name: "aps",
+        method: InstallMethod::Script {
+            install_dir_env: "APS_INSTALL_DIR",
+        },
+    },
 ];
 
 pub fn run_with_flags(sh: &Shell, flags: Install) -> Result<()> {
