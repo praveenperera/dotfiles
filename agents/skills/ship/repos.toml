@@ -108,6 +108,18 @@ deploy = [
 ]
 notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required"
 
+[repos."praveenperera/aps"]
+steps = ["commit", "push", "deploy", "clean"]
+deploy = [
+  "just bump <part>",
+  "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
+  "git push origin master",
+  "just release github",
+  "~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "aps update",
+]
+notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required"
+
 [repos."praveenperera/minid"]
 steps = ["commit", "push", "deploy", "clean"]
 deploy = [
