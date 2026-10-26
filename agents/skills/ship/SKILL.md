@@ -99,7 +99,7 @@ Run the plan's commands in order from the repository root: the main checkout aft
 Remove each manifest item that is still present, then the manifest:
 
 - **Worktree and branch:** remove a worktree with `git worktree remove` only when it has no uncommitted or untracked changes, and leave one you are standing in by changing to the main checkout first. Delete a branch with `git branch -d`, which succeeds only when its commits are on the default branch. After a squash merge, the branch counts as merged only when `gh pr view <n> --json state,headRefOid` shows `MERGED` and `headRefOid` equals the local branch tip; then `git branch -D` is allowed, and `git push origin --delete <branch>` removes the remote branch. Never use `--force` or `-D` in any other case. While the PR is open, keep both.
-- **Scratch:** before deleting `_scratch/<task>/` and `_scratch/ship/<task>/`, move anything the final report links to into `~/code/research/ship/<repo>/<task>/`.
+- **Scratch:** before deleting `_scratch/<task>/` and `_scratch/ship/<task>/`, move anything the final report links to into `~/code/private-workbench/ops/<repo>/ship/<task>/`.
 - **Processes and services:** stop dev servers, Monitors, background shells, and homebased tasks this run started that are still running, and close the previews it opened.
 - **Containers and images:** remove the ones built only for testing.
 

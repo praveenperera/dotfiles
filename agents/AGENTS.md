@@ -15,7 +15,7 @@
 - Minimize nesting in functions.
 - Prefer ReScript for new JavaScript-targeting application logic when practical. When TypeScript is required, use the Effect library for stronger type safety: model expected errors and dependencies explicitly, and validate external data with Effect Schema instead of unchecked type assertions.
 - Do not leave deprecated code in place by default. Remove it, or ask whether the change must preserve the old path.
-- Put ad hoc files the user may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory and create it if needed. Those directories are wiped weekly; do not keep needed files there. Keep durable notes in `~/code/research`.
+- Put ad hoc files the user may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory and create it if needed. Those directories are wiped weekly; do not keep needed files there. Keep durable findings and decisions in `~/code/research`, and tools, scripts, automation prompts, runbooks and project ops notes in `~/code/private-workbench`.
 - In public-facing copy, include only reader-visible content. Omit implementation notes, source labels, workflow state, reasoning, conversation context, and edit instructions.
 - Preserve unrelated user or agent changes. Use hunk staging for commits and never undo unrelated edits.
 

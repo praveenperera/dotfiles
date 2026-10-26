@@ -24,7 +24,7 @@ Start with source control, because it connects rationale to the change that ship
 Then search the records that can change the answer. Much of this user's rationale lives in agent conversations rather than in pull requests, so check local agent history when the change was made with an agent:
 
 - Claude Code transcripts under `~/.claude/projects/` and Codex sessions under `~/.codex/sessions/`; match by workspace and by the commit's date range, and confirm that a session's working directory matches before using it
-- plans and specs under the repository `_plans/` directory, and notes in `~/code/research`
+- plans and specs under the repository `_plans/` directory, notes in `~/code/research`, and ops notes in `~/code/private-workbench`
 - issues and project trackers for product or operational pressure
 - observability, error tracking, or analytics when the code reacts to a runtime signal or a number
 

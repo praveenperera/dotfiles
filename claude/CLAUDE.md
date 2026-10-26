@@ -3,7 +3,7 @@
 - Encode recurring corrections as types, tests, lints, scripts, or runtime checks instead of repeating instructions.
 - When a step doesn't need my input, keep going, and put status notes in the same message as your next action. Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository that I have not already approved.
 - For long multi-step runs, keep a checklist in `_scratch/<task-name>/TASKS.md` so concurrent runs do not share one file; tick each item when it's done and add anything new you find. At the end, list what needs my input first, then the summary.
-- Put ad hoc files I may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory, creating it if needed. Those directories are wiped weekly, so keep durable notes in `~/code/research`.
+- Put ad hoc files I may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory, creating it if needed. Those directories are wiped weekly, so put durable findings and decisions in `~/code/research`, and tools, scripts, automation prompts, runbooks and project ops notes in `~/code/private-workbench`.
 - Mark anything you couldn't confirm, and say where you looked.
 - When you change behavior, update the docs and READMEs that describe it in the same change, so they never describe the old behavior.
 - My instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
