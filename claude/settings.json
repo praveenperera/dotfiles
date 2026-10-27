@@ -82,6 +82,10 @@
           {
             "type": "command",
             "command": "$HOME/.claude/scripts/no-waiting-background-bash.sh"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/scripts/no-zsh-word-split.sh"
           }
         ]
       }
