@@ -54,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/praveen/.claude/scripts/require-agent-model.sh"
+            "command": "$HOME/.claude/scripts/require-agent-model.sh"
           }
         ]
       },
@@ -63,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/praveen/.claude/scripts/require-agent-model.sh"
+            "command": "$HOME/.claude/scripts/require-agent-model.sh"
           }
         ]
       },
@@ -72,7 +72,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/praveen/.claude/scripts/quiet-monitor.sh"
+            "command": "$HOME/.claude/scripts/quiet-monitor.sh"
           }
         ]
       },
@@ -81,7 +81,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/praveen/.claude/scripts/no-waiting-background-bash.sh"
+            "command": "$HOME/.claude/scripts/no-waiting-background-bash.sh"
           }
         ]
       }
@@ -100,7 +100,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "/bin/zsh /Users/praveen/.claude/statusline-command.sh"
+    "command": "/bin/zsh $HOME/.claude/statusline-command.sh"
   },
   "enabledPlugins": {
     "github@claude-plugins-official": false,
