@@ -408,15 +408,47 @@ fn is_managed_link_target(
 
 pub(super) fn sync_symlink(sh: &Shell, path: &Path, target: &Path) -> Result<SyncSymlinkOutcome> {
     if is_broken_symlink(path)? {
-        fsutil::remove_existing_path(target)?;
+        clear_link_target(target)?;
         return Ok(SyncSymlinkOutcome::SkippedBrokenSource);
     }
 
-    fsutil::remove_existing_path(target)?;
+    clear_link_target(target)?;
     fsutil::ensure_parent_dir(target)?;
 
     cmd!(sh, "ln -s {path} {target}").run()?;
     Ok(SyncSymlinkOutcome::Linked)
+}
+
+/// Clears `target` so a link can take its place. A non-empty real directory is
+/// renamed to `<target>.bak-<timestamp>` instead of deleted, because a tool can
+/// recreate its config dir with state that never reached dotfiles, as when a
+/// fresh `~/.claude` holds credentials and session history
+fn clear_link_target(target: &Path) -> Result<()> {
+    let is_real_dir = fs::symlink_metadata(target)
+        .is_ok_and(|metadata| metadata.is_dir() && !metadata.file_type().is_symlink());
+
+    if !is_real_dir || fs::read_dir(target)?.next().is_none() {
+        return fsutil::remove_existing_path(target);
+    }
+
+    let mut backup = target.as_os_str().to_owned();
+    backup.push(
+        chrono::Local::now()
+            .format(".bak-%Y%m%d-%H%M%S")
+            .to_string(),
+    );
+    let backup = PathBuf::from(backup);
+
+    fs::rename(target, &backup)?;
+    println!(
+        "{} {} {} {}",
+        "moved existing directory".yellow(),
+        target.display().to_string().blue(),
+        "to".yellow(),
+        backup.display().to_string().blue()
+    );
+
+    Ok(())
 }
 
 fn is_broken_symlink(path: &Path) -> Result<bool> {

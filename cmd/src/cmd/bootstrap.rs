@@ -280,6 +280,35 @@ mod tests {
     }
 
     #[test]
+    fn moves_real_target_dir_aside_instead_of_deleting_it() {
+        let dir = tempdir().unwrap();
+        let sh = Shell::new().unwrap();
+        let source = dir.path().join("source");
+        let target = dir.path().join("target");
+
+        fs::create_dir(&source).unwrap();
+        fs::create_dir(&target).unwrap();
+        fs::write(target.join(".credentials.json"), "keep").unwrap();
+
+        let outcome = sync_symlink(&sh, &source, &target).unwrap();
+
+        assert_eq!(outcome, SyncSymlinkOutcome::Linked);
+        assert_eq!(fs::read_link(&target).unwrap(), source);
+
+        let backups: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.to_string_lossy().contains("target.bak-"))
+            .collect();
+
+        assert_eq!(backups.len(), 1);
+        assert_eq!(
+            fs::read_to_string(backups[0].join(".credentials.json")).unwrap(),
+            "keep"
+        );
+    }
+
+    #[test]
     fn relinks_valid_source_on_repeat_runs() {
         let dir = tempdir().unwrap();
         let sh = Shell::new().unwrap();
