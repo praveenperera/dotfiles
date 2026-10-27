@@ -1,7 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_SHELL": "bash"
   },
   "attribution": {
     "commit": "",
@@ -82,10 +83,6 @@
           {
             "type": "command",
             "command": "$HOME/.claude/scripts/no-waiting-background-bash.sh"
-          },
-          {
-            "type": "command",
-            "command": "$HOME/.claude/scripts/no-zsh-word-split.sh"
           }
         ]
       }

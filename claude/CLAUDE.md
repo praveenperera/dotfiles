@@ -16,7 +16,6 @@
 # Code
 
 - The code explains what; comments explain why. Comment non-obvious decisions, constraints, and tradeoffs. Start inline comments lowercase and higher-level doc comments with a capital letter; do not end comments with periods or make them depend on conversation context. Document every public API in libraries.
-- The Bash tool runs zsh, which does not word-split an unquoted `$var`. Build argument lists with arrays (`"${files[@]}"`), split on purpose with `${=var}`, or write a `#!/usr/bin/env bash` script for anything that relies on bash splitting. A `PreToolUse` hook (`claude/scripts/no-zsh-word-split.sh`) denies the common shapes; add `# zsh-ok: <why>` to a line that is already correct.
 - Prefer ReScript for new JavaScript-targeting application logic when practical. When TypeScript is required, use the Effect library for stronger type safety: model expected errors and dependencies explicitly, and validate external data with Effect Schema instead of unchecked type assertions.
 - Do not leave deprecated code in place by default. Remove it, or ask whether the change must preserve the old path.
 - For unfamiliar crates or external libraries, inspect documentation or source instead of guessing. For Rust, check `target/doc/`, run `cargo doc -p <crate-name>`, or inspect `~/.cargo/registry/src`; `btx` works for any repository.
