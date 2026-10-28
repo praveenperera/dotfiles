@@ -12,7 +12,6 @@
 - Always give times in the US Central time zone.
 - Never give local-only 127.0.0.1 links; use host mode so links work on LAN and Tailscale.
 - In public-facing copy, include only reader-visible content. Omit implementation notes, source labels, workflow state, reasoning, conversation context, and edit instructions.
-- New repos should always use `master` as the default branch name never `main`
 
 # Code
 
@@ -23,6 +22,7 @@
 
 # Git
 
+- New repos should always use `master` as the default branch name never `main`
 - For commits, follow `$HOME/.agents/commit-message-guide.md` and use Praveen Perera when an author is needed. Never add Claude co-authors, generated-by notes, or `Claude-Session:` trailers.
 - Preserve unrelated user or agent changes: stage by hunk and never undo unrelated edits.
 
