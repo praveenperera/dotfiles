@@ -131,6 +131,7 @@
     }
   },
   "effortLevel": "high",
+  "promptCacheTtl": "1h",
   "modelSettings": {
     "claude-haiku-5-5": {
       "autoCompactWindow": 256000
