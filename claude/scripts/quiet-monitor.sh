@@ -28,6 +28,11 @@ if grep -qE '2>&1[[:space:]]*>[[:space:]]*[^&[:space:]]' <<<"$command"; then
   deny "This command redirects in the wrong order: \`2>&1 > file\` sends stderr to the Monitor. Write \`> file 2>&1\`."
 fi
 
+# tail and head hold every event until the wait exits, so the thread learns nothing while it runs
+if grep -qE 'homebased task wait' <<<"$command" && grep -qE '\|[[:space:]]*(tail|head)([[:space:]]|$)' <<<"$command"; then
+  deny "\`tail\` and \`head\` hold every event until \`homebased task wait\` exits. Run \`homebased task wait <id> [<id> ...]\` with no pipe."
+fi
+
 # an explicit opt-in for a stream the agent wants, such as each new error in a log
 grep -qE '#[[:space:]]*stream:' <<<"$command" && exit 0
 

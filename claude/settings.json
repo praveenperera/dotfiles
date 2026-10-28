@@ -110,6 +110,17 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Monitor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/scripts/register-background-wait.sh"
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
