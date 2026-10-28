@@ -31,6 +31,7 @@ steps = ["sol", "commit", "push", "pr", "clean"]
 
 [repos."avencera/avencera"]
 steps = ["commit", "push", "deploy", "clean"]
+greptile = true
 deploy = [
   "pnpm --dir web run build",
   "pnpm --dir web exec node scripts/public-leak-scan.mjs .svelte-kit/cloudflare",
