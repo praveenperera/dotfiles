@@ -2,7 +2,8 @@
 # PreToolUse hook for Monitor: every stdout line of a Monitor wakes the agent for a
 # full turn that re-reads the whole context, so waits that stream progress, per-job
 # updates, or redrawn `gh run watch` output cost hundreds of thousands of tokens per
-# line. Allow waits that print once at the end, and streams the agent opts into
+# line. Allow only `homebased task wait`, which prints once per task event and survives
+# a T3 restart, and streams the agent opts into
 set -euo pipefail
 
 input=$(cat)
@@ -31,7 +32,7 @@ fi
 grep -qE '#[[:space:]]*stream:' <<<"$command" && exit 0
 
 streams=$(grep -cE -- '--line-buffered|tail[[:space:]].*-[fF]|gh run watch|--watch|comm -13' <<<"$command" || true)
-if [[ "$streams" == 0 ]] && grep -qE 'homebased task wait|watch_run\.sh' <<<"$command"; then
+if [[ "$streams" == 0 ]] && grep -qE 'homebased task wait' <<<"$command"; then
   exit 0
 fi
 

@@ -84,7 +84,7 @@ Pass when all of these hold for the PR's current head commit:
 
 Until it passes, address each comment with [gh-address-comments](../gh-address-comments/SKILL.md), reply on its thread, push, and comment `@greptileai review` unless a review of the new head is already running. Allow at most 3 such rounds; then stop and report what remains.
 
-To wait, record the finished steps with `--done`, then use `watch_pull_request` in a T3 thread and end the turn; resume from `plan.json` when T3 wakes the thread. Elsewhere, poll every 20 to 30 seconds for at most 20 minutes.
+To wait, submit `homebased --json task run --name "CI for #<n>" --timeout 4h -- ~/.agents/skills/ship/scripts/watch_pr.sh <n> --greptile` through [homebased](../homebased/SKILL.md), chaining `--done` for the finished steps onto it. In a T3 Claude thread, arm `Monitor` with `homebased task wait <id>`; then end the turn. The script waits for CI and for Greptile's review of the head commit, prints one line, and exits non-zero unless CI passed with 5/5; read it with `homebased task log <id> --tail 5` and resume from `plan.json`. Do not use T3's `watch_pull_request`, which wakes the thread for every bot comment, or poll in the turn.
 
 ### merge
 
@@ -92,7 +92,7 @@ Merge only after the greptile step passed, when it is in the plan, and required 
 
 ### deploy and publish
 
-Run the plan's commands in order from the repository root: the main checkout after a merge, otherwise the current checkout. Fill each remaining placeholder, such as `<item>`, `<next>`, `<site>`, or `<version>`, from the plan's notes and the repository; never run a command with a placeholder left in it. Run a long command, such as a release watch, a fleet update, or a test suite, as a [homebased](../homebased/SKILL.md) task workload; in a T3 Claude thread, arm `Monitor` with `homebased task wait <id>` so the thread wakes once, when it ends. `watch_run.sh` prints a single line at the end, so it is safe to wait on directly. Verify the result the commands promise, such as a healthy service, a finished release run, or the new installed version.
+Run the plan's commands in order from the repository root: the main checkout after a merge, otherwise the current checkout. Fill each remaining placeholder, such as `<item>`, `<next>`, `<site>`, or `<version>`, from the plan's notes and the repository; never run a command with a placeholder left in it. Run a long command, such as a release watch, a fleet update, or a test suite, as a [homebased](../homebased/SKILL.md) task workload, as the configured `watch_run.sh` steps already are; in a T3 Claude thread, arm `Monitor` with `homebased task wait <id>` so the thread wakes once, when it ends. End the turn after submitting, and run the next command only after the event arrives and `homebased task log <id> --tail 5` shows success. Verify the result the commands promise, such as a healthy service, a finished release run, or the new installed version.
 
 ### clean
 

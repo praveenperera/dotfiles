@@ -83,6 +83,19 @@
           {
             "type": "command",
             "command": "$HOME/.claude/scripts/no-waiting-background-bash.sh"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/scripts/ci-waits-through-homebased.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__t3-code__watch_pull_request",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/scripts/no-pr-watch.sh"
           }
         ]
       }
