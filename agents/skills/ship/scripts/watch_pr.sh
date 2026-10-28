@@ -99,12 +99,13 @@ if [ -z "$greptile" ]; then
     exit 1
 fi
 
-# Greptile edits one summary comment per PR; its "Last reviewed commit" link names the
+# Greptile edits one summary comment per PR, and only its bot account counts, since
+# anyone can post the marker on a public repo; its "Last reviewed commit" link names the
 # commit the score belongs to. Give the review 1 hour after CI ends
 score=
 for _ in $(seq 120); do
     score=$(gh api "repos/$repo/issues/$pr/comments" --paginate \
-        --jq ".[] | select(.body | contains(\"<!-- greptile_summary -->\") and contains(\"/commit/$sha\")) | .body" 2>/dev/null |
+        --jq ".[] | select(.user.login == \"greptile-apps[bot]\") | select(.body | contains(\"<!-- greptile_summary -->\") and contains(\"/commit/$sha\")) | .body" 2>/dev/null |
         sed -n 's/.*<!-- greptile_confidence_score:\([0-9]\) -->.*/\1/p' | tail -n 1)
     [ -n "$score" ] && break
     head_moved
