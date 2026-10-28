@@ -162,9 +162,9 @@ class RepoTableTests(unittest.TestCase):
 
 
 class CliTests(unittest.TestCase):
-    def run_cli(self, arguments):
+    def run_cli(self, arguments, host="t3-claude"):
         return subprocess.run(
-            [sys.executable, "-I", str(SCRIPT_PATH), "--repo", "praveenperera/homelab", "--", arguments],
+            [sys.executable, "-I", str(SCRIPT_PATH), "--repo", "praveenperera/homelab", "--host", host, "--", arguments],
             capture_output=True,
             text=True,
             check=True,
@@ -179,6 +179,28 @@ class CliTests(unittest.TestCase):
         output = self.run_cli("+settle")
 
         self.assertIn("plan: commit → push → deploy → clean → settle\n", output)
+
+    def test_outside_t3_settle_is_skipped_and_waits_need_no_monitor(self):
+        output = self.run_cli("+settle soul", host="none")
+
+        self.assertIn("plan: sol 6.1 xhigh review → commit → push → deploy → clean\n", output)
+        self.assertIn("skipped: settle (not in a T3 thread)\n", output)
+        self.assertIn("sol via: the Codex review command", output)
+        self.assertIn("wait: submit through homebased and end the turn", output)
+        self.assertNotIn("t3_background_wait", output)
+
+    def test_a_t3_claude_thread_delegates_sol_and_registers_its_waits(self):
+        output = self.run_cli("+settle soul")
+
+        self.assertIn("host: t3-claude\n", output)
+        self.assertIn("sol via: delegate_task", output)
+        self.assertIn("pass the Monitor's task id to t3_background_wait", output)
+
+    def test_a_t3_codex_thread_cannot_arm_a_monitor(self):
+        output = self.run_cli("+settle", host="t3-codex")
+
+        self.assertIn("plan: commit → push → deploy → clean → settle\n", output)
+        self.assertIn("wait: submit through homebased and end the turn", output)
 
 
 class SavedPlanTests(unittest.TestCase):

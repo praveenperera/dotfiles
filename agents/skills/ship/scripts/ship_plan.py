@@ -12,12 +12,14 @@ Usage:
   ship_plan.py --task SLUG -- ...       also save the plan to _scratch/ship/SLUG/plan.json
   ship_plan.py --task SLUG --done STEP...  record finished steps in that plan
   ship_plan.py --check                  validate repos.toml
+  ship_plan.py --host HOST -- ...       plan for t3-claude, t3-codex, or none instead of reading the process tree
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -26,6 +28,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "repos.toml"
+
+# where the plan runs decides how sol, PR links, waits, and settle are done
+HOSTS = ["t3-claude", "t3-codex", "none"]
+
+# processes that run an agent session; T3 starts each directly under `t3 serve`
+AGENT_COMMANDS = {"claude", "codex"}
 
 # Canonical order; typed order never matters
 STEPS = ["sol", "commit", "push", "pr", "greptile", "merge", "deploy", "publish", "clean", "settle"]
@@ -79,6 +87,8 @@ class Plan:
     pr_draft: bool = False
     commands: dict[str, list[str]] = field(default_factory=dict)
     notes: str = ""
+    host: str = "none"
+    skipped: list[str] = field(default_factory=list)
 
     def summary(self) -> str:
         labels = {
@@ -278,6 +288,65 @@ def task_dir(cwd: Path, task: str) -> Path:
     return Path(root.strip()) / "_scratch" / "ship" / slug
 
 
+def ps(pid: int, columns: str) -> str:
+    result = subprocess.run(["ps", "-o", columns, "-p", str(pid)], capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def detect_host() -> str:
+    """`t3-claude` or `t3-codex` when a T3 Code thread runs the nearest agent above this process, else `none`
+
+    Environment variables are not enough: T3's leak into a `claude -p` that an agent
+    starts from a T3 thread, and that nested session has no t3-code tools. T3 starts
+    its sessions directly under `t3 serve`, while a nested one sits under a shell
+    """
+    pid = os.getpid()
+    while pid > 1:
+        fields = ps(pid, "ppid=,comm=").split(None, 1)
+        if len(fields) != 2:
+            return "none"
+
+        ppid, command = int(fields[0]), Path(fields[1]).name
+        if command in AGENT_COMMANDS:
+            parent = ps(ppid, "command=")
+            return f"t3-{command}" if re.search(r"(^|/)t3 serve( |$)", parent) else "none"
+
+        pid = ppid
+
+    return "none"
+
+
+def apply_host(plan: Plan, host: str) -> None:
+    """Record where the plan runs, and drop settle outside T3, the only place it works"""
+    plan.host = host
+    if host == "none" and "settle" in plan.steps:
+        plan.steps.remove("settle")
+        plan.skipped.append("settle (not in a T3 thread)")
+
+
+def host_actions(plan: Plan) -> list[str]:
+    """How this host does the steps that differ between T3 and elsewhere"""
+    t3 = plan.host != "none"
+    lines = []
+
+    if "sol" in plan.steps:
+        if t3:
+            lines.append("sol via: delegate_task with the Codex provider and model gpt-6.1-sol from orchestrator_capabilities")
+        else:
+            lines.append("sol via: the Codex review command in review-fix-loop's providers.md#codex-review, through homebased when it will run long")
+
+    if "pr" in plan.steps and t3:
+        lines.append("pr link: call link_pull_request with the PR URL")
+
+    if any(step in plan.steps for step in ("greptile", "deploy", "publish")):
+        if plan.host == "t3-claude":
+            lines.append("wait: arm Monitor on `homebased task wait <id>`, pass the Monitor's task id to t3_background_wait, and end the turn")
+        else:
+            lines.append("wait: submit through homebased and end the turn; its event starts the next turn")
+
+    return lines
+
+
 def save_plan(directory: Path, plan: Plan) -> Path:
     """Write the plan with an empty `done` list; a new invocation starts a new plan"""
     directory.mkdir(parents=True, exist_ok=True)
@@ -379,6 +448,7 @@ def main() -> int:
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--task", help="save the plan to _scratch/ship/TASK/plan.json in the checkout")
     parser.add_argument("--done", nargs="+", metavar="STEP", help="record finished steps in the saved plan; needs --task")
+    parser.add_argument("--host", choices=["auto", *HOSTS], default="auto", help="where the plan runs; auto reads the process tree")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -427,6 +497,8 @@ def main() -> int:
         print(f"ship: {error}", file=sys.stderr)
         return 2
 
+    apply_host(plan, detect_host() if args.host == "auto" else args.host)
+
     # status mode changes nothing, so it leaves any saved plan alone
     saved = None
     if args.task and plan.mode != "status":
@@ -452,6 +524,13 @@ def main() -> int:
 
     if plan.implied:
         print(f"implied: {', '.join(plan.implied)}")
+
+    if plan.skipped:
+        print(f"skipped: {', '.join(plan.skipped)}")
+
+    print(f"host: {plan.host}")
+    for line in host_actions(plan):
+        print(line)
 
     templates = config.get("repos", {}).get(repo, {})
     if any("<part>" in command for step in plan.commands for command in templates.get(step, [])):

@@ -20,7 +20,7 @@ The same run saves the plan as `_scratch/ship/<task>/plan.json` and prints a `sa
 
 - When it exits with `unknown word`, the words were a sentence or a typo rather than resolver words, such as `nice ship`, `looks good, no need to deploy`, or `delpoy`. Read what the user meant, translate it into resolver words (nothing at all for a plain "ship it"), and run the resolver once more with those. When the message asked to ship without `/ship`, skip the first run and translate it directly.
 - On any other nonzero exit, or when the translated words fail too, report the error line and stop.
-- Otherwise show the `ship:` and `plan:` lines, then the concrete actions each step will take in this checkout: the branch, the files or hunks to commit, the PR target, the deploy commands with their placeholders filled, and what clean will remove. After a translation, also show how you read the request, such as `read "no need to deploy" as -deploy`. Then start in the same turn; the invocation is the go-ahead. Inside `/run-auto`, also log the plan in the decision log.
+- Otherwise show the `ship:`, `plan:`, and any `skipped:` lines, then the concrete actions each step will take in this checkout: the branch, the files or hunks to commit, the PR target, the deploy commands with their placeholders filled, and what clean will remove. After a translation, also show how you read the request, such as `read "no need to deploy" as -deploy`. Then start in the same turn; the invocation is the go-ahead. Inside `/run-auto`, also log the plan in the decision log.
 - Stop and wait for the go-ahead instead when the output has `confirm: wait for go-ahead`, from the `confirm` word, when you are not confident how to translate the request, or when the plan is not obvious for the work, as in the cases below. Put every question in the same message as the plan, and start once they are answered.
 - Ask instead of assuming when the repository is new to the table, which the `ship:` line shows as `default fallback` or `external fallback`. Ask which steps it should use and what deploy means there, and offer to add its entry to [repos.toml](repos.toml) before running.
 - Also ask when anything is unclear: which changes belong to this task, such as unrelated edits or unpushed commits you cannot attribute; a placeholder the notes don't settle; or a plan that looks wrong for the work, such as a deploy for a docs-only change.
@@ -57,8 +57,7 @@ When the plan has `pr`, never push the default branch. If HEAD is on it, create 
 
 Review the change against the merge base of the default branch, including uncommitted work, with GPT-6.1 Sol at the plan's effort in a fresh read-only session.
 
-- In a T3 thread, use `delegate_task` with the Codex provider and model `gpt-6.1-sol` from `orchestrator_capabilities`.
-- Elsewhere, run the Codex review command from [the review-fix-loop provider reference](../review-fix-loop/references/providers.md#codex-review) with the plan's effort, submitting it through [homebased](../homebased/SKILL.md) when it will run long.
+Run it the way the plan's `sol via:` line says: `delegate_task` with model `gpt-6.1-sol`, or the Codex review command from [the review-fix-loop provider reference](../review-fix-loop/references/providers.md#codex-review) with the plan's effort, submitted through [homebased](../homebased/SKILL.md) when it will run long.
 
 Fix the actionable findings, which are correctness, security, data-loss, and maintainability problems; drop style preferences and speculation. Run the repository's checks, then run one fresh review of the fixed code. When that second review still has actionable findings, stop and report them.
 
@@ -72,7 +71,7 @@ Push the branch with tracking. When the remote has moved, integrate with `git pu
 
 ### pr
 
-Open the PR against the plan's `pr` target, as a draft when the plan says draft. For a fork, use `--repo <target> --head <owner>:<branch>`. Write the body as Markdown prose: what changed, why, the root cause for a fix, and how it was verified. In a T3 thread, call `link_pull_request` with its URL.
+Open the PR against the plan's `pr` target, as a draft when the plan says draft. For a fork, use `--repo <target> --head <owner>:<branch>`. Write the body as Markdown prose: what changed, why, the root cause for a fix, and how it was verified. When the plan has a `pr link:` line, do what it says.
 
 ### greptile
 
@@ -84,7 +83,7 @@ Pass when all of these hold for the PR's current head commit:
 
 Until it passes, address each comment with [gh-address-comments](../gh-address-comments/SKILL.md), reply on its thread, push, and comment `@greptileai review` unless a review of the new head is already running. Allow at most 3 such rounds; then stop and report what remains.
 
-To wait, submit `homebased --json task run --name "CI for #<n>" --timeout 4h -- ~/.agents/skills/ship/scripts/watch_pr.sh <n> --greptile` through [homebased](../homebased/SKILL.md), chaining `--done` for the finished steps onto it. In a T3 Claude thread, arm `Monitor` with `homebased task wait <id>`; then end the turn. The script waits for CI and for Greptile's review of the head commit, prints one line, and exits non-zero unless CI passed with 5/5; read it with `homebased task log <id> --tail 5` and resume from `plan.json`. Do not use T3's `watch_pull_request`, which wakes the thread for every bot comment, or poll in the turn.
+To wait, submit `homebased --json task run --name "CI for #<n>" --timeout 4h -- ~/.agents/skills/ship/scripts/watch_pr.sh <n> --greptile` through [homebased](../homebased/SKILL.md), chaining `--done` for the finished steps onto it, then wait as the plan's `wait:` line says. The script waits for CI and for Greptile's review of the head commit, prints one line, and exits non-zero unless CI passed with 5/5; read it with `homebased task log <id> --tail 5` and resume from `plan.json`. Do not use T3's `watch_pull_request`, which wakes the thread for every bot comment, or poll in the turn.
 
 ### merge
 
@@ -92,7 +91,7 @@ Merge only after the greptile step passed, when it is in the plan, and required 
 
 ### deploy and publish
 
-Run the plan's commands in order from the repository root: the main checkout after a merge, otherwise the current checkout. Fill each remaining placeholder, such as `<item>`, `<next>`, `<site>`, or `<version>`, from the plan's notes and the repository; never run a command with a placeholder left in it. Run a long command, such as a release watch, a fleet update, or a test suite, as a [homebased](../homebased/SKILL.md) task workload, as the configured `watch_run.sh` steps already are; in a T3 Claude thread, arm `Monitor` with `homebased task wait <id>` so the thread wakes once, when it ends. End the turn after submitting, and run the next command only after the event arrives and `homebased task log <id> --tail 5` shows success. Verify the result the commands promise, such as a healthy service, a finished release run, or the new installed version.
+Run the plan's commands in order from the repository root: the main checkout after a merge, otherwise the current checkout. Fill each remaining placeholder, such as `<item>`, `<next>`, `<site>`, or `<version>`, from the plan's notes and the repository; never run a command with a placeholder left in it. Run a long command, such as a release watch, a fleet update, or a test suite, as a [homebased](../homebased/SKILL.md) task workload, as the configured `watch_run.sh` steps already are, and wait as the plan's `wait:` line says. End the turn after submitting, and run the next command only after the event arrives and `homebased task log <id> --tail 5` shows success. Verify the result the commands promise, such as a healthy service, a finished release run, or the new installed version.
 
 ### clean
 
@@ -107,7 +106,7 @@ Never touch stashes, other agents' worktrees or scratch, or anything not in the 
 
 ### settle
 
-Opt-in: no repository includes it by default, so it runs only when the user asks for it, with `+settle` (or `+s` or `+set`) or a clear request such as "and settle this thread". Only in a T3 thread, and only when every earlier step succeeded and nothing needs the user, call `t3_thread_organize` with `action: "settle"` and no `threadId` as the last tool call of the turn. T3 applies it when the turn ends. Outside T3, report that settle was skipped.
+Opt-in: no repository includes it by default, so it runs only when the user asks for it, with `+settle` (or `+s` or `+set`) or a clear request such as "and settle this thread". The resolver drops it outside a T3 thread and prints `skipped: settle`; report that. Otherwise, only when every earlier step succeeded and nothing needs the user, call `t3_thread_organize` with `action: "settle"` and no `threadId` as the last tool call of the turn. T3 applies it when the turn ends.
 
 ## Report
 
