@@ -5,9 +5,7 @@
 # remind the agent with the Monitor's task id right after it starts
 set -euo pipefail
 
-# T3 starts Claude through the Agent SDK with T3CODE_HOME set; a `claude` run from
-# a terminal, even T3's own, has the cli entrypoint and no t3-code tools
-[[ -n "${T3CODE_HOME:-}" && "${CLAUDE_CODE_ENTRYPOINT:-}" == "sdk-ts" ]] || exit 0
+"$(dirname "$0")/in-t3.sh" || exit 0
 
 input=$(cat)
 command=$(jq -r '.tool_input.command // empty' <<<"$input")

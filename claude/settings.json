@@ -121,6 +121,16 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/scripts/t3-context.sh"
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
