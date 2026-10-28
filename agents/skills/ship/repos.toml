@@ -29,6 +29,16 @@ steps = ["sol", "commit", "push", "pr", "clean"]
 
 # -- direct to master, then deploy
 
+[repos."avencera/avencera"]
+steps = ["commit", "push", "deploy", "clean"]
+deploy = [
+  "pnpm --dir web run build",
+  "pnpm --dir web exec node scripts/public-leak-scan.mjs .svelte-kit/cloudflare",
+  "pnpm --dir web exec wrangler deploy",
+]
+notes = "Deploy publishes the web Worker to preview.avencera.com only; production (`wrangler deploy --env production`, avencera.com) is a separate, explicit request. Verify the changed pages on https://preview.avencera.com. Skip deploy when the work touches nothing under web/"
+
+
 [repos."praveenperera/homelab"]
 steps = ["commit", "push", "deploy", "clean"]
 deploy = ["just deploy <item>"]
