@@ -5,3 +5,5 @@
 # zshrc defines these, and Ubuntu ships only python3 and pip3
 alias python=python3
 alias pip=pip3
+alias sht='/home/praveen/.t3/worktrees/cloud-project-system/praveen-rust-test-coverage/utils/showtime/sht'
+alias showtime='/home/praveen/.t3/worktrees/cloud-project-system/praveen-rust-test-coverage/utils/showtime/sht'
