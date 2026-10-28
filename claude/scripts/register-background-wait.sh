@@ -5,6 +5,10 @@
 # remind the agent with the Monitor's task id right after it starts
 set -euo pipefail
 
+# T3 starts Claude through the Agent SDK with T3CODE_HOME set; a `claude` run from
+# a terminal, even T3's own, has the cli entrypoint and no t3-code tools
+[[ -n "${T3CODE_HOME:-}" && "${CLAUDE_CODE_ENTRYPOINT:-}" == "sdk-ts" ]] || exit 0
+
 input=$(cat)
 command=$(jq -r '.tool_input.command // empty' <<<"$input")
 grep -qE 'homebased task wait' <<<"$command" || exit 0
@@ -15,6 +19,6 @@ monitor_id=$(jq -r '.tool_response.taskId // empty' <<<"$input")
 jq -n --arg id "$monitor_id" '{
   hookSpecificOutput: {
     hookEventName: "PostToolUse",
-    additionalContext: ("In a T3 thread (the t3-code tools are present), call `t3_background_wait` with taskIds [\"" + $id + "\"] now, before ending the turn, so T3 lists the thread under Waiting. Outside T3, ignore this.")
+    additionalContext: ("Call `t3_background_wait` with taskIds [\"" + $id + "\"] now, before ending the turn, so T3 lists the thread under Waiting.")
   }
 }'
