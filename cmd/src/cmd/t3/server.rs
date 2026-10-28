@@ -66,12 +66,7 @@ impl Server {
 
         // the state file survives crashes, so the pid is the liveness check, and
         // its executable is the t3 build that matches the database schema
-        let bin = Command::new("ps")
-            .args(["-o", "comm=", "-p", &state.pid.to_string()])
-            .output()
-            .ok()
-            .filter(|output| output.status.success())
-            .map(|output| PathBuf::from(String::from_utf8_lossy(&output.stdout).trim()))
+        let bin = executable(state.pid)
             .filter(|path| path.ends_with("t3"))
             .ok_or_else(|| eyre!("T3 server pid {} is not a running t3 binary", state.pid))?;
 
@@ -298,6 +293,22 @@ impl Drop for Client {
             .args(["--log-level", "error"])
             .output();
     }
+}
+
+/// Executable path of the running process `pid`. Linux `ps -o comm=` reports the
+/// main thread's name, which for T3 is `node-MainThread`, so `/proc` comes first
+/// and `ps` covers macOS, where `comm` is the full path
+fn executable(pid: u32) -> Option<PathBuf> {
+    if let Ok(path) = fs::read_link(format!("/proc/{pid}/exe")) {
+        return Some(path);
+    }
+
+    Command::new("ps")
+        .args(["-o", "comm=", "-p", &pid.to_string()])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| PathBuf::from(String::from_utf8_lossy(&output.stdout).trim()))
 }
 
 /// The `exit` of the RPC reply to `request_id`, skipping pings and other traffic.
