@@ -18,6 +18,6 @@ jq -n '{
   hookSpecificOutput: {
     hookEventName: "PreToolUse",
     permissionDecision: "deny",
-    permissionDecisionReason: "T3 Code does not count a background Bash as pending work, so a turn that ends on one shows as finished instead of Working or Waiting. For a command you will wait on, such as a build, test suite, download, or data pull, submit it as a homebased task and arm a Monitor with `homebased task wait <id>`, or run it as foreground Bash if it takes under about 10 minutes. For a process you will not wait on, such as a dev server, add a `# long-lived: <why>` comment to the command."
+    permissionDecisionReason: "T3 Code does not count a background Bash as pending work, so a turn that ends on one shows as finished instead of Working or Waiting. For a command you will wait on, such as a build, test suite, download, or data pull, submit it as a homebased task and arm a Monitor with `homebased wait <id>`, or run it as foreground Bash if it takes under about 10 minutes. For a process you will not wait on, such as a dev server, add a `# long-lived: <why>` comment to the command."
   }
 }'

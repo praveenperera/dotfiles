@@ -39,6 +39,6 @@ jq -n '{
   hookSpecificOutput: {
     hookEventName: "PreToolUse",
     permissionDecision: "deny",
-    permissionDecisionReason: "Do not wait on CI or a release run inside the turn. Submit the wait as a homebased task and end the turn: `homebased --json task run --name \"CI for #<n>\" --timeout 4h -- ~/.agents/skills/ship/scripts/watch_pr.sh <n> [--greptile]` for a PR, or `homebased --json task run --name \"<workflow> run\" --timeout 2h -- ~/.agents/skills/ship/scripts/watch_run.sh <workflow> <sha>` for a workflow run such as a release. In a Claude thread, then arm `Monitor` with `homebased task wait <id>`. Both scripts print one line when done; read it with `homebased task log <id> --tail 5`. For a one-shot status check, drop the watch or sleep. To hold a wait in the turn anyway, add a `# foreground-wait: <why>` comment."
+    permissionDecisionReason: "Do not wait on CI or a release run inside the turn. Submit the wait as a homebased task and end the turn: `homebased --json task run --name \"CI for #<n>\" --timeout 4h -- ~/.agents/skills/ship/scripts/watch_pr.sh <n> [--greptile]` for a PR, or `homebased --json task run --name \"<workflow> run\" --timeout 2h -- ~/.agents/skills/ship/scripts/watch_run.sh <workflow> <sha>` for a workflow run such as a release. In a Claude thread, then arm `Monitor` with `homebased wait <id>`. Both scripts print one line when done; read it with `homebased task log <id> --tail 5`. For a one-shot status check, drop the watch or sleep. To hold a wait in the turn anyway, add a `# foreground-wait: <why>` comment."
   }
 }'

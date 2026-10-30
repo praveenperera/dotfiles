@@ -340,7 +340,7 @@ def host_actions(plan: Plan) -> list[str]:
 
     if any(step in plan.steps for step in ("greptile", "deploy", "publish")):
         if plan.host == "t3-claude":
-            lines.append("wait: arm Monitor on `homebased task wait <id>`, pass the Monitor's task id to t3_background_wait, and end the turn")
+            lines.append("wait: arm Monitor on `homebased wait <id>`, pass the Monitor's task id to t3_background_wait, and end the turn")
         else:
             lines.append("wait: submit through homebased and end the turn; its event starts the next turn")
 

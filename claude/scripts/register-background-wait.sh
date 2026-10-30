@@ -9,7 +9,8 @@ set -euo pipefail
 
 input=$(cat)
 command=$(jq -r '.tool_input.command // empty' <<<"$input")
-grep -qE 'homebased task wait' <<<"$command" || exit 0
+# `task wait` is the old name, still accepted until avencera/homebased#6
+grep -qE 'homebased[[:space:]]+(task[[:space:]]+)?wait([[:space:]]|$)' <<<"$command" || exit 0
 
 monitor_id=$(jq -r '.tool_response.taskId // empty' <<<"$input")
 [[ -z "$monitor_id" ]] && exit 0
