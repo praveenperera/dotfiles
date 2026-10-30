@@ -1,7 +1,7 @@
 ---
 name: fanout
 description: Launch one new T3 thread per item, each in its own new worktree, with a prompt written as if the user sent it. Use when the user invokes $fanout or /fanout.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Fanout
