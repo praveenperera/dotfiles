@@ -12,6 +12,7 @@
 - Always give times in the US Central time zone.
 - Never give local-only 127.0.0.1 links; use host mode so links work on LAN and Tailscale.
 - In public-facing copy, include only reader-visible content. Omit implementation notes, source labels, workflow state, reasoning, conversation context, and edit instructions.
+- All GPU work must be run through the homebased queue, never run work that needs GPU time directly
 
 # Code
 
