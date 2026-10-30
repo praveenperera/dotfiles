@@ -161,9 +161,8 @@ greptile = true
 publish = ["just publish --dry-run", "just publish"]
 
 [repos."avencera/scriptrs"]
-steps = ["sol", "commit", "push", "pr", "greptile", "clean"]
-greptile = true
-notes = "CodeRabbit also reviews PRs here; address its comments in the greptile step too. Merge is opt-in with +merge"
+steps = ["sol", "commit", "push", "pr", "clean"]
+notes = "CodeRabbit also reviews PRs here; address its comments before merging. Merge is opt-in with +merge"
 
 [repos."avencera/rustywind"]
 steps = ["sol", "commit", "push", "pr", "greptile", "merge", "clean"]
