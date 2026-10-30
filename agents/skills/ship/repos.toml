@@ -191,6 +191,10 @@ notes = "origin is the fork; open the PR with `gh pr create --draft --repo NVIDI
 
 # -- commit and push only
 
+[repos."router-for-me/cliproxyapi"]
+steps = ["sol", "commit", "push", "clean"]
+notes = "origin is upstream router-for-me/CLIProxyAPI; our fork is the `fork` remote (praveenperera/CLIProxyAPI). Push master to `fork` (`git push fork master`), never to origin, and open no PR. Syncing with upstream rebases master and needs an explicit force-push go-ahead; see FORK.md. An upstream PR is a separate, explicit request"
+
 [repos."praveenperera/research"]
 steps = ["commit", "push", "clean"]
 
