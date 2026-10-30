@@ -17,9 +17,10 @@ const DFU_COMMAND: &str = "/home/praveen/.local/bin/dfu";
 /// Terminal type for ssh and tmux when the caller has no usable one
 const FALLBACK_TERM: &str = "xterm-256color";
 
-/// Fleet machines that are often asleep; `fleet update` queues their update
-/// in Homebased, which sends it once the machine answers
-const SLEEPING_MACHINES: &[&str] = &["mba"];
+/// Macs that `fleet update` reaches through a queued Homebased task instead of
+/// ssh; Homebased sends it once the machine answers, so the mba, which is often
+/// asleep, runs it when it wakes and the Mac mini runs it at once
+const QUEUED_MACHINES: &[&str] = &["mba", "main"];
 
 /// Homebased coalesce key, so the updates a sleeping machine missed run once
 const UPDATE_COALESCE_KEY: &str = "fleet-update";
@@ -43,9 +44,10 @@ pub enum FleetCmd {
     /// update also checks out the Homebased skill at the matching release tag,
     /// and codemode-mcp installs its latest release binary
     ///
-    /// The mba is often asleep, so its update is queued in Homebased instead:
-    /// it runs `fleet update --local` there once someone has used the mba for
-    /// two minutes, and queued updates it missed collapse to one
+    /// The Mac mini (main) and the mba get their update as a queued Homebased
+    /// task that runs `fleet update --local` there. The mini runs it at once;
+    /// the mba, which is often asleep, runs it once someone has used it for two
+    /// minutes, and queued updates it missed collapse to one
     ///
     /// Without --all, this uses no sudo and changes no system packages;
     /// running Homebased daemons restart after their update
@@ -119,8 +121,8 @@ fn run_dfu(sh: &Shell) -> Result<()> {
 }
 
 fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
-    // queued first, so a remote failure below cannot skip a sleeping machine
-    queue_sleeping_updates(sh);
+    // queued first, so a remote failure below cannot skip a queued machine
+    queue_machine_updates(sh);
 
     let local = on_ai5090(sh);
     require_update_command(local)?;
@@ -214,17 +216,17 @@ fn finish(failures: Vec<String>) -> Result<()> {
     Err(eyre!("update failed for {}", failures.join(", ")))
 }
 
-/// Queue `fleet update --local` on each sleeping machine other than this one
+/// Queue `fleet update --local` on each queued machine other than this one
 ///
 /// A failure here only warns: the rest of the fleet still updates
-fn queue_sleeping_updates(sh: &Shell) {
+fn queue_machine_updates(sh: &Shell) {
     if !has_tool(sh, "homebased") {
-        eprintln!("homebased is not installed, so no update is queued for sleeping machines");
+        eprintln!("homebased is not installed, so no update is queued for the mba or main");
         return;
     }
 
     let this_machine = local_fleet_name();
-    for machine in SLEEPING_MACHINES {
+    for machine in QUEUED_MACHINES {
         if this_machine.as_deref() == Some(*machine) {
             continue;
         }
