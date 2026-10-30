@@ -113,7 +113,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Monitor",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",

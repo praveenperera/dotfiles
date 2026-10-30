@@ -194,7 +194,7 @@ class CliTests(unittest.TestCase):
 
         self.assertIn("host: t3-claude\n", output)
         self.assertIn("sol via: delegate_task", output)
-        self.assertIn("pass the Monitor's task id to t3_background_wait", output)
+        self.assertIn("pass its task id to t3_background_wait", output)
 
     def test_a_t3_codex_thread_cannot_arm_a_monitor(self):
         output = self.run_cli("+settle", host="t3-codex")
