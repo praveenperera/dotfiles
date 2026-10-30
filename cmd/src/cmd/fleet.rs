@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use eyre::{eyre, Result, WrapErr};
 use serde_json::{json, Value};
-use std::io::Write as _;
+use std::io::{IsTerminal as _, Write as _};
 use std::process::{Command, Stdio};
 use xshell::{cmd, Shell};
 
@@ -51,6 +51,9 @@ pub enum FleetCmd {
     ///
     /// Without --all, this uses no sudo and changes no system packages;
     /// running Homebased daemons restart after their update
+    ///
+    /// On a Mac whose login keychain is locked, as it is over ssh, this first
+    /// asks for its password so gh can read the private cln and aps releases
     Update {
         /// Also upgrade APT packages and update T3 Code; this can use sudo and
         /// restart T3 Code
@@ -121,6 +124,9 @@ fn run_dfu(sh: &Shell) -> Result<()> {
 }
 
 fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
+    // asks before the long remote update, so the run needs nobody afterwards
+    unlock_keychain_for_gh(sh);
+
     // queued first, so a remote failure below cannot skip a queued machine
     queue_machine_updates(sh);
 
@@ -142,6 +148,8 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
 
 /// Update only this machine, as a queued update does on a machine that was asleep
 fn run_local_update(sh: &Shell) -> Result<()> {
+    unlock_keychain_for_gh(sh);
+
     let mut failures = Vec::new();
     let dotfiles = dotfiles_dir()?;
     let dotfiles = dotfiles
@@ -198,6 +206,38 @@ fn update_tools(sh: &Shell, failures: &mut Vec<String>) {
             },
         )
     });
+}
+
+/// Unlock the macOS login keychain when it is locked and someone can type its password
+///
+/// An ssh session cannot read the login keychain until it is unlocked, so gh
+/// has no token there and the private cln and aps release lookups fail as
+/// "release not found". A failed unlock only warns: those steps then fail on
+/// their own and the rest still update
+fn unlock_keychain_for_gh(sh: &Shell) {
+    if !cfg!(target_os = "macos") || !std::io::stdin().is_terminal() {
+        return;
+    }
+
+    if !has_tool(sh, "cln") && !has_tool(sh, "aps") {
+        return;
+    }
+
+    let unlocked = Command::new("security")
+        .arg("show-keychain-info")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success());
+
+    if unlocked {
+        return;
+    }
+
+    eprintln!("the login keychain is locked, so gh cannot read its token; unlock it to update cln and aps");
+    if let Err(error) = run_attached("security", &["unlock-keychain"]) {
+        eprintln!("warning: could not unlock the login keychain: {error:#}");
+    }
 }
 
 /// Run one update step, recording its name when it fails
