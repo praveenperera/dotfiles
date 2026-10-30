@@ -1,0 +1,6 @@
+interface:
+  display_name: "GPU Work"
+  short_description: "Start GPU kernel or native-runtime work from the research start page"
+  default_prompt: "Use $gpu-work to start this GPU kernel task from the research start page."
+policy:
+  allow_implicit_invocation: false
