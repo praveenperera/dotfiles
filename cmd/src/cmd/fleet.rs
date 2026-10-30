@@ -14,6 +14,11 @@ const UPDATE_COMMAND: &str = "/home/praveen/.local/bin/fleet-update";
 /// Pulls dotfiles on ai5090 and its code container
 const DFU_COMMAND: &str = "/home/praveen/.local/bin/dfu";
 
+/// Updates gpu-ab, which has no self-update, through the install.sh its release
+/// ships; that script checks the archive against the release checksum
+const GPU_AB_UPDATE: &str = "set -o pipefail; \
+    gh release download --repo praveenperera/gpu-ab --pattern install.sh -O - | bash";
+
 /// Terminal type for ssh and tmux when the caller has no usable one
 const FALLBACK_TERM: &str = "xterm-256color";
 
@@ -38,11 +43,12 @@ pub enum FleetCmd {
     DotfilesUp,
 
     /// Pull ~/code/dotfiles, then update Codex, Claude Code, Grok Build, and
-    /// installed cmd, cln, Homebased, and codemode-mcp on ai5090 and code;
-    /// update cmd and any installed cln, aps, Homebased, and codemode-mcp on
-    /// the calling machine too if it was not updated remotely. Each Homebased
-    /// update also checks out the Homebased skill at the matching release tag,
-    /// and codemode-mcp installs its latest release binary
+    /// installed cmd, cln, Homebased, codemode-mcp, and gpu-ab on ai5090 and
+    /// code; update cmd and any installed cln, aps, Homebased, codemode-mcp,
+    /// and gpu-ab on the calling machine too if it was not updated remotely.
+    /// Each Homebased update also checks out the Homebased skill at the
+    /// matching release tag, and codemode-mcp and gpu-ab install their latest
+    /// release binaries
     ///
     /// The Mac mini (main) and the mba get their update as a queued Homebased
     /// task that runs `fleet update --local` there. The mini runs it at once;
@@ -61,8 +67,8 @@ pub enum FleetCmd {
         all: bool,
 
         /// Update only this machine: pull ~/code/dotfiles, then update cmd and
-        /// any installed cln, aps, Homebased and its skill, and codemode-mcp; a
-        /// failed step does not stop the rest
+        /// any installed cln, aps, Homebased and its skill, codemode-mcp, and
+        /// gpu-ab; a failed step does not stop the rest
         #[arg(long, conflicts_with = "all")]
         local: bool,
     },
@@ -162,7 +168,7 @@ fn run_local_update(sh: &Shell) -> Result<()> {
     finish(failures)
 }
 
-/// Update cmd and any installed cln, aps, Homebased, and codemode-mcp on this machine
+/// Update cmd and any installed cln, aps, Homebased, codemode-mcp, and gpu-ab on this machine
 ///
 /// Each step runs even when an earlier one failed, because they are
 /// independent and an unattended run has nobody to rerun the rest
@@ -192,6 +198,13 @@ fn update_tools(sh: &Shell, failures: &mut Vec<String>) {
     if has_tool(sh, "codemode-mcp") {
         step(failures, "codemode-mcp", || {
             run_attached("codemode-mcp", &["update"])
+        });
+    }
+
+    // only the Linux GPU hosts install gpu-ab; its release has no macOS build
+    if has_tool(sh, "gpu-ab") {
+        step(failures, "gpu-ab", || {
+            run_attached("bash", &["-c", GPU_AB_UPDATE])
         });
     }
 
