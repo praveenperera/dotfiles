@@ -1,7 +1,6 @@
 ---
 name: gpu-work
-description: Start or run GPU kernel, CUDA, cuda-oxide or native-runtime work (custom kernels, speed climbs, porting a model off PyTorch or ONNX Runtime, profiling with nsys or ncu), defaulting to ambitious floor-capable designs over easy tuning, keeping a decision log and adding new rules and gotchas back into this skill. Use when the user invokes $gpu-work or /gpu-work.
-disable-model-invocation: true
+description: Rules and workflow for GPU kernel and native-runtime work. Use for writing, porting or optimizing CUDA kernels (cuda-oxide, PTX tiers, shipping CUDA crates), speed climbs on GPU pipelines, porting a model off PyTorch or ONNX Runtime to a native runtime, replacing cuDNN or cuBLAS layers, and profiling kernels with nsys or ncu, or when the user invokes $gpu-work or /gpu-work. Defaults to ambitious floor-capable designs over easy tuning, keeps a decision log, and adds new rules and gotchas back into this skill. Do not use for ML training runs or other GPU jobs that change no kernel or runtime code.
 ---
 
 # GPU work

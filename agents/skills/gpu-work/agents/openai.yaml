@@ -3,4 +3,4 @@ interface:
   short_description: "Run GPU kernel or native-runtime work by its rules, with a decision log"
   default_prompt: "Use $gpu-work to run this GPU kernel task."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true
