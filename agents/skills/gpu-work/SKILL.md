@@ -29,7 +29,7 @@ Track D on the start page has the details.
 1. Read `~/code/research/gpu-kernels/README.md`: "Every project", then the track or tracks that fit. Open only the notes your track links.
 2. Speed climb on an existing pipeline: follow `~/code/private-workbench/playbooks/gpu-hill-climb.md` and the repo sheet in `~/code/private-workbench/ops/<repo>/hill-climb/README.md`.
 3. Delegating to a worker: fill `~/code/private-workbench/playbooks/kernel-worker-brief-template.md`, copying in only the rules that apply and naming the ambitious design to build first.
-4. All GPU work, including tests, nsys and ncu, goes through the homebased queue on `gpu0`.
+4. All GPU work, including tests, nsys and ncu, goes through the homebased GPU queue; never run it directly.
 5. At the end of each phase and before finishing, record results and lessons as in "Recording lessons" on the start page.
 
 If you are a worker with a brief, the brief replaces steps 1-3, but the ambition rule still applies.
