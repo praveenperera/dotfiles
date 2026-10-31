@@ -10,5 +10,6 @@ Running workers, advisors or reviewers on kernel tasks. `R` = `~/code/research/g
 - Workers fix their own scratch bugs and rerun without asking. Diff every worker change against its brief.
 - Give advisors the same blind baseline, and score them against measurements. Use xhigh for Sol, and for Opus only when it can read raw traces.
 - Integrate with every dependency on day one, against the real gate.
+- Run Claude subagents that submit GPU queue jobs in the background. A job's callback arrives in the root session as a user turn and interrupts any foreground tool call there, including a foreground subagent, which then stops mid-task (twice in the cuda-oxide gotcha validation, 2026-10-31). The subagent waits by polling `homebased resource job show`, not with a callback.
 
 Read: lessons §4, §5 and §6 ("Workers and models"), `R/cuda-kernels/speakrs-cuda-advisor-comparison-2026-10-08.md` §8, `~/code/research/agents/agent-models/README.md`.
