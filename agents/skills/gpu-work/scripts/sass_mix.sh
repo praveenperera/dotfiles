@@ -35,8 +35,13 @@ fi
 for k in "${kernels[@]}"; do
   echo "== $k"
   for v in ref new; do
-    "$bin/cuobjdump" -sass -fun "$k" "$tmp/$v.cubin" > "$tmp/$v.sass" 2>/dev/null || true
     res=$(awk -v k="$k" '$1 == k { printf "regs %s stack %s spill %s/%s", $2, $3, $4, $5 }' "$tmp/$v.res")
+    # a kernel new in one build (or renamed) has no counterpart to compare
+    if [[ -z $res ]]; then
+      printf '%-4s not in this build\n' "$v"
+      continue
+    fi
+    "$bin/cuobjdump" -sass -fun "$k" "$tmp/$v.cubin" > "$tmp/$v.sass" 2>/dev/null || true
     ops=$(grep -oE '/\*[0-9a-f]{4}\*/\s+(@!?U?P[0-9T] )?[A-Z0-9_]+' "$tmp/$v.sass" | awk '{print $NF}' |
       awk '$1 ~ /^(LD|LDG|LDS|LDL|STL|FSETP|FSEL|FMNMX|HMMA|MUFU|CALL)$/' | sort | uniq -c | awk '{printf "%s %s  ", $2, $1}')
     printf '%-4s %-36s insts %5s  %s\n' "$v" "$res" "$(grep -cE '/\*[0-9a-f]{4}\*/' "$tmp/$v.sass")" "$ops"

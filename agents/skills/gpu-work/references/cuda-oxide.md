@@ -13,8 +13,17 @@ Traps that cost correctness or speed in cuda-oxide kernels, and the checks that 
 
 - **Generic `#[device]` fns are never inlined** (`2d47e43`): they stay a `.func` and their pointers arrive generic (generic `LD` instead of `LDS`/`LDG`, flash attention 25-72% slower). Write generic bodies as plain `#[inline(always)]` fns, and unroll their loops with `cuda_device::thread::__unroll_config::<0>()` as the loop body's first statement (0 = fully, N = by N). That marker is the undocumented call `#[unroll]` expands to, so recheck it after every cuda-oxide upgrade (the build's no-`call` check and a SASS look catch a break).
 - **`f32::max`/`min` become compare + select** (`2d47e43`), not one `max.f32`: use libdevice `__nv_fmaxf`/`__nv_fminf`.
-- **No automatic partial unrolling of runtime-bound loops**, which nvcc does: ask for it where loads should overlap.
+- **No automatic partial unrolling of runtime-bound loops**, which nvcc does (a `blockDim.x`-step loop gets 4x from nvcc and stays rolled here, one load round trip per iteration: flash tile staging 27% slower, `2d47e43`). The full-unroll marker is checked before inlining, so a bound that is constant only after inlining is refused, and LLVM ignored a partial count. Loop to a fixed upper bound fully unrolled and skip the extra iterations with a test that folds after inlining.
+- **`ptx_asm!` loads and stores keep their source order**: asm is opaque and a store with `clobber("memory")` blocks moving any later load above it, so neither LLVM nor ptxas overlaps the loads of an unrolled load-store loop. Write all the loads into registers first, then all the stores.
 - **Iterating a local array with `for x in arr`** puts it on the stack: write the operations out.
+- **`core::iter::Zip` over a slice iterator and a view iterator is not inlined** (`2d47e43`): a `call` and a 72-byte stack. Use cuda-device's own `zip_exact`/`ZipView32` or a counted loop over views.
+- **Selecting between a real view and `RowView32::empty()`** (a null pointer) turns the loads into generic `LD`, and `Option<RowView32>` puts it on the stack: keep an optional input as an empty slice and test `is_empty()`.
+- **Bounds-checked `slice[i]` in a loop can stop LLVM unrolling it** (14 loads issued together became 2); a view's `get(i)` checks against the loop bound once and unrolls. Read rows through `MatrixView32`/`RowView32`.
+- **Shared addresses for `ldmatrix`: 32-bit math, lane term first, constant last.** Computed in 64 bits and truncated, or with the constant added first, the offset becomes an `or` ptxas can't fold into the immediate (about 150 more instructions in a flash kernel, `2d47e43`).
+- **A bounds check whose trap depends on the thread marks the warp divergent**: ptxas then wraps every later shuffle and `mma` in WARPSYNC/ENDCOLLECTIVE. In warp-cooperative kernels, check once up front with a block-uniform condition and index unchecked after.
+- **A pointer merged with null (through `if`/`select` or an empty view) becomes a generic `LD`**: load inside the branch instead.
+- **Deriving a row length from a slice length in a block-per-row kernel** (`x.len() / gridDim.x`) puts an integer division before the first load of every block. Pass the row length as a param and let the view check it (layernorm_bf16 3% faster, `2d47e43`). One-thread-per-element kernels only compare against the length, so they are fine.
+- **`warp::reduce_max_f32` uses `f32::max`** (`2d47e43`), so it carries the compare + select; write the butterfly with `fmaxf`. `reduce_sum_f32` is fine.
 
 ## Correctness traps
 
@@ -24,11 +33,17 @@ Traps that cost correctness or speed in cuda-oxide kernels, and the checks that 
 ## API gaps and limits
 
 - `#[unroll]` works only directly in `#[kernel]`/`#[device]` bodies, not inside `macro_rules!` bodies, and not on loops with a non-constant step (warns, stays rolled).
+- `#[unroll(N)]` on a loop with a bounds check warns about multiple exits (the trap branch counts) and is ignored; LLVM often unrolls it unaided.
+- `ThreadIndex32` is not `Copy`, so each output `DisjointSlice` needs its own witness: call `thread::index_1d_u32(lc)` once per slice.
+- `DisjointSlice` params are declared `.align 1` whatever `T` is, so wide stores can't be inferred from them.
+- No block-indexed output space: a block that owns a row writes through `DisjointSlice::get_unchecked_mut` with a SAFETY comment. A kernel that reads and writes one buffer can't take it as both `&[T]` and `DisjointSlice<T>` (that aliasing is UB): split an in-place kernel that takes only the `DisjointSlice`.
 - No `static mut SharedArray` in generic fns: declare tiles per kernel and pass pointers in.
 - No `[T; D / 16]` in generics without `generic_const_exprs`: pass the derived length as another const param.
 - No `f32::mul_add` in `no_std` (use `float::fma_rn_f32`); libdevice math through `unsafe extern "C" { fn __nv_erff(x: f32) -> f32; }`, which matches nvcc's results.
-- Wide loads and stores (`float4`, `st.shared.v4`) need `ptx_asm!`.
-- Not every tensor-core instruction is wrapped: the FP16-accumulate `mma.sync ...f16.f16.f16.f16` isn't (`2d47e43`), so it is `ptx_asm!`. Check `cuda_device::wmma` before writing one.
+- Wide shared stores (`st.shared.v4`) and 16-byte global loads need `ptx_asm!`. Wide global stores don't: a `repr(C, align(16))` element type in a `DisjointSlice` lowers to `st.global.v4`.
+- No safe empty `DisjointSlice` (`from_mut_slice(&mut [])` is unsafe); `launch_contract(block = ...)` emits `.reqntid` and drops `.maxntid`.
+- Tensor-core wrappers are split across files: `cuda_device::wmma` has `mma_m16n8k16_f32_bf16`, `_f32_f16`, `_f16_f16` (FP16 accumulate, from `generated/register_mma.rs`), `_f32_tf32`, `ldmatrix_*` and the `mma_frag` accumulator layout helpers (`2d47e43`). Search the crate source, including `generated/`, before writing `ptx_asm!`.
+- A host that launches slice-ABI kernels should check its arguments against each `.entry` param list read from the PTX text it loaded (`.u64 .ptr` address, `.u64` length, `.u32`, `.f32`), once per kernel. Probing `cuFuncGetParamInfo` past the last param returns `CUDA_ERROR_INVALID_VALUE`, which compute-sanitizer reports as an API error for every kernel, and `cuFuncGetParamCount` needs CUDA 13.2.
 - `#[kernel] pub unsafe fn` with raw pointers and plain scalars exports a C-like entry, so hosts written for CUDA C++ kernels need no launch changes.
 
 ## Checks on every build
