@@ -73,3 +73,17 @@ Scripts in this skill's `scripts/` folder:
 - ptxas `-v`: no unexpected spills or stack frames.
 - A refactor with byte-identical PTX is safe; diff it.
 - When porting or changing codegen, compare `cuobjdump -sass` opcode counts per kernel with the reference build, and run an nsys per-kernel diff plus an A/B in every precision mode: parity and sanitizers miss speed regressions.
+
+## Upstream issues
+
+Traps above that name an issue are tracked in NVIDIA/cuda-rust; check it before an upgrade, and comment with measurements rather than filing a duplicate. Not filed as of 2026-10-31 (keyword search found no issue), each needing a minimal reproduction on current `main` first:
+
+- A closure capturing shared-memory pointers fails MIR verification.
+- `core::iter::Zip` over a slice iterator and a view iterator is not inlined.
+- A pointer merged with null (a view or `RowView32::empty()`) loses its address space, so loads become generic `LD`.
+- `#[unroll]` is unusable in `#[inline(always)]` helpers and `macro_rules!`, the full-unroll check runs before inlining, and runtime-bound loops are never partially unrolled.
+- No vector global loads or shared stores without `ptx_asm!`.
+- No block-indexed output space for kernels where a block owns a row (#583 covered a thread owning several elements).
+- No safe empty `DisjointSlice` for optional outputs.
+
+Not upstream material: the open slowdowns until a cause is confirmed, ptxas behavior (divergent bounds-check traps, `cvt.rna.tf32` cost, helper moves changing SASS), and Rust language limits (generic statics, `[T; D / 16]`).
