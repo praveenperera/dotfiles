@@ -14,15 +14,15 @@ Agents drift to small, safe tuning (parameter sweeps, launch configs, small fusi
 
 ## Kernels: cuda-oxide, shipped as PTX
 
-Write every custom CUDA kernel in Rust with cuda-oxide, not CUDA C++, Triton or NVRTC source strings. cuda-oxide needs a pinned nightly and a CUDA toolkit; that cost stays with the maintainers, and the published library builds on stable Rust:
+Write every custom CUDA kernel in Rust with cuda-oxide, not CUDA C++, Triton or NVRTC source strings. cuda-oxide needs its pinned Rust toolchain (with rustc-dev), LLVM and a CUDA toolkit; that cost stays with the maintainers, and the published library builds on stable Rust:
 
-- Take cuda-oxide from the tip of its git `main`, never a crates.io release. When you start kernel work or rebuild the PTX, move to the current tip and to the nightly that tip pins in its own `rust-toolchain.toml`. Record the commit (a `rev` or the lockfile) so the PTX check knows which cuda-oxide built the committed files.
-- Kernels live in a standalone crate outside the workspace, with its own `rust-toolchain.toml` matching cuda-oxide's nightly. Only a build command (an xtask or script run on a GPU box) compiles it, once per area and tier, to PTX and, where it pays, cubins.
+- Take cuda-oxide from the tip of its git `main`, never a crates.io release. When you start kernel work or rebuild the PTX, move to the current tip and to the toolchain that tip pins in its own `rust-toolchain.toml` (stable 1.99.1 in October 2026, a nightly before that). Record the commit (a `rev` or the lockfile) so the PTX check knows which cuda-oxide built the committed files.
+- Kernels live in a standalone crate outside the workspace, with its own `rust-toolchain.toml` matching cuda-oxide's. Only a build command (an xtask or script run on a GPU box) compiles it, once per area and tier, to PTX and, where it pays, cubins.
 - Commit the generated PTX and embed it with `include_str!` (`include_bytes!` for cubins). If the artifacts would pass the crates.io upload limit, split them into one crate per PTX tier: an sm75 baseline, plus higher tiers only where they unlock math the baseline can't use.
-- The host library loads the PTX through the driver at run time (for example cudarc with dynamic loading), so users need no nightly, no CUDA toolkit and no GPU to build it, and the installed driver JIT-compiles the PTX.
+- The host library loads the PTX through the driver at run time (for example cudarc with dynamic loading), so users need no special toolchain, no CUDA toolkit and no GPU to build it, and the installed driver JIT-compiles the PTX.
 - CI checks the committed PTX against hashes of every input that can change it (kernel sources, cuda-oxide rev, toolchain, toolkit), so stale PTX fails without a GPU.
 
-Track D on the start page has the details.
+Track D on the start page has the details. Before writing or porting a kernel, read [references/cuda-oxide.md](references/cuda-oxide.md), the known traps and per-build checks, and add any new trap you hit to it. To compare a kernel build against a reference build, use this skill's scripts: [scripts/sass_mix.sh](scripts/sass_mix.sh) `REF.ptx NEW.ptx [ARCH] [KERNEL...]` (calls, registers, spills and trap opcodes per kernel; CPU only) and [scripts/nsys_kernel_diff.py](scripts/nsys_kernel_diff.py) `CTL.sqlite[,...] EXP.sqlite[,...] [N]` (per-kernel GPU time from nsys exports profiled through the queue).
 
 ## Where to look
 
