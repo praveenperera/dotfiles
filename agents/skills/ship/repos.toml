@@ -164,6 +164,14 @@ publish = ["just publish --dry-run", "just publish"]
 steps = ["sol", "commit", "push", "pr", "clean"]
 notes = "CodeRabbit also reviews PRs here; address its comments before merging. Merge is opt-in with +merge"
 
+[repos."avencera/sam3rs"]
+steps = ["sol", "commit", "push", "pr", "clean"]
+notes = "Greptile is not enabled here. Merge is opt-in with +merge"
+
+[repos."avencera/dialogrs"]
+steps = ["sol", "commit", "push", "pr", "clean"]
+notes = "Greptile is not enabled here. Merge is opt-in with +merge. The Cargo.lock follows the sibling ../speakrs and ../scriptrs checkouts, so ship it after their changes"
+
 [repos."avencera/rustywind"]
 steps = ["sol", "commit", "push", "pr", "greptile", "merge", "clean"]
 greptile = true
