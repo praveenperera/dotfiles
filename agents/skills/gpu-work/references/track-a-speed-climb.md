@@ -6,6 +6,7 @@ Making kernels or a pipeline faster: a contest (OKC) or a hill climb on our runt
 - Skip experiments whose expected gain is below the noise. Rewrite the largest share first.
 - Measure real hardware floors before trusting specs: H200 cold-L2 reads reached 3.6 of 4.8 TB/s.
 - Measure the instruction issue rate before trusting "pipe saturated". m16n8k16 FP16 issues at the same rate as k8, which doubled throughput.
+- Sample power and clock-event reasons during the timed run (`nvidia-smi --query-gpu=power.draw,clocks.sm,clocks_event_reasons.active -lms 20`) before counting idle issue slots as headroom. sam3rs's FP32 encode ran at the RTX 5090's 575 W cap at 2.6 of 2.9 GHz with the FMA pipe 55-61% busy; there, only fewer joules per FLOP buys speed. ncu locks base clocks and hides this.
 - When kernels overlap on the GPU, end-to-end wins need less total SM occupancy, not a faster kernel in isolation.
 - Size a SIMT (FP32 FMA) tile by shared-memory wavefronts, not occupancy: a 16-byte warp load costs 4 or more wavefronts even when lanes broadcast, so an R x C register piece caps at RC / 4(R + C) of the FMA rate (50% for 4x4, 67% for 8x4). In sam3rs's FP32 flash attention, a second block per SM changed nothing and 8x4 pieces took 18.0 to 16.5 ms (`~/code/research/inference/specialized-model-runtimes/sam3rs-decisions.md`).
 - Run an A/A hash check before a bit-identity guard on any mode with timing-based autotune: sam3rs TF32's near-tie cuBLASLt choices gave one binary two output hashes across processes. Guard such modes with a parity-limit gate.
