@@ -5,7 +5,7 @@ Supporting several architectures, or working on vast.ai and similar boxes. `R` =
 - Rent one GPU per target generation early. Ada, sm_120 and the A100 each found a bug or a loss the others couldn't.
 - Size shared-memory tiles for GeForce: sm_86, sm_89 and sm_120 have 100 KB an SM and 99 KB a block, against 164-227 KB on A100 and H100. A 105 KB sam3rs tile failed to launch on the RTX 5090, and 50 KB is the most that fits two blocks an SM.
 - Profile the whole pipeline on each new GPU before optimizing; the A100 loss was scalar FP32 convs where cuDNN used TF32.
-- Cooperative grids start differently by architecture and can deadlock under MPS. Mixed-size loads and stores are a data race. Always use `cvta_generic_to_shared_u32`.
+- Cooperative grids start differently by architecture and can deadlock under MPS. Keep a private MPS pipe directory short (`mktemp -d /tmp/mps.XXXXXX`): the control socket path caps at 107 bytes, and `nvidia-cuda-mps-control -d` exits 1 with empty logs past it. Mixed-size loads and stores are a data race. Always use `cvta_generic_to_shared_u32`.
 - Billed boxes must never idle: smoke-test the package on a cheap box, bootstrap only the toolchain, cap uploads, and pull evidence on a schedule.
 - Never put secrets or agents on a rented box. Wrap GPU work in a shared flock, kill only PIDs you started, and wipe the box when done.
 
