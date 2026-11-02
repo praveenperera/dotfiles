@@ -29,8 +29,7 @@ if grep -qE '2>&1[[:space:]]*>[[:space:]]*[^&[:space:]]' <<<"$command"; then
   deny "This command redirects in the wrong order: \`2>&1 > file\` sends stderr to the Monitor. Write \`> file 2>&1\`."
 fi
 
-# `task wait` is the old name, still accepted until avencera/homebased#6
-if grep -qE 'homebased[[:space:]]+(task[[:space:]]+)?wait([[:space:]]|$)' <<<"$command"; then
+if grep -qE 'homebased[[:space:]]+wait([[:space:]]|$)' <<<"$command"; then
   deny "A Monitor expires after 30 minutes and wakes you each time with nothing to report. Run \`homebased wait --next <id> [<id> ...]\` as a background Bash command with \`timeout: 7200000\` instead, pass its task id to \`t3_background_wait\`, and end the turn."
 fi
 
