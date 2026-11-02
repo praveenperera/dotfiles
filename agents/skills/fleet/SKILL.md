@@ -33,6 +33,7 @@ These are configured roles and addresses, not proof that a machine is online. Co
 
 ## Task instructions
 
+- To run a coding agent on another machine as a T3 Code thread, use `homebased t3`: `homebased t3 launch` starts the thread there and `homebased t3 project` adds the project first when the machine lacks it.
 - For agents and work that must survive a disconnect, remain interactive, or support a later handoff, read [sessions.md](references/sessions.md) and use a named tmux session on the execution machine. Run short, non-interactive checks and routine commands directly without creating a session.
 - For GPU work, shared files, and image builds, also read [compute.md](references/compute.md).
 - For disk layout, where to put datasets, checkpoints, and build output, moving finished data, deduplication, or cleanup on `ai5090` and `code`, read [storage.md](references/storage.md).
