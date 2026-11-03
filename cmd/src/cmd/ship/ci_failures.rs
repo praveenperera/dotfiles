@@ -336,9 +336,9 @@ struct LogWindow {
 }
 
 impl LogWindow {
-    /// The lines around the failure: `context` lines on each side of the last
-    /// error annotation, else of the last line with a failure marker, else the
-    /// log's tail, keeping the last `max_lines`. The annotation wins because a
+    /// The lines around the failure: up to `context` lines on each side of the
+    /// last error annotation, else of the last line with a failure marker, else
+    /// the log's tail, at most `max_lines` in all. The annotation wins because a
     /// post-job step can log a harmless marker after the failure, such as
     /// actions/cache's "Failed to save" warning
     fn snippet<'a>(&self, lines: &'a [String]) -> &'a [String] {
@@ -350,9 +350,14 @@ impl LogWindow {
             return self.tail(lines);
         };
 
-        let start = anchor.saturating_sub(self.context);
-        let end = (anchor + self.context + 1).min(lines.len());
-        self.tail(&lines[start..end])
+        // the cause, such as a compiler error, comes before the annotation and
+        // cleanup after it, so a tight limit keeps the lines before first
+        let before = self.context.min(anchor).min(self.max_lines - 1);
+        let after = self
+            .context
+            .min(self.max_lines - 1 - before)
+            .min(lines.len() - anchor - 1);
+        &lines[anchor - before..=anchor + after]
     }
 
     fn tail<'a>(&self, lines: &'a [String]) -> &'a [String] {
@@ -566,7 +571,8 @@ mod tests {
                         "jobId": 201,
                         "run": ci_run,
                         "status": "ok",
-                        "logSnippet": "thread 'parses_pr' panicked at src/lib.rs:9:5\n##[error]Process completed with exit code 101.\nPost job cleanup.\nWarning: Failed to save: cache entry exists",
+                        // a limit tighter than the context keeps the cause before the annotation
+                        "logSnippet": "test parses_pr ... FAILED\nthread 'parses_pr' panicked at src/lib.rs:9:5\n##[error]Process completed with exit code 101.\nPost job cleanup.",
                         "logTail": "thread 'parses_pr' panicked at src/lib.rs:9:5\n##[error]Process completed with exit code 101.\nPost job cleanup.\nWarning: Failed to save: cache entry exists"
                     },
                     {
