@@ -8,9 +8,9 @@ The entries come from one codebase (sam3rs, about 50 kernels: elementwise, norms
 
 ## Version
 
-Use `praveenperera/cuda-rust` `master` at `a5c86a293`.
+Use `praveenperera/cuda-rust` `master` at `b1e94cedf`.
 
-When moving the pin, rebuild the old and new pins and run `sass_mix.sh` over every kernel; time any kernel whose registers moved. The move to `4c0182cd5` raised every flash kernel's registers unnoticed (Open slowdowns).
+When moving the pin, rebuild the old and new pins and run `sass_mix.sh` over every kernel; time any kernel whose registers moved. The pins at `4c0182cd5` and `a5c86a293` carried a 3.7% flash-attention slowdown unnoticed (see the `convergent` entry under Speed traps).
 
 ## Setup
 
@@ -43,13 +43,15 @@ When moving the pin, rebuild the old and new pins and run `sass_mix.sh` over eve
 - **`cvt.rna.tf32.f32` costs 3 instructions per value on sm_120** (ptxas, as with nvcc's `__float_to_tf32`: an `FSETP` NaN/Inf guard, a predicated add of `0x1000`, a mask), which shows up as many `FSETP` in TF32 kernels. A bit-trick rounding saves only the guard and turns the canonical NaN `0x7fffffff` into -0.
 - **Shared addresses for `ldmatrix`:** prefer `ldmatrix_*_shared_u32` with a per-lane u32 address computed once. At `88e52d117` every constant-stride form compiles to the same SASS; a runtime-stride usize form costs about 16 setup instructions and 4 registers, with no measurable time. The "150 more instructions" seen in a flash kernel at `2d47e43` didn't reproduce in isolation.
 
-- **Under one wave, ptxas can save registers for occupancy the grid never uses, and serialize loads to fit.** `flash_attn_rpb_d32` at the sam3rs decoder shape (448 blocks, 0.53-0.66 waves on a 5090) got 96 registers and issued the last 16 of its 32 bias loads two at a time, each pair waited on before the next: 25.10 µs against nvcc's 23.01, where nvcc's PTX got 128. nvcc's PTX capped at 96 registers ran 26.57 µs. `.minnctapersm 1` (which `#[launch_bounds(128, 1)]` emits; tested by editing the PTX) or `.maxnreg 128` gave 115 registers and 22.38 µs, 2.7% ahead of nvcc, with bit-identical output (`88e52d117`). It didn't help at `4c0182cd5` (see Open slowdowns). When a latency-bound kernel's grid is under a wave at every deployed shape, try the min-blocks bound; above a wave it trades occupancy, so time it. Diagnose from the SASS scoreboard bits rather than load counts: how many loads are in flight at each wait.
+- **Non-convergent special-register reads cost the flash kernels registers and time.** Upstream PR #1721 (draft; `acd66a84f` on the fork, reverted in `b1e94cedf`) exports `llvm.nvvm.read.ptx.sreg.*` calls without `convergent`, which is semantically right. EarlyCSE then merges the `tid.x` reads, and LICM moves the staging and `ldmatrix` addresses that depend on them in front of the key loop. Every sam3rs flash kernel gained registers (rpb 96 to 147, `d32` 80 to 128), and rpb ran 3.7% slower (25.03 to 25.97 µs, bit-identical output). Restoring `convergent` on `tid.x` alone recovered all of it; turning LICM off lowered registers but cost 9%. If a pin includes that change, or upstream merges it, time the flash kernels against the build before it.
+
+- **Under one wave, ptxas can save registers for occupancy the grid never uses, and serialize loads to fit.** `flash_attn_rpb_d32` at the sam3rs decoder shape (448 blocks, 0.53-0.66 waves on a 5090) got 96 registers and issued the last 16 of its 32 bias loads two at a time, each pair waited on before the next: 25.10 µs against nvcc's 23.01, where nvcc's PTX got 128. nvcc's PTX capped at 96 registers ran 26.57 µs. `.minnctapersm 1` (which `#[launch_bounds(128, 1)]` emits; tested by editing the PTX) or `.maxnreg 128` gave 115 registers and 22.38 µs, 2.7% ahead of nvcc, with bit-identical output (`88e52d117`). With `tid` reads non-convergent (`acd66a84f`, reverted at the pin) it didn't help. When a latency-bound kernel's grid is under a wave at every deployed shape, try the min-blocks bound; above a wave it trades occupancy, so time it. Diagnose from the SASS scoreboard bits rather than load counts: how many loads are in flight at each wait.
 
 ## Open slowdowns
 
 Measured, cause not confirmed. Test the suspects before trusting a fix.
 
-- **`4c0182cd5` regressed the flash-attention kernels against `88e52d117`.** `flash_attn_rpb_d32` went from 25.10 to 26.04 µs (13.1% behind nvcc), with output unchanged. Registers rose in every flash kernel, with no spills: `flash_attn_d32` 80 to 128, `kv16_d32` 80 to 98, `bf16_d64` 137 to 162, `d64` 152 to 176. In rpb every bias load now issues in a pair, and no register directive restores the overlap. Bisected to `acd66a84f` (upstream PR #1721, open): special-register reads (`tid`, `ctaid`) are no longer exported `convergent`, so LLVM hoists the thread-derived `ldmatrix` addresses out of the key loop and keeps each one live. Restoring `convergent` on those reads alone gives back every old register count; on the 786 `llvm.trap` calls it changes nothing. Only rpb was timed. Until it's resolved, time each flash kernel against a `cb3df85aa` build before trusting a number from this pin.
+None open.
 
 ## Correctness traps
 
