@@ -55,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd hook claude pre-tool-use 2>/dev/null || true"
+            "command": "$HOME/.local/bin/cmd hook claude pre-tool-use 2>/dev/null || true"
           }
         ]
       },
@@ -64,7 +64,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd hook claude pre-tool-use 2>/dev/null || true"
+            "command": "$HOME/.local/bin/cmd hook claude pre-tool-use 2>/dev/null || true"
           }
         ]
       },
@@ -73,7 +73,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd hook claude pre-tool-use 2>/dev/null || true"
+            "command": "$HOME/.local/bin/cmd hook claude pre-tool-use 2>/dev/null || true"
           }
         ]
       },
@@ -82,7 +82,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd hook claude pre-tool-use 2>/dev/null || true"
+            "command": "$HOME/.local/bin/cmd hook claude pre-tool-use 2>/dev/null || true"
           }
         ]
       },
@@ -91,7 +91,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd hook claude pre-tool-use 2>/dev/null || true"
+            "command": "$HOME/.local/bin/cmd hook claude pre-tool-use 2>/dev/null || true"
           }
         ]
       }
@@ -113,7 +113,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd hook claude post-tool-use 2>/dev/null || true"
+            "command": "$HOME/.local/bin/cmd hook claude post-tool-use 2>/dev/null || true"
           }
         ]
       }
@@ -123,7 +123,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd hook claude session-start 2>/dev/null || true"
+            "command": "$HOME/.local/bin/cmd hook claude session-start 2>/dev/null || true"
           }
         ]
       }
