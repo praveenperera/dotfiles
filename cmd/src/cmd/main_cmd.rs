@@ -193,6 +193,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::fleet::FleetCmd,
     },
 
+    /// Waits for a PR's CI or a workflow run, used by the ship skill
+    #[command(arg_required_else_help = true)]
+    Ship {
+        #[command(subcommand)]
+        subcommand: crate::cmd::ship::ShipCmd,
+    },
+
     /// Manage reusable agent skills
     #[command(arg_required_else_help = true)]
     Skill {

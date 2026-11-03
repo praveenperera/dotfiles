@@ -19,6 +19,7 @@ pub mod modal;
 pub mod pack;
 mod project_root;
 pub mod secrets;
+pub mod ship;
 pub mod skill;
 pub mod sync;
 pub mod t3;
@@ -105,6 +106,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             let fleet_flags = fleet::Fleet { subcommand };
             fleet::run_with_flags(sh, fleet_flags)
         }
+        MainCmd::Ship { subcommand } => ship::run_with_flags(subcommand),
         MainCmd::Skill { subcommand } => {
             let skill_flags = skill::Skill { subcommand };
             skill::run_with_flags(sh, skill_flags)

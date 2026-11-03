@@ -1,8 +1,11 @@
+pub(crate) mod ci;
+
 use color_eyre::eyre::{Context, ContextCompat, Result};
 use reqwest::RequestBuilder;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::process::Command;
+use std::time::Duration;
 
 const PULL_REQUEST_METADATA_QUERY: &str = r#"
 query PullRequestMetadata($owner: String!, $repo: String!, $number: Int!) {
@@ -131,8 +134,14 @@ impl Github {
     }
 
     fn with_base_url(base_url: impl Into<String>, token: Option<String>) -> Result<Self> {
+        // the ship watchers poll for hours: a stalled request must fail rather than
+        // hang the wait, and a pooled connection idle across a 30-second poll gap
+        // may already be closed by GitHub, which fails the next request on it
         let client = reqwest::Client::builder()
             .user_agent("pr-context-cli")
+            .connect_timeout(Duration::from_secs(15))
+            .timeout(Duration::from_secs(60))
+            .pool_idle_timeout(Duration::from_secs(10))
             .build()?;
 
         Ok(Self {
@@ -372,13 +381,25 @@ impl Github {
             .context("Failed to decode GitHub GraphQL response")?;
 
         if !payload.errors.is_empty() {
+            // GitHub reports a missing or forbidden object with HTTP 200 and a typed error
+            let refused = payload.errors.iter().any(|error| {
+                matches!(
+                    error.kind.as_deref(),
+                    Some("NOT_FOUND" | "FORBIDDEN" | "UNAUTHORIZED")
+                )
+            });
             let messages = payload
                 .errors
                 .into_iter()
                 .map(|error| error.message)
                 .collect::<Vec<_>>()
                 .join("; ");
-            eyre::bail!("GitHub GraphQL query {operation_name} failed: {messages}");
+
+            return Err(GraphqlQueryError {
+                message: format!("GitHub GraphQL query {operation_name} failed: {messages}"),
+                refused,
+            }
+            .into());
         }
 
         payload
@@ -406,22 +427,85 @@ impl Github {
         }
 
         let status = response.status();
+        let headers = response.headers();
+        // GitHub signals both primary and secondary rate limits with 403 or 429
+        // plus one of these headers; a plain 403 is a permission problem
+        let rate_limited = status == reqwest::StatusCode::TOO_MANY_REQUESTS
+            || headers.contains_key("retry-after")
+            || headers
+                .get("x-ratelimit-remaining")
+                .is_some_and(|remaining| remaining == "0");
         let body = response.text().await?;
 
-        if matches!(
+        let message = if matches!(
             status,
             reqwest::StatusCode::UNAUTHORIZED
                 | reqwest::StatusCode::FORBIDDEN
                 | reqwest::StatusCode::NOT_FOUND
         ) {
-            eyre::bail!(
+            format!(
                 "{context}: GitHub API request failed with status {status}: {body}\nIf this is a private repository, authenticate with --token, GITHUB_TOKEN, GH_TOKEN, or `gh auth login` with repo read access"
-            );
-        }
+            )
+        } else {
+            format!("{context}: GitHub API request failed with status {status}: {body}")
+        };
 
-        eyre::bail!("{context}: GitHub API request failed with status {status}: {body}");
+        Err(ApiStatusError {
+            status,
+            rate_limited,
+            message,
+        }
+        .into())
     }
 }
+
+/// A GitHub API response with a non-success status, kept typed so a long poll
+/// can tell a wrong token or target from an outage worth waiting out
+#[derive(Debug)]
+pub(crate) struct ApiStatusError {
+    pub(crate) status: reqwest::StatusCode,
+    pub(crate) rate_limited: bool,
+    pub(crate) message: String,
+}
+
+impl ApiStatusError {
+    /// Whether retrying cannot help: a bad token, a missing target, or a token
+    /// without access to it
+    pub(crate) fn is_refusal(&self) -> bool {
+        !self.rate_limited
+            && matches!(
+                self.status,
+                reqwest::StatusCode::UNAUTHORIZED
+                    | reqwest::StatusCode::FORBIDDEN
+                    | reqwest::StatusCode::NOT_FOUND
+            )
+    }
+}
+
+impl std::fmt::Display for ApiStatusError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for ApiStatusError {}
+
+/// Errors a GraphQL query returned alongside HTTP 200
+#[derive(Debug)]
+pub(crate) struct GraphqlQueryError {
+    pub(crate) message: String,
+    /// Whether GitHub refused the query because the object is missing or the
+    /// token lacks access, which retrying cannot fix
+    pub(crate) refused: bool,
+}
+
+impl std::fmt::Display for GraphqlQueryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for GraphqlQueryError {}
 
 fn pr_variables(owner: &str, repo: &str, number: i64, cursor: Option<&str>) -> Value {
     json!({
@@ -602,6 +686,8 @@ struct GraphqlResponse<T> {
 #[derive(Deserialize)]
 struct GraphqlError {
     message: String,
+    #[serde(rename = "type")]
+    kind: Option<String>,
 }
 
 #[derive(Deserialize)]

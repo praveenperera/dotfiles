@@ -85,7 +85,7 @@ notes = "Run once for each site directory the change touched: bereadytoanswer, m
 steps = ["commit", "push", "deploy", "clean"]
 deploy = [
   "cmd release",
-  "homebased --json task run --name \"release-cmd run\" --timeout 2h -- ~/.agents/skills/ship/scripts/watch_run.sh release-cmd HEAD",
+  "homebased --json task run --name \"release-cmd run\" --timeout 2h -- cmd ship watch-run release-cmd HEAD",
   "git pull --ff-only",
   "cmd fleet update",
 ]
@@ -102,7 +102,7 @@ deploy = [
   "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
   "git push origin master",
   "just release github",
-  "homebased --json task run --name \"Release run\" --timeout 2h -- ~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "homebased --json task run --name \"Release run\" --timeout 2h -- cmd ship watch-run Release HEAD",
   "cmd fleet update",
 ]
 notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required"
@@ -114,7 +114,7 @@ deploy = [
   "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
   "git push origin master",
   "just release github",
-  "homebased --json task run --name \"Release run\" --timeout 2h -- ~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "homebased --json task run --name \"Release run\" --timeout 2h -- cmd ship watch-run Release HEAD",
   "cln update",
 ]
 notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required"
@@ -126,7 +126,7 @@ deploy = [
   "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
   "git push origin master",
   "just release github",
-  "homebased --json task run --name \"Release run\" --timeout 2h -- ~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "homebased --json task run --name \"Release run\" --timeout 2h -- cmd ship watch-run Release HEAD",
   "aps update",
 ]
 notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required"
@@ -138,7 +138,7 @@ deploy = [
   "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
   "git push origin master",
   "just release github",
-  "homebased --json task run --name \"Release run\" --timeout 2h -- ~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "homebased --json task run --name \"Release run\" --timeout 2h -- cmd ship watch-run Release HEAD",
   "just install",
 ]
 notes = "`just bump` only edits the version files and `just release github` only tags, so the bump commit and push in between are required. Run `just install` on the Mac mini, over ssh when this is another machine"
@@ -150,7 +150,7 @@ steps = ["commit", "push", "pr", "merge", "deploy", "clean"]
 deploy = [
   "just bump <part>",
   "just release github",
-  "homebased --json task run --name \"Release run\" --timeout 2h -- ~/.agents/skills/ship/scripts/watch_run.sh Release HEAD",
+  "homebased --json task run --name \"Release run\" --timeout 2h -- cmd ship watch-run Release HEAD",
   "cmd fleet update",
 ]
 notes = "`just bump` commits \"Release vX.Y.Z\" and pushes it itself; `just release github` refuses to run until that commit is on origin"

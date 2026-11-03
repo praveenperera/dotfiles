@@ -28,10 +28,11 @@ grep -qE 'homebased\b.*\btask (run|submit)\b' <<<"$command" && exit 0
 grep -qE '#[[:space:]]*foreground-wait:' <<<"$command" && exit 0
 
 # match only where a command runs, so `git add`, `ls`, or `grep` naming one is fine
-at='(^|[;&|(`]|\b(do|then|else|timeout[[:space:]]+[^[:space:]]+|sh|bash)[[:space:]])[[:space:]]*'
+# a command position may follow `sh -c '` and carry `VAR=value` prefixes
+at='(^|[;&|(`]|\b(do|then|else|timeout[[:space:]]+[^[:space:]]+|sh|bash|zsh)[[:space:]]|\b(sh|bash|zsh)[[:space:]]+-l?c[[:space:]]+["'"'"'])[[:space:]]*([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*'
 
 waits=no
-grep -qE "${at}(gh run watch|gh pr checks[^|;&]*--watch|[^[:space:];&|]*watch_(run|pr)\.sh)" <<<"$command" && waits=yes
+grep -qE "${at}(gh run watch|gh pr checks[^|;&]*--watch|([^[:space:];&|]*/)?cmd[[:space:]]+ship[[:space:]]+watch-(run|pr))" <<<"$command" && waits=yes
 grep -qE "${at}sleep\b" <<<"$command" && grep -qE "${at}gh (run|pr|api)\b" <<<"$command" && waits=yes
 [[ "$waits" == yes ]] || exit 0
 
@@ -39,6 +40,6 @@ jq -n '{
   hookSpecificOutput: {
     hookEventName: "PreToolUse",
     permissionDecision: "deny",
-    permissionDecisionReason: "Do not wait on CI or a release run inside the turn. Submit the wait as a homebased task and end the turn: `homebased --json task run --name \"CI for #<n>\" --timeout 4h -- ~/.agents/skills/ship/scripts/watch_pr.sh <n> [--greptile]` for a PR, or `homebased --json task run --name \"<workflow> run\" --timeout 2h -- ~/.agents/skills/ship/scripts/watch_run.sh <workflow> <sha>` for a workflow run such as a release. In a Claude thread, then run `homebased wait --next <id>` as a background Bash command with `timeout: 7200000`. Both scripts print one line when done; read it with `homebased task log <id> --tail 5`. For a one-shot status check, drop the watch or sleep. To hold a wait in the turn anyway, add a `# foreground-wait: <why>` comment."
+    permissionDecisionReason: "Do not wait on CI or a release run inside the turn. Submit the wait as a homebased task and end the turn: `homebased --json task run --name \"CI for #<n>\" --timeout 12h -- cmd ship watch-pr <n> [--greptile]` for a PR, or `homebased --json task run --name \"<workflow> run\" --timeout 2h -- cmd ship watch-run <workflow> <sha>` for a workflow run such as a release. In a Claude thread, then run `homebased wait --next <id>` as a background Bash command with `timeout: 7200000`. Both print one line when done; read it with `homebased task log <id> --tail 5`. For a one-shot status check, drop the watch or sleep. To hold a wait in the turn anyway, add a `# foreground-wait: <why>` comment."
   }
 }'
