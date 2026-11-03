@@ -192,9 +192,9 @@ deploy = ["just deploy"]
 [repos."praveenperera/cuda-rust"]
 steps = ["sol", "commit", "push", "pr", "clean"]
 pr_repo = "NVIDIA/cuda-rust"
-pr_draft = true
+pr_draft = false
 merge = "never"
-notes = "origin is the fork; open the PR with `gh pr create --draft --repo NVIDIA/cuda-rust --base main --head praveenperera:<branch>`. NVIDIA maintainers merge"
+notes = "origin is the fork; open the PR with `gh pr create --repo NVIDIA/cuda-rust --base main --head praveenperera:<branch>`. Push over SSH (`git@github.com:praveenperera/cuda-rust.git`); force-pushing PR branches to the fork is allowed. NVIDIA maintainers merge"
 
 # -- commit and push only
 
