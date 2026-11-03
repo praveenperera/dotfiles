@@ -133,7 +133,11 @@ impl Github {
         Self::with_base_url(Self::BASE_URL, resolve_token(token))
     }
 
-    fn with_base_url(base_url: impl Into<String>, token: Option<String>) -> Result<Self> {
+    /// A client for a GitHub API at `base_url`, such as a mock server in tests
+    pub(crate) fn with_base_url(
+        base_url: impl Into<String>,
+        token: Option<String>,
+    ) -> Result<Self> {
         // the ship watchers poll for hours: a stalled request must fail rather than
         // hang the wait, and a pooled connection idle across a 30-second poll gap
         // may already be closed by GitHub, which fails the next request on it

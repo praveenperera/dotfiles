@@ -7,9 +7,9 @@ use std::time::Duration;
 use clap::Args;
 use eyre::Result;
 
-use super::{one_line, short, Repo, Report, Retry};
+use super::{one_line, pr_target, short, Repo, Report, Retry};
 use crate::github::ci::{Check, CheckState, GreptileReview, WorkflowRun};
-use crate::github::{self, Github};
+use crate::github::Github;
 
 #[derive(Debug, Clone, Args)]
 pub struct WatchPrArgs {
@@ -26,14 +26,7 @@ pub struct WatchPrArgs {
 }
 
 pub(super) async fn run(args: WatchPrArgs) -> Result<Report> {
-    let (repo, number) = match args.pr.parse::<u64>() {
-        Ok(number) => (Repo::resolve(args.repo.as_deref())?, number),
-        Err(_) => {
-            let (owner, name, number) = github::parse_url(&args.pr)?;
-            (Repo { owner, name }, number)
-        }
-    };
-
+    let (repo, number) = pr_target(&args.pr, args.repo.as_deref())?;
     let github = Github::new(None)?;
     let timing = Timing::GITHUB;
 
@@ -92,7 +85,7 @@ impl Timing {
 /// One poll of a PR: the head the PR points at now, and the CI on the commit
 /// being watched
 #[derive(Debug, Clone)]
-struct Observation {
+pub(super) struct Observation {
     head_sha: String,
     checks: Vec<Check>,
     runs: Vec<WorkflowRun>,
@@ -111,18 +104,7 @@ struct GithubPr {
 
 impl PrSource for GithubPr {
     async fn observe(&self, sha: &str) -> Result<Observation> {
-        let Repo { owner, name } = &self.repo;
-        let (commit, runs) = tokio::try_join!(
-            self.github
-                .fetch_commit_checks(owner, name, self.number, sha),
-            self.github.fetch_workflow_runs(owner, name, sha),
-        )?;
-
-        Ok(Observation {
-            head_sha: commit.head_sha,
-            checks: commit.checks,
-            runs,
-        })
+        Observation::fetch(&self.github, &self.repo, self.number, sha).await
     }
 
     async fn greptile(&self, sha: &str) -> Result<GreptileReview> {
@@ -144,11 +126,82 @@ enum CiState {
     Finished(Vec<String>),
 }
 
+/// The checks and runs that decide CI on a commit, once runs a newer run of the
+/// same workflow replaced are set aside
+pub(super) struct CurrentCi<'a> {
+    pub(super) checks: Vec<&'a Check>,
+    /// The newest run of each workflow and event, by id
+    pub(super) runs: Vec<&'a WorkflowRun>,
+}
+
+impl CurrentCi<'_> {
+    /// Names of the checks and runs still going
+    pub(super) fn pending(&self) -> BTreeSet<String> {
+        // a rerun job is queued on its run before its check reappears in the rollup
+        self.checks
+            .iter()
+            .filter(|check| check.state == CheckState::Pending)
+            .map(|check| check.name.clone())
+            .chain(
+                self.runs
+                    .iter()
+                    .filter(|run| !run.is_completed())
+                    .map(|run| run.display_name().to_string()),
+            )
+            .collect()
+    }
+
+    pub(super) fn failed_checks(&self) -> Vec<&Check> {
+        self.checks
+            .iter()
+            .copied()
+            .filter(|check| check.state == CheckState::Failed)
+            .collect()
+    }
+
+    /// Runs that failed without a failed check to name, such as one that failed
+    /// before any job started on an invalid workflow file
+    pub(super) fn failed_runs_without_checks(&self) -> Vec<&WorkflowRun> {
+        let failed_checks = self.failed_checks();
+
+        self.runs
+            .iter()
+            .copied()
+            .filter(|run| run.passed() == Some(false))
+            .filter(|run| {
+                !failed_checks
+                    .iter()
+                    .any(|check| check.run_id == Some(run.id))
+            })
+            .collect()
+    }
+}
+
 impl Observation {
+    /// Read the check rollup and Actions runs of `sha`, and PR `number`'s head
+    pub(super) async fn fetch(
+        github: &Github,
+        repo: &Repo,
+        number: u64,
+        sha: &str,
+    ) -> Result<Self> {
+        let Repo { owner, name } = repo;
+        let (commit, runs) = tokio::try_join!(
+            github.fetch_commit_checks(owner, name, number, sha),
+            github.fetch_workflow_runs(owner, name, sha),
+        )?;
+
+        Ok(Self {
+            head_sha: commit.head_sha,
+            checks: commit.checks,
+            runs,
+        })
+    }
+
     /// Drop the runs, and their checks, that belong to another PR with the same
     /// head commit, such as one opened from the same branch against another base.
     /// A fork's PR runs list no PRs, so they stay
-    fn for_pr(mut self, number: u64) -> Self {
+    pub(super) fn for_pr(mut self, number: u64) -> Self {
         let foreign = self
             .runs
             .iter()
@@ -165,8 +218,8 @@ impl Observation {
         self
     }
 
-    fn assess(&self) -> CiState {
-        let (current, superseded) = split_runs(&self.runs);
+    pub(super) fn current(&self) -> CurrentCi<'_> {
+        let (runs, superseded) = split_runs(&self.runs);
 
         // checks of a run that a newer run of the same workflow replaced, such as
         // one cancelled by a concurrency group, no longer decide anything
@@ -174,51 +227,30 @@ impl Observation {
             .checks
             .iter()
             .filter(|check| !check.run_id.is_some_and(|id| superseded.contains(&id)))
-            .collect::<Vec<_>>();
+            .collect();
 
-        // a rerun job is queued on its run before its check reappears in the rollup
-        let pending = checks
-            .iter()
-            .filter(|check| check.state == CheckState::Pending)
-            .map(|check| check.name.clone())
-            .chain(
-                current
-                    .iter()
-                    .filter(|run| !run.is_completed())
-                    .map(|run| run.display_name().to_string()),
-            )
-            .collect::<BTreeSet<_>>();
+        CurrentCi { checks, runs }
+    }
 
+    fn assess(&self) -> CiState {
+        let current = self.current();
+        let pending = current.pending();
         if !pending.is_empty() {
             return CiState::Pending(pending);
         }
 
-        if checks.is_empty() && current.is_empty() {
+        if current.checks.is_empty() && current.runs.is_empty() {
             return CiState::Empty;
         }
 
-        let failed_checks = checks
-            .iter()
-            .filter(|check| check.state == CheckState::Failed)
-            .collect::<Vec<_>>();
+        let failed_runs = current.failed_runs_without_checks().into_iter().map(|run| {
+            let conclusion = run.conclusion.map_or("unknown", |c| c.as_str());
+            format!("{} ({conclusion})", run.display_name())
+        });
 
-        // a run can fail before any job starts, such as on an invalid workflow
-        // file, which leaves no failed check to name
-        let failed_runs = current
-            .iter()
-            .filter(|run| run.passed() == Some(false))
-            .filter(|run| {
-                !failed_checks
-                    .iter()
-                    .any(|check| check.run_id == Some(run.id))
-            })
-            .map(|run| {
-                let conclusion = run.conclusion.map_or("unknown", |c| c.as_str());
-                format!("{} ({conclusion})", run.display_name())
-            });
-
-        let failed = failed_checks
-            .iter()
+        let failed = current
+            .failed_checks()
+            .into_iter()
             .map(|check| check.name.clone())
             .chain(failed_runs)
             .collect();
@@ -547,6 +579,8 @@ mod tests {
             name: name.into(),
             state,
             run_id: Some(run_id),
+            job_id: None,
+            url: None,
         }
     }
 

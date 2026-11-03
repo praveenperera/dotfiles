@@ -207,7 +207,8 @@ pub enum MainCmd {
     #[command(visible_alias = "sl")]
     Statusline,
 
-    /// Waits for a PR's CI or a workflow run, used by the ship skill
+    /// Waits for a PR's CI or a workflow run, and reports failing checks, for the
+    /// ship and gh-fix-ci skills
     #[command(visible_alias = "sh", arg_required_else_help = true)]
     Ship {
         #[command(subcommand)]
@@ -309,6 +310,7 @@ mod tests {
     fn short_aliases_reach_nested_commands() {
         for (words, want) in [
             (&["sh", "wp", "5"][..], "ship watch-pr"),
+            (&["sh", "cif", "5"][..], "ship ci-failures"),
             (&["fl", "up"][..], "fleet update"),
             (&["tm", "p", "w"][..], "tmux picker"),
         ] {
@@ -319,6 +321,9 @@ mod tests {
                 MainCmd::Ship {
                     subcommand: crate::cmd::ship::ShipCmd::WatchPr(_),
                 } => "ship watch-pr",
+                MainCmd::Ship {
+                    subcommand: crate::cmd::ship::ShipCmd::CiFailures(_),
+                } => "ship ci-failures",
                 MainCmd::Fleet {
                     subcommand: FleetCmd::Update { .. },
                 } => "fleet update",

@@ -1,13 +1,17 @@
-//! Waits used by the ship skill: each blocks until a PR's CI or a workflow run
-//! ends, stays quiet on stdout meanwhile, then prints one line and exits 0 only
-//! when everything passed
+//! CI commands for the ship and gh-fix-ci skills
 //!
-//! They run as homebased tasks, so the thread that submitted one wakes once, when
-//! there is a result to act on. Waiting on CI or a run has no time limit of its
-//! own; the task's `--timeout` decides how long that may take. Only things that
-//! may never happen are bounded: Greptile gets 1 hour after CI ends, and a
-//! workflow run gets 10 minutes to appear
+//! The waits, `watch-pr` and `watch-run`, block until a PR's CI or a workflow run
+//! ends, stay quiet on stdout meanwhile, then print one line and exit 0 only
+//! when everything passed. They run as homebased tasks, so the thread that
+//! submitted one wakes once, when there is a result to act on. Waiting on CI or
+//! a run has no time limit of its own; the task's `--timeout` decides how long
+//! that may take. Only things that may never happen are bounded: Greptile gets
+//! 1 hour after CI ends, and a workflow run gets 10 minutes to appear
+//!
+//! `ci-failures` is a one-shot report of a PR's failing checks with a snippet of
+//! each failed job's log
 
+mod ci_failures;
 mod watch_pr;
 mod watch_run;
 
@@ -16,7 +20,7 @@ use std::process::Command;
 use clap::Subcommand;
 use eyre::{bail, eyre, Context, Result};
 
-use crate::github::{ApiStatusError, GraphqlQueryError};
+use crate::github::{self, ApiStatusError, GraphqlQueryError};
 use crate::runtime;
 
 #[derive(Debug, Clone, Subcommand)]
@@ -29,20 +33,20 @@ pub enum ShipCmd {
     /// Wait for the GitHub Actions run of a workflow on a commit, then print one line
     #[command(visible_alias = "wr")]
     WatchRun(watch_run::WatchRunArgs),
+
+    /// Report a PR's failing checks now, with a log snippet of each failed
+    /// GitHub Actions job; exits 1 when any check failed
+    #[command(visible_alias = "cif")]
+    CiFailures(ci_failures::CiFailuresArgs),
 }
 
 pub fn run_with_flags(subcommand: ShipCmd) -> Result<()> {
-    let name = match subcommand {
-        ShipCmd::WatchPr(_) => "watch-pr",
-        ShipCmd::WatchRun(_) => "watch-run",
+    let (name, result) = match subcommand {
+        ShipCmd::WatchPr(args) => ("watch-pr", runtime::block_on(watch_pr::run(args))?),
+        ShipCmd::WatchRun(args) => ("watch-run", runtime::block_on(watch_run::run(args))?),
+        // a report, not a wait, so it prints its own output rather than one line
+        ShipCmd::CiFailures(args) => return ci_failures::run(args),
     };
-
-    let result = runtime::block_on(async {
-        match subcommand {
-            ShipCmd::WatchPr(args) => watch_pr::run(args).await,
-            ShipCmd::WatchRun(args) => watch_run::run(args).await,
-        }
-    })?;
 
     // a setup failure, such as an unknown PR, still ends with the one result line
     let report =
@@ -154,6 +158,17 @@ impl Repo {
 
         Self::parse(path.strip_suffix(".git").unwrap_or(path))
     }
+}
+
+/// The repository and number of a PR given as a number, read in `--repo` or the
+/// current directory's repository, or as a URL, which names its own repository
+fn pr_target(pr: &str, repo: Option<&str>) -> Result<(Repo, u64)> {
+    if let Ok(number) = pr.parse::<u64>() {
+        return Ok((Repo::resolve(repo)?, number));
+    }
+
+    let (owner, name, number) = github::parse_url(pr)?;
+    Ok((Repo { owner, name }, number))
 }
 
 fn git(args: &[&str]) -> Result<String> {

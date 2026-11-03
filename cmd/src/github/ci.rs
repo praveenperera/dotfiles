@@ -2,7 +2,7 @@
 //! review score, as read by the `cmd ship` watchers
 
 use color_eyre::eyre::{Context, ContextCompat, Result};
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 
 use super::{pr_variables, pull_request, Connection, Github, RepositoryData};
@@ -40,11 +40,14 @@ query CommitChecks(
                 name
                 status
                 conclusion
+                databaseId
+                detailsUrl
                 checkSuite { workflowRun { databaseId } }
               }
               ... on StatusContext {
                 context
                 state
+                targetUrl
               }
             }
             pageInfo { hasNextPage endCursor }
@@ -104,6 +107,12 @@ pub(crate) struct Check {
     pub(crate) state: CheckState,
     /// The Actions run that owns this check, when it is an Actions job
     pub(crate) run_id: Option<u64>,
+    /// The job behind this check, when it is an Actions job, whose check run id
+    /// is its job id
+    pub(crate) job_id: Option<u64>,
+    /// The page the check links to: the job's log for an Actions job, or an
+    /// external provider's page
+    pub(crate) url: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -160,7 +169,7 @@ impl WorkflowRun {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum RunStatus {
     Requested,
@@ -173,7 +182,7 @@ pub(crate) enum RunStatus {
     Unknown,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum RunConclusion {
     Success,
@@ -366,6 +375,23 @@ impl Github {
         Ok(failed)
     }
 
+    /// The plain-text log of Actions job `id`. GitHub answers with a redirect to
+    /// a short-lived download URL on another host, which reqwest follows without
+    /// sending the token there
+    pub(crate) async fn fetch_job_log(&self, owner: &str, repo: &str, id: u64) -> Result<String> {
+        let context = format!("Failed to fetch the log of job {id} of {owner}/{repo}");
+        let request = self
+            .client
+            .get(self.url(&format!("repos/{owner}/{repo}/actions/jobs/{id}/logs")));
+        let response = self.send(self.authorize(request), &context).await?;
+        let bytes = response
+            .bytes()
+            .await
+            .with_context(|| format!("{context}: could not read the response"))?;
+
+        Ok(String::from_utf8_lossy(&bytes).into_owned())
+    }
+
     /// Greptile's confidence score for `sha`, from the summary comment it edits
     /// in place on each review
     pub(crate) async fn fetch_greptile_review(
@@ -470,11 +496,15 @@ enum RollupContext {
         name: String,
         status: CheckRunStatus,
         conclusion: Option<CheckRunConclusion>,
+        database_id: Option<u64>,
+        details_url: Option<String>,
         check_suite: Option<CheckSuite>,
     },
+    #[serde(rename_all = "camelCase")]
     StatusContext {
         context: String,
         state: StatusState,
+        target_url: Option<String>,
     },
 }
 
@@ -485,15 +515,28 @@ impl RollupContext {
                 name,
                 status,
                 conclusion,
+                database_id,
+                details_url,
                 check_suite,
-            } => Check {
-                name,
-                state: check_run_state(status, conclusion),
-                run_id: check_suite
+            } => {
+                let run_id = check_suite
                     .and_then(|suite| suite.workflow_run)
-                    .map(|run| run.database_id),
-            },
-            Self::StatusContext { context, state } => Check {
+                    .map(|run| run.database_id);
+
+                Check {
+                    name,
+                    state: check_run_state(status, conclusion),
+                    run_id,
+                    // an external app's check run id names no job
+                    job_id: database_id.filter(|_| run_id.is_some()),
+                    url: details_url,
+                }
+            }
+            Self::StatusContext {
+                context,
+                state,
+                target_url,
+            } => Check {
                 name: context,
                 state: match state {
                     StatusState::Success => CheckState::Passed,
@@ -503,6 +546,8 @@ impl RollupContext {
                     }
                 },
                 run_id: None,
+                job_id: None,
+                url: target_url,
             },
         }
     }
@@ -710,22 +755,30 @@ mod tests {
                 Check {
                     name: "ios-ui".into(),
                     state: CheckState::Pending,
-                    run_id: Some(41649623712)
+                    run_id: Some(41649623712),
+                    job_id: None,
+                    url: None
                 },
                 Check {
                     name: "clippy".into(),
                     state: CheckState::Passed,
-                    run_id: Some(41649623546)
+                    run_id: Some(41649623546),
+                    job_id: None,
+                    url: None
                 },
                 Check {
                     name: "CodeQL".into(),
                     state: CheckState::Failed,
-                    run_id: None
+                    run_id: None,
+                    job_id: None,
+                    url: None
                 },
                 Check {
                     name: "CodeRabbit".into(),
                     state: CheckState::Failed,
-                    run_id: None
+                    run_id: None,
+                    job_id: None,
+                    url: None
                 },
             ]
         );
