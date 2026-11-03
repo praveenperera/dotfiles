@@ -1,7 +1,8 @@
 //! Checks on Agent and T3's delegate_task: a call must name its model, because
 //! an unnamed subagent silently inherits the parent's model (usually Opus), and
-//! must not run at max effort, which burns plan usage that a subagent rarely
-//! turns into correctness
+//! must not run Opus, Sonnet, or Haiku at max effort, which burns plan usage
+//! that a subagent rarely turns into correctness. Other models, such as Fable
+//! or another provider's, may run at max
 
 use std::path::Path;
 
@@ -21,7 +22,10 @@ struct SubagentInput {
 
 /// delegate_task's `target`
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct Target {
+    model: Option<String>,
+    provider_instance_id: Option<String>,
     options: Option<TargetOptions>,
 }
 
@@ -68,10 +72,34 @@ impl SubagentInput {
             .or_else(|| set(options.and_then(|options| options.get("effort"))))
             .or_else(|| set(options.and_then(|options| options.get("reasoningEffort"))))
     }
+
+    /// Whether the subagent runs Opus, Sonnet, or Haiku. A call that names no
+    /// model inherits the parent's, which is a Claude model in the sessions
+    /// this hook runs in, unless delegate_task picks another provider
+    fn runs_capped_model(&self) -> bool {
+        let target = self.target.as_ref();
+        let model = self
+            .model
+            .as_deref()
+            .or_else(|| target.and_then(|target| target.model.as_deref()))
+            .filter(|model| !model.is_empty());
+
+        match model {
+            Some(model) => {
+                let model = model.to_ascii_lowercase();
+                ["opus", "sonnet", "haiku"]
+                    .iter()
+                    .any(|family| model.contains(family))
+            }
+            None => target
+                .and_then(|target| target.provider_instance_id.as_deref())
+                .is_none_or(|provider| provider.to_ascii_lowercase().contains("claude")),
+        }
+    }
 }
 
 pub const MAX_EFFORT_REASON: &str =
-    "Run subagents at xhigh effort or below, not max. If the user explicitly asked for max, tell them this hook blocks it.";
+    "Run Opus, Sonnet, and Haiku subagents at xhigh effort or below, not max. If the user explicitly asked for max, tell them this hook blocks it.";
 
 pub const MODEL_REASON: &str = "Name the model on this Agent call (haiku, sonnet, opus, or fable), chosen for what the task needs. Leaving it out inherits the parent model.";
 
@@ -80,7 +108,7 @@ pub fn model_and_effort(input: &HookInput, host: &impl Host) -> Decision {
         return Decision::Allow;
     };
 
-    if call.effort().is_some_and(|effort| effort == "max") {
+    if call.effort().is_some_and(|effort| effort == "max") && call.runs_capped_model() {
         return Decision::Deny(MAX_EFFORT_REASON.to_owned());
     }
 
@@ -226,6 +254,9 @@ mod tests {
                     json!({"prompt": "y", "model": "haiku", "effort": "xhigh"}),
                     None,
                 ),
+                (json!({"prompt": "y", "model": "opus", "effort": "max"}), max),
+                (json!({"prompt": "y", "model": "haiku", "effort": "max"}), max),
+                (json!({"prompt": "y", "model": "fable", "effort": "max"}), None),
                 (json!({"prompt": "y", "subagent_type": "fork"}), None),
                 (
                     json!({"prompt": "y", "subagent_type": "fork", "effort": "max"}),
@@ -259,7 +290,7 @@ mod tests {
     }
 
     #[test]
-    fn delegate_task_is_checked_for_effort_only() {
+    fn delegate_task_caps_claude_models_at_xhigh() {
         let max = Some(MAX_EFFORT_REASON);
 
         check(
@@ -294,9 +325,29 @@ mod tests {
                 ),
                 (
                     json!({"task": "y", "target": {"model": "gpt-5.5", "options": [{"id": "reasoningEffort", "value": "max"}]}}),
-                    max,
+                    None,
                 ),
                 (json!({"task": "y", "target": {"options": []}}), None),
+                (
+                    json!({"task": "y", "target": {"model": "claude-sonnet-5-5", "options": {"effort": "max"}}}),
+                    max,
+                ),
+                (
+                    json!({"task": "y", "target": {"providerInstanceId": "claudeAgent", "options": {"effort": "max"}}}),
+                    max,
+                ),
+                (
+                    json!({"task": "y", "target": {"model": "claude-fable-5-1", "options": {"effort": "max"}}}),
+                    None,
+                ),
+                (
+                    json!({"task": "y", "target": {"providerInstanceId": "codex", "model": "gpt-6.1-terra", "options": [{"id": "reasoningEffort", "value": "max"}]}}),
+                    None,
+                ),
+                (
+                    json!({"task": "y", "target": {"providerInstanceId": "codex", "options": {"reasoningEffort": "max"}}}),
+                    None,
+                ),
             ],
         );
     }
