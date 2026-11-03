@@ -1,13 +1,15 @@
 ---
 name: ask-grok
-description: Ask Grok through the installed Grok CLI and return its response. Use when the user says "ask Grok," "consult Grok," "get Grok's opinion," or otherwise explicitly asks to send a task to Grok. Also use for X.com / Twitter lookups, posts, accounts, threads, and live discussion.
+description: Use Grok through the installed Grok CLI only to search and read X.com / Twitter posts, accounts, threads, and replies. Use when the user asks to read an X post or asks Grok to look something up on X. Grok only fetches and summarizes; the caller does any analysis.
 ---
 
 # Ask Grok
 
+Grok only searches and reads X. Never ask it to analyze, compare, review, read a repository, or apply what it finds; that wastes tokens. Ask it to fetch the posts and return their content or a short summary with post URLs, then do any analysis yourself.
+
 If you are running in Codex, use the `$hbd` skill.
 
-Otherwise, run the command from the directory that contains the relevant context. Grok headless mode does not read piped stdin as the prompt. Pass the prompt with `-p` and a quoted here-document inside command substitution:
+Otherwise, run the command from a new empty temporary directory so Grok cannot read the repository. Grok headless mode does not read piped stdin as the prompt. Pass the prompt with `-p` and a quoted here-document inside command substitution:
 
 ```sh
 grok -m grok-4.5 --effort medium --always-approve \
@@ -22,14 +24,11 @@ GROK_PROMPT
 - Never start `grok -p` without the prompt argument; headless mode ignores stdin and exits after the turn
 - Use `--prompt-file <path>` instead of `-p` when the prompt is already on disk
 - `--always-approve` is required so X search and web search can run without a TTY prompt
-- `--disallowed-tools` keeps this consult read-only; do not drop it or add write tools
-- Preserve the user's request and add only context that Grok needs to answer
-- Do not steer Grok: no preferred answer, no framing that implies a conclusion, no leading questions, no "consider that X is better" style hints
-- Pass facts, constraints, and paths; leave judgment and recommendation to Grok
+- `--disallowed-tools` keeps this read-only; do not drop it or add write tools
+- Keep the prompt to the search: what to find or fetch, and the constraints below. Do not add repository context, paths, or follow-up questions
 - Use the quoted here-document delimiter so prompt text is not evaluated as shell syntax
 - Return Grok's answer faithfully and identify it as Grok's response
 - If the command fails, report the error and do not invent a response
-- For repository implementation, use delegate-grok instead of this skill
 
 ## X.com searches
 
