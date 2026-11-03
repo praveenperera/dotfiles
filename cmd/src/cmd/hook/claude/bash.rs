@@ -75,32 +75,20 @@ pub fn ci_wait(input: &HookInput) -> Decision {
 
     let script = Script::parse(&bash.command);
 
-    // submitting the wait to homebased is the fix, not the problem
-    if script.runs(submits_homebased_task) {
-        return Decision::Allow;
-    }
-
     // an explicit opt-in for a wait the agent must hold in the turn
     if has_marker(&script.text, "foreground-wait:") {
         return Decision::Allow;
     }
 
+    // a wait handed to homebased is one of its arguments, never a command that
+    // runs here, so a submission needs no exemption and cannot cover another
+    // command on the same line
     let polls = script.runs(|command| command.program() == "sleep") && script.runs(calls_gh_ci);
     if script.runs(watches_ci) || polls {
         return Decision::Deny(ci_wait_reason());
     }
 
     Decision::Allow
-}
-
-/// `homebased task run` or `homebased task submit`, with any flags before `task`
-fn submits_homebased_task(command: &Command) -> bool {
-    if command.program() != "homebased" {
-        return false;
-    }
-
-    let mut args = command.args().skip_while(|&arg| arg != "task");
-    args.next().is_some() && matches!(args.next(), Some("run" | "submit"))
 }
 
 /// A command that blocks until CI or a run ends
@@ -195,7 +183,7 @@ mod tests {
 
     #[test]
     fn ci_waits_are_denied() {
-        use Want::Ci;
+        use Want::{Allow, Ci};
 
         check(
             &[
@@ -235,6 +223,17 @@ mod tests {
                 ("{ gh run watch 1; }", Ci),
                 ("bash -ec 'gh run watch 1'", Ci),
                 ("x=1; until gh pr checks 5; do sleep 30; done", Ci),
+                ("/usr/bin/timeout 60 gh run watch 1", Ci),
+                ("env GH_TOKEN=x gh run watch 1", Ci),
+                ("env -u GH_TOKEN gh run watch 1", Ci),
+                ("nohup gh run watch 1 &", Ci),
+                // a homebased submission covers only itself
+                ("homebased task run -- x && gh run watch 1", Ci),
+                ("homebased task run -- true; gh run watch 1", Ci),
+                // a `<<` terminator must be the whole line, so the wait is body text
+                ("cat <<EOF\nbody\n EOF\ngh run watch 1\nEOF", Allow),
+                // `<<-` strips leading tabs from the terminator
+                ("cat <<-EOF\n\tbody\n\tEOF\ngh run watch 1", Ci),
             ],
             false,
         );
@@ -251,7 +250,6 @@ mod tests {
                     Allow,
                 ),
                 ("homebased task submit --name x -- gh run watch 1", Allow),
-                ("homebased task run -- x && gh run watch 1", Allow),
                 ("grep -rn \"cmd ship watch-pr\" .", Allow),
                 ("echo 'cmd ship watch-pr 5' > notes.txt", Allow),
                 (
@@ -292,9 +290,7 @@ mod tests {
                 ("git commit -m \"timeout 5 gh run watch\"", Allow),
                 ("echo \"do sleep 1\"; gh pr view 5", Allow),
                 ("printf '%s\\n' \"a; sleep 5\" && gh pr view 5", Allow),
-                // wrappers neither version looks through
-                ("env GH_TOKEN=x gh run watch 1", Allow),
-                ("nohup gh run watch 1 &", Allow),
+                // a wait on another machine does not hold this turn's shell
                 ("ssh host gh run watch 1", Allow),
             ],
             false,

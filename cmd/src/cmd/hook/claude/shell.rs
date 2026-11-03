@@ -94,8 +94,13 @@ fn resolve(words: &[String], depth: usize, out: &mut Vec<Vec<String>>) {
         match rest.first().map(String::as_str) {
             None => return,
             Some(word) if KEYWORDS.contains(&word) || is_assignment(word) => rest = &rest[1..],
-            Some("timeout") => rest = skip_timeout(&rest[1..]),
-            Some(_) => break,
+            // wrappers that run the rest of the line, by name or by path
+            Some(word) => match file_name(word) {
+                "timeout" => rest = skip_timeout(&rest[1..]),
+                "env" => rest = skip_env(&rest[1..]),
+                "nohup" | "exec" | "time" => rest = &rest[1..],
+                _ => break,
+            },
         }
     }
 
@@ -118,6 +123,23 @@ fn is_assignment(word: &str) -> bool {
         .next()
         .is_some_and(|first| first.is_ascii_alphabetic() || first == '_')
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+/// Skips `env`'s options and `VAR=value` arguments, as in `env -u X GH_TOKEN=y gh ...`
+fn skip_env(args: &[String]) -> &[String] {
+    let mut rest = args;
+    while let Some(arg) = rest.first() {
+        match arg.as_str() {
+            "-u" | "--unset" | "-C" | "--chdir" | "-S" | "--split-string" => {
+                rest = rest.get(2..).unwrap_or_default()
+            }
+            "--" => return &rest[1..],
+            arg if arg.starts_with('-') || is_assignment(arg) => rest = &rest[1..],
+            _ => break,
+        }
+    }
+
+    rest
 }
 
 /// Skips `timeout`'s options and duration, as in `timeout -s KILL 600 gh ...`
@@ -166,6 +188,8 @@ fn shell_script(words: &[String]) -> Option<&str> {
 /// A heredoc whose body starts after the current line
 struct Heredoc {
     delimiter: String,
+    /// `<<-`, which strips leading tabs from body lines and the terminator
+    strip_tabs: bool,
 }
 
 struct Lexer {
@@ -183,6 +207,7 @@ struct Lexer {
     /// The next word is a heredoc delimiter
     heredoc_word: bool,
     heredocs: Vec<Heredoc>,
+    heredoc_tabs: bool,
     text: String,
 }
 
@@ -200,6 +225,7 @@ impl Lexer {
             skip_word: false,
             heredoc_word: false,
             heredocs: Vec::new(),
+            heredoc_tabs: false,
             text: String::with_capacity(source.len()),
         }
     }
@@ -298,7 +324,10 @@ impl Lexer {
 
         if self.heredoc_word {
             self.heredoc_word = false;
-            self.heredocs.push(Heredoc { delimiter: word });
+            self.heredocs.push(Heredoc {
+                delimiter: word,
+                strip_tabs: self.heredoc_tabs,
+            });
         } else if self.skip_word {
             self.skip_word = false;
         } else {
@@ -337,7 +366,8 @@ impl Lexer {
                 self.skip_word = true;
             } else {
                 self.take(2);
-                if self.peek(0) == Some('-') {
+                self.heredoc_tabs = self.peek(0) == Some('-');
+                if self.heredoc_tabs {
                     self.take(1);
                 }
                 self.heredoc_word = true;
@@ -484,8 +514,13 @@ impl Lexer {
                 let line = self.chars[self.at..line_end].iter().collect::<String>();
                 self.at = (line_end + 1).min(self.chars.len());
 
-                // like the shell, but also tolerate trailing whitespace and any indent
-                if line.trim() == heredoc.delimiter {
+                // as in the shell: the terminator is the whole line, after
+                // leading tabs only for `<<-`
+                let line = match heredoc.strip_tabs {
+                    true => line.trim_start_matches('\t'),
+                    false => line.as_str(),
+                };
+                if line == heredoc.delimiter {
                     break;
                 }
             }
