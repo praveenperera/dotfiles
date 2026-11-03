@@ -203,6 +203,10 @@ pub enum MainCmd {
         subcommand: crate::cmd::hook::HookCmd,
     },
 
+    /// Print the Claude Code status line for the session JSON on stdin
+    #[command(visible_alias = "sl")]
+    Statusline,
+
     /// Waits for a PR's CI or a workflow run, used by the ship skill
     #[command(visible_alias = "sh", arg_required_else_help = true)]
     Ship {

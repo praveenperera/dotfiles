@@ -131,7 +131,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "/bin/zsh $HOME/.claude/statusline-command.sh"
+    "command": "$HOME/.local/bin/cmd statusline"
   },
   "enabledPlugins": {
     "github@claude-plugins-official": false,

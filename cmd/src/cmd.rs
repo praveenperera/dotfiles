@@ -22,6 +22,7 @@ mod project_root;
 pub mod secrets;
 pub mod ship;
 pub mod skill;
+pub mod statusline;
 pub mod sync;
 pub mod t3;
 pub mod terraform;
@@ -109,6 +110,10 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
         }
         MainCmd::Hook { subcommand } => {
             hook::run(subcommand);
+            Ok(())
+        }
+        MainCmd::Statusline => {
+            statusline::run();
             Ok(())
         }
         MainCmd::Ship { subcommand } => ship::run_with_flags(subcommand),
