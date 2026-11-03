@@ -1,7 +1,7 @@
 # Workflow
 
 - Encode recurring corrections as types, tests, lints, scripts, or runtime checks instead of repeating instructions.
-- When a step doesn't need my input, keep going, and put status notes in the same message as your next action. Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository that I have not already approved.
+- When a step doesn't need my input, keep going, and put status notes in the same message as your next action. Stop and ask only when you can't continue without me
 - For long multi-step runs, keep a checklist in `_scratch/<task-name>/TASKS.md` so concurrent runs do not share one file; tick each item when it's done and add anything new you find. At the end, list what needs my input first, then the summary.
 - Put ad hoc files I may want to inspect, such as Markdown, HTML, screenshots, and image-generation outputs, in a repo-root `_scratch/` directory, creating it if needed. Those directories are wiped weekly, so put durable findings and decisions in `~/code/research`, and tools, scripts, automation prompts, runbooks and project ops notes in `~/code/private-workbench`.
 - Mark anything you couldn't confirm, and say where you looked.
@@ -36,7 +36,7 @@
 - Pick the runner by duration. Use the Agent tool for work that finishes in this turn, which covers most exploration, and `homebased` for long or unattended agent work.
 - Run commands you wait on longer than a few mins, such as builds, test suites, deploys, CI runs, and Fleet or GPU work, as homebased tasks, not under a raw `Monitor`, since every line a Monitor prints wakes the thread and re-reads its whole context. For CI and reviews on a PR, submit `~/.agents/skills/ship/scripts/watch_pr.sh <n>` instead of T3's `watch_pull_request`, which wakes the thread for every bot comment.
 - A delegate never waits inside a long command: it submits through `homebased`, reports `waiting`, and exits.
-- Use Grok 4.5 at medium effort only to read X posts; never ask it to analyze or do other work.
+- Use Grok 4.5 at high effort only to read X posts; never ask it to analyze or do other work.
 - For a larger task, run one fresh review of the related change set; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
 
 # Testing
