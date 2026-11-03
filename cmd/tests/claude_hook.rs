@@ -61,3 +61,45 @@ fn hook_prints_one_decision_or_nothing() {
         }
     }
 }
+
+#[test]
+fn answers_from_a_deleted_directory() {
+    // a session left in a removed worktree has no working directory, where
+    // xshell refuses to start, so these two must not need a shell
+    let home = tempfile::tempdir().unwrap();
+    let gone = home.path().join("gone");
+    let deny_ci = r#"{"tool_name": "Bash", "tool_input": {"command": "gh run watch 1"}}"#;
+
+    for (args, stdin, want) in [
+        ("statusline", r#"{"cwd": "/"}"#, "/"),
+        ("hook claude pre-tool-use", deny_ci, "\"deny\""),
+    ] {
+        let mut child = Command::new("sh")
+            .args([
+                "-c",
+                r#"mkdir "$1" && cd "$1" && rmdir "$1" && exec "$2" $3"#,
+                "sh",
+            ])
+            .arg(&gone)
+            .arg(env!("CARGO_BIN_EXE_cmd"))
+            .arg(args)
+            .env("HOME", home.path())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(stdin.as_bytes())
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+
+        assert!(output.status.success(), "{args}: {output:?}");
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(stdout.contains(want), "{args}: {stdout}");
+    }
+}

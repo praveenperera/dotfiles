@@ -193,7 +193,10 @@ fn git_branch(dir: &Path) -> Option<String> {
         // a reftable repository keeps this placeholder in `HEAD`
         Some(".invalid") => git(dir, &["symbolic-ref", "--short", "-q", "HEAD"])
             .or_else(|| git(dir, &["rev-parse", "--short", "HEAD"])),
-        Some(branch) => Some(branch.to_owned()),
+        Some(branch) if !branch.contains(char::is_control) => Some(branch.to_owned()),
+        // a hand-edited `HEAD` can hold terminal escapes; git refuses an invalid
+        // name, so the branch is left out as the script did
+        Some(_) => git(dir, &["symbolic-ref", "--short", "-q", "HEAD"]),
         // git picks the abbreviation length, which grows with the repository
         None => git(dir, &["rev-parse", "--short", "HEAD"]),
     }
@@ -214,7 +217,10 @@ fn find_git_dir(dir: &Path) -> Option<PathBuf> {
 
         // a linked worktree or submodule has a `.git` file naming its git dir
         let contents = fs::read_to_string(&dot_git).ok()?;
-        let git_dir = contents.trim().strip_prefix("gitdir:")?.trim();
+        // git writes `gitdir: <path>` and a newline; a path may end in a space
+        let git_dir = contents
+            .trim_end_matches(['\n', '\r'])
+            .strip_prefix("gitdir: ")?;
         return Some(ancestor.join(git_dir));
     }
 
@@ -227,6 +233,9 @@ fn git(dir: &Path, args: &[&str]) -> Option<String> {
         .arg("-C")
         .arg(dir)
         .args(args)
+        // `-C` does not override these, which would point git at another repository
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
         .stderr(Stdio::null())
         .output()
         .ok()?;
@@ -351,5 +360,15 @@ mod tests {
         );
         assert_eq!(git_branch(&worktree).as_deref(), Some("wt-branch"));
         assert_eq!(find_git_dir(&root.path().join("missing")), None);
+
+        // escapes in a hand-edited `HEAD` never reach the terminal
+        let escaped = root.path().join("escaped");
+        fs::create_dir_all(escaped.join(".git")).unwrap();
+        fs::write(
+            escaped.join(".git/HEAD"),
+            "ref: refs/heads/a\x1b]52;c;eA==\x07b\n",
+        )
+        .unwrap();
+        assert_eq!(git_branch(&escaped), None);
     }
 }

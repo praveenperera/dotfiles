@@ -77,6 +77,12 @@ fn main() -> Result<()> {
             )
         })?;
 
+    if program == "cmd" {
+        if let Some(result) = cmd::run_without_shell(&args[1..]) {
+            return result;
+        }
+    }
+
     let sh = Shell::new()?;
 
     let args = match program {

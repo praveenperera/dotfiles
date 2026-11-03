@@ -30,12 +30,30 @@ pub mod tmux;
 pub mod update;
 pub mod vault;
 
+use clap::Parser;
 use eyre::Result;
 use log::debug;
 use xshell::Shell;
 
 use main_cmd::{Cmd, MainCmd};
 use std::ffi::OsString;
+
+/// Runs the commands that need no shell, or returns `None` for every other
+/// command. The status line and hooks read their paths from stdin and must
+/// answer from a deleted directory, such as a removed worktree, where
+/// `Shell::new` fails
+pub fn run_without_shell(args: &[OsString]) -> Option<Result<()>> {
+    let program = std::iter::once(OsString::from("cmd"));
+    let flags = Cmd::try_parse_from(program.chain(args.iter().cloned())).ok()?;
+
+    match flags.subcommand {
+        MainCmd::Statusline => statusline::run(),
+        MainCmd::Hook { subcommand } => hook::run(subcommand),
+        _ => return None,
+    }
+
+    Some(Ok(()))
+}
 
 pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
     debug!("cmd run args: {args:?}");
