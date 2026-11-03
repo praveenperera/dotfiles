@@ -12,6 +12,7 @@ pub mod file;
 pub mod fleet;
 pub mod gcloud;
 pub mod generate;
+pub mod hook;
 pub mod install;
 pub mod main_cmd;
 pub mod mcp;
@@ -105,6 +106,10 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
         MainCmd::Fleet { subcommand } => {
             let fleet_flags = fleet::Fleet { subcommand };
             fleet::run_with_flags(sh, fleet_flags)
+        }
+        MainCmd::Hook { subcommand } => {
+            hook::run(subcommand);
+            Ok(())
         }
         MainCmd::Ship { subcommand } => ship::run_with_flags(subcommand),
         MainCmd::Skill { subcommand } => {

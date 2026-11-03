@@ -193,6 +193,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::fleet::FleetCmd,
     },
 
+    /// Agent harness hooks, such as `cmd hook claude pre-tool-use`
+    #[command(arg_required_else_help = true)]
+    Hook {
+        #[command(subcommand)]
+        subcommand: crate::cmd::hook::HookCmd,
+    },
+
     /// Waits for a PR's CI or a workflow run, used by the ship skill
     #[command(arg_required_else_help = true)]
     Ship {

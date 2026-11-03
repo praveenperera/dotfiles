@@ -55,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/scripts/require-agent-model.sh"
+            "command": "cmd hook claude pre-tool-use"
           }
         ]
       },
@@ -64,7 +64,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/scripts/require-agent-model.sh"
+            "command": "cmd hook claude pre-tool-use"
           }
         ]
       },
@@ -73,7 +73,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/scripts/quiet-monitor.sh"
+            "command": "cmd hook claude pre-tool-use"
           }
         ]
       },
@@ -82,11 +82,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/scripts/no-waiting-background-bash.sh"
-          },
-          {
-            "type": "command",
-            "command": "$HOME/.claude/scripts/ci-waits-through-homebased.sh"
+            "command": "cmd hook claude pre-tool-use"
           }
         ]
       },
@@ -95,7 +91,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/scripts/no-pr-watch.sh"
+            "command": "cmd hook claude pre-tool-use"
           }
         ]
       }
@@ -117,7 +113,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/scripts/register-background-wait.sh"
+            "command": "cmd hook claude post-tool-use"
           }
         ]
       }
@@ -127,7 +123,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/scripts/t3-context.sh"
+            "command": "cmd hook claude session-start"
           }
         ]
       }

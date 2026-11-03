@@ -5,6 +5,7 @@ pub mod fsutil;
 pub mod github;
 pub mod os;
 pub mod pr_context;
+pub mod process;
 pub mod runtime;
 pub mod util;
 

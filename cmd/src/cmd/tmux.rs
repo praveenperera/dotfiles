@@ -1702,27 +1702,9 @@ fn is_client_local(sh: &Shell) -> Result<bool> {
         .trim()
         .parse()?;
 
-    let mut pid = client_pid;
-    while pid > 1 {
-        let pid_str = pid.to_string();
-        let output = match cmd!(sh, "ps -o comm= -o ppid= -p {pid_str}").quiet().read() {
-            Ok(o) => o,
-            Err(_) => break,
-        };
-
-        let parts: Vec<&str> = output.split_whitespace().collect();
-        if parts.len() < 2 {
-            break;
-        }
-
-        if parts[0].contains("sshd") {
-            return Ok(false);
-        }
-
-        pid = parts[1].parse().unwrap_or(0);
-    }
-
-    Ok(true)
+    let over_ssh =
+        crate::process::ancestors(client_pid).any(|process| process.comm.contains("sshd"));
+    Ok(!over_ssh)
 }
 
 fn sync_ssh(sh: &Shell, all: bool) -> Result<()> {

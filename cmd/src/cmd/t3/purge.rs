@@ -346,25 +346,7 @@ fn wait_for_idle(db_path: &Path, timeout: Duration) -> Result<()> {
 
 /// Whether this process runs under `pid`, as it does when a T3 thread runs it
 fn descends_from(pid: u32) -> bool {
-    let mut current = std::process::id();
-    while current > 1 {
-        if current == pid {
-            return true;
-        }
-
-        let parent = Command::new("ps")
-            .args(["-o", "ppid=", "-p", &current.to_string()])
-            .output()
-            .ok()
-            .and_then(|output| String::from_utf8_lossy(&output.stdout).trim().parse().ok());
-
-        match parent {
-            Some(parent) => current = parent,
-            None => return false,
-        }
-    }
-
-    false
+    crate::process::ancestors(std::process::id()).any(|process| process.pid == pid)
 }
 
 /// Continue in a copy that outlives T3, since stopping T3 ends the thread that
