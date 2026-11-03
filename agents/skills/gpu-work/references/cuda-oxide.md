@@ -10,6 +10,8 @@ The entries come from one codebase (sam3rs, about 50 kernels: elementwise, norms
 
 Use `praveenperera/cuda-rust` `master` at `4c0182cd5`.
 
+When moving the pin, rebuild the old and new pins and run `sass_mix.sh` over every kernel; time any kernel whose registers moved. The move to `4c0182cd5` raised every flash kernel's registers unnoticed (Open slowdowns).
+
 ## Setup
 
 - Use a project-owned `CARGO_HOME` for cargo-oxide: the backend cache in `$CARGO_HOME/cuda-oxide/` has one slot, rebuilt whenever a project's `cuda-device` dependency resolves to another commit (`source-rev.txt`).
@@ -41,11 +43,13 @@ Use `praveenperera/cuda-rust` `master` at `4c0182cd5`.
 - **`cvt.rna.tf32.f32` costs 3 instructions per value on sm_120** (ptxas, as with nvcc's `__float_to_tf32`: an `FSETP` NaN/Inf guard, a predicated add of `0x1000`, a mask), which shows up as many `FSETP` in TF32 kernels. A bit-trick rounding saves only the guard and turns the canonical NaN `0x7fffffff` into -0.
 - **Shared addresses for `ldmatrix`:** prefer `ldmatrix_*_shared_u32` with a per-lane u32 address computed once. At `88e52d117` every constant-stride form compiles to the same SASS; a runtime-stride usize form costs about 16 setup instructions and 4 registers, with no measurable time. The "150 more instructions" seen in a flash kernel at `2d47e43` didn't reproduce in isolation.
 
+- **Under one wave, ptxas can save registers for occupancy the grid never uses, and serialize loads to fit.** `flash_attn_rpb_d32` at the sam3rs decoder shape (448 blocks, 0.53-0.66 waves on a 5090) got 96 registers and issued the last 16 of its 32 bias loads two at a time, each pair waited on before the next: 25.10 µs against nvcc's 23.01, where nvcc's PTX got 128. nvcc's PTX capped at 96 registers ran 26.57 µs. `.minnctapersm 1` (which `#[launch_bounds(128, 1)]` emits; tested by editing the PTX) or `.maxnreg 128` gave 115 registers and 22.38 µs, 2.7% ahead of nvcc, with bit-identical output (`88e52d117`). It didn't help at `4c0182cd5` (see Open slowdowns). When a latency-bound kernel's grid is under a wave at every deployed shape, try the min-blocks bound; above a wave it trades occupancy, so time it. Diagnose from the SASS scoreboard bits rather than load counts: how many loads are in flight at each wait.
+
 ## Open slowdowns
 
 Measured, cause not confirmed. Test the suspects before trusting a fix.
 
-- **`flash_attn_rpb_d32` +9% behind nvcc** (`88e52d117`, LLVM 23: 25.04 against 22.96 µs; +16% with llc-21, as sam3rs builds). The loads and results are the same, and the output is bit-identical. ptxas issues the 32 relative-position-bias loads in bursts of 1-3 (96 registers) where nvcc's PTX gets bursts of 9-12 (128 registers), so the bias adds stall on long scoreboard. Ruled out: layout flags, the `.nc` loads, the grid-wrap loop, FMA fusion. The PTX difference ptxas reacts to isn't found.
+- **`4c0182cd5` regressed the flash-attention kernels against `88e52d117`.** `flash_attn_rpb_d32` went from 25.10 to 26.04 µs (13.1% behind nvcc), with output unchanged. Registers rose in every flash kernel, with no spills: `flash_attn_d32` 80 to 128, `kv16_d32` 80 to 98, `bf16_d64` 137 to 162, `d64` 152 to 176. In rpb every bias load now issues in a pair, and no register directive restores the overlap, so the PTX itself changed. Only rpb was timed, and the 31 commits weren't bisected. Until they are, time each flash kernel against an `88e52d117` build before trusting a number from this pin.
 
 ## Correctness traps
 
