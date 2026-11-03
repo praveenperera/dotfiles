@@ -17,7 +17,7 @@ pub struct Sync {
 #[derive(Debug, Clone, Subcommand)]
 pub enum SyncCmd {
     /// Sync a local file or directory to iCloud Drive and symlink back
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "ic", arg_required_else_help = true)]
     Icloud {
         /// Local file or directory to sync (e.g., _plans or ~/.codex/config.toml)
         path: String,

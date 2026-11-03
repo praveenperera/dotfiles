@@ -46,10 +46,11 @@ pub enum SecretsCmd {
     },
 
     /// Save secrets to local files
+    #[command(visible_alias = "sv")]
     Save,
 
     /// Update secrets in vault
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "up", arg_required_else_help = true)]
     Update {
         /// Secret to update (or "all" for all secrets)
         secret: String,

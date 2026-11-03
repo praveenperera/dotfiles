@@ -19,6 +19,7 @@ pub struct DigitalOcean {
 #[derive(Debug, Clone, Subcommand)]
 pub enum DigitalOceanCmd {
     /// Show product charges for the current invoice preview
+    #[command(visible_alias = "b")]
     Billing(#[command(flatten)] BillingArgs),
 }
 

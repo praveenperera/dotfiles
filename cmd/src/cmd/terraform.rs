@@ -27,6 +27,7 @@ pub enum TerraformCmd {
     },
 
     /// Create the encrypted state file if needed and run tofu init
+    #[command(visible_alias = "in")]
     Init,
 
     /// Encrypt a plaintext state file to <file>.enc

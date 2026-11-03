@@ -65,6 +65,7 @@ pub struct WorkspaceArgs {
 #[derive(Debug, Clone, Subcommand)]
 enum WorkspaceCommand {
     /// Attach a display client to the shared workspace
+    #[command(visible_alias = "at")]
     Attach {
         /// Stable display label
         #[arg(long, default_value = "main")]
@@ -77,16 +78,20 @@ enum WorkspaceCommand {
         connection_id: Option<String>,
     },
     /// Connect from another Mac through the registered Mini route
+    #[command(visible_alias = "co")]
     Connect {
         /// Stable display label
         #[arg(long, default_value = "main")]
         display: String,
     },
     /// Reconcile saved subscriptions and managed views
+    #[command(visible_alias = "rc")]
     Reconnect,
     /// Restore managed displays and the sync worker after canonical restore
+    #[command(visible_alias = "rs")]
     Restore,
     /// Stop the worker and remove only managed workspace sessions
+    #[command(visible_alias = "sd")]
     Shutdown,
 }
 
@@ -99,12 +104,14 @@ pub struct SyncArgs {
 #[derive(Debug, Clone, Subcommand)]
 enum SyncCommand {
     /// Run the supervised synchronization loop
+    #[command(visible_alias = "w")]
     Worker {
         /// Canonical workspace session ID
         #[arg(long)]
         workspace: String,
     },
     /// Reconcile the current remote snapshots once
+    #[command(visible_alias = "rc")]
     Reconcile {
         /// Canonical workspace session ID
         #[arg(long)]

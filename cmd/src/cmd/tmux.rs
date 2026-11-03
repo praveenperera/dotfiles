@@ -56,31 +56,41 @@ pub struct NotifyArgs {
 #[derive(Debug, Clone, Subcommand)]
 pub enum TmuxCmd {
     /// Create, attach, or list canonical fleet sessions
+    #[command(visible_alias = "rem")]
     Remote(managed::RemoteArgs),
     /// Manage the shared Mini workspace
+    #[command(visible_alias = "ws")]
     Workspace(managed::WorkspaceArgs),
     /// Run or reconcile the workspace synchronization service
+    #[command(visible_alias = "sy")]
     Sync(managed::SyncArgs),
     /// Close the selected pane with managed-view semantics
+    #[command(visible_alias = "cl")]
     Close(managed::CloseArgs),
     /// Stop tracking a canonical remote session
+    #[command(visible_alias = "unsub")]
     Unsubscribe(managed::UnsubscribeArgs),
     /// Capture, transfer, and insert one image into the selected task
+    #[command(visible_alias = "pi")]
     PasteImage(image::PasteImageArgs),
     /// Move current window after specified position (0 = move to first)
+    #[command(visible_alias = "ma")]
     MoveAfter {
         /// Window position to move after (0 moves to first position)
         position: u32,
     },
     /// Clear 🔔 prefix from current window name
+    #[command(visible_alias = "cb")]
     ClearBell,
     /// Print "unset SSH_CONNECTION SSH_CLIENT" if the tmux client is local (no sshd in parent chain)
+    #[command(visible_alias = "ss")]
     SyncSsh {
         /// Unset SSH vars in tmux session env and all idle panes at once
         #[arg(short, long)]
         all: bool,
     },
     /// Send terminal notification (bell, macos, or both)
+    #[command(visible_alias = "n")]
     Notify {
         /// Notification message (used with macos)
         message: Option<String>,
@@ -95,24 +105,28 @@ pub enum TmuxCmd {
         force: bool,
     },
     /// Execute a quick action by name (used by fzf quick actions menu)
+    #[command(visible_alias = "a")]
     Action {
         /// Action name (e.g., "New Tab", "Close Pane")
         #[arg(trailing_var_arg = true)]
         name: Vec<String>,
     },
     /// Name a running Codex pane, or restore its default label after Codex exits
+    #[command(visible_alias = "ncp")]
     NameCodexPane {
         /// Tmux pane target, defaults to the active pane
         #[arg(long)]
         target_pane: Option<String>,
     },
     /// Set a pane name from a Codex turn-complete notification on stdin
+    #[command(visible_alias = "scpn")]
     SyncCodexPaneName {
         /// Tmux pane target, defaults to TMUX_PANE
         #[arg(long)]
         target_pane: Option<String>,
     },
     /// Rename a pane and the matching Codex session when possible
+    #[command(visible_alias = "rp")]
     RenamePane {
         /// Tmux pane target, defaults to the active pane
         #[arg(long)]
@@ -122,6 +136,7 @@ pub enum TmuxCmd {
         name: Vec<String>,
     },
     /// Fzf picker menus (window, session, action, pane)
+    #[command(visible_alias = "p")]
     Picker {
         #[command(subcommand)]
         kind: PickerKind,
@@ -143,6 +158,7 @@ pub enum PickerKind {
     #[command(alias = "p")]
     Pane,
     /// Select a pane in the managed remote window
+    #[command(alias = "rp")]
     RemotePane,
 }
 

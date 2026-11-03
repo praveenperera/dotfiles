@@ -37,15 +37,17 @@ pub enum MainCmd {
     Version,
 
     /// Bootstrap dotfiles
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "bs", arg_required_else_help = true)]
     Bootstrap {
         mode: crate::cmd::bootstrap::BootstrapMode,
     },
 
     /// Release/update cmd binary, or release a local project
+    #[command(visible_alias = "rel")]
     Release(#[command(flatten)] ReleaseArgs),
 
     /// Download the latest cmd release from GitHub if it is newer
+    #[command(visible_alias = "up")]
     Update(#[command(flatten)] crate::cmd::update::Update),
 
     /// Configure dotfiles
@@ -78,7 +80,7 @@ pub enum MainCmd {
     },
 
     /// Modal API operations
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "mo", arg_required_else_help = true)]
     Modal {
         #[command(subcommand)]
         subcommand: crate::cmd::modal::ModalCmd,
@@ -89,14 +91,14 @@ pub enum MainCmd {
     Billing(#[command(flatten)] crate::cmd::billing::Billing),
 
     /// Google Cloud operations
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "gc", arg_required_else_help = true)]
     Gcloud {
         #[command(subcommand)]
         subcommand: crate::cmd::gcloud::GcloudCmd,
     },
 
     /// Secret operations
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "sec", arg_required_else_help = true)]
     Secret {
         #[command(subcommand)]
         subcommand: crate::cmd::secrets::SecretsCmd,
@@ -110,7 +112,7 @@ pub enum MainCmd {
     },
 
     /// Vault operations
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "va", arg_required_else_help = true)]
     Vault {
         #[command(subcommand)]
         subcommand: crate::cmd::vault::VaultCmd,
@@ -128,7 +130,7 @@ pub enum MainCmd {
     Install(#[command(flatten)] crate::cmd::install::Install),
 
     /// Tmux operations
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "tm", arg_required_else_help = true)]
     Tmux {
         #[command(subcommand)]
         subcommand: crate::cmd::tmux::TmuxCmd,
@@ -147,13 +149,14 @@ pub enum MainCmd {
     },
 
     /// Codex CLI profile management
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "cx", arg_required_else_help = true)]
     Codex {
         #[command(subcommand)]
         subcommand: crate::cmd::codex::CodexCmd,
     },
 
     /// Show Codex and Claude Code usage together
+    #[command(visible_alias = "u")]
     Usage {
         /// Print the same view as JSON, without saving a history sample
         #[arg(long)]
@@ -173,42 +176,42 @@ pub enum MainCmd {
     },
 
     /// Crate operations (crates.io)
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "cr", arg_required_else_help = true)]
     Crate {
         #[command(subcommand)]
         subcommand: CrateCmd,
     },
 
     /// File encryption/decryption operations
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "f", arg_required_else_help = true)]
     File {
         #[command(subcommand)]
         subcommand: crate::cmd::file::FileCmd,
     },
 
     /// ai5090 fleet operations
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "fl", arg_required_else_help = true)]
     Fleet {
         #[command(subcommand)]
         subcommand: crate::cmd::fleet::FleetCmd,
     },
 
     /// Agent harness hooks, such as `cmd hook claude pre-tool-use`
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "hk", arg_required_else_help = true)]
     Hook {
         #[command(subcommand)]
         subcommand: crate::cmd::hook::HookCmd,
     },
 
     /// Waits for a PR's CI or a workflow run, used by the ship skill
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "sh", arg_required_else_help = true)]
     Ship {
         #[command(subcommand)]
         subcommand: crate::cmd::ship::ShipCmd,
     },
 
     /// Manage reusable agent skills
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "sk", arg_required_else_help = true)]
     Skill {
         #[command(subcommand)]
         subcommand: crate::cmd::skill::SkillCmd,
@@ -222,21 +225,21 @@ pub enum MainCmd {
     },
 
     /// Add reusable project packs of skills and MCPs
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "pk", arg_required_else_help = true)]
     Pack {
         #[command(subcommand)]
         subcommand: crate::cmd::pack::PackCmd,
     },
 
     /// Sync files and directories via iCloud
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "sy", arg_required_else_help = true)]
     Sync {
         #[command(subcommand)]
         subcommand: crate::cmd::sync::SyncCmd,
     },
 
     /// Symlink folders onto CacheDisk (dev-cache)
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "ca", arg_required_else_help = true)]
     Cache {
         #[command(subcommand)]
         subcommand: crate::cmd::cache::CacheCmd,
@@ -253,6 +256,7 @@ pub enum MainCmd {
 #[derive(Debug, Clone, Subcommand)]
 pub enum CrateCmd {
     /// Fetch latest versions for crates from crates.io
+    #[command(visible_alias = "v")]
     Versions(#[command(flatten)] crate::cmd::crate_versions::CrateVersions),
 }
 
@@ -288,6 +292,43 @@ mod tests {
     use crate::cmd::modal::ModalCmd;
     use crate::cmd::pack::PackCmd;
     use crate::cmd::skill::SkillCmd;
+
+    #[test]
+    fn command_tree_has_no_clashing_names_or_aliases() {
+        use clap::CommandFactory;
+
+        // clap checks only the subcommands a parse walks, so check them all here
+        Cmd::command().debug_assert();
+    }
+
+    #[test]
+    fn short_aliases_reach_nested_commands() {
+        for (words, want) in [
+            (&["sh", "wp", "5"][..], "ship watch-pr"),
+            (&["fl", "up"][..], "fleet update"),
+            (&["tm", "p", "w"][..], "tmux picker"),
+        ] {
+            let cmd = Cmd::try_parse_from(std::iter::once("cmd").chain(words.iter().copied()))
+                .unwrap_or_else(|error| panic!("{words:?}: {error}"));
+
+            let parsed = match cmd.subcommand {
+                MainCmd::Ship {
+                    subcommand: crate::cmd::ship::ShipCmd::WatchPr(_),
+                } => "ship watch-pr",
+                MainCmd::Fleet {
+                    subcommand: FleetCmd::Update { .. },
+                } => "fleet update",
+                MainCmd::Tmux {
+                    subcommand:
+                        crate::cmd::tmux::TmuxCmd::Picker {
+                            kind: crate::cmd::tmux::PickerKind::Window,
+                        },
+                } => "tmux picker",
+                other => panic!("{words:?} parsed as {other:?}"),
+            };
+            assert_eq!(parsed, want, "{words:?}");
+        }
+    }
 
     #[test]
     fn parses_skill_add_without_names() {

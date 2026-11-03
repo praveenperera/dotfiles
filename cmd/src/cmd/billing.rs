@@ -44,6 +44,7 @@ pub enum BillingCmd {
     DigitalOcean(#[command(flatten)] crate::cmd::digitalocean::BillingArgs),
 
     /// Show the Modal billing report
+    #[command(visible_alias = "mo")]
     Modal(#[command(flatten)] crate::cmd::modal::BillingArgs),
 }
 

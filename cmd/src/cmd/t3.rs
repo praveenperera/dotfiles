@@ -27,13 +27,16 @@ pub struct T3 {
 #[derive(Debug, Clone, Subcommand)]
 pub enum T3Cmd {
     /// Continue a Claude Code or Codex CLI session as a T3 Code thread
+    #[command(visible_alias = "im")]
     Import(ImportArgs),
 
     /// Delete settled threads that have been idle for a while
+    #[command(visible_alias = "cl")]
     Cleanup(CleanupArgs),
 
     /// Stop T3, permanently remove deleted threads from its database, VACUUM
     /// it, and start T3 again
+    #[command(visible_alias = "pg")]
     Purge(PurgeArgs),
 }
 

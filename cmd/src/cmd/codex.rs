@@ -55,6 +55,7 @@ struct CodexCli {
 #[derive(Debug, Clone, Subcommand)]
 pub enum CodexCmd {
     /// Launch codex with an optional profile
+    #[command(visible_alias = "l")]
     Launch {
         /// Optional profile name, or first codex argument when auto-selecting
         profile_or_arg: Option<OsString>,
@@ -81,6 +82,7 @@ pub enum CodexCmd {
     },
 
     /// Login and save a new profile
+    #[command(visible_alias = "li")]
     Login {
         /// Profile name to save
         profile: String,
@@ -99,6 +101,7 @@ pub enum CodexCmd {
     },
 
     /// Show usage for the current global codex auth
+    #[command(visible_alias = "u")]
     Usage,
 
     /// Show saved usage samples
@@ -582,7 +585,11 @@ fn parse_raw_args(args: &[OsString]) -> Result<Codex> {
 }
 
 fn parse_launch_with_forced_auto_selection(args: &[OsString]) -> Result<Option<Codex>> {
-    if args.first().and_then(|arg| arg.to_str()) != Some("launch") {
+    // `l` is launch's alias, which this pre-parse must see the same way
+    if !matches!(
+        args.first().and_then(|arg| arg.to_str()),
+        Some("launch" | "l")
+    ) {
         return Ok(None);
     }
 
@@ -2101,36 +2108,38 @@ mod tests {
 
     #[test]
     fn cmd_parses_launch_with_forced_auto_selection() {
-        let cmd = parse_raw_args(&[
-            OsString::from("launch"),
-            OsString::from("-r"),
-            OsString::from("shared-work"),
-            OsString::from("-c"),
-            OsString::from("cfg-a"),
-            OsString::from("--"),
-            OsString::from("a"),
-        ])
-        .unwrap();
+        for launch in ["launch", "l"] {
+            let cmd = parse_raw_args(&[
+                OsString::from(launch),
+                OsString::from("-r"),
+                OsString::from("shared-work"),
+                OsString::from("-c"),
+                OsString::from("cfg-a"),
+                OsString::from("--"),
+                OsString::from("a"),
+            ])
+            .unwrap();
 
-        let subcommand = cmd.subcommand;
-        let CodexCmd::Launch {
-            profile_or_arg,
-            resume_group,
-            config_group,
-            other,
-            force,
-            args,
-        } = subcommand
-        else {
-            panic!("expected launch subcommand");
-        };
+            let subcommand = cmd.subcommand;
+            let CodexCmd::Launch {
+                profile_or_arg,
+                resume_group,
+                config_group,
+                other,
+                force,
+                args,
+            } = subcommand
+            else {
+                panic!("expected launch subcommand");
+            };
 
-        assert_eq!(profile_or_arg, None);
-        assert_eq!(resume_group.as_deref(), Some("shared-work"));
-        assert_eq!(config_group.as_deref(), Some("cfg-a"));
-        assert!(!other);
-        assert!(!force);
-        assert_eq!(args, vec![OsString::from("a")]);
+            assert_eq!(profile_or_arg, None, "{launch}");
+            assert_eq!(resume_group.as_deref(), Some("shared-work"));
+            assert_eq!(config_group.as_deref(), Some("cfg-a"));
+            assert!(!other);
+            assert!(!force);
+            assert_eq!(args, vec![OsString::from("a")], "{launch}");
+        }
     }
 
     #[test]

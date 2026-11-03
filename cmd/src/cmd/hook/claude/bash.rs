@@ -1,12 +1,15 @@
 //! Checks on the Bash tool: CI waits held in the turn, background commands an
 //! agent will wait on, and the reminder to register a background `homebased wait`
 
+use clap::Parser;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
 use super::shell::{Command, Script};
 use super::text::{has_marker, mentions_homebased_wait, starts_line_with_homebased_wait};
 use super::{recommend, Decision, HookInput, Host};
+use crate::cmd::main_cmd::{Cmd, MainCmd};
+use crate::cmd::ship::ShipCmd;
 
 /// The Bash tool's input
 #[derive(Debug, Deserialize)]
@@ -99,9 +102,17 @@ fn watches_ci(command: &Command) -> bool {
                 || (command.starts_with(&["pr", "checks"])
                     && command.args().any(|arg| arg.starts_with("--watch")))
         }
+        // parsed with cmd's own parser, so aliases such as `cmd sh wp 5` match too
         "cmd" => {
-            command.starts_with(&["ship", "watch-pr"])
-                || command.starts_with(&["ship", "watch-run"])
+            let words = std::iter::once("cmd").chain(command.args());
+            matches!(
+                Cmd::try_parse_from(words),
+                Ok(Cmd {
+                    subcommand: MainCmd::Ship {
+                        subcommand: ShipCmd::WatchPr(_) | ShipCmd::WatchRun(_)
+                    }
+                })
+            )
         }
         _ => false,
     }
@@ -192,6 +203,12 @@ mod tests {
                 ("bash -c 'cmd ship watch-run release-cmd HEAD'", Ci),
                 ("sh -lc \"cmd ship watch-pr 5\"", Ci),
                 ("~/.local/bin/cmd ship watch-pr 978", Ci),
+                ("cmd sh wp 5", Ci),
+                ("cmd ship wr release-cmd HEAD --repo o/r", Ci),
+                (
+                    "cmd sh watch-pr https://github.com/o/r/pull/5 --greptile",
+                    Ci,
+                ),
                 ("while true; do gh pr checks 5; sleep 30; done", Ci),
                 ("gh run watch 123", Ci),
                 ("gh pr checks 5 --watch", Ci),
@@ -262,6 +279,9 @@ mod tests {
                 ("gh run view 123 --log-failed", Allow),
                 ("sleep 5 && cargo test", Allow),
                 ("cmd ship plan", Allow),
+                ("cmd sh --help", Allow),
+                ("cmd ship watch-pr --help", Allow),
+                ("cmd fl dfu", Allow),
                 (
                     "gh run watch 1 # foreground-wait: the user asked to watch",
                     Allow,

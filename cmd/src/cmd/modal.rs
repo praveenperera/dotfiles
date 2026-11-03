@@ -19,6 +19,7 @@ pub struct Modal {
 #[derive(Debug, Clone, Subcommand)]
 pub enum ModalCmd {
     /// Show workspace costs for the current billing month
+    #[command(visible_alias = "b")]
     Billing(#[command(flatten)] BillingArgs),
 }
 

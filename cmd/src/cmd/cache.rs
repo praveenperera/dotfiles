@@ -22,6 +22,7 @@ pub struct Cache {
 #[derive(Debug, Clone, Subcommand)]
 pub enum CacheCmd {
     /// Symlink a folder onto CacheDisk (no path = rust target from cwd)
+    #[command(visible_alias = "ln")]
     Link {
         /// Local folder to host on CacheDisk (omit to auto-find cargo target)
         path: Option<String>,
@@ -44,6 +45,7 @@ pub enum CacheCmd {
     },
 
     /// Show whether a path is linked onto CacheDisk
+    #[command(visible_alias = "st")]
     Status {
         /// Path to inspect (omit to auto-find cargo target from cwd)
         path: Option<String>,

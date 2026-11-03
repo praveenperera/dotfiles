@@ -34,7 +34,7 @@ pub enum GenerateCmd {
     },
 
     /// Swift related generators
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "sw", arg_required_else_help = true)]
     Swift {
         name: String,
         identifier: String,
@@ -44,7 +44,7 @@ pub enum GenerateCmd {
     },
 
     /// Swift Colors
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "sc", arg_required_else_help = true)]
     SwiftColor {
         name: String,
         light_hex: String,

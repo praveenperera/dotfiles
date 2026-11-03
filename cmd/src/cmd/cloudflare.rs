@@ -26,10 +26,11 @@ pub struct Cloudflare {
 #[derive(Debug, Clone, Subcommand)]
 pub enum CloudflareCmd {
     /// Show usage and charges for the current billing period
+    #[command(visible_alias = "b")]
     Billing(#[command(flatten)] BillingArgs),
 
     /// Manage Single Redirect rules
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "r", arg_required_else_help = true)]
     Redirect {
         #[command(subcommand)]
         subcommand: RedirectCmd,
@@ -39,14 +40,15 @@ pub enum CloudflareCmd {
 #[derive(Debug, Clone, Subcommand)]
 pub enum RedirectCmd {
     /// List Single Redirect rules for a zone
+    #[command(visible_alias = "ls")]
     List(#[command(flatten)] ListRedirectArgs),
 
     /// Redirect www.example.com to example.com
-    #[command(name = "www-to-apex")]
+    #[command(name = "www-to-apex", visible_alias = "w2a")]
     WwwToApex(#[command(flatten)] RedirectArgs),
 
     /// Redirect example.com to www.example.com
-    #[command(name = "apex-to-www")]
+    #[command(name = "apex-to-www", visible_alias = "a2w")]
     ApexToWww(#[command(flatten)] RedirectArgs),
 }
 

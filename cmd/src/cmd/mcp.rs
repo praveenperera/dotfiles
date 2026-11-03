@@ -21,6 +21,7 @@ pub struct Mcp {
 #[derive(Debug, Clone, Subcommand)]
 pub enum McpCmd {
     /// Add project-local MCP servers to the current project
+    #[command(visible_alias = "a")]
     Add {
         /// Agent project layout to install into. When omitted, installs for every supported agent
         #[arg(long, value_enum)]

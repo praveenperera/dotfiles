@@ -60,6 +60,7 @@ pub enum FleetCmd {
     ///
     /// On a Mac whose login keychain is locked, as it is over ssh, this first
     /// asks for its password so gh can read the private cln and aps releases
+    #[command(visible_alias = "up")]
     Update {
         /// Also upgrade APT packages and update T3 Code; this can use sudo and
         /// restart T3 Code

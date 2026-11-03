@@ -19,6 +19,7 @@ pub struct Aws {
 #[derive(Debug, Clone, Subcommand)]
 pub enum AwsCmd {
     /// Show service charges for the current UTC month
+    #[command(visible_alias = "b")]
     Billing(#[command(flatten)] BillingArgs),
 }
 

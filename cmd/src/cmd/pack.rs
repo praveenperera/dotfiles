@@ -24,6 +24,7 @@ pub struct Pack {
 #[derive(Debug, Clone, Subcommand)]
 pub enum PackCmd {
     /// Add project-local skills and MCPs from reusable packs
+    #[command(visible_alias = "a")]
     Add {
         /// Agent project layout to install into. When omitted, installs for every supported agent
         #[arg(long, value_enum)]
@@ -34,6 +35,7 @@ pub enum PackCmd {
     },
 
     /// Refresh registered project pack links and plugin MCPs
+    #[command(visible_alias = "r")]
     Refresh {
         /// Refresh every registered project instead of only the current project
         #[arg(long)]

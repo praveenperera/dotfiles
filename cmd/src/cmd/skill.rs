@@ -20,6 +20,7 @@ pub struct Skill {
 #[derive(Debug, Clone, Subcommand)]
 pub enum SkillCmd {
     /// Link project-local skills into the current project
+    #[command(visible_alias = "a")]
     Add {
         /// Agent project layout to install into. When omitted, installs for every supported agent
         #[arg(long, value_enum)]

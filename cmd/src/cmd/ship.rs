@@ -23,9 +23,11 @@ use crate::runtime;
 pub enum ShipCmd {
     /// Wait for a PR's CI, and with --greptile for Greptile's review of the head
     /// commit, then print one line
+    #[command(visible_alias = "wp")]
     WatchPr(watch_pr::WatchPrArgs),
 
     /// Wait for the GitHub Actions run of a workflow on a commit, then print one line
+    #[command(visible_alias = "wr")]
     WatchRun(watch_run::WatchRunArgs),
 }
 

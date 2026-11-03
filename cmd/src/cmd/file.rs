@@ -33,7 +33,7 @@ pub enum FileCmd {
     },
 
     /// Initialize encryption keys for a new file
-    #[command(arg_required_else_help = true)]
+    #[command(visible_alias = "in", arg_required_else_help = true)]
     Init {
         /// Source file to initialize encryption for
         input: String,
