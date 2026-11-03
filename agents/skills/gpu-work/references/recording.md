@@ -19,7 +19,7 @@ Add an entry when you choose between designs, keep, revert or park a change, kil
 ```
 
 - Fill in **Outcome** when it's known, and edit it if a later result changes it. Give every kill its scope (what, which shapes, which commit), so a later reader doesn't widen it.
-- **Skill** is `none`, `rule` (would change how the next project, or the next project of a track, is done), or `gotcha` (a trap in cuda-oxide, a library, a profiler or the queue), with a one-line proposed wording. Mark it whenever you're unsure; the end-of-task pass filters.
+- **Skill** is `none`, `rule` (would change how the next project, or the next project of a track, is done), or `gotcha` (a trap in cuda-oxide, a library, a profiler or the queue), with a one-line proposed wording. Mark it whenever you're unsure; the user filters these when updating the skill.
 - Workers with a brief don't write to the log. They list decisions and candidates in their report, and the root copies them in.
 - Commit and push the log with the topic's other notes as you go.
 
@@ -28,8 +28,8 @@ Add an entry when you choose between designs, keep, revert or park a change, kil
 1. **Decisions** go in the decision log, as above.
 2. **Results** (numbers, tables, what shipped, what was rejected) go in the project's topic, such as `R/scriptrs-cuda/<subject>-<date>.md`, linked from the topic README. When the conclusion changes, update the README's status, date and summary.
 3. **Transferable lessons with their evidence** go in the general lessons file `R/cuda-kernels/cuda-kernel-lessons-general-2026-10-04.md`. Add to your project's section, or start a new numbered section, `## N. Lessons from <project> (<dates>)`, with a one-line source note. Group bullets under the existing bold sub-heads where they fit (kernel design, precision, parity, measurement, build, agents).
-4. **Rules and gotchas** for every project, or for every project of a track, go in this skill, as in "Update this skill" below. The skill holds the rule; the numbers stay in research.
-5. **Scripts, runbooks, brief templates and handoffs** go in `~/code/private-workbench`, and repo-specific commands, gates and rejected ideas go in the repo sheet `ops/<repo>/hill-climb/README.md` there. A reusable analysis script that isn't tied to one repo can go in this skill's `scripts/`.
+4. **Rules and gotchas** for every project, or for every project of a track, stay in the decision log's Skill lines. Never edit this skill during a task; the user decides what goes into it. The skill holds the rule; the numbers stay in research.
+5. **Scripts, runbooks, brief templates and handoffs** go in `~/code/private-workbench`, and repo-specific commands, gates and rejected ideas go in the repo sheet `ops/<repo>/hill-climb/README.md` there. A reusable analysis script that isn't tied to one repo goes there too.
 
 ## How to write a lesson
 
@@ -42,15 +42,3 @@ Add an entry when you choose between designs, keep, revert or park a change, kil
 Before adding, grep for the key terms (`rg -i '<term>' ~/code/research ~/.claude/skills/gpu-work`) and extend an existing bullet rather than writing a near-duplicate. If a new result contradicts an existing lesson, edit the old bullet to say what's now true and when it changed; don't leave both standing. If a later change moves numbers you quoted, update every note that quotes them, including topic summaries.
 
 No raw logs, profiler output or task lists in the research repo; summarize them in Markdown. Commit and push; its pre-commit hook regenerates `INDEX.md` and checks the layout.
-
-## Update this skill
-
-Before finishing, the root goes through the decision log entries marked `rule` or `gotcha` and the lessons added during the task, and folds what generalizes into this skill:
-
-- **Placement:** a rule for every project goes in SKILL.md "Be ambitious", "Every project" or "Kernels"; a rule for one kind of project goes in that track's `references/track-*.md`; a cuda-oxide trap or per-build check goes in `references/cuda-oxide.md` with the commit it was seen at.
-- **Keep it short:** merge into or replace an existing bullet rather than adding one. If the new rule contradicts an existing one, replace the old one and say in the decision log what changed. Leave out anything specific to one repo; that belongs in its sheet.
-- **Wording:** the rule in the imperative, one clause of evidence (the number that justifies it), and a pointer to the lessons section or research note that holds the rest.
-- **Where to edit:** `~/code/dotfiles/agents/skills/gpu-work/` (`~/.claude/skills/gpu-work` and `~/.codex/skills/gpu-work` link there). Commit only the skill's files, staged by hunk, in their own commit, and push.
-- **Close the loop:** set each processed entry's Skill line to `added`, `merged into <section>` or `rejected: <reason>`, so the next pass doesn't redo it.
-
-If nothing generalizes, say so in the final report rather than adding a weak rule.

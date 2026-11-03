@@ -4,7 +4,7 @@ Running workers, advisors or reviewers on kernel tasks. `R` = `~/code/research/g
 
 - Use `PW/playbooks/kernel-worker-brief-template.md`. It bakes in stop rules, attempt caps and known risks.
 - The root reads this skill and copies the rules that apply into the brief, so workers get a bounded brief instead of the whole skill. Name the ambitious design the worker should build first.
-- The root owns the decision log and the skill. Workers report their decisions and rule candidates; the root logs them and decides what goes into the skill.
+- The root owns the decision log. Workers report their decisions and rule candidates; the root logs them, and the user decides what goes into the skill.
 - Codex workers can't be messaged mid-run; Claude workers can. Route time-sensitive findings to Claude workers.
 - So far (one tier run plus the advisor comparison), Sol has been thorough and conservative, while Opus reverse-engineers and takes bolder numerical routes that need audits. Run both on different routes for hard problems.
 - Workers fix their own scratch bugs and rerun without asking. Diff every worker change against its brief.

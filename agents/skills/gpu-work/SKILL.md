@@ -1,6 +1,6 @@
 ---
 name: gpu-work
-description: Rules and workflow for GPU kernel and native-runtime work. Use for writing, porting or optimizing CUDA kernels (cuda-oxide, PTX tiers, shipping CUDA crates), speed climbs on GPU pipelines, porting a model off PyTorch or ONNX Runtime to a native runtime, replacing cuDNN or cuBLAS layers, and profiling kernels with nsys or ncu, or when the user invokes $gpu-work or /gpu-work. Defaults to ambitious floor-capable designs over easy tuning, keeps a decision log, and adds new rules and gotchas back into this skill. Do not use for ML training runs or other GPU jobs that change no kernel or runtime code.
+description: Rules and workflow for GPU kernel and native-runtime work. Use for writing, porting or optimizing CUDA kernels (cuda-oxide, PTX tiers, shipping CUDA crates), speed climbs on GPU pipelines, porting a model off PyTorch or ONNX Runtime to a native runtime, replacing cuDNN or cuBLAS layers, and profiling kernels with nsys or ncu, or when the user invokes $gpu-work or /gpu-work. Defaults to ambitious floor-capable designs over easy tuning, and keeps a decision log. Do not use for ML training runs or other GPU jobs that change no kernel or runtime code.
 ---
 
 # GPU work
@@ -18,7 +18,6 @@ The rules for GPU kernel and native-runtime work live in this skill. The evidenc
 4. Delegating to a worker: fill `PW/playbooks/kernel-worker-brief-template.md`, copying in only the rules that apply and naming the ambitious design to build first.
 5. All GPU work, including tests, nsys and ncu, goes through the homebased GPU queue; never run it directly. Before queuing, import every module each benchmark venv loads on the CPU, and after a job read each step's own exit status: a job reports success when its wrapper exits 0, and three LivePortrait jobs (hours of queue each) died on missing Python packages behind a green job.
 6. At the end of each phase, after a revert or a parked attempt, and after the user corrects you: log the decision, then record results and lessons as in [references/recording.md](references/recording.md).
-7. Before finishing, add the new rules and gotchas from the decision log to this skill and commit them: [references/recording.md](references/recording.md) "Update this skill".
 
 If you are a worker with a brief, the brief replaces steps 1, 3 and 4. Put your decisions and rule candidates in your report rather than the research repo or this skill; the root records them. The ambition rule still applies.
 
@@ -56,7 +55,7 @@ Write every custom CUDA kernel in Rust with cuda-oxide, not CUDA C++, Triton or 
 - The host library loads the PTX through the driver at run time (for example cudarc with dynamic loading), so users need no special toolchain, no CUDA toolkit and no GPU to build it, and the installed driver JIT-compiles the PTX.
 - CI checks the committed PTX against hashes of every input that can change it (kernel sources, cuda-oxide rev, toolchain, toolkit), so stale PTX fails without a GPU.
 
-Track D has the shipping details. Before writing or porting a kernel, read [references/cuda-oxide.md](references/cuda-oxide.md), the known traps and per-build checks. Add each new trap you hit to it, and each slowdown you measured but couldn't explain to its open list. To compare a kernel build against a reference build, use this skill's scripts: [scripts/sass_mix.sh](scripts/sass_mix.sh) `REF.ptx NEW.ptx [ARCH] [KERNEL...]` (calls, registers, spills and trap opcodes per kernel; CPU only) and [scripts/nsys_kernel_diff.py](scripts/nsys_kernel_diff.py) `CTL.sqlite[,...] EXP.sqlite[,...] [N]` (per-kernel GPU time from nsys exports profiled through the queue). (`R/cuda-kernels/sam3rs-cuda-oxide-port-2026-10-30.md`; lessons §1)
+Track D has the shipping details. Before writing or porting a kernel, read [references/cuda-oxide.md](references/cuda-oxide.md), the known traps and per-build checks. Don't edit it during a task: log each new trap you hit, and each slowdown you measured but couldn't explain, in the decision log with a `gotcha` Skill line. To compare a kernel build against a reference build, use this skill's scripts: [scripts/sass_mix.sh](scripts/sass_mix.sh) `REF.ptx NEW.ptx [ARCH] [KERNEL...]` (calls, registers, spills and trap opcodes per kernel; CPU only) and [scripts/nsys_kernel_diff.py](scripts/nsys_kernel_diff.py) `CTL.sqlite[,...] EXP.sqlite[,...] [N]` (per-kernel GPU time from nsys exports profiled through the queue). (`R/cuda-kernels/sam3rs-cuda-oxide-port-2026-10-30.md`; lessons §1)
 
 ## Pick your track
 
