@@ -85,6 +85,24 @@ pub fn command_line(pid: u32) -> Option<String> {
         .then(|| String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 
+/// The agent CLI that runs a T3 Code thread
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum T3Agent {
+    Claude,
+    Codex,
+}
+
+impl T3Agent {
+    /// The agent an executable name runs, such as `codex` for Codex
+    fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "claude" => Some(Self::Claude),
+            "codex" => Some(Self::Codex),
+            _ => None,
+        }
+    }
+}
+
 /// Whether the Claude session running this process belongs to a T3 Code thread
 ///
 /// Environment variables are not enough: `T3CODE_HOME` and the sdk-ts entrypoint
@@ -101,10 +119,47 @@ pub fn in_t3_session_with(
     lookup: impl FnMut(u32) -> Option<Process>,
     command_line: impl FnOnce(u32) -> Option<String>,
 ) -> bool {
-    ancestors_with(pid, lookup)
-        .find(|process| process.name() == "claude")
-        .and_then(|claude| command_line(claude.ppid))
-        .is_some_and(|parent| is_t3_serve(&parent))
+    t3_child(pid, lookup, command_line, |process| {
+        process.name() == "claude"
+    })
+    .is_some()
+}
+
+/// The agent of the T3 Code thread that runs this process, or `None` outside one
+///
+/// Unlike [`in_t3_session`], the nearest Claude or Codex session decides, so a
+/// command a T3 Codex thread runs reports Codex, and one run by a `claude -p` that
+/// such a thread started reports nothing
+pub fn t3_agent() -> Option<T3Agent> {
+    t3_agent_with(std::process::id(), Process::lookup, command_line)
+}
+
+/// [`t3_agent`] over any process lookup, starting from `pid`
+pub fn t3_agent_with(
+    pid: u32,
+    lookup: impl FnMut(u32) -> Option<Process>,
+    command_line: impl FnOnce(u32) -> Option<String>,
+) -> Option<T3Agent> {
+    let agent = |process: &Process| T3Agent::from_name(process.name());
+
+    t3_child(pid, lookup, command_line, |process| {
+        agent(process).is_some()
+    })
+    .as_ref()
+    .and_then(agent)
+}
+
+/// The nearest ancestor that `is_agent` accepts, when `t3 serve` started it
+fn t3_child(
+    pid: u32,
+    lookup: impl FnMut(u32) -> Option<Process>,
+    command_line: impl FnOnce(u32) -> Option<String>,
+    is_agent: impl Fn(&Process) -> bool,
+) -> Option<Process> {
+    let agent = ancestors_with(pid, lookup).find(|process| is_agent(process))?;
+    let parent = command_line(agent.ppid)?;
+
+    is_t3_serve(&parent).then_some(agent)
 }
 
 /// Whether a command line runs `t3 serve`, by bare name or by path
@@ -121,7 +176,7 @@ fn is_t3_serve(command_line: &str) -> bool {
 mod tests {
     use std::collections::HashMap;
 
-    use super::{ancestors_with, in_t3_session_with, is_t3_serve, Process};
+    use super::{ancestors_with, in_t3_session_with, is_t3_serve, t3_agent_with, Process, T3Agent};
 
     fn table(rows: &[(u32, u32, &str)]) -> HashMap<u32, Process> {
         rows.iter()
@@ -216,6 +271,55 @@ mod tests {
         for (name, rows, want) in cases {
             let processes = table(&rows);
             let got = in_t3_session_with(
+                9,
+                |pid| processes.get(&pid).cloned(),
+                |pid| parents.get(&pid).cloned(),
+            );
+
+            assert_eq!(got, want, "{name}");
+        }
+    }
+
+    #[test]
+    fn t3_agent_is_the_nearest_claude_or_codex_under_t3_serve() {
+        let parents = HashMap::from([
+            (100, "/Users/me/.t3/runtime/t3 serve".to_owned()),
+            (200, "zsh -l".to_owned()),
+        ]);
+
+        let cases = [
+            (
+                "claude thread",
+                vec![(9, 8, "cmd"), (8, 100, "claude")],
+                Some(T3Agent::Claude),
+            ),
+            (
+                "codex thread through a shell",
+                vec![(9, 7, "cmd"), (7, 8, "zsh"), (8, 100, "/opt/bin/codex")],
+                Some(T3Agent::Codex),
+            ),
+            // the nearest agent decides, so a claude a codex thread started is not T3
+            (
+                "claude under a codex thread",
+                vec![
+                    (9, 8, "cmd"),
+                    (8, 7, "claude"),
+                    (7, 6, "zsh"),
+                    (6, 100, "codex"),
+                ],
+                None,
+            ),
+            (
+                "codex under a shell",
+                vec![(9, 8, "cmd"), (8, 200, "codex")],
+                None,
+            ),
+            ("no agent", vec![(9, 8, "cmd"), (8, 100, "node")], None),
+        ];
+
+        for (name, rows, want) in cases {
+            let processes = table(&rows);
+            let got = t3_agent_with(
                 9,
                 |pid| processes.get(&pid).cloned(),
                 |pid| parents.get(&pid).cloned(),

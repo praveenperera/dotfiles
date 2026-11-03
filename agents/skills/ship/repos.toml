@@ -3,7 +3,7 @@
 # Keeping this here instead of in each repo leaves work and upstream repos untouched
 #
 # Fields per repo:
-#   steps     default sequence; ship_plan.py sorts it into the canonical order. Leave
+#   steps     default sequence; `cmd ship plan` sorts it into the canonical order. Leave
 #             "settle" out: it is opt-in per run with `/ship +settle`
 #   deploy    commands for the deploy step; <part> is the bump level (patch unless overridden)
 #   deploy_paths, deploy_otherwise

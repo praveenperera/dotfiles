@@ -6,14 +6,14 @@ argument-hint: "[? | confirm | +step | -step | only step... | high | minor | maj
 
 # Ship
 
-`/ship` carries the current work to the finish this repository uses. The sequence comes from [repos.toml](repos.toml), not from interpretation: never add, drop, or reorder a step the script did not put in the plan.
+`/ship` carries the current work to the finish this repository uses. The sequence comes from [repos.toml](repos.toml), not from interpretation: never add, drop, or reorder a step the resolver did not put in the plan.
 
 ## Resolve the plan
 
 Run the resolver from the repository root with the user's words passed as one argument. `<task>` is the branch name or a short slug of the work:
 
 ```sh
-python3 -I ~/.agents/skills/ship/scripts/ship_plan.py --task <task> -- "$ARGUMENTS"
+cmd ship plan --task <task> -- "$ARGUMENTS"
 ```
 
 The same run saves the plan as `_scratch/ship/<task>/plan.json` and prints a `saved:` line, so do not run the resolver again for `--json`. Chain the read-only checks you need for the plan, such as `git status --short` and `git diff --stat`, onto that command.
@@ -24,7 +24,7 @@ The same run saves the plan as `_scratch/ship/<task>/plan.json` and prints a `sa
 - Stop and wait for the go-ahead instead when the output has `confirm: wait for go-ahead`, from the `confirm` word, when you are not confident how to translate the request, or when the plan is not obvious for the work, as in the cases below. Put every question in the same message as the plan, and start once they are answered.
 - Ask instead of assuming when the repository is new to the table, which the `ship:` line shows as `default fallback` or `external fallback`. Ask which steps it should use and what deploy means there, and offer to add its entry to [repos.toml](repos.toml) before running.
 - Also ask when anything is unclear: which changes belong to this task, such as unrelated edits or unpushed commits you cannot attribute; a placeholder the notes don't settle; or a plan that looks wrong for the work, such as a deploy for a docs-only change.
-- Record finished steps only before the turn ends to wait for a wake-up, such as a PR watch, a `Monitor`, or a homebased task: chain `python3 -I ~/.agents/skills/ship/scripts/ship_plan.py --task <task> --done <step>...` onto the last command before the wait, and resume from the saved plan's `done` list when the thread wakes. A run that finishes in one turn records nothing.
+- Record finished steps only before the turn ends to wait for a wake-up, such as a PR watch, a `Monitor`, or a homebased task: chain `cmd ship plan --task <task> --done <step>...` onto the last command before the wait, and resume from the saved plan's `done` list when the thread wakes. A run that finishes in one turn records nothing.
 
 Words: a bare or `+` step adds it, `-step` removes it, `only` replaces the default with the steps that follow, `high` or `xhigh` sets the Sol effort, `patch`, `minor`, or `major` sets the bump, `confirm` waits for the go-ahead before starting, and `?` reports status without changing anything. The resolver also accepts dictation variants such as "soul", "reptile", and "XI", and `s` or `set` for `settle`.
 
@@ -114,4 +114,4 @@ List anything that needs the user first, then: the plan line, each step's result
 
 ## Change a repository's default
 
-Edit [repos.toml](repos.toml), then run `python3 -I ~/.agents/skills/ship/scripts/ship_plan.py --check` and the tests in `tests/`. When `/ship` runs in a repository without an entry, ask for its steps and add the entry before running.
+Edit [repos.toml](repos.toml), then run `cmd ship plan --check`. It reads the table in `~/code/dotfiles`, so pass `--config agents/skills/ship/repos.toml` when you edited it in another checkout, such as a worktree. The resolver lives in the dotfiles `cmd` crate, at `cmd/src/cmd/ship/plan.rs`; after changing it, run `cargo test` in `cmd/`, which also validates the checked-in repos.toml. When `/ship` runs in a repository without an entry, ask for its steps and add the entry before running.

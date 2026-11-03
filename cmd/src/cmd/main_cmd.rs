@@ -207,8 +207,8 @@ pub enum MainCmd {
     #[command(visible_alias = "sl")]
     Statusline,
 
-    /// Waits for a PR's CI or a workflow run, and reports failing checks, for the
-    /// ship and gh-fix-ci skills
+    /// Plans /ship runs, waits for a PR's CI or a workflow run, and reports
+    /// failing checks, for the ship and gh-fix-ci skills
     #[command(visible_alias = "sh", arg_required_else_help = true)]
     Ship {
         #[command(subcommand)]
@@ -311,6 +311,7 @@ mod tests {
         for (words, want) in [
             (&["sh", "wp", "5"][..], "ship watch-pr"),
             (&["sh", "cif", "5"][..], "ship ci-failures"),
+            (&["sh", "p", "--", "+sol -deploy"][..], "ship plan"),
             (&["fl", "up"][..], "fleet update"),
             (&["tm", "p", "w"][..], "tmux picker"),
         ] {
@@ -324,6 +325,9 @@ mod tests {
                 MainCmd::Ship {
                     subcommand: crate::cmd::ship::ShipCmd::CiFailures(_),
                 } => "ship ci-failures",
+                MainCmd::Ship {
+                    subcommand: crate::cmd::ship::ShipCmd::Plan(_),
+                } => "ship plan",
                 MainCmd::Fleet {
                     subcommand: FleetCmd::Update { .. },
                 } => "fleet update",

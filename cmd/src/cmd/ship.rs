@@ -1,4 +1,5 @@
-//! CI commands for the ship and gh-fix-ci skills
+//! Commands for the ship and gh-fix-ci skills: `plan` resolves /ship words
+//! into a step plan, the waits block on CI, and `ci-failures` reports failures
 //!
 //! The waits, `watch-pr` and `watch-run`, block until a PR's CI or a workflow run
 //! ends, stay quiet on stdout meanwhile, then print one line and exit 0 only
@@ -12,9 +13,11 @@
 //! each failed job's log
 
 mod ci_failures;
+mod plan;
 mod watch_pr;
 mod watch_run;
 
+use std::future::Future;
 use std::process::Command;
 
 use clap::Subcommand;
@@ -25,6 +28,10 @@ use crate::runtime;
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum ShipCmd {
+    /// Resolve /ship words and repos.toml into an ordered step plan
+    #[command(visible_alias = "p")]
+    Plan(plan::PlanArgs),
+
     /// Wait for a PR's CI, and with --greptile for Greptile's review of the head
     /// commit, then print one line
     #[command(visible_alias = "wp")]
@@ -41,12 +48,18 @@ pub enum ShipCmd {
 }
 
 pub fn run_with_flags(subcommand: ShipCmd) -> Result<()> {
-    let (name, result) = match subcommand {
-        ShipCmd::WatchPr(args) => ("watch-pr", runtime::block_on(watch_pr::run(args))?),
-        ShipCmd::WatchRun(args) => ("watch-run", runtime::block_on(watch_run::run(args))?),
+    match subcommand {
+        ShipCmd::Plan(args) => plan::run(args),
+        ShipCmd::WatchPr(args) => watch("watch-pr", watch_pr::run(args)),
+        ShipCmd::WatchRun(args) => watch("watch-run", watch_run::run(args)),
         // a report, not a wait, so it prints its own output rather than one line
-        ShipCmd::CiFailures(args) => return ci_failures::run(args),
-    };
+        ShipCmd::CiFailures(args) => ci_failures::run(args),
+    }
+}
+
+/// Runs a wait and prints its one line, exiting 1 unless everything passed
+fn watch(name: &str, wait: impl Future<Output = Result<Report>>) -> Result<()> {
+    let result = runtime::block_on(wait)?;
 
     // a setup failure, such as an unknown PR, still ends with the one result line
     let report =
