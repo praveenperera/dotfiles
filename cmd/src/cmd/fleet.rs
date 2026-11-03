@@ -13,6 +13,9 @@ const HOMEBASED_SKILL_SYNC: &str = "bin/homebased-skill-sync";
 const UPDATE_COMMAND: &str = "/home/praveen/.local/bin/fleet-update";
 /// Pulls dotfiles on ai5090 and its code container
 const DFU_COMMAND: &str = "/home/praveen/.local/bin/dfu";
+/// Where the update pane records fleet-update's exit code, since tmux exits 0
+/// when its session ends, whatever the command in it returned
+const STATUS_DIR: &str = "/home/praveen/.local/state/fleet-update";
 
 /// Updates gpu-ab, which has no self-update, through the install.sh its release
 /// ships; that script checks the archive against the release checksum
@@ -60,6 +63,10 @@ pub enum FleetCmd {
     ///
     /// On a Mac whose login keychain is locked, as it is over ssh, this first
     /// asks for its password so gh can read the private cln and aps releases
+    ///
+    /// It exits non-zero when fleet-update fails on ai5090 or its tmux session
+    /// is detached before it ends, after still updating this machine. A cmd
+    /// release whose build for this machine has not published yet only warns
     #[command(visible_alias = "up")]
     Update {
         /// Also upgrade APT packages and update T3 Code; this can use sudo and
@@ -109,6 +116,11 @@ impl UpdateMode {
             Self::Full => "fleet-update-all",
         }
     }
+
+    /// The file the update pane writes fleet-update's exit code to
+    fn status_path(self) -> String {
+        format!("{STATUS_DIR}/{}.status", self.tmux_session())
+    }
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Fleet) -> Result<()> {
@@ -141,16 +153,50 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
     require_update_command(local)?;
 
     clear_stale_session(local, mode.tmux_session())?;
-    let (program, args) = update_argv(local, mode);
-    run_attached(program, &args)?;
 
-    if updated_by_remote_script(sh) {
-        return Ok(());
+    // the remote run and this machine's tools are independent, so a failed
+    // remote run is reported at the end instead of skipping the rest
+    let mut failures = Vec::new();
+    step(&mut failures, "ai5090 and code", || {
+        ai5090_shell(local, &format!("rm -f {}", mode.status_path()))
+            .status()
+            .wrap_err("failed to clear the last fleet-update result")?;
+
+        let (program, args) = update_argv(local, mode);
+        let args = args.iter().map(String::as_str).collect::<Vec<_>>();
+        run_attached(program, &args)?;
+        remote_result(local, mode)
+    });
+
+    if !updated_by_remote_script(sh) {
+        update_tools(sh, &mut failures);
     }
 
-    let mut failures = Vec::new();
-    update_tools(sh, &mut failures);
     finish(failures)
+}
+
+/// The exit code the update pane recorded, as a result
+///
+/// A missing record means the run has not ended, as when its tmux session was
+/// detached, so its result is not known yet
+fn remote_result(on_ai5090: bool, mode: UpdateMode) -> Result<()> {
+    let output = ai5090_shell(on_ai5090, &format!("cat {}", mode.status_path()))
+        .stderr(Stdio::null())
+        .output()
+        .wrap_err("failed to read the fleet-update result")?;
+
+    let recorded = String::from_utf8_lossy(&output.stdout);
+    match recorded.trim().parse::<i32>() {
+        Ok(0) => Ok(()),
+        Ok(code) => Err(eyre!(
+            "fleet-update exited with code {code}; its output is above"
+        )),
+        Err(_) => Err(eyre!(
+            "fleet-update has not finished, so its result is unknown; reattach with \
+             `ssh -t {HOST} tmux attach -t ={}`",
+            mode.tmux_session()
+        )),
+    }
 }
 
 /// Update only this machine, as a queued update does on a machine that was asleep
@@ -212,13 +258,23 @@ fn update_tools(sh: &Shell, failures: &mut Vec<String>) {
     // last, because a just-tagged release has no assets until its build
     // finishes; this also refreshes the btx and prc links to the new binary
     step(failures, "cmd", || {
-        update::run_with_flags(
+        let updated = update::run_with_flags(
             sh,
             update::Update {
                 force: false,
                 wait: false,
             },
-        )
+        );
+
+        // `cmd release` installs this machine's build before CI tags it, so a
+        // release whose build is still running is no reason to fail the update
+        match updated {
+            Err(error) if error.downcast_ref::<update::AssetPending>().is_some() => {
+                eprintln!("warning: {error}; this machine keeps its current cmd");
+                Ok(())
+            }
+            other => other,
+        }
     });
 }
 
@@ -461,6 +517,22 @@ fn runs_update(start_commands: &str) -> bool {
         .any(|command| command.trim_start_matches('"').starts_with(UPDATE_COMMAND))
 }
 
+/// A non-interactive shell `script` on ai5090, through ssh when called elsewhere
+fn ai5090_shell(on_ai5090: bool, script: &str) -> Command {
+    let mut command = if on_ai5090 {
+        let mut command = Command::new("sh");
+        command.arg("-c");
+        command
+    } else {
+        let mut command = Command::new("ssh");
+        command.args(["-o", "BatchMode=yes", HOST]);
+        command
+    };
+
+    command.arg(script);
+    command
+}
+
 /// A non-interactive tmux invocation on ai5090, through ssh when called elsewhere
 fn tmux_command(on_ai5090: bool, args: &[&str]) -> Command {
     if on_ai5090 {
@@ -482,38 +554,44 @@ fn shell_quote(arg: &str) -> String {
     format!("'{}'", arg.replace('\'', "'\\''"))
 }
 
-fn update_argv(on_ai5090: bool, mode: UpdateMode) -> (&'static str, Vec<&'static str>) {
-    let mut args = Vec::new();
+/// The command the update pane runs: fleet-update, then a record of its exit
+/// code for `remote_result`. It starts with fleet-update, which is what
+/// `runs_update` looks for when it decides whether to reuse a session
+fn pane_command(mode: UpdateMode) -> String {
+    let command = std::iter::once(UPDATE_COMMAND)
+        .chain(mode.args().iter().copied())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    format!(
+        "{command}; code=$?; mkdir -p {STATUS_DIR} && echo $code > {}; exit $code",
+        mode.status_path()
+    )
+}
+
+fn update_argv(on_ai5090: bool, mode: UpdateMode) -> (&'static str, Vec<String>) {
+    let session = mode.tmux_session();
 
     if on_ai5090 {
-        args.extend([
-            "new-session",
-            "-A",
-            "-s",
-            mode.tmux_session(),
-            UPDATE_COMMAND,
-        ]);
+        let args = ["new-session", "-A", "-s", session]
+            .map(str::to_owned)
+            .into_iter()
+            .chain([pane_command(mode)])
+            .collect();
 
-        args.extend(mode.args().iter().copied());
-
-        ("tmux", args)
-    } else {
-        // force a remote pty even when stdin is not a local tty
-        args.extend([
-            "-tt",
-            HOST,
-            "tmux",
-            "new-session",
-            "-A",
-            "-s",
-            mode.tmux_session(),
-            UPDATE_COMMAND,
-        ]);
-
-        args.extend(mode.args().iter().copied());
-
-        ("ssh", args)
+        return ("tmux", args);
     }
+
+    // force a remote pty even when stdin is not a local tty; ssh joins its
+    // arguments into one line for the remote shell, so the pane command is
+    // quoted to reach tmux as one argument
+    let args = ["-tt", HOST, "tmux", "new-session", "-A", "-s", session]
+        .map(str::to_owned)
+        .into_iter()
+        .chain([shell_quote(&pane_command(mode))])
+        .collect();
+
+    ("ssh", args)
 }
 
 fn run_attached(program: &str, args: &[&str]) -> Result<()> {
@@ -582,8 +660,8 @@ fn is_remote_updated_host(hostname: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        fallback_term, is_ai5090_host, is_remote_updated_host, runs_update, shell_quote,
-        update_argv, UpdateMode, FALLBACK_TERM,
+        fallback_term, is_ai5090_host, is_remote_updated_host, pane_command, runs_update,
+        shell_quote, update_argv, UpdateMode, FALLBACK_TERM, HOST, STATUS_DIR, UPDATE_COMMAND,
     };
 
     #[test]
@@ -647,60 +725,51 @@ mod tests {
     }
 
     #[test]
-    fn local_update_attaches_tmux() {
-        let (program, args) = update_argv(true, UpdateMode::Safe);
+    fn pane_records_the_exit_code_and_keeps_its_session_reusable() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = dir.path().to_str().unwrap();
 
-        assert_eq!(program, "tmux");
-        assert_eq!(
-            args,
-            [
-                "new-session",
-                "-A",
-                "-s",
-                "fleet-update",
-                "/home/praveen/.local/bin/fleet-update"
-            ]
-        );
+        for (mode, code) in [(UpdateMode::Safe, 0), (UpdateMode::Full, 3)] {
+            let command = pane_command(mode);
+            assert!(runs_update(&command), "{command}");
+
+            // the real script is swapped for one that exits with `code`
+            let script = command
+                .replace(
+                    UPDATE_COMMAND,
+                    &format!("exit_with() {{ return {code}; }}; exit_with"),
+                )
+                .replace(STATUS_DIR, state);
+            let status = std::process::Command::new("sh")
+                .args(["-c", &script])
+                .status()
+                .unwrap();
+            let recorded =
+                std::fs::read_to_string(format!("{state}/{}.status", mode.tmux_session())).unwrap();
+
+            assert_eq!(status.code(), Some(code));
+            assert_eq!(recorded.trim(), code.to_string());
+        }
     }
 
     #[test]
-    fn remote_update_forces_a_pty() {
-        let (program, args) = update_argv(false, UpdateMode::Safe);
-
-        assert_eq!(program, "ssh");
-        assert_eq!(
-            args,
-            [
-                "-tt",
-                "praveen@ai5090",
-                "tmux",
-                "new-session",
-                "-A",
-                "-s",
-                "fleet-update",
-                "/home/praveen/.local/bin/fleet-update"
-            ]
-        );
-    }
-
-    #[test]
-    fn remote_full_update_uses_the_all_session() {
+    fn remote_update_forces_a_pty_and_passes_the_pane_command_as_one_word() {
         let (program, args) = update_argv(false, UpdateMode::Full);
 
         assert_eq!(program, "ssh");
         assert_eq!(
-            args,
+            args[..7],
             [
                 "-tt",
-                "praveen@ai5090",
+                HOST,
                 "tmux",
                 "new-session",
                 "-A",
                 "-s",
-                "fleet-update-all",
-                "/home/praveen/.local/bin/fleet-update",
-                "--all"
+                "fleet-update-all"
             ]
         );
+        assert_eq!(args[7], shell_quote(&pane_command(UpdateMode::Full)));
+        assert_eq!(args.len(), 8);
     }
 }

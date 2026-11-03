@@ -17,6 +17,27 @@ const REPO: &str = "praveenperera/dotfiles";
 const WAIT_POLL_INTERVAL: Duration = Duration::from_secs(15);
 const WAIT_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
+/// The latest release has no binary for this platform yet, as while its build
+/// runs; `fleet update` reports this as a warning instead of a failure
+#[derive(Debug)]
+pub struct AssetPending {
+    tag: String,
+    asset: String,
+}
+
+impl std::fmt::Display for AssetPending {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "release {} has no {} asset yet, the build may still be running; \
+             rerun with --wait to wait for it",
+            self.tag, self.asset
+        )
+    }
+}
+
+impl std::error::Error for AssetPending {}
+
 #[derive(Debug, Clone, Args)]
 pub struct Update {
     /// Reinstall the latest release even if it is not newer
@@ -60,11 +81,11 @@ pub fn run_with_flags(sh: &Shell, flags: Update) -> Result<()> {
         }
 
         if !flags.wait {
-            return Err(eyre!(
-                "release {} has no {asset_name} asset yet, the build may still be running; \
-                 rerun with --wait to wait for it",
-                release.tag_name
-            ));
+            return Err(AssetPending {
+                tag: release.tag_name,
+                asset: asset_name,
+            }
+            .into());
         }
 
         if started.elapsed() >= WAIT_TIMEOUT {
