@@ -49,7 +49,7 @@ When moving the pin, rebuild the old and new pins and run `sass_mix.sh` over eve
 
 Measured, cause not confirmed. Test the suspects before trusting a fix.
 
-- **`4c0182cd5` regressed the flash-attention kernels against `88e52d117`.** `flash_attn_rpb_d32` went from 25.10 to 26.04 µs (13.1% behind nvcc), with output unchanged. Registers rose in every flash kernel, with no spills: `flash_attn_d32` 80 to 128, `kv16_d32` 80 to 98, `bf16_d64` 137 to 162, `d64` 152 to 176. In rpb every bias load now issues in a pair, and no register directive restores the overlap, so the PTX itself changed. Only rpb was timed, and the 31 commits weren't bisected. Until they are, time each flash kernel against an `88e52d117` build before trusting a number from this pin.
+- **`4c0182cd5` regressed the flash-attention kernels against `88e52d117`.** `flash_attn_rpb_d32` went from 25.10 to 26.04 µs (13.1% behind nvcc), with output unchanged. Registers rose in every flash kernel, with no spills: `flash_attn_d32` 80 to 128, `kv16_d32` 80 to 98, `bf16_d64` 137 to 162, `d64` 152 to 176. In rpb every bias load now issues in a pair, and no register directive restores the overlap. Bisected to `acd66a84f` (upstream PR #1721, open): special-register reads (`tid`, `ctaid`) are no longer exported `convergent`, so LLVM hoists the thread-derived `ldmatrix` addresses out of the key loop and keeps each one live. Restoring `convergent` on those reads alone gives back every old register count; on the 786 `llvm.trap` calls it changes nothing. Only rpb was timed. Until it's resolved, time each flash kernel against a `cb3df85aa` build before trusting a number from this pin.
 
 ## Correctness traps
 
