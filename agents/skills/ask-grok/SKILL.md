@@ -10,7 +10,7 @@ If you are running in Codex, use the `$hbd` skill.
 Otherwise, run the command from the directory that contains the relevant context. Grok headless mode does not read piped stdin as the prompt. Pass the prompt with `-p` and a quoted here-document inside command substitution:
 
 ```sh
-grok -m grok-4.5 --effort low --always-approve \
+grok -m grok-4.5 --effort medium --always-approve \
   --disallowed-tools "search_replace,run_terminal_cmd" \
   --verbatim \
   -p "$(cat <<'GROK_PROMPT'
