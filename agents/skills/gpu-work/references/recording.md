@@ -20,7 +20,6 @@ Add an entry when you choose between designs, keep, revert or park a change, kil
 
 - Fill in **Outcome** when it's known, and edit it if a later result changes it. Give every kill its scope (what, which shapes, which commit), so a later reader doesn't widen it.
 - **Skill** is `none`, `rule` (would change how the next project, or the next project of a track, is done), or `gotcha` (a trap in cuda-oxide, a library, a profiler or the queue), with a one-line proposed wording. Mark it whenever you're unsure; the user filters these when updating the skill.
-- Workers with a brief don't write to the log. They list decisions and candidates in their report, and the root copies them in.
 - Commit and push the log with the topic's other notes as you go.
 
 ## Where each finding goes

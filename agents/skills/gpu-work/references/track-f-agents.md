@@ -1,17 +1,12 @@
 # Track F: agent-run kernel work
 
-Running workers, advisors or reviewers on kernel tasks. `R` = `~/code/research/gpu-kernels/`, `PW` = `~/code/private-workbench/`.
+Running workers, advisors or reviewers on kernel tasks. Shorthands as in SKILL.md.
 
-- Use `PW/playbooks/kernel-worker-brief-template.md`. It bakes in stop rules, attempt caps and known risks.
-- The root reads this skill and copies the rules that apply into the brief, so workers get a bounded brief instead of the whole skill. Name the ambitious design the worker should build first.
-- The root owns the decision log. Workers report their decisions and rule candidates; the root logs them, and the user decides what goes into the skill.
-- Codex workers can't be messaged mid-run; Claude workers can. Route time-sensitive findings to Claude workers.
-- So far (one tier run plus the advisor comparison), Sol has been thorough and conservative, while Opus reverse-engineers and takes bolder numerical routes that need audits. Run both on different routes for hard problems.
-- Workers fix their own scratch bugs and rerun without asking. Diff every worker change against its brief.
-- Give advisors the same blind baseline, and score them against measurements. Use xhigh for Sol, and for Opus only when it can read raw traces.
-- Integrate with every dependency on day one, against the real gate.
-- Run Claude subagents that submit GPU queue jobs in the background. A job's callback arrives in the root session as a user turn and interrupts any foreground tool call there, including a foreground subagent, which then stops mid-task (twice in the cuda-oxide gotcha validation, 2026-10-31). The subagent waits by polling `homebased resource job show`, not with a callback.
-- A delegate that submits its own GPU queue job receives that job's events and resumes work on them, even after reporting done. Don't edit its files meanwhile; route follow-ups through it. In LivePortrait the root and a delegate rewrote the same setup script within a minute and left it calling undefined functions.
-- Give each session that builds and times GPU binaries its own worktree. Two sam3rs sessions climbing in one tree each froze binaries holding the other's half-finished edits (an image guard, an 8-warp kernel build); both had to cancel and re-check queued jobs. Before freezing a build, check that every file changed since the last freeze is your own (mtimes against the last frozen binary), or snapshot the source you built.
+- The root reads this skill and copies the rules that apply into `PW/playbooks/kernel-worker-brief-template.md`, so workers get a bounded brief with stop rules, attempt caps and known risks, and the ambitious design to build first.
+- The root owns the decision log. Workers report decisions and rule candidates; the root logs them, and the user decides what goes into the skill.
+- Sol has been thorough and conservative; Opus reverse-engineers and takes bolder numerical routes that need audits. Run both on different routes for hard problems. Give advisors the same blind baseline and score them against measurements; use xhigh for Sol, and for Opus only when it can read raw traces.
+- Workers fix their own scratch bugs and rerun without asking. Diff every worker change against its brief, and integrate with every dependency on day one, against the real gate.
+- A delegate that queues a GPU job submits it, reports waiting and exits; the job's events resume it, even after it reported done. Don't edit its files meanwhile; route follow-ups through it. In LivePortrait the root and a delegate rewrote the same script within a minute.
+- Give each session that builds and times GPU binaries its own worktree. Two sam3rs sessions in one tree froze binaries holding each other's half-finished edits. Before freezing, check that every file changed since the last freeze is yours, or snapshot the source you built. When workers each regenerate shared PTX, merge their kernel sources and rebuild once, then diff that only their kernels changed.
 
 Read: lessons §4, §5 and §6 ("Workers and models"), `R/cuda-kernels/speakrs-cuda-advisor-comparison-2026-10-08.md` §8, `~/code/research/agents/agent-models/README.md`.
