@@ -19,7 +19,7 @@ Exercised on an M4 Pro only. Expect unlisted traps on M5 matrix units, other M g
 ## Kernels: MSL on Metal 4 tensor ops
 
 - Embed the `.metal` sources with `include_str!` and compile them at load with `newLibraryWithSource` (language 4.0, `MTLMathMode::Safe`), so users need no Metal Toolchain. Build every pipeline on a background thread during the weight load; Metal's shader cache makes warm loads cheap. `xcrun metal` is an offline compile check only, and needs a separately downloaded Xcode component.
-- Check each dispatch's bindings against the pipeline's reflected argument list, once per kernel.
+- Check each dispatch's bindings against the pipeline's reflected argument list, once per kernel, and check every command buffer's status before its results update host state, so a GPU fault or validation error fails the call instead of returning stale data.
 - **GEMMs: MPP `matmul2d` with cooperative-tensor epilogues** before a hand simdgroup_matrix kernel; it reaches the BF16 roof where hand kernels reach about 85%.
 - **Attention: write the flash loop on `matmul2d` cooperative tensors** (`reduce_rows`, `map_iterator`, `get_left_input_cooperative_tensor`) before hand-tiling simdgroup_matrix. When each SIMD group computes its own skinny QK tile, have the threadgroup's SIMD groups compute one 64 x 64 tile into threadgroup memory instead, and split keys until there are about 16 SIMD groups a core. Always time the unfused score GEMM, softmax and P@V GEMM too: at head dim 256 with 256-wide values it beat every fused variant by 2x.
 - **Fill the GPU.** When a tile grid falls under about 8 threadgroups a core with long K or many keys, use split-K or split-KV plus a combine kernel.
@@ -28,7 +28,7 @@ Exercised on an M4 Pro only. Expect unlisted traps on M5 matrix units, other M g
 
 ## Correctness traps
 
-- **Run Metal's validation layers as the sanitizer.** At the end of each phase, run the kernel and stage tests through the queue with `MTL_DEBUG_LAYER=1 MTL_SHADER_VALIDATION=1`, and read the output for validation errors, since the job can still exit 0. Out-of-bounds reads rarely fault on Apple GPUs and can land in another pooled buffer, so ragged tiles and split ranges pass parity until a shape or pool layout changes. Shader validation is roughly memcheck: there is no race, init or sync check. Never time under either layer. Confirm on the first run that the `matmul2d` kernels are covered.
+- **Run Metal's validation layers as the sanitizer.** At the end of each phase, run the repo's kernel and stage tests through the queue under [scripts/metal_validate.sh](../scripts/metal_validate.sh), which sets `MTL_DEBUG_LAYER=1 MTL_SHADER_VALIDATION=1` and fails on validation errors even when the tests exit 0. Out-of-bounds reads rarely fault on Apple GPUs and can land in another pooled buffer, so ragged tiles and split ranges pass parity until a shape or pool layout changes. Shader validation is roughly memcheck: there is no race, init or sync check. Never time under either layer. Confirm on the first run that the `matmul2d` kernels are covered.
 - `simdgroup_matrix::thread_elements()` returns a reference: `auto e = ...` copies the fragment and silently drops writes. Use `thread auto& e`.
 - **A cooperative-tensor shape that compiles can return garbage** (a 256-column `matmul2d` destination on one SIMD group; 32 or 64 query rows a SIMD group). Split P@V into chunks of at most 64 columns, each with its own named accumulator; arrays of cooperative tensors don't compile. Give every new tile shape an f64 kernel test before timing it.
 - Gate precision changes on the slowest-to-diverge end metric: FP16 attention operands passed the kernel test and image parity, then collapsed video tracking.
@@ -40,11 +40,11 @@ Exercised on an M4 Pro only. Expect unlisted traps on M5 matrix units, other M g
 - **Time dispatches with counter-sample timestamps.** Apple GPUs sample only at encoder boundaries, so in profile mode give each dispatch its own compute pass and charge it `end - max(start, previous end)`. Waiting after each dispatch lets the GPU clock down and inflates small kernels; summing back-to-back command buffers double-counts their overlap. Check the profile's sum against an unprofiled run, and quote headline numbers from unprofiled runs.
 - Instruments' Metal System Trace times dispatches in a normal run but needs Developer mode (`DevToolsSecurity -status`).
 - MPSGraph's `commitAndContinue` splits command buffers: time the graph by wall clock, not the last buffer.
-- **The queue doesn't see every GPU user** (iOS simulators, browsers, other projects' Core ML jobs). `gpu-ab` runs on the Mac and drops arms where other Metal clients used the GPU; use the `sam3rs-metal` adapter or write a Mac one. Process medians drift 2-7% on the Mac, so take A/A noise from the Mac, never from a CUDA run.
+- **The queue doesn't see every GPU user** (iOS simulators, browsers, other projects' Core ML jobs). `gpu-ab` runs on the Mac and drops arms where other Metal clients used the GPU; give each repo its own Mac adapter, named apart from its CUDA one (the gpu-ab README has an example). Process medians drift 2-7% on the Mac, so take A/A noise from the Mac, never from a CUDA run.
 
 ## Runs and memory
 
-- Mac GPU jobs go through homebased `gpu0` with `preempt: wait` (`PW/ops/sam3rs/metal/q.sh`).
+- Mac GPU jobs, including validation runs, go through homebased `gpu0` with `preempt: wait`.
 - Core ML caches compiled models per executable name, so a harness that rebuilds in its own tree can run different code from the one you meant.
 - Core ML keeps a GPU buffer set for each concurrent prediction that never shrinks while the model lives: cap predictions in flight.
 
