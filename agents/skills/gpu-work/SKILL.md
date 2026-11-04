@@ -1,6 +1,6 @@
 ---
 name: gpu-work
-description: Rules and workflow for GPU kernel and native-runtime work. Use for writing, porting or optimizing CUDA kernels (cuda-oxide, PTX tiers, shipping CUDA crates), speed climbs on GPU pipelines, porting a model off PyTorch or ONNX Runtime to a native runtime, replacing cuDNN or cuBLAS layers, and profiling kernels with nsys or ncu, or when the user invokes $gpu-work or /gpu-work. Defaults to ambitious floor-capable designs over easy tuning, and keeps a decision log. Do not use for ML training runs or other GPU jobs that change no kernel or runtime code.
+description: Rules and workflow for GPU kernel and native-runtime work. Use for writing, porting or optimizing CUDA kernels (cuda-oxide, PTX tiers, shipping CUDA crates), speed climbs on GPU pipelines, porting a model off PyTorch or ONNX Runtime to a native runtime, replacing cuDNN or cuBLAS layers, profiling kernels with nsys or ncu, and Metal backends on Apple silicon (MSL kernels, Metal 4 tensor ops, Core ML or Neural Engine offload), or when the user invokes $gpu-work or /gpu-work. Defaults to ambitious floor-capable designs over easy tuning, and keeps a decision log. Do not use for ML training runs or other GPU jobs that change no kernel or runtime code.
 ---
 
 # GPU work
@@ -56,6 +56,8 @@ Write every custom CUDA kernel in Rust with cuda-oxide, not CUDA C++, Triton or 
 - CI checks the committed PTX against hashes of every input (kernel sources, cuda-oxide rev, toolchain, toolkit).
 
 Read [references/cuda-oxide.md](references/cuda-oxide.md) before writing or porting a kernel. Don't edit it during a task; log new traps and unexplained slowdowns in the decision log with a `gotcha` Skill line. Compare builds with [scripts/sass_mix.sh](scripts/sass_mix.sh) and [scripts/nsys_kernel_diff.py](scripts/nsys_kernel_diff.py).
+
+On Apple GPUs, read [references/apple.md](references/apple.md) instead of this section: kernels are MSL, and nsys, ncu and compute-sanitizer don't apply.
 
 ## Pick your track
 
