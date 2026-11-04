@@ -49,7 +49,7 @@ Agents drift to small, safe tuning (parameter sweeps, launch configs, small fusi
 
 Write every custom CUDA kernel in Rust with cuda-oxide, not CUDA C++, Triton or NVRTC strings; vendor libraries are the only non-Rust device code. cuda-oxide's toolchain cost stays with the maintainers, and the published library builds on stable Rust:
 
-- Take cuda-oxide from `praveenperera/cuda-rust` `master` at `08ac925a8` (never crates.io) with the toolchain that commit's `rust-toolchain.toml` pins (stable 1.99.1). Record the rev in the kernel crate's `Cargo.toml` and `Cargo.lock`, and install cargo-oxide at the same commit under a project-owned `CARGO_HOME`. Move the pin in its own change, never inside a climb whose guards diff PTX.
+- Take cuda-oxide from `praveenperera/cuda-rust` `master` at `4e267d0ee` (never crates.io) with the toolchain that commit's `rust-toolchain.toml` pins (stable 1.99.1). Record the rev in the kernel crate's `Cargo.toml` and `Cargo.lock`, and install cargo-oxide at the same commit under a project-owned `CARGO_HOME`. Move the pin in its own change, never inside a climb whose guards diff PTX.
 - Kernels live in a standalone crate outside the workspace, with its own `rust-toolchain.toml`. Only a build script run on a GPU box through the queue compiles it to PTX (and cubins where they pay).
 - Commit the PTX and embed it with `include_str!` (`include_bytes!` for cubins); split per-tier crates if artifacts pass the crates.io limit.
 - The host loads the PTX through the driver at run time (cudarc with dynamic loading), so users need no toolkit or GPU to build.
