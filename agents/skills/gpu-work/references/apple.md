@@ -28,6 +28,7 @@ Exercised on an M4 Pro only. Expect unlisted traps on M5 matrix units, other M g
 
 ## Correctness traps
 
+- **Run Metal's validation layers as the sanitizer.** At the end of each phase, run the kernel and stage tests through the queue with `MTL_DEBUG_LAYER=1 MTL_SHADER_VALIDATION=1`, and read the output for validation errors, since the job can still exit 0. Out-of-bounds reads rarely fault on Apple GPUs and can land in another pooled buffer, so ragged tiles and split ranges pass parity until a shape or pool layout changes. Shader validation is roughly memcheck: there is no race, init or sync check. Never time under either layer. Confirm on the first run that the `matmul2d` kernels are covered.
 - `simdgroup_matrix::thread_elements()` returns a reference: `auto e = ...` copies the fragment and silently drops writes. Use `thread auto& e`.
 - **A cooperative-tensor shape that compiles can return garbage** (a 256-column `matmul2d` destination on one SIMD group; 32 or 64 query rows a SIMD group). Split P@V into chunks of at most 64 columns, each with its own named accumulator; arrays of cooperative tensors don't compile. Give every new tile shape an f64 kernel test before timing it.
 - Gate precision changes on the slowest-to-diverge end metric: FP16 attention operands passed the kernel test and image parity, then collapsed video tracking.
