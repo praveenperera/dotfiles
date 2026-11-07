@@ -1,6 +1,6 @@
 ---
 name: run-auto
-description: Run an explicitly requested task end to end without asking the user for input, delegating through homebased and use-agents, consulting Astra on hard calls, and keeping a decision log. Use only when the user invokes $run-auto or /run-auto.
+description: Run an explicitly requested task end to end without asking the user for input, delegating to Opus through homebased and use-agents, reviewing with Sol, saving Astra for rare hard calls, and keeping a decision log. Use only when the user invokes $run-auto or /run-auto.
 disable-model-invocation: true
 ---
 
@@ -42,15 +42,17 @@ Keep each message short. Name the repository and task, state the outcome or the 
 
 The script reads the topic from `RUN_AUTO_NTFY_TOPIC`, falling back to `~/.secrets.zsh`. Sending these notifications is an allowed exception to the publish rule. When the script fails, log the failure and keep working.
 
-## Decide hard calls with Astra
+## Decide hard calls
 
-When two options remain close after you have weighed the evidence, or you are stuck, ask Astra at `low` effort for a read-only second opinion through the [use-agents](../use-agents/SKILL.md) routing. Give it the goal, the options, the evidence so far, and the constraint that the answer must pick one. Then decide yourself and log the decision with Astra's input as evidence. Astra advises; the root decides.
+When two options remain close after you have weighed the evidence, ask a fresh read-only Opus at `high` for a second opinion through the [use-agents](../use-agents/SKILL.md) routing. Give it the goal, the options, the evidence so far, and the constraint that the answer must pick one. Then decide yourself and log the decision with its input as evidence. The advisor advises; the root decides.
 
-Do not consult Astra for routine choices with a conventional default.
+Save Astra for the hardest calls, since it shares the single Codex plan with Sol reviews: a decision that is expensive to reverse, or a point where you are stuck after an Opus second opinion. Consult it at most twice in a run, at `low` effort unless the question is broad or high-risk, and log each consultation.
+
+Do not ask for a second opinion on routine choices with a conventional default.
 
 ## Delegate through homebased
 
-Use [use-agents](../use-agents/SKILL.md) to pick the model and effort for each piece of work. Submit agent work and long-running commands through [homebased](../homebased/SKILL.md) so they run unattended and report back with events. Use [fleet](../fleet/SKILL.md) to choose the machine for heavy work.
+Use [use-agents](../use-agents/SKILL.md) to pick the model and effort for each piece of work: Opus 5.5 for most delegated work, and one fresh GPT-6.1 Sol `xhigh` review of the finished change set before acceptance. Submit agent work and long-running commands through [homebased](../homebased/SKILL.md) so they run unattended and report back with events. Use [fleet](../fleet/SKILL.md) to choose the machine for heavy work.
 
 Run independent work in parallel when it does not contend for the same hardware.
 
@@ -58,7 +60,7 @@ The root keeps the goal, the plan, acceptance, and integration. Treat every work
 
 ## Keep a decision log
 
-Use [show-me-your-work](../show-me-your-work/SKILL.md) from the start. Log every chosen path, accepted or rejected attempt, Astra consultation, pivot, and blocker. Keep the progress checklist in `_scratch/<task-slug>/TASKS.md` alongside it.
+Use [show-me-your-work](../show-me-your-work/SKILL.md) from the start. Log every chosen path, accepted or rejected attempt, second opinion, review verdict, pivot, and blocker. Keep the progress checklist in `_scratch/<task-slug>/TASKS.md` alongside it.
 
 ## Improve a measurable result
 
