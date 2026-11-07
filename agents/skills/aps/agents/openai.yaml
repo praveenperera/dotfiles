@@ -3,4 +3,4 @@ interface:
   short_description: "Find and compare academic papers across sources"
   default_prompt: "Use $aps to find and compare papers on this topic."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true
