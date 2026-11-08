@@ -73,6 +73,8 @@ Send a status at phase boundaries, on any schedule the user sets, and when asked
   homebased --json thread watch --children --context-above 250k --action compact
   ```
 
+  `--children` covers only T3 subagents. Threads the root started as top-level threads, such as with `t3_thread_launch` or `homebased t3 launch`, need their references passed explicitly: `homebased --json thread watch <ref>... --context-above 200k`, and the same for the compact watch.
+
   The first sends `THREAD_CONTEXT_OVER` when this thread or a child sits idle above 200K, and the root decides what to do. The second compacts any of them that sit idle above 250K. Record both watch ids in the state file. `homebased thread watches` lists them, and `homebased thread unwatch <watch-id>` ends one.
 - Rewrite the state file at every phase boundary. Then check the context with `homebased thread context`, and compact the root with `homebased thread compact` once it is past about 150K.
 - `homebased --json thread context --children --live` lists the live delegates with their state, model and context size. Use it to rebuild the delegate list in the state file and to spot a delegate that is due for replacement.
