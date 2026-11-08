@@ -22,3 +22,7 @@ Write each prompt in the user's voice, as if they typed it themselves:
 
 Then stop. Don't monitor, poll, or message the threads. Reply with each thread's link
 and a one-line scope for each.
+
+These threads are hand-offs that the user takes over. When this thread must coordinate
+the items and integrate their results, use `orchestrate` with `delegate_task` children
+instead of fanout.

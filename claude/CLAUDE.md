@@ -37,6 +37,7 @@
 - Pick the runner by duration. Use the Agent tool for work that finishes in this turn, which covers most exploration, and `homebased` for long or unattended agent work.
 - Run commands you wait on longer than a few mins, such as builds, test suites, deploys, CI runs, and Fleet or GPU work, as homebased tasks, not under a raw `Monitor`, since every line a Monitor prints wakes the thread and re-reads its whole context. For CI and reviews on a PR, submit `cmd ship watch-pr <n>` instead of T3's `watch_pull_request`, which wakes the thread for every bot comment.
 - A delegate never waits inside a long command: it submits through `homebased`, reports `waiting`, and exits.
+- When this thread coordinates several delegates, PRs, or queued jobs over a long run, use the `orchestrate` skill.
 - Use Grok 4.5 at high effort only to read X posts; never ask it to analyze or do other work.
 - For a larger task, run one fresh review of the related change set; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
 

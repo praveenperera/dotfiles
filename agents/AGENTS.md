@@ -36,6 +36,7 @@
 - Wait on CI and reviews for a PR, and on release runs, with a `$homebased` task, such as `cmd ship watch-pr <n>`, never with T3's `watch_pull_request`, which wakes the thread for every bot comment, and never with a polling loop or `gh run watch` in the turn.
 - Outside T3, always use `$homebased` when using a non-Codex model.
 - Do not let a delegate wait inside a long build, test run, or CI watch. Its brief must tell it to hand the command to `$homebased`, write `RESUME.md`, report `blocked`, and exit; `$use-agents` gives the protocol and how to resume each provider.
+- When this thread coordinates several delegates, PRs, or queued jobs over a long run, use `$orchestrate`.
 - Spawn a native subagent for such a small task when a self-contained `fork_turns="none"` prompt drops unused parent context, or when non-overlapping owned scopes can run at the same time and be integrated in this turn. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work. Only the root may spawn unless the user or the root's contract authorizes nested delegation.
 
 # Rust Project Specific
