@@ -15,7 +15,7 @@ Rules: read <absolute path to the state file>, section "Rules", and follow it. I
 Verification: <commands and the pass condition>
 Budget: finish this phase under about 150K context. If you get close, stop and report what is done and what is left.
 
-Long commands: follow "Long commands inside a delegate" in ~/.agents/skills/use-agents/SKILL.md. Submit them yourself, wait the way that section says for your runner, and never end a turn with only "still waiting".
+Long commands: follow "Long commands inside a delegate" in ~/.agents/skills/use-agents/SKILL.md. Submit them yourself, wait the way that section says for your runner, and end a turn only with a final report. A progress update, such as "downloads are running, the wait is registered", is not a report: keep working, or keep the wait alive and handle its events, until you are done, failed or blocked.
 
 Review loop: when the change is verified, <start one fresh review with delegate_task (<provider and model>), fix the findings, and get a delta review of each fix, within <n> fix passes | skip review>. Report the final verdict, not each round.
 
