@@ -164,6 +164,17 @@ publish = ["just publish --dry-run", "just publish"]
 steps = ["sol", "commit", "push", "pr", "clean"]
 notes = "CodeRabbit also reviews PRs here; address its comments before merging. Merge is opt-in with +merge"
 
+[repos."avencera/cudakit"]
+steps = ["sol", "commit", "push", "pr"]
+# the version is bumped in the PR; publish runs from master after the merge
+publish = [
+    "cargo publish -p cudakit-build",
+    "cargo publish -p cudakit",
+    "git tag -a v<version> -m 'cudakit <version>'",
+    "git push origin v<version>",
+]
+notes = "Greptile is not enabled here; CodeRabbit reviews PRs, so address its comments before merging. Merge is opt-in with +merge. scriptrs and speakrs depend on cudakit from crates.io, so say in the PR when a release needs their version requirement bumped"
+
 [repos."avencera/sam3rs"]
 steps = ["sol", "commit", "push", "pr", "clean"]
 notes = "Greptile is not enabled here. Merge is opt-in with +merge"
