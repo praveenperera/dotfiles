@@ -13,6 +13,12 @@ const HOMEBASED_SKILL_SYNC: &str = "bin/homebased-skill-sync";
 const UPDATE_COMMAND: &str = "/home/praveen/.local/bin/fleet-update";
 /// Pulls dotfiles on ai5090 and its code container
 const DFU_COMMAND: &str = "/home/praveen/.local/bin/dfu";
+/// The Mac mini, over Tailscale, which `dfu` pulls through ssh
+const MINI_HOST: &str = "praveen@main";
+/// The Mac mini's Homebased Fleet name
+const MINI_FLEET_NAME: &str = "main";
+/// Pulls dotfiles on the Mac mini; `~` expands in its remote shell
+const MINI_PULL: &str = "GIT_TERMINAL_PROMPT=0 git -C ~/code/dotfiles up";
 /// Where the update pane records fleet-update's exit code, since tmux exits 0
 /// when its session ends, whatever the command in it returned
 const STATUS_DIR: &str = "/home/praveen/.local/state/fleet-update";
@@ -41,7 +47,11 @@ pub struct Fleet {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum FleetCmd {
-    /// Pull ~/code/dotfiles with git up on ai5090 and code
+    /// Pull ~/code/dotfiles with git up on ai5090, code, and the Mac mini
+    /// (main), through ssh from any other machine
+    ///
+    /// A failed pull on one does not stop the others; it exits non-zero
+    /// when any of them failed
     #[command(name = "dotfiles-up", visible_alias = "dfu")]
     DotfilesUp,
 
@@ -57,6 +67,9 @@ pub enum FleetCmd {
     /// task that runs `fleet update --local` there. The mini runs it at once;
     /// the mba, which is often asleep, runs it once someone has used it for two
     /// minutes, and queued updates it missed collapse to one
+    ///
+    /// Run on a machine other than ai5090 and code, such as the mini, it also
+    /// pulls that machine's ~/code/dotfiles before updating its tools
     ///
     /// Without --all, this uses no sudo and changes no system packages;
     /// running Homebased daemons restart after their update
@@ -131,15 +144,44 @@ pub fn run_with_flags(sh: &Shell, flags: Fleet) -> Result<()> {
     }
 }
 
-// called by path because a non-interactive ssh shell has no ~/.local/bin on PATH
 fn run_dfu(sh: &Shell) -> Result<()> {
-    if on_ai5090(sh) {
-        sh.cmd(DFU_COMMAND).run()?;
+    let mut failures = Vec::new();
+
+    // called by path because a non-interactive ssh shell has no ~/.local/bin on PATH
+    step(&mut failures, "ai5090 and code", || {
+        if on_ai5090(sh) {
+            sh.cmd(DFU_COMMAND).run()?;
+        } else {
+            cmd!(sh, "ssh -o BatchMode=yes {HOST} {DFU_COMMAND}").run()?;
+        }
+
+        Ok(())
+    });
+
+    if local_fleet_name().as_deref() == Some(MINI_FLEET_NAME) {
+        pull_dotfiles(&mut failures);
     } else {
-        cmd!(sh, "ssh -o BatchMode=yes {HOST} {DFU_COMMAND}").run()?;
+        // the timeout keeps an unreachable mini from stalling a deploy step
+        step(&mut failures, "main", || {
+            eprintln!("\nUpdating main");
+            cmd!(sh, "ssh -o BatchMode=yes -o ConnectTimeout=10 {MINI_HOST} {MINI_PULL}")
+                .run()?;
+            Ok(())
+        });
     }
 
-    Ok(())
+    finish(failures)
+}
+
+/// Pull this machine's ~/code/dotfiles, recording a failure as `dotfiles`
+fn pull_dotfiles(failures: &mut Vec<String>) {
+    step(failures, "dotfiles", || {
+        let dotfiles = dotfiles_dir()?;
+        let dotfiles = dotfiles
+            .to_str()
+            .ok_or_else(|| eyre!("non-UTF-8 path {}", dotfiles.display()))?;
+        run_attached("git", &["-C", dotfiles, "up"])
+    });
 }
 
 fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
@@ -168,7 +210,11 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
         remote_result(local, mode)
     });
 
+    // fleet-update pulls ai5090 and code, and a queued update pulls the
+    // machine it runs on, but this machine is neither when it is the mini or
+    // the mba
     if !updated_by_remote_script(sh) {
+        pull_dotfiles(&mut failures);
         update_tools(sh, &mut failures);
     }
 
@@ -204,13 +250,7 @@ fn run_local_update(sh: &Shell) -> Result<()> {
     unlock_keychain_for_gh(sh);
 
     let mut failures = Vec::new();
-    let dotfiles = dotfiles_dir()?;
-    let dotfiles = dotfiles
-        .to_str()
-        .ok_or_else(|| eyre!("non-UTF-8 path {}", dotfiles.display()))?;
-    step(&mut failures, "dotfiles", || {
-        run_attached("git", &["-C", dotfiles, "up"])
-    });
+    pull_dotfiles(&mut failures);
     update_tools(sh, &mut failures);
     finish(failures)
 }
