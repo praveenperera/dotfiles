@@ -107,15 +107,19 @@ When work splits into many parallel workers, such as coverage slices, a race bet
 
 ## Long commands inside a delegate
 
-A delegate must not wait inside a long build, test suite, CI watch, benchmark, or training run. Waiting uses its turn and context budget, and if the delegate dies or is cancelled, everything it learned dies with it. The homebased worker rules forbid submitting tasks unless the prompt allows it, so every brief for a delegate that may run such a command must grant that permission and include this handoff:
+A delegate must not wait in the foreground for a long build, test suite, CI watch, benchmark, or training run. Waiting that way uses up its turn and context budget, and if the delegate dies or is cancelled, everything it learned dies with it. The delegate submits the command through `homebased` and owns the wait itself. The root never waits on a delegate's jobs and never passes their events on. How the delegate waits depends on its runner:
 
-1. Write `RESUME.md` under the repository's `_scratch/` directory, never the repository root, with the task id, what each outcome means, and the next steps for each outcome
-2. Submit the command as a homebased `task` workload with `thread` set to the root's id, which `homebased --json task show "$HOMEBASED_TASK_ID"` prints
-3. Report `blocked` with the summary `WAITING <task-id>` and exit
+- **T3 `delegate_task` child on a Claude model.** The child persists between turns and can run background commands.
+  1. Submit the command from the child's own session with `homebased task run` or `resource job submit`, so its events come back to the child and not the root.
+  2. Start `homebased wait --next --final-only <ids>` as a background Bash command with `timeout: 7200000`, register it with `t3_background_wait`, and end the turn. `--final-only` still prints interim events, such as a preempted job, but exits only when a target ends. A wait accepts only ids submitted from the same session on the same machine.
+  3. When the wait exits, handle the events, and before ending that turn start the wait again for every id whose final event has not come yet.
+  4. Report only a final state: done, failed, or blocked with a reason the root must act on. Never end a turn with only "still waiting".
 
-When the event for the waited task arrives, the root resumes the delegate with that outcome. For Claude delegates (Opus, Sonnet, Haiku), submit a new Claude task with the original brief, the outcome, and an instruction to continue from `RESUME.md`. Homebased runs Claude with `--no-session-persistence` and rejects `--resume` and `--continue`, so the old session cannot resume, and `RESUME.md` is the only thing that carries progress forward.
+  While a background wait is live, T3 counts the child as waiting and does not wake the parent. A turn that ends with no live wait and no final result wakes the root for nothing.
+- **T3 `delegate_task` child on a Codex model.** Codex cannot run a background command that wakes it, so every event would start a turn and wake the root. Give Codex children only work that finishes inside a turn, such as reviews, and send long commands to a Claude child.
+- **homebased agent worker** (`HOMEBASED_TASK_ID` is set). Follow the homebased worker rules: submit the command, report `waiting` with notes on what each outcome means and what to do next, and exit. Homebased starts the continuation on its own, and the root does nothing. Do not write a `RESUME.md`.
 
-Keep this rule in a shared brief file that each delegate prompt includes, so new delegates get it without the root restating it. A running Claude delegate gets it through `homebased message send --worker`; for other providers, add the rule to the next brief.
+Briefs point to this section instead of restating it. [orchestrate](../orchestrate/references/briefs.md) has a brief template that does this.
 
 ## Transport references
 
