@@ -38,6 +38,7 @@
 - Run commands you wait on longer than a few mins, such as builds, test suites, deploys, CI runs, and Fleet or GPU work, as homebased tasks, not under a raw `Monitor`, since every line a Monitor prints wakes the thread and re-reads its whole context. For CI and reviews on a PR, submit `cmd ship watch-pr <n>` instead of T3's `watch_pull_request`, which wakes the thread for every bot comment.
 - A delegate never waits in the foreground for a long command, and the root never waits on a delegate's jobs. A T3 `delegate_task` child on a Claude model submits through `homebased`, keeps a background `homebased wait --next --final-only` registered with `t3_background_wait`, and reports only its final result. A homebased worker reports `waiting` and exits. `use-agents` has the details.
 - When this thread coordinates several delegates, PRs, or queued jobs over a long run, use the `orchestrate` skill.
+- Set `model` on every Agent call; a hook denies calls that leave it out, and the brief then has to be sent again.
 - Use Grok 4.5 at high effort only to read X posts; never ask it to analyze or do other work.
 - For a larger task, run one fresh review of the related change set; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
 
