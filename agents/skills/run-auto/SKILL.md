@@ -1,6 +1,6 @@
 ---
 name: run-auto
-description: Run an explicitly requested task end to end without asking the user for input, delegating to Opus through homebased and use-agents, reviewing with Sol, saving Astra for rare hard calls, and keeping a decision log. Use only when the user invokes $run-auto or /run-auto.
+description: Run an explicitly requested task end to end without the user after an upfront setup interview, delegating to Opus through homebased and use-agents, reviewing with Sol, saving Astra for rare hard calls, and keeping a decision log. Use only when the user invokes $run-auto or /run-auto.
 disable-model-invocation: true
 ---
 
@@ -12,13 +12,13 @@ The user will be away from the computer. Carry the task to completion and leave 
 
 Activate this workflow only when the user explicitly invokes this skill. Do not infer it from the kind of task. Keep it active until the task finishes or the user cancels it.
 
-## Ask task-specific questions once at invocation
+## Interview the user before starting
 
-Before starting the autonomous run, ask the user any clarifying questions specific to this task whose answers would change how the run proceeds. Ask them in one batch while the user is still present. Skip questions that the request, the repository, or a sensible default already answers, and skip the round entirely when nothing is unclear.
+This is the last time the user is present before the run ends. After they leave, anything left unsettled becomes a guess you make alone: a wrong guess about the goal or scope can waste the whole run, and a step the safety boundary below blocks stays blocked until they return. The interview exists so you can finish the run well without them, so ask whatever gets you there, in as many questions and AskUserQuestion calls as it takes. What matters depends on the task; it is often what done means and how to verify it, what is in and out of scope, advance permission for blocked steps, time or usage limits, or what to do when stuck. Skip what the request or the repository already answers.
 
-Log the answers in the decision log. After this round, do not ask again.
+Log the answers in the decision log. Once the run starts, do not ask again.
 
-## Do not ask the user
+## Do not ask the user once the run starts
 
 Make every decision yourself. Do not end a turn with a question, an options list, or a request for confirmation. When the user's input would normally be useful, choose the option you would recommend, log it, and continue.
 
