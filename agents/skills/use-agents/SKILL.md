@@ -119,6 +119,8 @@ A delegate must not wait in the foreground for a long build, test suite, CI watc
 - **T3 `delegate_task` child on a Codex model.** Codex cannot run a background command that wakes it, so every event would start a turn and wake the root. Give Codex children only work that finishes inside a turn, such as reviews, and send long commands to a Claude child.
 - **homebased agent worker** (`HOMEBASED_TASK_ID` is set). Follow the homebased worker rules: submit the command, report `waiting` with notes on what each outcome means and what to do next, and exit. Homebased starts the continuation on its own, and the root does nothing. Do not write a `RESUME.md`.
 
+Memory-heavy commands go through `homebased` too, even short ones: training, feature extraction, evals, embedding runs, corpus builds, and large downloads. A delegate never starts one from its own shell, a background Bash, `nohup`, or tmux. Command tasks share the daemon's cgroup, which carries a memory cap where the machine sets one (on `code`, see the `fleet` skill), and the kernel kills the largest task when they outgrow it. Work outside `homebased` has no cap: it can fill the machine, thrash swap until SSH stops answering, and get agents killed first. Keep each job's memory bounded, check `free -h` and running tasks before a large one, and do not stack large runs.
+
 Briefs point to this section instead of restating it. [orchestrate](../orchestrate/references/briefs.md) has a brief template that does this.
 
 ## Transport references
