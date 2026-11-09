@@ -38,7 +38,7 @@ Every tool call the root makes re-reads the root's whole context. At 170K, a roo
 ## Stalled or dead delegates
 
 - When a delegate reports `blocked`, act on the reason it gives. If the block is a decision, answer it with `t3_thread_send`. If not, replace the delegate.
-- A delegate has stalled when it has no final report and no live work. Check it once with `homebased --json thread context --children --live`, or with `t3_thread_read` using a small `limit` and `runLimit` 1. If it is dead or looping, `task_cancel` it and start a fresh delegate from the state file and its last report. Do not nurse it with repeated messages.
+- A delegate has stalled when it has no final report and no live work. The stall watch (below) wakes the root with `THREAD_STALLED` when one sits idle with nothing due to wake it, so do not write a polling script for this. On that event, or when you suspect a stall, check it once with `homebased --json thread context --children --live`, or with `t3_thread_read` using a small `limit` and `runLimit` 1. If it is dead or looping, `task_cancel` it and start a fresh delegate from the state file and its last report. Do not nurse it with repeated messages.
 
 ## Shared resources have one owner
 
@@ -74,7 +74,16 @@ Send a status at phase boundaries, on any schedule the user sets, and when asked
 
   `--children` covers only T3 subagents. Threads the root started as top-level threads, such as with `t3_thread_launch` or `homebased t3 launch`, need their references passed explicitly: `homebased --json thread watch <ref>... --context-above 200k --action compact`.
 
-  It compacts this thread or a child once it sits idle or waiting above 200K, without waking the root. The root hears about it only when the compaction cannot start. Do not add a notify-only watch (no `--action`) by default: each one wakes the root for a full turn, and that turn ends up running the same compaction by hand. Add one only for a child whose work you would rather hand to a fresh thread than compact. Record the watch ids in the state file. `homebased thread watches` lists them, and `homebased thread unwatch <watch-id>` ends one.
+  Watch the same threads for stalls, again after starting new delegates:
+
+  ```bash
+  homebased --json thread watch --children --stalled-after 20m
+  homebased --json thread watch <ref>... --stalled-after 20m   # top-level threads
+  ```
+
+  It sends `THREAD_STALLED` once a thread has sat idle for 20 minutes with no turn running, no homebased task or job owing it events, and no delegated task due to report to it. A delegate's stall watch ends on its own when its task finishes. A top-level thread looks the same after its final report as when it stalls, so run `homebased thread unwatch <watch-id>` when that report arrives.
+
+  The context watch compacts this thread or a child once it sits idle or waiting above 200K, without waking the root. The root hears about it only when the compaction cannot start. Do not add a notify-only watch (no `--action`) by default: each one wakes the root for a full turn, and that turn ends up running the same compaction by hand. Add one only for a child whose work you would rather hand to a fresh thread than compact. Record the watch ids in the state file. `homebased thread watches` lists them, and `homebased thread unwatch <watch-id>` ends one.
 - Rewrite the state file at every phase boundary. Then check the context with `homebased thread context`. Once it is past about 150K, run `homebased --json thread watch --context-above 150k --action compact --once` and end the turn. T3 compacts the thread as soon as it is idle. The compaction wakes the root only when no delegate, task or job is still due to report; otherwise the next report resumes it. Do not run `homebased thread compact` on the root's own thread: T3 refuses to compact a thread while its turn is running.
 - `homebased --json thread context --children --live` lists the live delegates with their state, model and context size. Use it to rebuild the delegate list in the state file and to spot a delegate that is due for replacement.
 - After compaction, re-read the state file before anything else. Take ids and commands from its operations block instead of grepping the transcript or rerunning `--help`. If something you needed was missing, add it to the block.
