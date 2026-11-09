@@ -6,12 +6,14 @@ Use [sessions.md](sessions.md) for persistent or interactive execution. Run shor
 
 Check `nvidia-smi`, active jobs, RAM, and disk space before a large run. Test GPU access in `code` and the Docker image before a long run. GPU Docker workloads use `--gpus all`.
 
-Incus limits `code` to 28 GiB of RAM and 28 GiB of swap. Also cap the nested Docker job, so that one job cannot use the full container limit. `ai5090` has 30.2 GiB of usable RAM. Leave several GiB for the kernel, SSH, Incus, and other work in `code`. For a single training job, pass both flags and keep them equal so the container cannot fill host swap:
+`ai5090` has about 61 GiB of usable RAM. Incus limits `code` to that minus 8 GiB (about 53 GiB) and 28 GiB of swap. Submit non-Docker jobs through Homebased; `homebased.service` caps them together at the container's memory minus 12 GiB with 8 GiB of swap, and a job over the cap is OOM-killed. Check the live values with `free -h` and `systemctl --user show homebased.service -p MemoryMax -p MemoryCurrent`.
+
+Docker containers run under the `code` Docker daemon, outside `homebased.service`, so its cap does not reach them even when a Homebased task starts them. Cap each nested Docker job, so that one job cannot use the full container limit. Leave several GiB for the kernel, SSH, Incus, and other work in `code`. For a single training job, pass both flags and keep them equal so the container cannot fill host swap:
 
 ```bash
 docker run --rm --gpus all \
-    --memory=22g \
-    --memory-swap=22g \
+    --memory=32g \
+    --memory-swap=32g \
     my-project:<version>
 ```
 
