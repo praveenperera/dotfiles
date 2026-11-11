@@ -254,9 +254,18 @@ mod tests {
                     json!({"prompt": "y", "model": "haiku", "effort": "xhigh"}),
                     None,
                 ),
-                (json!({"prompt": "y", "model": "opus", "effort": "max"}), max),
-                (json!({"prompt": "y", "model": "haiku", "effort": "max"}), max),
-                (json!({"prompt": "y", "model": "fable", "effort": "max"}), None),
+                (
+                    json!({"prompt": "y", "model": "opus", "effort": "max"}),
+                    max,
+                ),
+                (
+                    json!({"prompt": "y", "model": "haiku", "effort": "max"}),
+                    max,
+                ),
+                (
+                    json!({"prompt": "y", "model": "fable", "effort": "max"}),
+                    None,
+                ),
                 (json!({"prompt": "y", "subagent_type": "fork"}), None),
                 (
                     json!({"prompt": "y", "subagent_type": "fork", "effort": "max"}),

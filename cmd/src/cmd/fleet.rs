@@ -164,8 +164,11 @@ fn run_dfu(sh: &Shell) -> Result<()> {
         // the timeout keeps an unreachable mini from stalling a deploy step
         step(&mut failures, "main", || {
             eprintln!("\nUpdating main");
-            cmd!(sh, "ssh -o BatchMode=yes -o ConnectTimeout=10 {MINI_HOST} {MINI_PULL}")
-                .run()?;
+            cmd!(
+                sh,
+                "ssh -o BatchMode=yes -o ConnectTimeout=10 {MINI_HOST} {MINI_PULL}"
+            )
+            .run()?;
             Ok(())
         });
     }
