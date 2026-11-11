@@ -486,7 +486,7 @@ impl Plan {
             .any(has)
         {
             lines.push(if self.host == Host::T3Claude {
-                "wait: run `homebased wait --next <id>` as a background Bash command with timeout 3300000 (55 minutes, under the hour-long prompt cache), pass its task id to t3_background_wait, and end the turn; if it times out with no event, start it again"
+                "wait: run `homebased wait --next <id>` as a background Bash command with timeout 7200000, pass its task id to t3_background_wait, and end the turn; if it exits with no event, run the command it prints to start it again"
             } else {
                 "wait: submit through homebased and end the turn; its event starts the next turn"
             });
@@ -1394,7 +1394,7 @@ merge = "never"
             .find(|line| line.starts_with("wait:"))
             .expect("a gated plan waits on Greptile");
 
-        let timeout = format!("timeout {} ", recommend::WAIT_TIMEOUT_MS);
+        let timeout = format!("timeout {},", recommend::WAIT_TIMEOUT_MS);
         assert!(wait.contains(&timeout), "{wait}");
     }
 

@@ -149,27 +149,11 @@ pub mod recommend {
     pub const WAIT_MANY: &str = "homebased wait --next <id> [<id> ...]";
     pub const TASK_LOG: &str = "homebased task log <id> --tail 5";
 
-    /// Bash `timeout` for a background `homebased wait`, 55 minutes. T3 sessions
-    /// cache prompts for an hour, so a wait that ends or times out inside that
-    /// window wakes the agent on a warm cache; one that runs past it rewrites the
-    /// whole context, about $0.90 of Opus input at 150K tokens, while re-arming
-    /// the wait costs about $0.13
-    pub const WAIT_TIMEOUT_MS: u64 = 3_300_000;
-
-    /// Bash `timeout` for a wait on work expected to take over 4 hours, the most
-    /// Claude Code allows. Past about 4 hours, re-arming every 55 minutes costs
-    /// more than compacting once, so the agent compacts first ([`COMPACT_SELF`])
-    /// and each later wake-up rebuilds only the small compacted context
-    pub const LONG_WAIT_TIMEOUT_MS: u64 = 7_200_000;
-
-    /// Compacts the calling T3 thread once its turn ends: run mid-turn, it
-    /// queues the compaction behind the running turn. Nothing wakes the thread
-    /// after a queued compaction, which suits a long wait, since the wait wakes
-    /// it later
-    pub const COMPACT_SELF: &str = "homebased --json thread compact";
-
-    /// The comment that opts a background wait into [`LONG_WAIT_TIMEOUT_MS`]
-    pub const LONG_WAIT_MARKER: &str = "long-wait:";
+    /// Bash `timeout` for a background `homebased wait`, Claude Code's 2-hour
+    /// maximum. The wait picks its own limit, 55 minutes with no event in a T3
+    /// Claude session, inside the hour-long prompt cache, or 115 with `--long`,
+    /// so the Bash timeout only has to stay out of its way
+    pub const WAIT_TIMEOUT_MS: u64 = 7_200_000;
 }
 
 /// Runs `event` on stdin and prints its output; never fails, so a hook bug
@@ -495,7 +479,7 @@ mod tests {
         for wait in [recommend::WAIT, recommend::WAIT_MANY] {
             let stdin = pre(
                 "Bash",
-                json!({"command": fill(wait), "run_in_background": true}),
+                json!({"command": fill(wait), "run_in_background": true, "timeout": recommend::WAIT_TIMEOUT_MS}),
             );
             assert_eq!(
                 decision(Event::PreToolUse, &stdin, &host),
@@ -520,7 +504,6 @@ mod tests {
             recommend::WAIT,
             recommend::WAIT_MANY,
             recommend::TASK_LOG,
-            recommend::COMPACT_SELF,
         ];
 
         for reason in reasons {

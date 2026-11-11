@@ -31,7 +31,11 @@ fn only_true<'de, D: Deserializer<'de>>(deserializer: D) -> Result<bool, D::Erro
 /// Reads a JSON whole number, and any other value as unset, so a malformed
 /// timeout never blocks a call
 fn whole_number<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
-    Ok(Value::deserialize(deserializer)?.as_u64())
+    // a model sometimes quotes the number
+    Ok(match Value::deserialize(deserializer)? {
+        Value::String(text) => text.trim().parse().ok(),
+        value => value.as_u64(),
+    })
 }
 
 /// The Bash tool's result, of which only the background task id matters here
@@ -51,12 +55,9 @@ pub fn background_reason() -> String {
 
 pub fn wait_timeout_reason() -> String {
     format!(
-        "Give a background `{}` a `timeout` of at most {} (55 minutes). The prompt cache expires after an hour, so a wake-up after that rewrites the whole context, while re-arming the wait costs about $0.13. When the wait times out with no event, start it again with the same ids. Only for work expected to take over 4 hours: first run `{}`, which queues a compaction of this thread for when the turn ends, then start the wait with `timeout: {}` and a `# {} <expected duration>` comment.",
+        "Give a background `{}` `timeout: {}`, Claude Code's maximum. The wait picks its own limit: with no event it exits after 55 minutes, inside the hour-long prompt cache, and prints the command that starts it again. A shorter Bash timeout kills it before then, and leaving it out gives the 30-minute default. For work expected to take over 4 hours, add `--long` to the wait, which compacts this thread once the turn ends and waits up to 115 minutes.",
         recommend::WAIT,
         recommend::WAIT_TIMEOUT_MS,
-        recommend::COMPACT_SELF,
-        recommend::LONG_WAIT_TIMEOUT_MS,
-        recommend::LONG_WAIT_MARKER,
     )
 }
 
@@ -81,29 +82,21 @@ pub fn background_wait(input: &HookInput) -> Decision {
     Decision::Deny(background_reason())
 }
 
-/// A background `homebased wait` that outlives the hour-long prompt cache wakes
-/// the agent on a cold cache, which rewrites its whole context; waits that ran
-/// past an hour cost about $0.90 each in Opus cache writes. A wait with no
-/// timeout gets Claude Code's 30-minute default, which is fine
-///
-/// Work expected to take over 4 hours opts out with a `# long-wait:` comment,
-/// after compacting the thread, since a hook cannot tell how long a job will run
-/// or whether the compaction was set up
+/// `homebased wait --next` exits on its own limit, chosen so each wake-up of
+/// a T3 Claude session lands inside its hour-long prompt cache, or later after
+/// `--long` compacted the thread. A Bash timeout below that, including Claude
+/// Code's 30-minute default, kills the wait first and leaves the agent to
+/// guess how to start it again
 pub fn wait_timeout(input: &HookInput) -> Decision {
     let Some(bash) = input.tool_input::<BashInput>() else {
         return Decision::Allow;
     };
 
-    let too_long = bash
+    let too_short = bash
         .timeout
-        .is_some_and(|timeout| timeout > recommend::WAIT_TIMEOUT_MS);
+        .is_none_or(|timeout| timeout < recommend::WAIT_TIMEOUT_MS);
 
-    let capped = bash.run_in_background
-        && too_long
-        && starts_line_with_homebased_wait(&bash.command)
-        && !has_marker(&bash.command, recommend::LONG_WAIT_MARKER);
-
-    if capped {
+    if bash.run_in_background && too_short && starts_line_with_homebased_wait(&bash.command) {
         return Decision::Deny(wait_timeout_reason());
     }
 
@@ -241,7 +234,9 @@ mod tests {
         for &(command, expected) in rows {
             let stdin = pre(
                 "Bash",
-                json!({"command": command, "run_in_background": background}),
+                // these rows are about what may run in the background, not the
+                // wait's timeout, which has its own test
+                json!({"command": command, "run_in_background": background, "timeout": recommend::WAIT_TIMEOUT_MS}),
             );
             assert_eq!(
                 decision(Event::PreToolUse, &stdin, &host),
@@ -412,31 +407,18 @@ mod tests {
     }
 
     #[test]
-    fn background_homebased_wait_timeout_stays_under_the_cache_ttl() {
+    fn background_homebased_wait_leaves_its_limit_to_homebased() {
         let host = Fixture::new(true);
-        let cap = recommend::WAIT_TIMEOUT_MS;
-        let too_long = Decision::Deny(wait_timeout_reason());
+        let max = recommend::WAIT_TIMEOUT_MS;
+        let too_short = Decision::Deny(wait_timeout_reason());
 
         let rows = [
             (
-                json!({"command": "homebased wait --next a", "run_in_background": true, "timeout": 7_200_000}),
-                too_long.clone(),
-            ),
-            (
-                json!({"command": "homebased wait --next a b", "run_in_background": true, "timeout": cap + 1}),
-                too_long,
-            ),
-            (
-                json!({"command": "homebased wait --next a", "run_in_background": true, "timeout": cap}),
+                json!({"command": "homebased wait --next a", "run_in_background": true, "timeout": max}),
                 Decision::Allow,
             ),
             (
-                json!({"command": "homebased wait --next a", "run_in_background": true}),
-                Decision::Allow,
-            ),
-            // a foreground call is capped at 10 minutes by Claude Code itself
-            (
-                json!({"command": "homebased wait --next a", "timeout": 7_200_000}),
+                json!({"command": "homebased wait --next --long a b", "run_in_background": true, "timeout": max}),
                 Decision::Allow,
             ),
             (
@@ -444,16 +426,21 @@ mod tests {
                 Decision::Allow,
             ),
             (
-                json!({"command": "npm run dev # long-lived: dev server", "run_in_background": true, "timeout": 7_200_000}),
+                json!({"command": "homebased wait --next a", "run_in_background": true, "timeout": 3_300_000}),
+                too_short.clone(),
+            ),
+            // Claude Code's 30-minute default would kill the wait first
+            (
+                json!({"command": "homebased wait --next a", "run_in_background": true}),
+                too_short,
+            ),
+            // a foreground call is capped at 10 minutes by Claude Code itself
+            (
+                json!({"command": "homebased wait --next a", "timeout": 600_000}),
                 Decision::Allow,
             ),
-            // work expected to take over 4 hours opts in after compacting
             (
-                json!({"command": "homebased wait --next a # long-wait: 9h training run", "run_in_background": true, "timeout": recommend::LONG_WAIT_TIMEOUT_MS}),
-                Decision::Allow,
-            ),
-            (
-                json!({"command": "homebased wait --next a #long-wait:6h", "run_in_background": true, "timeout": 7_200_000}),
+                json!({"command": "npm run dev # long-lived: dev server", "run_in_background": true, "timeout": 600_000}),
                 Decision::Allow,
             ),
         ];
