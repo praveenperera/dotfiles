@@ -148,6 +148,8 @@ pub mod recommend {
     pub const WAIT: &str = "homebased wait --next <id>";
     pub const WAIT_MANY: &str = "homebased wait --next <id> [<id> ...]";
     pub const TASK_LOG: &str = "homebased task log <id> --tail 5";
+    pub const SERVICE_START: &str =
+        "homebased service start --name <name> --port <port> -- <command>";
 
     /// Bash `timeout` for a background `homebased wait`, Claude Code's 2-hour
     /// maximum. The wait picks its own limit, 55 minutes with no event in a T3
@@ -504,6 +506,7 @@ mod tests {
             recommend::WAIT,
             recommend::WAIT_MANY,
             recommend::TASK_LOG,
+            recommend::SERVICE_START,
         ];
 
         for reason in reasons {

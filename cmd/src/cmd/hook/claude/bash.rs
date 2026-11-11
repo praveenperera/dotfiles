@@ -7,7 +7,7 @@ use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
 use super::shell::{Command, Script};
-use super::text::{has_marker, mentions_homebased_wait, starts_line_with_homebased_wait};
+use super::text::{mentions_homebased_wait, starts_line_with_homebased_wait};
 use super::{recommend, Decision, HookInput, Host};
 use crate::cmd::main_cmd::{Cmd, MainCmd};
 use crate::cmd::ship::ShipCmd;
@@ -47,9 +47,10 @@ struct BashResponse {
 
 pub fn background_reason() -> String {
     format!(
-        "For a command you will wait on, such as a build, test suite, download, or data pull, submit it as a homebased task and run `{}` as a background Bash command with `timeout: {}`, then pass its task id to `t3_background_wait`, or run it as foreground Bash if it takes under about 10 minutes. For a process you will not wait on, such as a dev server, add a `# long-lived: <why>` comment to the command.",
+        "For a command you will wait on, such as a build, test suite, download, or data pull, submit it as a homebased task and run `{}` as a background Bash command with `timeout: {}`, then pass its task id to `t3_background_wait`, or run it as foreground Bash if it takes under about 10 minutes. For a process you will not wait on, such as a dev server, proxy, or emulator, start it with `{}` (or `--ready-line <regex>` in place of `--port`): it returns once the service is ready, stops when this thread settles, and reports if it dies.",
         recommend::WAIT,
         recommend::WAIT_TIMEOUT_MS,
+        recommend::SERVICE_START,
     )
 }
 
@@ -64,18 +65,16 @@ pub fn wait_timeout_reason() -> String {
 /// T3 Code files a background Bash under the `command` kind, which holds a
 /// thread in Waiting only once it is registered with `t3_background_wait`, and a
 /// long command run that way still dies with the 2-hour Bash timeout. Long work
-/// goes to homebased, and the one background command allowed by default is the
-/// `homebased wait --next` that waits on it. Other background Bash, for
-/// processes nobody waits on such as dev servers, needs an opt-in
+/// goes to homebased, and the one background command allowed is the
+/// `homebased wait --next` that waits on it. A process nobody waits on, such
+/// as a dev server, goes to `homebased service start`, which stops it when the
+/// thread settles instead of leaving it running
 pub fn background_wait(input: &HookInput) -> Decision {
     let Some(bash) = input.tool_input::<BashInput>() else {
         return Decision::Allow;
     };
 
-    if !bash.run_in_background
-        || starts_line_with_homebased_wait(&bash.command)
-        || has_marker(&bash.command, "long-lived:")
-    {
+    if !bash.run_in_background || starts_line_with_homebased_wait(&bash.command) {
         return Decision::Allow;
     }
 
@@ -399,7 +398,7 @@ mod tests {
     }
 
     #[test]
-    fn background_bash_needs_homebased_wait_or_opt_in() {
+    fn background_bash_is_only_for_homebased_wait() {
         use Want::{Allow, Background, Both};
 
         check(
@@ -408,8 +407,8 @@ mod tests {
                 ("homebased wait --next abc123", Allow),
                 ("  homebased   wait --next a b", Allow),
                 ("cd x\nhomebased wait --next a", Allow),
-                ("npm run dev # long-lived: dev server", Allow),
-                ("pnpm dev #long-lived:x", Allow),
+                ("npm run dev # long-lived: dev server", Background),
+                ("pnpm dev", Background),
                 // only a line that starts with the wait counts
                 ("cd x && homebased wait --next a", Background),
                 ("homebased wait", Background),
@@ -464,10 +463,6 @@ mod tests {
             // a foreground call is capped at 10 minutes by Claude Code itself
             (
                 json!({"command": "homebased wait --next a", "timeout": 600_000}),
-                Decision::Allow,
-            ),
-            (
-                json!({"command": "npm run dev # long-lived: dev server", "run_in_background": true, "timeout": 600_000}),
                 Decision::Allow,
             ),
         ];

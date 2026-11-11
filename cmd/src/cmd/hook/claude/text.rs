@@ -12,15 +12,6 @@ fn trim_space(text: &str) -> &str {
     text.trim_start_matches(is_space)
 }
 
-/// Whether `text` holds an opt-in marker such as `# long-lived: <why>`, given
-/// as `long-lived:`
-pub fn has_marker(text: &str, marker: &str) -> bool {
-    text.lines().any(|line| {
-        line.match_indices('#')
-            .any(|(at, _)| trim_space(&line[at + 1..]).starts_with(marker))
-    })
-}
-
 /// Whether `text` mentions `homebased wait` anywhere, as a word followed by
 /// whitespace or the end of a line
 pub fn mentions_homebased_wait(text: &str) -> bool {
@@ -70,19 +61,10 @@ pub fn redirects_stderr_first(text: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        has_marker, mentions_homebased_wait, redirects_stderr_first,
-        starts_line_with_homebased_wait,
-    };
+    use super::{mentions_homebased_wait, redirects_stderr_first, starts_line_with_homebased_wait};
 
     #[test]
     fn matches_like_the_grep_patterns() {
-        assert!(has_marker("x # long-lived: y", "long-lived:"));
-        assert!(has_marker("x #long-lived:", "long-lived:"));
-        assert!(has_marker("a\nb #\t long-lived: c", "long-lived:"));
-        assert!(!has_marker("x # long-lived y", "long-lived:"));
-        assert!(!has_marker("x #\nlong-lived:", "long-lived:"));
-
         assert!(mentions_homebased_wait("homebased wait --next a"));
         assert!(mentions_homebased_wait("cd x && homebased  wait"));
         assert!(!mentions_homebased_wait("homebased waiter"));
