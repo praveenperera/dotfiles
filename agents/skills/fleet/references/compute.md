@@ -1,10 +1,10 @@
 # GPU work, shared files, and images
 
-Use [sessions.md](sessions.md) for persistent or interactive execution. Run short resource checks directly.
+Run long commands as homebased tasks and all GPU work through the homebased resource queue, as the `homebased` skill says. Use [sessions.md](sessions.md) only for interactive sessions and hand-offs. Run short resource checks directly.
 
 ## GPU runs
 
-Check `nvidia-smi`, active jobs, RAM, and disk space before a large run. Test GPU access in `code` and the Docker image before a long run. GPU Docker workloads use `--gpus all`.
+Submit every GPU run through the resource queue, smoke tests included, such as an `nvidia-smi` check in the image before a long run. Build the image first as a CPU homebased task, and chain the GPU job on it with `homebased resource job submit --after <build-task-id>`, so the job does not hold the GPU during the build. Check active jobs, RAM, and disk space before a large run. GPU Docker workloads use `--gpus all`.
 
 `ai5090` has about 61 GiB of usable RAM. Incus limits `code` to that minus 6 GiB (about 55 GiB) and 28 GiB of swap. Submit non-Docker jobs through Homebased; `homebased.service` caps them together at the container's memory minus 8 GiB with 8 GiB of swap, and a job over the cap is OOM-killed. Check the live values with `free -h` and `systemctl --user show homebased.service -p MemoryMax -p MemoryCurrent`.
 
@@ -19,7 +19,7 @@ docker run --rm --gpus all \
 
 If `--memory-swap` is omitted, Docker allows extra swap equal to `--memory`. That can stall SSH. Do not pass `--oom-kill-disable`. Lower `--memory` when `free -h` shows less headroom. A `nvidia-smi` smoke test does not need these flags. Consult `~/code/homelab/ai5090/README.md` for the same rule.
 
-Use a distinct run directory. Keep the configuration, source revision, image tag or ID, logs, and checkpoint path together. Report the run directory with the tmux attach command. Do not overwrite another run's checkpoints.
+Use a distinct run directory. Keep the configuration, source revision, image tag or ID, logs, and checkpoint path together. Report the run directory with the homebased task or job id and its log path. `homebased --json task show <task-id>` gives the path as `output_log`; for a queue job, take the run's task id from `homebased --json resource job show <job>`. Do not overwrite another run's checkpoints.
 
 The host provides the NVIDIA kernel driver. The `code` container provides the user-space libraries and NVIDIA Container Toolkit. For driver or nested Docker faults, consult the homelab README before changing setup. Do not change the host driver to fix an application dependency without that check.
 

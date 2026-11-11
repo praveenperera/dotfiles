@@ -69,13 +69,13 @@ Mode: <read-only analysis|implementation>
 
 - Read and obey applicable AGENTS.md and CLAUDE.md files before acting.
 - Inspect relevant repository context before concluding or editing.
-- Do all work yourself. Do not spawn subagents, nested agents, or multi-agent orchestration.
+- Do all work yourself. Do not spawn subagents, nested agents, or multi-agent orchestration, unless the brief grants nested delegation, such as one review of your change. Then start only what it grants, with the model and effort it names.
 - Preserve pre-existing and concurrent changes; never revert work you do not own.
 - In read-only mode, do not edit any repository file.
 - In implementation mode, edit only the owned scope.
 - Do not commit, stage, push, open or modify pull requests, deploy, post messages, or change external state.
 - Stop and report rather than expanding authority.
-- Do not wait inside a command that may run longer than a few minutes. Write `RESUME.md` under `_scratch/` with the task id, what each outcome means, and your next steps; submit the command as a homebased `task` with `thread` set to your parent task's thread; then report `blocked` with `WAITING <task-id>` and exit.
+- Do not wait in the foreground on a command that may run longer than a few minutes. Submit it through homebased and wait the way "Long commands inside a delegate" in the use-agents skill says for your runner.
 
 ## Final report
 

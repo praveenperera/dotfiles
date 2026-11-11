@@ -11,9 +11,10 @@ Choose the build location before choosing the command:
   use its local Docker daemon
 - On `ai5090`, enter the selected Incus container and use that container's
   Docker daemon; do not install Docker on the host
-- On the Mac, default to a named tmux session on `code`, including for GPU
-  training images; read the `fleet` skill for remote session and checkout
-  handling
+- On the Mac, default to a CPU homebased task on `code`
+  (`homebased task run --machine code`), including for GPU training images:
+  build the image before asking for GPU time. Read the `fleet` skill for
+  checkout handling
 - Use AWS through `rb build` only when the task needs parallel builds beyond the
   available local builder, or when the user explicitly requests AWS
 

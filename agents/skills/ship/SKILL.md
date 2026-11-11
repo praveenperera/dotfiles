@@ -55,11 +55,11 @@ When the plan has `pr`, never push the default branch. If HEAD is on it, create 
 
 ### sol
 
-Review the change against the merge base of the default branch, including uncommitted work, with GPT-6.1 Sol at the plan's effort in a fresh read-only session.
+Reuse a prior review when one in this run already returned a clean final verdict on exactly the content being shipped: the same base and head, with no changes since. Cite the reviewer model and effort, the head SHA it covered, and where the report is, such as an implementer's done report or a scratch file, and count the step as done. A bare claim, such as "reviewed" or `done: sol`, is not enough. When the user asks for a fresh review, run one anyway.
 
-Run it the way the plan's `sol via:` line says: `delegate_task` with model `gpt-6.1-sol`, or the Codex review command from [the review-fix-loop provider reference](../review-fix-loop/references/providers.md#codex-review) with the plan's effort, submitted through [homebased](../homebased/SKILL.md) when it will run long.
+Otherwise, review the change against the merge base of the default branch, including uncommitted work, with GPT-6.1 Sol at the plan's effort in a fresh read-only session. Run it the way the plan's `sol via:` line says: `delegate_task` with model `gpt-6.1-sol`, or the Codex review command from [the review-fix-loop provider reference](../review-fix-loop/references/providers.md#codex-review) with the plan's effort, submitted through [homebased](../homebased/SKILL.md) when it will run long.
 
-Fix the actionable findings, which are correctness, security, data-loss, and maintainability problems; drop style preferences and speculation. Run the repository's checks, then run one fresh review of the fixed code. When that second review still has actionable findings, stop and report them.
+Fix the actionable findings, which are correctness, security, data-loss, and maintainability problems; drop style preferences and speculation. Run the repository's checks, then run a delta review of the fixes and the behavior they touch, not a second full review. Run a broader review only when the fixes changed the design. When the delta review still has actionable findings, stop and report them.
 
 ### commit
 

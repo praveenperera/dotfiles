@@ -30,7 +30,7 @@ Then search the records that can change the answer. Much of this user's rational
 
 A source that is unavailable is a gap. A relevant search with no result is a finding. Do not run a large sweep for a narrow question whose answer is already explicit in a commit or pull request.
 
-For a broad question with several independent sources, send one read-only GPT-6.1 Sol `high` investigator per source through the `use-agents` skill and keep the synthesis in the root. Give each investigator the anchor, the question, and the confidence tiers below.
+For a broad question with several independent sources, send one read-only Opus 5.5 `high` investigator per source through the `use-agents` skill and keep the synthesis in the root. Give each investigator the anchor, the question, and the confidence tiers below.
 
 ## Weigh the result
 

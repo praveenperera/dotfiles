@@ -40,6 +40,6 @@ Provide the diff, relevant paths, and user constraints without telling the revie
 
 Use a native writer with explicit owned paths when available. For CLI implementation, adapt the review command: set the routed model and effort (Opus at `medium` or `high`, Haiku at `medium`, or Sonnet at `medium`), use `--permission-mode acceptEdits`, remove the edit-tool denies, and retain `Agent,Task` denies plus `--permission-prompts none`. Allow only the specific local verification commands needed by the task through the installed permission controls. Do not use permission-bypass flags to avoid a headless prompt.
 
-Keep commits, staging, publication, messages, external writes, and nested delegation outside the worker's scope. If a needed command is denied, report the exact command; the root can run an already-authorized check or adjust the scoped invocation. Do not change global permissions.
+Keep commits, staging, publication, messages, external writes, and nested delegation outside the worker's scope, unless the brief grants them, such as one review of the worker's change. If a needed command is denied, report the exact command; the root can run an already-authorized check or adjust the scoped invocation. Do not change global permissions.
 
 Inspect the diff and exact model identity before accepting the result. Complete required checks on the integrated code without repeating reliable checks on unchanged code. A final message or zero process exit alone does not establish completion.

@@ -1,6 +1,6 @@
 ---
 name: use-agents
-description: Model roster and routing notes for delegating work to Opus 5.5, GPT-6.1 Sol, Astra, Sonnet 5.5, Haiku 5.5, and Grok subagents. Use when the user says "use agents", "use subagents", names which providers or models to delegate to (for example "only Claude agents", "mostly Opus"), or invokes $use-agents.
+description: Model roster and routing notes for delegating work to Opus 5.5, GPT-6.1 Sol, Astra, Sonnet 5.5, and Haiku 5.5 subagents, and Grok for reading X posts. Use when the user says "use agents", "use subagents", names which providers or models to delegate to (for example "only Claude agents", "mostly Opus"), or invokes $use-agents.
 disable-model-invocation: true
 ---
 
@@ -15,7 +15,8 @@ Praveen has two Claude Ultra plans and one $100 Codex plan. Claude capacity is p
 ## Apply the user's mix
 
 - With no stated mix, use the default routing below
-- "Only Claude" or "only Grok" restricts every delegate to that provider; route inside it with the provider sections below
+- "Only Claude" restricts every delegate to Claude; route inside it with the provider sections below
+- "Only Grok" still limits Grok to reading X posts through the `ask-grok` skill. Grok takes no analysis, review or implementation, so ask which provider should take that work
 - "Mostly X and Y" or "prefer X" makes those the default workers; use another model only when the task needs a strength the preferred models lack, and say why
 - A named model and effort level always wins over these defaults
 - Keep the selection for the rest of the session until the user changes it
@@ -32,9 +33,9 @@ The root thread keeps scope, design decisions, integration, and acceptance. Give
 | GPT-6 Astra (`gpt-6-astra`) at `low` or `high` | Second opinion only, read-only, and sparingly: a big architecture or design decision, or when the root is stuck after its own attempts. The root keeps the decision. `low` for a focused question, `high` for a broad or high-risk one         | [codex-native.md](references/codex-native.md) in Codex; [codex-cli.md](references/codex-cli.md) elsewhere                                  |
 | Claude Haiku 5.5 (`claude-haiku-5-5`)          | Optional. High-volume mechanical fan-out where following the prompt literally is enough and a cheap check proves it, such as renames, fixtures, inventories, and repeated transforms across many slices                                        | Claude Agent tool with `model: haiku`, or [claude-cli.md](references/claude-cli.md) with `claude-haiku-5-5`                                |
 | Claude Sonnet 5.5 (`claude-sonnet-5-5`)        | Optional, at the root's discretion. Well-scoped work where Opus would be more than the task needs, such as bounded implementation with a cheap check, investigation, or verification                                                           | Claude Agent tool with `model: sonnet`, or [claude-cli.md](references/claude-cli.md) with `claude-sonnet-5-5`                              |
-| Grok 4.5 (`grok-4.5`)                          | Implementation, and the default Grok for long or high-volume work because it has better usage limits. At `high` effort, reading X posts                                                                                                        | [grok-cli.md](references/grok-cli.md) with `--model grok-4.5`; `ask-grok` skill for X reads                                                |
+| Grok 4.5 (`grok-4.5`) at `high`                | Reading X posts only. Never analysis, review, or implementation | `ask-grok` skill |
 
-Do not use these unless the user names them: Claude Fable (any version), Grok 4.7, and Sol for implementation or exploration (the `use-sol` skill covers that when the user asks for it).
+Do not use these unless the user names them: Claude Fable (any version) and Sol for implementation or exploration (the `use-sol` skill covers that when the user asks for it).
 
 Run Claude delegates through the Claude CLI with `homebased` by default; see [Run delegates through homebased](#run-delegates-through-homebased). The CLI also sets an explicit effort. The Claude Agent tool selects the model but inherits the session effort, so keep it for short tasks where the session effort is acceptable.
 
@@ -44,7 +45,7 @@ Send work to **Opus 5.5** unless another row of the roster fits better. Pick the
 
 Use **Sonnet 5.5** when you judge that Opus is more than the task needs, such as a bounded pass with a decided approach and a cheap check, or a long agent loop where the cheaper model is good enough. If a Sonnet pass fails its check twice on the same defect, rerun it on Opus.
 
-Use **Haiku 5.5** only for wide mechanical fan-out, where many cheap slices finish faster than a few Opus runs and a check catches every mistake. Haiku is priced at $0.10/$0.50 per MTok only while the prompt stays under 100K tokens; above that it costs five times as much, and its compaction is set at 100K. So split the work into slices that each finish well under 100K tokens, such as one directory, file group, or batch of items per agent. If a Haiku pass fails its check or needs a judgment call, rerun it on Opus at `medium` instead of sending repair passes to Haiku.
+Use **Haiku 5.5** only for wide mechanical fan-out, where many cheap slices finish faster than a few Opus runs and a check catches every mistake. Haiku is priced at $0.10/$0.50 per MTok only while the prompt stays under 100K tokens; above that it costs five times as much, while its auto-compaction only starts at 256K. So split the work into slices that each finish well under 100K tokens, such as one directory, file group, or batch of items per agent. If a Haiku pass fails its check or needs a judgment call, rerun it on Opus at `medium` instead of sending repair passes to Haiku.
 
 Send **reviews to Sol at `xhigh`**. For a larger task, run one fresh review of the related change set once the implementation is done and verified; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, do not repeat completed checks, and skip the Sol review for small, reversible changes the root has already checked. When Sol is unavailable or its usage is exhausted, report that and run the review on a fresh Opus at `high`.
 
@@ -55,7 +56,6 @@ A common split: the root decides the design (with an Astra second opinion only o
 ## Route inside one provider
 
 - **Claude only:** the default routing with no Sol, Astra, or Grok. Reviews go to a fresh Opus at `high`; keep big design decisions in the root
-- **Grok only:** Grok 4.5 for bulk and long implementation, Grok 4.6 for work where quality matters or a 4.5 pass fell short. Keep design decisions in the root
 - **OpenAI only:** Sol for implementation through the `use-sol` skill and for reviews at `xhigh`, Astra for second opinions. Say that this draws on the single Codex plan
 
 ## Opus 5.5 effort levels
@@ -89,7 +89,7 @@ Use the `homebased` skill to launch every delegate that is not a short task. The
 
 - **Default:** `homebased` for implementation with verification, investigation, review, audits, research, and any fan-out
 - **Short tasks only:** use a native subagent (Claude Agent tool, Codex native spawn) when the scope is narrow and the root checks and integrates the result in the same turn, such as a focused lookup or a small edit, or when non-overlapping owned scopes can run at the same time. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work
-- **External agents** (Grok CLI, Codex CLI for Sol or Astra, Claude CLI from Codex): always `homebased` or T3 `delegate_task`, whatever the task size
+- **External agents** (Codex CLI for Sol or Astra, Claude CLI from Codex): always `homebased` or T3 `delegate_task`, whatever the task size
 
 When it is unclear whether a task is short, use `homebased`.
 
@@ -107,7 +107,7 @@ When work splits into many parallel workers, such as coverage slices, a race bet
 
 ## Long commands inside a delegate
 
-A delegate must not wait in the foreground for a long build, test suite, CI watch, benchmark, or training run. Waiting that way uses up its turn and context budget, and if the delegate dies or is cancelled, everything it learned dies with it. The delegate submits the command through `homebased` and owns the wait itself. The root never waits on a delegate's jobs and never passes their events on. How the delegate waits depends on its runner:
+A delegate must not wait in the foreground for a long build, test suite, CI watch, benchmark, or training run. Waiting that way ties up its turn, and if the delegate dies or is cancelled, everything it learned dies with it. The delegate submits the command through `homebased` and owns the wait itself. The root never waits on a delegate's jobs and never passes their events on. How the delegate waits depends on its runner:
 
 - **T3 `delegate_task` child on a Claude model.** The child persists between turns and can run background commands.
   1. Submit the command from the child's own session with `homebased task run` or `resource job submit`, so its events come back to the child and not the root.
@@ -130,4 +130,3 @@ Read [delegate-run.md](references/delegate-run.md) for the shared run directory,
 - [claude-cli.md](references/claude-cli.md): Claude CLI for Opus 5.5, Haiku 5.5, or Sonnet 5.5 with an explicit effort
 - [codex-native.md](references/codex-native.md): Codex `collaboration.spawn_agent` for Sol reviews and Astra
 - [codex-cli.md](references/codex-cli.md): `codex exec` for Sol reviews and Astra outside Codex
-- [grok-cli.md](references/grok-cli.md): Grok headless runs and permission preflight

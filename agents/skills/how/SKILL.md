@@ -13,7 +13,7 @@ Explain the real execution path from an entry point to an observable result.
 If the scope is unclear, state your reading and proceed; the user can redirect.
 
 - **Narrow:** one module, function, or flow. Trace it yourself in one pass.
-- **Broad:** a subsystem that crosses several files, services, or languages. Split it into two to four distinct angles, such as the request path, state ownership, and persistence. Send each angle to a read-only GPT-6.1 Sol `high` explorer routed through the `use-agents` skill, then synthesize their findings in the root. Each explorer returns file and symbol citations, the path it traced, and what it could not confirm.
+- **Broad:** a subsystem that crosses several files, services, or languages. Split it into two to four distinct angles, such as the request path, state ownership, and persistence. Send each angle to a read-only Opus 5.5 `high` explorer routed through the `use-agents` skill, then synthesize their findings in the root. Each explorer returns file and symbol citations, the path it traced, and what it could not confirm.
 
 When in doubt, take the narrow path.
 

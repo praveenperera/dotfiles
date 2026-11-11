@@ -12,7 +12,7 @@ If you are running in Codex, use the `$hbd` skill.
 Otherwise, run the command from a new empty temporary directory so Grok cannot read the repository. Grok headless mode does not read piped stdin as the prompt. Pass the prompt with `-p` and a quoted here-document inside command substitution:
 
 ```sh
-grok -m grok-4.5 --effort medium --always-approve \
+grok -m grok-4.5 --effort high --always-approve \
   --disallowed-tools "search_replace,run_terminal_cmd" \
   --verbatim \
   -p "$(cat <<'GROK_PROMPT'

@@ -1,12 +1,12 @@
 ---
 name: delegate-glm
-description: "Helper for delegating coding work or read-only analysis to OpenCode with Z.ai Coding Plan GLM 5.2."
+description: "Helper for delegating coding work or read-only analysis to OpenCode with Z.ai Coding Plan GLM 5.3."
 disable-model-invocation: true
 ---
 
 # Delegate GLM
 
-Delegate the requested work to OpenCode with Z.ai Coding Plan GLM 5.2.
+Delegate the requested work to OpenCode with Z.ai Coding Plan GLM 5.3.
 
 ## Prepare the run
 
@@ -89,10 +89,9 @@ Use the plan agent for either read-only mode:
 ```sh
 prompt=$(< "$scratch/prompts/task.md")
 opencode run \
-  --model zai-coding-plan/glm-5.2 \
+  --model zai-coding-plan/glm-5.3 \
   --agent plan \
   --format json \
-  --dir "$PWD" \
   --title "delegate glm coding task" \
   "$prompt" \
   > "$scratch/raw/stdout.jsonl" \
@@ -106,10 +105,9 @@ Use the build agent for implementation:
 ```sh
 prompt=$(< "$scratch/prompts/task.md")
 opencode run \
-  --model zai-coding-plan/glm-5.2 \
+  --model zai-coding-plan/glm-5.3 \
   --agent build \
   --format json \
-  --dir "$PWD" \
   --title "delegate glm coding task" \
   "$prompt" \
   > "$scratch/raw/stdout.jsonl" \

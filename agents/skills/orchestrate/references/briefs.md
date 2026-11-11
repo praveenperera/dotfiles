@@ -17,12 +17,12 @@ Progress: after each item, update <absolute path to the progress file> with what
 
 Long commands: follow "Long commands inside a delegate" in ~/.agents/skills/use-agents/SKILL.md. Submit them yourself, wait the way that section says for your runner, and end a turn only with a final report. A progress update, such as "downloads are running, the wait is registered", is not a report: keep working, or keep the wait alive and handle its events, until you are done, failed or blocked.
 
-Review loop: when the change is verified, <start one fresh review with delegate_task (<provider and model>), fix the findings, and get a delta review of each fix, within <n> fix passes | skip review>. Report the final verdict, not each round.
+Review loop: when the change is verified, <start one fresh review with delegate_task (<provider and model>), fix the findings, and get a delta review of each fix, within <n> fix passes | skip review>. Report the final verdict, not each round, with the head SHA it covered and the reviewer model and effort.
 
 Shared resources: do not delete files, reorder queues, rebase or merge other PRs, or take locks that are not yours. List what you need in your report.
 
 Report only a final state:
-- done: changed files, commits, check results, review verdict, risks
+- done: changed files, commits, check results, the final review verdict with the head SHA it covered and the reviewer model and effort, risks
 - failed: what failed, the evidence, and what you tried
 - blocked: the one decision or resource you need from the root
 ```

@@ -18,7 +18,7 @@ Ask when the requested scope or timing is ambiguous. Authorization for a final p
 
 ## Authorized writes
 
-After local success, perform only the individually authorized actions. Follow repository commit instructions. A push requires an existing authorized commit containing the intended changes; otherwise request commit authorization. For a pushed result, poll required CI with a finite timeout. Resolve only threads whose findings are demonstrably addressed and only when thread resolution was authorized.
+After local success, perform only the individually authorized actions. Follow repository commit instructions. A push requires an existing authorized commit containing the intended changes; otherwise request commit authorization. For a pushed result, wait for required CI with `cmd ship watch-pr <n>` (add `--greptile` when Greptile is a required gate) submitted as a homebased task, and wait on it as the [homebased skill](../../homebased/SKILL.md) says. Do not poll in the turn. Resolve only threads whose findings are demonstrably addressed and only when thread resolution was authorized.
 
 ## Optional PR audit comment
 

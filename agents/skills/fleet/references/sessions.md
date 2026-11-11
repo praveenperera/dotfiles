@@ -1,10 +1,10 @@
-# Persistent sessions
+# Interactive sessions
 
 ## Choose whether to use tmux
 
 Use a direct local shell or SSH command for short, non-interactive work that is safe to rerun, such as checking machine identity, resource availability, service state, configuration, or Git status. Do not create a tmux session only to run routine commands.
 
-Use a named tmux session when work must survive a disconnect, can outlive the current interaction, needs an interactive prompt, or may require a user handoff. Agents, training jobs, and long-running builds normally meet these conditions. Create the session on the execution machine; a local tmux session that holds an SSH connection does not make remote work persistent.
+Use a named tmux session only for an interactive session, such as an agent CLI or a prompt that needs input, or for a hand-off to Praveen. Run long commands, such as builds, test suites, and training, as homebased tasks, and send all GPU work through the homebased resource queue; the `homebased` skill covers both. Create the session on the execution machine; a local tmux session that holds an SSH connection does not keep remote work alive.
 
 Connect to `praveen@code.local` for coding and training. From the host, enter `code` with the command below:
 
@@ -12,13 +12,13 @@ Connect to `praveen@code.local` for coding and training. From the host, enter `c
 incus exec code -- su - praveen
 ```
 
-When tmux is needed, start or attach to it inside that container. Run agents and training as `praveen`, not root.
+Start tmux inside that container, and run everything as `praveen`, not root.
 
 The remote `praveen` user must have systemd lingering enabled so tmux survives the final SSH disconnect. Check with `loginctl show-user praveen -p Linger`; the result must be `Linger=yes`. If it is not, repair the machine setup instead of replacing tmux with a transient service.
 
 Use a task-specific session name. Inspect existing sessions before reuse. Never send commands into an active agent or job, or create a second copy after a connection failure. Inspect the existing session first.
 
-SSH calls that create or inspect tmux are session control steps. Run the persistent or interactive task in the pane. Supporting checks can remain direct commands unless they need the same persistence or interactive context.
+SSH calls that create or inspect tmux are session control steps. Run the interactive task in the pane. Supporting checks can remain direct commands.
 
 ## Start and inspect
 
@@ -39,7 +39,7 @@ ssh praveen@code.local 'tmux capture-pane -p -S -100 -t %3'
 
 Use the actual pane ID. Preserve quoting across the local shell, SSH, and remote shell. For complex input, transfer a prompt or script file. Keep task notes and evidence in the repository's `_scratch/` directory.
 
-For a local agent that needs persistence or handoff, use the same tmux commands without SSH. Create a separate pane or session; do not start it inside an active agent process.
+For a local interactive session or hand-off, use the same tmux commands without SSH. Create a separate pane or session; do not start it inside an active agent process.
 
 ## Run and verify
 
@@ -50,7 +50,7 @@ Inside the pane:
 3. Transfer only the required patch and untracked files, and record the base revision. Do not commit, push, overwrite a dirty checkout, or copy secrets merely to transfer work.
 4. Check that the selected agent CLI is installed and authenticated. Give it the repository, task, scope, constraints, and required checks. Run it in the foreground with its normal permission controls.
 
-The parent agent owns progress, review, and integration. Successful `send-keys` only confirms that input was sent. Inspect output, completion or exit status, the Git diff, and checks. For long tasks, retain logs and exit status in `_scratch/`. Silence or an SSH disconnect is not proof of success.
+The parent agent owns progress, review, and integration. Successful `send-keys` only confirms that input was sent. Inspect output, completion or exit status, the Git diff, and checks. Silence or an SSH disconnect is not proof of success.
 
 If a prompt needs Praveen, keep the session and give the attach command. Never put credentials in task files or captured logs.
 
@@ -64,4 +64,4 @@ ssh -t praveen@code.local 'tmux attach-session -t fleet-myproject'
 
 For local work, use `tmux attach-session -t fleet-myproject`.
 
-Keep active jobs and handoff sessions. When a short maintenance, benchmark, or verification task succeeds, record its result, then remove only its completed session and temporary files. Report retained changes and logs. Transfer and review the intended diff when local integration is needed; preserve unrelated changes.
+Keep hand-off sessions and sessions Praveen is using. When an interactive task finishes, record its result, then remove only its session and temporary files. Report retained changes and logs. Transfer and review the intended diff when local integration is needed; preserve unrelated changes.
