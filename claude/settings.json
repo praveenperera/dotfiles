@@ -2,7 +2,9 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "CLAUDE_CODE_SHELL": "bash"
+    "CLAUDE_CODE_SHELL": "bash",
+    "SECURITY_REVIEW_MODEL": "claude-sonnet-5-5",
+    "SG_AGENTIC_MODEL": "claude-sonnet-5-5"
   },
   "attribution": {
     "commit": "",

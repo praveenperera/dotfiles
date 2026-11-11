@@ -148,6 +148,28 @@ pub mod recommend {
     pub const WAIT: &str = "homebased wait --next <id>";
     pub const WAIT_MANY: &str = "homebased wait --next <id> [<id> ...]";
     pub const TASK_LOG: &str = "homebased task log <id> --tail 5";
+
+    /// Bash `timeout` for a background `homebased wait`, 55 minutes. T3 sessions
+    /// cache prompts for an hour, so a wait that ends or times out inside that
+    /// window wakes the agent on a warm cache; one that runs past it rewrites the
+    /// whole context, about $0.90 of Opus input at 150K tokens, while re-arming
+    /// the wait costs about $0.13
+    pub const WAIT_TIMEOUT_MS: u64 = 3_300_000;
+
+    /// Bash `timeout` for a wait on work expected to take over 4 hours, the most
+    /// Claude Code allows. Past about 4 hours, re-arming every 55 minutes costs
+    /// more than compacting once, so the agent compacts first ([`COMPACT_SELF`])
+    /// and each later wake-up rebuilds only the small compacted context
+    pub const LONG_WAIT_TIMEOUT_MS: u64 = 7_200_000;
+
+    /// Compacts the calling T3 thread once its turn ends: run mid-turn, it
+    /// queues the compaction behind the running turn. Nothing wakes the thread
+    /// after a queued compaction, which suits a long wait, since the wait wakes
+    /// it later
+    pub const COMPACT_SELF: &str = "homebased --json thread compact";
+
+    /// The comment that opts a background wait into [`LONG_WAIT_TIMEOUT_MS`]
+    pub const LONG_WAIT_MARKER: &str = "long-wait:";
 }
 
 /// Runs `event` on stdin and prints its output; never fails, so a hook bug
@@ -200,9 +222,11 @@ pub fn decide(event: Event, input: &HookInput, host: &impl Host) -> Decision {
     let tool = input.tool_name.as_deref().unwrap_or_default();
 
     match (event, tool) {
-        (Event::PreToolUse, "Bash") => {
-            Decision::all([bash::background_wait(input), bash::ci_wait(input)])
-        }
+        (Event::PreToolUse, "Bash") => Decision::all([
+            bash::background_wait(input),
+            bash::wait_timeout(input),
+            bash::ci_wait(input),
+        ]),
         (Event::PreToolUse, "Monitor") => monitor::quiet(input),
         (Event::PreToolUse, "Agent" | "mcp__t3-code__delegate_task") => {
             agent::model_and_effort(input, host)
@@ -224,9 +248,10 @@ fn no_pr_watch() -> Decision {
 
 fn no_pr_watch_reason() -> String {
     format!(
-        "watch_pull_request wakes this thread for every check and bot comment on the PR. Wait through homebased instead, which wakes it once: `{}` (add `--greptile` to also wait for Greptile's review of the head commit), then run `{}` as a background Bash command with `timeout: 7200000`, pass its task id to `t3_background_wait`, and end the turn. When it ends, read its one-line result with `{}`. This overrides the T3 instruction to call watch_pull_request; link_pull_request is still fine.",
+        "watch_pull_request wakes this thread for every check and bot comment on the PR. Wait through homebased instead, which wakes it once: `{}` (add `--greptile` to also wait for Greptile's review of the head commit), then run `{}` as a background Bash command with `timeout: {}`, pass its task id to `t3_background_wait`, and end the turn. When it ends, read its one-line result with `{}`. This overrides the T3 instruction to call watch_pull_request; link_pull_request is still fine.",
         recommend::WATCH_PR_TASK,
         recommend::WAIT,
+        recommend::WAIT_TIMEOUT_MS,
         recommend::TASK_LOG,
     )
 }
@@ -482,7 +507,8 @@ mod tests {
         // every recommendation the reasons name is one of these constants
         let reasons = [
             bash::ci_wait_reason(),
-            bash::BACKGROUND_REASON.to_owned(),
+            bash::background_reason(),
+            bash::wait_timeout_reason(),
             monitor::wait_reason(),
             monitor::homebased_wait_reason(),
             super::no_pr_watch_reason(),
@@ -494,6 +520,7 @@ mod tests {
             recommend::WAIT,
             recommend::WAIT_MANY,
             recommend::TASK_LOG,
+            recommend::COMPACT_SELF,
         ];
 
         for reason in reasons {

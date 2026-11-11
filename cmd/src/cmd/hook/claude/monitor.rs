@@ -20,15 +20,17 @@ pub const REDIRECT_REASON: &str = "This command redirects in the wrong order: `2
 
 pub fn homebased_wait_reason() -> String {
     format!(
-        "A Monitor expires after 30 minutes and wakes you each time with nothing to report. Run `{}` as a background Bash command with `timeout: 7200000` instead, pass its task id to `t3_background_wait`, and end the turn.",
-        recommend::WAIT_MANY
+        "A Monitor expires after 30 minutes and wakes you each time with nothing to report. Run `{}` as a background Bash command with `timeout: {}` instead, pass its task id to `t3_background_wait`, and end the turn.",
+        recommend::WAIT_MANY,
+        recommend::WAIT_TIMEOUT_MS
     )
 }
 
 pub fn wait_reason() -> String {
     format!(
-        "A Monitor wakes you for a full turn on every stdout line, so a wait must print once, when the job ends. Submit the command as a homebased task and run `{}` as a background Bash command with `timeout: 7200000`, or run it as foreground Bash if it takes under about 10 minutes. To stream on purpose, for example each new error in a log, add a `# stream: <why>` comment to the command and filter it to the lines you would act on.",
-        recommend::WAIT
+        "A Monitor wakes you for a full turn on every stdout line, so a wait must print once, when the job ends. Submit the command as a homebased task and run `{}` as a background Bash command with `timeout: {}`, or run it as foreground Bash if it takes under about 10 minutes. To stream on purpose, for example each new error in a log, add a `# stream: <why>` comment to the command and filter it to the lines you would act on.",
+        recommend::WAIT,
+        recommend::WAIT_TIMEOUT_MS
     )
 }
 

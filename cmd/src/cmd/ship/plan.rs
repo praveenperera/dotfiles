@@ -486,7 +486,7 @@ impl Plan {
             .any(has)
         {
             lines.push(if self.host == Host::T3Claude {
-                "wait: run `homebased wait --next <id>` as a background Bash command with timeout 7200000, pass its task id to t3_background_wait, and end the turn"
+                "wait: run `homebased wait --next <id>` as a background Bash command with timeout 3300000 (55 minutes, under the hour-long prompt cache), pass its task id to t3_background_wait, and end the turn; if it times out with no event, start it again"
             } else {
                 "wait: submit through homebased and end the turn; its event starts the next turn"
             });
@@ -1329,7 +1329,8 @@ impl<V: Serialize> Serialize for Ordered<V> {
 mod tests {
     use std::path::Path;
 
-    use super::{parse_github_remote, task_slug, Config, Effort, PlanError, Step};
+    use super::{parse_github_remote, task_slug, Config, Effort, Host, PlanError, Step};
+    use crate::cmd::hook::claude::recommend;
 
     const CONFIG: &str = r#"
 owners = ["me"]
@@ -1380,6 +1381,21 @@ merge = "never"
             Some(plan_error) => plan_error.to_string(),
             None => panic!("{repo} {words:?}: not a plan error: {error:#}"),
         }
+    }
+
+    #[test]
+    fn t3_claude_wait_uses_the_hook_timeout() {
+        let mut plan = config().resolve("me/gated", &[], None, None).unwrap();
+        plan.apply_host(Host::T3Claude);
+
+        let wait = plan
+            .host_actions()
+            .into_iter()
+            .find(|line| line.starts_with("wait:"))
+            .expect("a gated plan waits on Greptile");
+
+        let timeout = format!("timeout {} ", recommend::WAIT_TIMEOUT_MS);
+        assert!(wait.contains(&timeout), "{wait}");
     }
 
     #[test]

@@ -1,5 +1,6 @@
 //! Checks on the Bash tool: CI waits held in the turn, background commands an
-//! agent will wait on, and the reminder to register a background `homebased wait`
+//! agent will wait on, the timeout of a background `homebased wait`, and the
+//! reminder to register one
 
 use clap::Parser;
 use serde::{Deserialize, Deserializer};
@@ -17,11 +18,20 @@ struct BashInput {
     command: String,
     #[serde(default, deserialize_with = "only_true")]
     run_in_background: bool,
+    /// milliseconds; anything but a whole number reads as unset
+    #[serde(default, deserialize_with = "whole_number")]
+    timeout: Option<u64>,
 }
 
 /// Reads `true` as true and any other value as false, as the jq check did
 fn only_true<'de, D: Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
     Ok(Value::deserialize(deserializer)? == Value::Bool(true))
+}
+
+/// Reads a JSON whole number, and any other value as unset, so a malformed
+/// timeout never blocks a call
+fn whole_number<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
+    Ok(Value::deserialize(deserializer)?.as_u64())
 }
 
 /// The Bash tool's result, of which only the background task id matters here
@@ -31,7 +41,24 @@ struct BashResponse {
     background_task_id: Option<String>,
 }
 
-pub const BACKGROUND_REASON: &str = "For a command you will wait on, such as a build, test suite, download, or data pull, submit it as a homebased task and run `homebased wait --next <id>` as a background Bash command with `timeout: 7200000`, then pass its task id to `t3_background_wait`, or run it as foreground Bash if it takes under about 10 minutes. For a process you will not wait on, such as a dev server, add a `# long-lived: <why>` comment to the command.";
+pub fn background_reason() -> String {
+    format!(
+        "For a command you will wait on, such as a build, test suite, download, or data pull, submit it as a homebased task and run `{}` as a background Bash command with `timeout: {}`, then pass its task id to `t3_background_wait`, or run it as foreground Bash if it takes under about 10 minutes. For a process you will not wait on, such as a dev server, add a `# long-lived: <why>` comment to the command.",
+        recommend::WAIT,
+        recommend::WAIT_TIMEOUT_MS,
+    )
+}
+
+pub fn wait_timeout_reason() -> String {
+    format!(
+        "Give a background `{}` a `timeout` of at most {} (55 minutes). The prompt cache expires after an hour, so a wake-up after that rewrites the whole context, while re-arming the wait costs about $0.13. When the wait times out with no event, start it again with the same ids. Only for work expected to take over 4 hours: first run `{}`, which queues a compaction of this thread for when the turn ends, then start the wait with `timeout: {}` and a `# {} <expected duration>` comment.",
+        recommend::WAIT,
+        recommend::WAIT_TIMEOUT_MS,
+        recommend::COMPACT_SELF,
+        recommend::LONG_WAIT_TIMEOUT_MS,
+        recommend::LONG_WAIT_MARKER,
+    )
+}
 
 /// T3 Code files a background Bash under the `command` kind, which holds a
 /// thread in Waiting only once it is registered with `t3_background_wait`, and a
@@ -51,7 +78,36 @@ pub fn background_wait(input: &HookInput) -> Decision {
         return Decision::Allow;
     }
 
-    Decision::Deny(BACKGROUND_REASON.to_owned())
+    Decision::Deny(background_reason())
+}
+
+/// A background `homebased wait` that outlives the hour-long prompt cache wakes
+/// the agent on a cold cache, which rewrites its whole context; waits that ran
+/// past an hour cost about $0.90 each in Opus cache writes. A wait with no
+/// timeout gets Claude Code's 30-minute default, which is fine
+///
+/// Work expected to take over 4 hours opts out with a `# long-wait:` comment,
+/// after compacting the thread, since a hook cannot tell how long a job will run
+/// or whether the compaction was set up
+pub fn wait_timeout(input: &HookInput) -> Decision {
+    let Some(bash) = input.tool_input::<BashInput>() else {
+        return Decision::Allow;
+    };
+
+    let too_long = bash
+        .timeout
+        .is_some_and(|timeout| timeout > recommend::WAIT_TIMEOUT_MS);
+
+    let capped = bash.run_in_background
+        && too_long
+        && starts_line_with_homebased_wait(&bash.command)
+        && !has_marker(&bash.command, recommend::LONG_WAIT_MARKER);
+
+    if capped {
+        return Decision::Deny(wait_timeout_reason());
+    }
+
+    Decision::Allow
 }
 
 pub fn ci_wait_reason() -> String {
@@ -156,9 +212,10 @@ pub fn register_background_wait(input: &HookInput, host: &impl Host) -> Decision
 mod tests {
     use serde_json::json;
 
+    use super::super::recommend;
     use super::super::tests::{decision, pre, Fixture};
     use super::super::{Decision, Event};
-    use super::{ci_wait_reason, BACKGROUND_REASON};
+    use super::{background_reason, ci_wait_reason, wait_timeout_reason};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum Want {
@@ -172,8 +229,10 @@ mod tests {
         match want {
             Want::Allow => Decision::Allow,
             Want::Ci => Decision::Deny(ci_wait_reason()),
-            Want::Background => Decision::Deny(BACKGROUND_REASON.to_owned()),
-            Want::Both => Decision::Deny(format!("{BACKGROUND_REASON}\n\n{}", ci_wait_reason())),
+            Want::Background => Decision::Deny(background_reason()),
+            Want::Both => {
+                Decision::Deny(format!("{}\n\n{}", background_reason(), ci_wait_reason()))
+            }
         }
     }
 
@@ -350,6 +409,63 @@ mod tests {
             json!({"command": "cargo build", "run_in_background": "true"}),
         );
         assert_eq!(decision(Event::PreToolUse, &stdin, &host), Decision::Allow);
+    }
+
+    #[test]
+    fn background_homebased_wait_timeout_stays_under_the_cache_ttl() {
+        let host = Fixture::new(true);
+        let cap = recommend::WAIT_TIMEOUT_MS;
+        let too_long = Decision::Deny(wait_timeout_reason());
+
+        let rows = [
+            (
+                json!({"command": "homebased wait --next a", "run_in_background": true, "timeout": 7_200_000}),
+                too_long.clone(),
+            ),
+            (
+                json!({"command": "homebased wait --next a b", "run_in_background": true, "timeout": cap + 1}),
+                too_long,
+            ),
+            (
+                json!({"command": "homebased wait --next a", "run_in_background": true, "timeout": cap}),
+                Decision::Allow,
+            ),
+            (
+                json!({"command": "homebased wait --next a", "run_in_background": true}),
+                Decision::Allow,
+            ),
+            // a foreground call is capped at 10 minutes by Claude Code itself
+            (
+                json!({"command": "homebased wait --next a", "timeout": 7_200_000}),
+                Decision::Allow,
+            ),
+            (
+                json!({"command": "homebased wait --next a", "run_in_background": true, "timeout": "7200000"}),
+                Decision::Allow,
+            ),
+            (
+                json!({"command": "npm run dev # long-lived: dev server", "run_in_background": true, "timeout": 7_200_000}),
+                Decision::Allow,
+            ),
+            // work expected to take over 4 hours opts in after compacting
+            (
+                json!({"command": "homebased wait --next a # long-wait: 9h training run", "run_in_background": true, "timeout": recommend::LONG_WAIT_TIMEOUT_MS}),
+                Decision::Allow,
+            ),
+            (
+                json!({"command": "homebased wait --next a #long-wait:6h", "run_in_background": true, "timeout": 7_200_000}),
+                Decision::Allow,
+            ),
+        ];
+
+        for (input, expected) in rows {
+            let stdin = pre("Bash", input.clone());
+            assert_eq!(
+                decision(Event::PreToolUse, &stdin, &host),
+                expected,
+                "{input}"
+            );
+        }
     }
 
     #[test]
