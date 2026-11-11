@@ -47,7 +47,7 @@
     "ask": [],
     "defaultMode": "auto"
   },
-  "model": "opus",
+  "model": "fable",
   "hooks": {
     "PreToolUse": [
       {
@@ -147,8 +147,8 @@
       }
     }
   },
-  "effortLevel": "high",
   "promptCacheTtl": "1h",
+  "effortLevel": "high",
   "modelSettings": {
     "claude-haiku-5-5": {
       "autoCompactWindow": 256000
