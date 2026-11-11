@@ -56,6 +56,65 @@ calls = [{ tool = "authenticate" }, { tool = "list_environments" }]
 [servers.secrets]
 builtin = "secrets"
 
+# Logins in agent-browser sessions on this Mac. `fill` types the user's
+# 1Password username, password or one-time code into the focused field of a
+# session's page without the agent seeing it, and asks on every call; while
+# the user is away the phone is asked for the whole sign-in at once.
+# `handoff` pushes to the phone and waits while the user drives the session
+# there, such as for a passkey. Not served to spokes
+[servers.browser]
+builtin = "browser"
+policy = "ask"
+tools.fill.grant = "per_call"
+tools.handoff.policy = "allow"
+
+# agent-browser's own MCP server, one per logged-in session, so an agent
+# reaches only the profile the server names: a shared server would take any
+# `session`, including ones logged in to accounts no agent may drive. The
+# session and the arguments that could reach other sessions, files or saved
+# state are pinned (a script cannot pass them); reading and navigating run
+# freely, every action on the page asks on the phone, and anything else, such
+# as eval, cookies, flows or new tabs, is denied. Served to spokes
+[servers.agent_browser_github]
+command = "/opt/homebrew/bin/agent-browser"
+args = ["mcp"]
+policy = "deny"
+env = { AGENT_BROWSER_SESSION = "github", AGENT_BROWSER_PROFILE = "/Users/praveen/.agent-browser/github" }
+
+[servers.agent_browser_github.arguments]
+session = "github"
+extraArgs = ["--engine", "chrome"]
+restore = false
+all = false
+path = "/Users/praveen/.agent-browser/screenshots/github.png"
+
+[servers.agent_browser_github.tools]
+agent_browser_open.policy = "allow"
+agent_browser_snapshot.policy = "allow"
+agent_browser_read.policy = "allow"
+agent_browser_get_text.policy = "allow"
+agent_browser_get_url.policy = "allow"
+agent_browser_get_title.policy = "allow"
+agent_browser_scroll.policy = "allow"
+agent_browser_wait_ms.policy = "allow"
+agent_browser_wait_for_selector.policy = "allow"
+agent_browser_wait_for_text.policy = "allow"
+agent_browser_wait_for_load.policy = "allow"
+agent_browser_screenshot.policy = "allow"
+agent_browser_tab_list.policy = "allow"
+agent_browser_tab_switch.policy = "allow"
+agent_browser_close.policy = "allow"
+agent_browser_back.policy = "allow"
+agent_browser_forward.policy = "allow"
+agent_browser_reload.policy = "allow"
+agent_browser_click = { policy = "ask", grant = "per_call" }
+agent_browser_type = { policy = "ask", grant = "per_call" }
+agent_browser_fill = { policy = "ask", grant = "per_call" }
+agent_browser_press = { policy = "ask", grant = "per_call" }
+agent_browser_select = { policy = "ask", grant = "per_call" }
+agent_browser_check = { policy = "ask", grant = "per_call" }
+agent_browser_uncheck = { policy = "ask", grant = "per_call" }
+
 [servers.openai_docs]
 url = "https://developers.openai.com/mcp"
 
