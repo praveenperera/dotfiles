@@ -13,7 +13,7 @@ Decided approach: <the design choices already made>
 Rules: read <absolute path to the state file>, section "Rules", and follow it. It overrides anything here that conflicts with it.
 
 Verification: <commands and the pass condition>
-Budget: finish this phase under about 150K context. If you get close, stop and report what is done and what is left.
+Progress: after each item, update <absolute path to the progress file> with what is done, what is left and the commit SHAs.
 
 Long commands: follow "Long commands inside a delegate" in ~/.agents/skills/use-agents/SKILL.md. Submit them yourself, wait the way that section says for your runner, and end a turn only with a final report. A progress update, such as "downloads are running, the wait is registered", is not a report: keep working, or keep the wait alive and handle its events, until you are done, failed or blocked.
 
@@ -29,6 +29,7 @@ Report only a final state:
 
 ## Notes
 
+- Do not mention context sizes, limits or compaction in a brief, or in a message to a delegate. The root's watches handle compaction. A delegate that knows its limit stops early to hand off.
 - Point to the state file instead of pasting rules into the brief, so a correction lands in one place.
 - Name the delegate in any message that corrects it. When a correction applies to several delegates, send it to each one.
 - If the brief grants nested delegation, name the model and effort it may use and how many reviews it may start.
