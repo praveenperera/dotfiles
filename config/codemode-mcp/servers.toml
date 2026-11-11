@@ -72,9 +72,13 @@ tools.handoff.policy = "allow"
 # reaches only the profile the server names: a shared server would take any
 # `session`, including ones logged in to accounts no agent may drive. The
 # session and the arguments that could reach other sessions, files or saved
-# state are pinned (a script cannot pass them); reading and navigating run
-# freely, every action on the page asks on the phone, and anything else, such
-# as eval, cookies, flows or new tabs, is denied. Served to spokes
+# state are pinned (a script cannot pass them); reading the open page,
+# scrolling and history run freely; opening a URL asks, since the browser
+# opens file:// URLs and would show any file on this Mac, and so does
+# `read`, which fetches any http URL it is given from this Mac, local
+# network included; every action on the page asks on the phone, and
+# anything else, such as eval, cookies, flows or new tabs, is denied.
+# Served to spokes
 [servers.agent_browser_github]
 command = "/opt/homebrew/bin/agent-browser"
 args = ["mcp"]
@@ -89,9 +93,9 @@ all = false
 path = "/Users/praveen/.agent-browser/screenshots/github.png"
 
 [servers.agent_browser_github.tools]
-agent_browser_open.policy = "allow"
+agent_browser_open = { policy = "ask", grant = "per_call" }
 agent_browser_snapshot.policy = "allow"
-agent_browser_read.policy = "allow"
+agent_browser_read = { policy = "ask", grant = "per_call" }
 agent_browser_get_text.policy = "allow"
 agent_browser_get_url.policy = "allow"
 agent_browser_get_title.policy = "allow"
