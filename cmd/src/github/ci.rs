@@ -159,6 +159,12 @@ impl WorkflowRun {
         self.status == RunStatus::Completed
     }
 
+    /// Whether a pull request event started the run, rather than a push or a
+    /// manual dispatch on the same commit
+    pub(crate) fn is_pr_event(&self) -> bool {
+        matches!(self.event.as_str(), "pull_request" | "pull_request_target")
+    }
+
     /// Whether a completed run counts as passing; `None` while it is still running
     pub(crate) fn passed(&self) -> Option<bool> {
         if !self.is_completed() {
@@ -323,6 +329,34 @@ impl Github {
         }
 
         Ok(runs)
+    }
+
+    /// Whether the repository has an active workflow file, so a push to a PR is
+    /// expected to start Actions runs. Workflows GitHub manages, such as default
+    /// CodeQL setup, live under `dynamic/` and do not count
+    pub(crate) async fn fetch_has_workflow_files(&self, owner: &str, repo: &str) -> Result<bool> {
+        let mut seen = 0;
+
+        for page in 1.. {
+            let response: WorkflowsPage = self
+                .get_json(
+                    &format!("repos/{owner}/{repo}/actions/workflows?per_page=100&page={page}"),
+                    &format!("Failed to list workflows of {owner}/{repo}"),
+                )
+                .await?;
+            let count = response.workflows.len();
+            seen += count;
+
+            if response.workflows.iter().any(Workflow::is_active_file) {
+                return Ok(true);
+            }
+
+            if count == 0 || seen >= response.total_count {
+                break;
+            }
+        }
+
+        Ok(false)
     }
 
     pub(crate) async fn fetch_workflow_run(
@@ -627,6 +661,24 @@ struct WorkflowRunsPage {
 }
 
 #[derive(Deserialize)]
+struct WorkflowsPage {
+    total_count: usize,
+    workflows: Vec<Workflow>,
+}
+
+#[derive(Deserialize)]
+struct Workflow {
+    path: String,
+    state: String,
+}
+
+impl Workflow {
+    fn is_active_file(&self) -> bool {
+        self.state == "active" && self.path.starts_with(".github/workflows/")
+    }
+}
+
+#[derive(Deserialize)]
 struct JobsPage {
     total_count: usize,
     jobs: Vec<Job>,
@@ -785,6 +837,42 @@ mod tests {
         assert_eq!(runs.len(), 1);
         assert_eq!(runs[0].status, RunStatus::Queued);
         assert_eq!(runs[0].passed(), None);
+    }
+
+    #[tokio::test]
+    async fn only_active_workflow_files_count() {
+        let workflow =
+            |path: &str, state: &str| json!({"id": 1, "name": "x", "path": path, "state": state});
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/repos/o/managed/actions/workflows"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "total_count": 2,
+                "workflows": [
+                    workflow("dynamic/github-code-scanning/codeql", "active"),
+                    workflow(".github/workflows/ci.yml", "disabled_manually"),
+                ]
+            })))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/repos/o/ci/actions/workflows"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "total_count": 2,
+                "workflows": [
+                    workflow("dynamic/github-code-scanning/codeql", "active"),
+                    workflow(".github/workflows/ci.yml", "active"),
+                ]
+            })))
+            .mount(&server)
+            .await;
+        let github = Github::with_base_url(server.uri(), None).unwrap();
+
+        assert!(!github
+            .fetch_has_workflow_files("o", "managed")
+            .await
+            .unwrap());
+        assert!(github.fetch_has_workflow_files("o", "ci").await.unwrap());
     }
 
     #[test]

@@ -32,9 +32,13 @@ pub(super) async fn run(args: WatchPrArgs) -> Result<Report> {
 
     // an outage when the task starts should not end a wait meant to last hours
     let mut errors = Retry::new();
-    let head = loop {
-        match github.fetch_pr_head(&repo.owner, &repo.name, number).await {
-            Ok(head) => break head,
+    let (head, expects_actions) = loop {
+        let start = tokio::try_join!(
+            github.fetch_pr_head(&repo.owner, &repo.name, number),
+            github.fetch_has_workflow_files(&repo.owner, &repo.name),
+        );
+        match start {
+            Ok(start) => break start,
             Err(error) => errors.absorb(error)?,
         }
 
@@ -50,6 +54,7 @@ pub(super) async fn run(args: WatchPrArgs) -> Result<Report> {
         number,
         url: head.url,
         sha: head.sha,
+        expects_actions,
         timing,
     };
 
@@ -64,8 +69,9 @@ struct Timing {
     /// is rerun, its old attempt can leave the rollup before the new one appears,
     /// so a single quiet poll can be a false pass
     settle_polls: u32,
-    /// Polls without any check or run before the PR counts as having no CI, since
-    /// checks take a few seconds to register after a push
+    /// Polls without any check or run before the PR counts as having no CI, or
+    /// without an Actions run before a repo with workflows counts as running none
+    /// on this commit, since runs can take minutes to register after a push
     empty_polls: u32,
     /// Answered polls to wait for Greptile's review once CI has ended
     greptile_polls: u32,
@@ -120,6 +126,9 @@ impl PrSource for GithubPr {
 enum CiState {
     /// No check or run exists yet
     Empty,
+    /// Everything listed ended, but Actions has not registered a pull request
+    /// run yet; names of what did not pass
+    AwaitingActions(Vec<String>),
     /// Names of the checks and runs still going
     Pending(BTreeSet<String>),
     /// Everything ended; names of what did not pass
@@ -232,7 +241,9 @@ impl Observation {
         CurrentCi { checks, runs }
     }
 
-    fn assess(&self) -> CiState {
+    /// Classify this poll; `expects_actions` says the repo has workflow files, so
+    /// the commit has not started CI until an Actions run appears
+    fn assess(&self, expects_actions: bool) -> CiState {
         let current = self.current();
         let pending = current.pending();
         if !pending.is_empty() {
@@ -254,6 +265,15 @@ impl Observation {
             .map(|check| check.name.clone())
             .chain(failed_runs)
             .collect();
+
+        // another app's status, such as CodeRabbit's, can land within seconds of
+        // a push while Actions can take over a minute to register the push's
+        // runs, longer than the settle window. A push or dispatch run on the same
+        // commit, such as one from before the PR opened, does not show the PR's
+        // workflows have registered
+        if expects_actions && !current.runs.iter().any(|run| run.is_pr_event()) {
+            return CiState::AwaitingActions(failed);
+        }
 
         CiState::Finished(failed)
     }
@@ -292,6 +312,14 @@ enum CiResult {
 }
 
 impl CiResult {
+    /// The result of CI that ended, from the names of what did not pass
+    fn finished(failed: Vec<String>) -> Self {
+        match failed.is_empty() {
+            true => Self::Passed,
+            false => Self::Failed(failed),
+        }
+    }
+
     fn passed(&self) -> bool {
         !matches!(self, Self::Failed(_))
     }
@@ -324,6 +352,8 @@ struct PrWatch<S> {
     number: u64,
     url: String,
     sha: String,
+    /// Whether the repo has workflow files, so the commit should get Actions runs
+    expects_actions: bool,
     timing: Timing,
 }
 
@@ -379,7 +409,10 @@ impl<S: PrSource> PrWatch<S> {
 
     async fn wait_for_ci(&self) -> Result<CiResult, Stop> {
         let mut errors = Retry::new();
+        // consecutive finished polls with PR runs, and without them; kept apart so
+        // a PR run first seen completed still gets its own settle window
         let mut settled = 0;
+        let mut settled_awaiting = 0;
         let mut empty = 0;
         let mut last_pending = BTreeSet::new();
 
@@ -398,9 +431,10 @@ impl<S: PrSource> PrWatch<S> {
                 return Err(Stop::HeadMoved(observation.head_sha));
             }
 
-            match observation.for_pr(self.number).assess() {
+            match observation.for_pr(self.number).assess(self.expects_actions) {
                 CiState::Pending(pending) => {
                     settled = 0;
+                    settled_awaiting = 0;
                     empty = 0;
                     if pending != last_pending {
                         eprintln!("waiting on {}", join(&pending));
@@ -410,20 +444,33 @@ impl<S: PrSource> PrWatch<S> {
 
                 CiState::Empty => {
                     settled = 0;
+                    settled_awaiting = 0;
                     empty += 1;
                     if empty >= self.timing.empty_polls {
                         return Ok(CiResult::NoChecks);
                     }
                 }
 
+                // a workflow can skip a commit, such as on a paths filter, so after
+                // the grace period what is listed decides CI, once it has also
+                // stayed finished for the settle window
+                CiState::AwaitingActions(failed) => {
+                    settled = 0;
+                    settled_awaiting += 1;
+                    empty += 1;
+                    if empty >= self.timing.empty_polls
+                        && settled_awaiting >= self.timing.settle_polls
+                    {
+                        return Ok(CiResult::finished(failed));
+                    }
+                }
+
                 CiState::Finished(failed) => {
+                    settled_awaiting = 0;
                     empty = 0;
                     settled += 1;
                     if settled >= self.timing.settle_polls {
-                        return Ok(match failed.is_empty() {
-                            true => CiResult::Passed,
-                            false => CiResult::Failed(failed),
-                        });
+                        return Ok(CiResult::finished(failed));
                     }
                 }
             }
@@ -619,10 +666,22 @@ mod tests {
             number: 978,
             url: URL.into(),
             sha: SHA.into(),
+            expects_actions: true,
             timing: FAST,
         }
         .run(greptile)
         .await
+    }
+
+    /// A commit status another app posts, such as CodeRabbit's
+    fn status(name: &str, state: CheckState) -> Check {
+        Check {
+            name: name.into(),
+            state,
+            run_id: None,
+            job_id: None,
+            url: None,
+        }
     }
 
     fn done(id: u64, name: &str) -> WorkflowRun {
@@ -670,6 +729,205 @@ mod tests {
             report,
             Report::new(
                 format!("PR #978 (1f975f0): CI failed (ios-ui) {URL}"),
+                false
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn early_status_does_not_pass_ci_before_actions_registers() {
+        // CodeRabbit passed seconds after the push and Actions registered the
+        // push's runs only after more polls than the settle window; then a UI job
+        // failed
+        let status_only = || poll(vec![status("CodeRabbit", CheckState::Passed)], vec![]);
+        let script = Script::new(vec![
+            status_only(),
+            status_only(),
+            status_only(),
+            poll(
+                vec![status("CodeRabbit", CheckState::Passed)],
+                vec![run(2, "UI tests", RunStatus::Queued, None)],
+            ),
+            poll(
+                vec![
+                    status("CodeRabbit", CheckState::Passed),
+                    check("android-ui", CheckState::Failed, 2),
+                ],
+                vec![run(
+                    2,
+                    "UI tests",
+                    RunStatus::Completed,
+                    Some(RunConclusion::Failure),
+                )],
+            ),
+        ]);
+
+        let report = watch(script, false).await;
+
+        assert_eq!(
+            report,
+            Report::new(
+                format!("PR #978 (1f975f0): CI failed (android-ui) {URL}"),
+                false
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn push_run_does_not_stand_in_for_pr_runs() {
+        // a push run on the commit finished before the PR opened, and Actions
+        // registered the PR's runs only after the settle window
+        let mut push = done(1, "CI");
+        push.event = "push".into();
+        push.pull_requests = vec![];
+        let push_only = || {
+            poll(
+                vec![check("clippy", CheckState::Passed, 1)],
+                vec![push.clone()],
+            )
+        };
+        let script = Script::new(vec![
+            push_only(),
+            push_only(),
+            push_only(),
+            poll(
+                vec![check("clippy", CheckState::Passed, 1)],
+                vec![push.clone(), run(2, "UI tests", RunStatus::Queued, None)],
+            ),
+            poll(
+                vec![
+                    check("clippy", CheckState::Passed, 1),
+                    check("android-ui", CheckState::Failed, 2),
+                ],
+                vec![
+                    push.clone(),
+                    run(
+                        2,
+                        "UI tests",
+                        RunStatus::Completed,
+                        Some(RunConclusion::Failure),
+                    ),
+                ],
+            ),
+        ]);
+
+        let report = watch(script, false).await;
+
+        assert_eq!(
+            report,
+            Report::new(
+                format!("PR #978 (1f975f0): CI failed (android-ui) {URL}"),
+                false
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn check_seen_at_the_end_of_the_grace_period_still_settles() {
+        // nothing for most of the grace period, a status on its last poll, then
+        // the PR's runs register and fail
+        let script = Script::new(vec![
+            poll(vec![], vec![]),
+            poll(vec![], vec![]),
+            poll(vec![], vec![]),
+            poll(vec![status("CodeRabbit", CheckState::Passed)], vec![]),
+            poll(
+                vec![status("CodeRabbit", CheckState::Passed)],
+                vec![run(2, "UI tests", RunStatus::Queued, None)],
+            ),
+            poll(
+                vec![
+                    status("CodeRabbit", CheckState::Passed),
+                    check("android-ui", CheckState::Failed, 2),
+                ],
+                vec![run(
+                    2,
+                    "UI tests",
+                    RunStatus::Completed,
+                    Some(RunConclusion::Failure),
+                )],
+            ),
+        ]);
+
+        let report = watch(script, false).await;
+
+        assert_eq!(
+            report,
+            Report::new(
+                format!("PR #978 (1f975f0): CI failed (android-ui) {URL}"),
+                false
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn pr_run_first_seen_completed_gets_its_own_settle_window() {
+        // the PR's run shows up already completed with its previous result, then
+        // reads queued again for a rerun that fails
+        let status_only = || poll(vec![status("CodeRabbit", CheckState::Passed)], vec![]);
+        let stale_pass = || {
+            poll(
+                vec![
+                    status("CodeRabbit", CheckState::Passed),
+                    check("android-ui", CheckState::Passed, 2),
+                ],
+                vec![done(2, "UI tests")],
+            )
+        };
+        let script = Script::new(vec![
+            status_only(),
+            status_only(),
+            status_only(),
+            stale_pass(),
+            poll(
+                vec![status("CodeRabbit", CheckState::Passed)],
+                vec![run(2, "UI tests", RunStatus::Queued, None)],
+            ),
+            poll(
+                vec![
+                    status("CodeRabbit", CheckState::Passed),
+                    check("android-ui", CheckState::Failed, 2),
+                ],
+                vec![run(
+                    2,
+                    "UI tests",
+                    RunStatus::Completed,
+                    Some(RunConclusion::Failure),
+                )],
+            ),
+        ]);
+
+        let report = watch(script, false).await;
+
+        assert_eq!(
+            report,
+            Report::new(
+                format!("PR #978 (1f975f0): CI failed (android-ui) {URL}"),
+                false
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn other_apps_checks_decide_ci_when_no_run_starts() {
+        // every workflow skipped this commit, so only CodeRabbit ever reports
+        let passed = Script::new(vec![poll(
+            vec![status("CodeRabbit", CheckState::Passed)],
+            vec![],
+        )]);
+        let failed = Script::new(vec![poll(
+            vec![status("CodeRabbit", CheckState::Failed)],
+            vec![],
+        )]);
+
+        assert_eq!(
+            watch(passed, false).await,
+            Report::new(format!("PR #978 (1f975f0): CI passed {URL}"), true)
+        );
+        assert_eq!(
+            watch(failed, false).await,
+            Report::new(
+                format!("PR #978 (1f975f0): CI failed (CodeRabbit) {URL}"),
                 false
             )
         );
