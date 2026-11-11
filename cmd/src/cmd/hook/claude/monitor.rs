@@ -7,7 +7,7 @@
 
 use serde::Deserialize;
 
-use super::text::{has_marker, mentions_homebased_wait, redirects_stderr_first};
+use super::text::{mentions_homebased_wait, redirects_stderr_first};
 use super::{recommend, Decision, HookInput};
 
 /// The Monitor tool's input; a WebSocket source has no `command`
@@ -28,7 +28,7 @@ pub fn homebased_wait_reason() -> String {
 
 pub fn wait_reason() -> String {
     format!(
-        "A Monitor wakes you for a full turn on every stdout line, so a wait must print once, when the job ends. Submit the command as a homebased task and run `{}` as a background Bash command with `timeout: {}`, or run it as foreground Bash if it takes under about 10 minutes. To stream on purpose, for example each new error in a log, add a `# stream: <why>` comment to the command and filter it to the lines you would act on.",
+        "A Monitor wakes you for a full turn on every stdout line, so a wait must print once, when the job ends. Submit the command as a homebased task and run `{}` as a background Bash command with `timeout: {}`, or run it as foreground Bash if it takes under about 10 minutes.",
         recommend::WAIT,
         recommend::WAIT_TIMEOUT_MS
     )
@@ -53,11 +53,6 @@ pub fn quiet(input: &HookInput) -> Decision {
         return Decision::Deny(homebased_wait_reason());
     }
 
-    // an explicit opt-in for a stream the agent wants, such as each new error in a log
-    if has_marker(&command, "stream:") {
-        return Decision::Allow;
-    }
-
     Decision::Deny(wait_reason())
 }
 
@@ -70,7 +65,7 @@ mod tests {
     use super::{homebased_wait_reason, wait_reason, REDIRECT_REASON};
 
     #[test]
-    fn monitors_must_opt_into_streams() {
+    fn command_monitors_are_denied() {
         let redirect = Decision::Deny(REDIRECT_REASON.to_owned());
         let homebased = Decision::Deny(homebased_wait_reason());
         let wait = Decision::Deny(wait_reason());
@@ -85,29 +80,20 @@ mod tests {
                 json!({"command": "tail -f log 2>&1 > out"}),
                 redirect.clone(),
             ),
-            (
-                json!({"command": "tail -f log 2>&1 > f # stream: x"}),
-                redirect.clone(),
-            ),
-            (
-                json!({"command": "make 2>&1 >/dev/null # stream: x"}),
-                redirect,
-            ),
+            (json!({"command": "tail -f log 2>&1 > f"}), redirect.clone()),
+            (json!({"command": "make 2>&1 >/dev/null"}), redirect),
             (
                 json!({"command": "homebased wait --next a"}),
                 homebased.clone(),
             ),
             (json!({"command": "homebased wait"}), homebased.clone()),
-            (
-                json!({"command": "homebased wait --next a # stream: x"}),
-                homebased,
-            ),
+            (json!({"command": "homebased wait --next a > f"}), homebased),
             (json!({"command": "cargo build > out 2>&1"}), wait.clone()),
             (json!({"command": "make 2>&1 >&2"}), wait.clone()),
-            (json!({"command": "gh run watch 1"}), wait),
+            (json!({"command": "gh run watch 1"}), wait.clone()),
             (
-                json!({"command": "tail -f app.log | grep --line-buffered ERROR # stream: each error"}),
-                Decision::Allow,
+                json!({"command": "tail -f app.log | grep --line-buffered ERROR"}),
+                wait,
             ),
         ];
 

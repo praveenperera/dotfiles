@@ -624,7 +624,7 @@ mod tests {
             assert_eq!(commands(source), *want, "{source:?}");
         }
 
-        let script = Script::parse("cat <<EOF\n# foreground-wait: x\nEOF\nls");
+        let script = Script::parse("cat <<EOF\n# note: x\nEOF\nls");
         assert_eq!(script.text, "cat <<EOF\nls");
     }
 

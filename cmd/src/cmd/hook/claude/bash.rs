@@ -105,7 +105,7 @@ pub fn wait_timeout(input: &HookInput) -> Decision {
 
 pub fn ci_wait_reason() -> String {
     format!(
-        "Do not wait on CI or a release run inside the turn. Submit the wait as a homebased task and end the turn: `{} [--greptile]` for a PR, or `{}` for a workflow run such as a release. In a T3 thread, then run `{}` as a background Bash command with `timeout: 7200000` and pass its task id to `t3_background_wait`. Both print one line when done; read it with `{}`. For a one-shot status check, drop the watch or sleep. To hold a wait in the turn anyway, add a `# foreground-wait: <why>` comment.",
+        "Do not wait on CI or a release run inside the turn. Submit the wait as a homebased task and end the turn: `{} [--greptile]` for a PR, or `{}` for a workflow run such as a release. In a T3 thread, then run `{}` as a background Bash command with `timeout: 7200000` and pass its task id to `t3_background_wait`. Both print one line when done; read it with `{}`. For a one-shot status check, drop the watch or sleep.",
         recommend::WATCH_PR_TASK,
         recommend::WATCH_RUN_TASK,
         recommend::WAIT,
@@ -126,11 +126,6 @@ pub fn ci_wait(input: &HookInput) -> Decision {
     };
 
     let script = Script::parse(&bash.command);
-
-    // an explicit opt-in for a wait the agent must hold in the turn
-    if has_marker(&script.text, "foreground-wait:") {
-        return Decision::Allow;
-    }
 
     // a wait handed to homebased is one of its arguments, never a command that
     // runs here, so a submission needs no exemption and cannot cover another
@@ -168,9 +163,36 @@ fn watches_ci(command: &Command) -> bool {
 }
 
 /// A `gh` call that reads CI state, which a `sleep` beside it turns into a poll
+///
+/// Other `gh` calls in a sleep loop, such as waiting out the API rate limit,
+/// an async merge, or a push retry, wait on GitHub but not on CI
 fn calls_gh_ci(command: &Command) -> bool {
-    command.program() == "gh" && matches!(command.args().next(), Some("run" | "pr" | "api"))
+    if command.program() != "gh" {
+        return false;
+    }
+
+    let names_ci = || {
+        command
+            .args()
+            .any(|arg| CI_API_PATHS.iter().any(|path| arg.contains(path)))
+    };
+    let mut args = command.args();
+    match (args.next(), args.next()) {
+        (Some("run"), Some("view" | "list")) | (Some("pr"), Some("checks")) => true,
+        (Some("pr"), Some("view")) | (Some("api"), _) => names_ci(),
+        _ => false,
+    }
 }
+
+/// Parts of a `gh api` path or `gh pr view` field that read CI status
+const CI_API_PATHS: &[&str] = &[
+    "check-runs",
+    "check-suites",
+    "actions/runs",
+    "actions/jobs",
+    "/status",
+    "statusCheckRollup",
+];
 
 /// T3 lists a thread under Waiting only after the background command that runs
 /// `homebased wait` is registered with `t3_background_wait`; the command alone
@@ -276,18 +298,17 @@ mod tests {
                 ("if false; then :; else gh run watch 1; fi", Ci),
                 ("sleep 60; gh api repos/o/r/actions/runs/1", Ci),
                 ("for i in 1 2 3; do sleep 30 && gh run view 5; done", Ci),
-                ("bash -lc 'sleep 30; gh pr view 5'", Ci),
+                (
+                    "bash -lc 'sleep 30; gh pr view 5 --json statusCheckRollup'",
+                    Ci,
+                ),
+                ("sleep 30; gh api repos/o/r/commits/abc/check-runs", Ci),
                 ("(gh run watch 1)", Ci),
                 ("echo `gh run watch 1`", Ci),
                 ("echo \"$(gh run watch 1)\"", Ci),
                 ("zsh -c \"gh run watch 1\"", Ci),
                 ("cat <<EOF\nnotes\nEOF\ngh run watch 1", Ci),
                 ("cmd ship watch-pr 5 \\\n  --greptile", Ci),
-                // an opt-in inside a heredoc body is data, not a comment
-                (
-                    "cat <<EOF\n# foreground-wait: in a body\nEOF\ngh run watch 1",
-                    Ci,
-                ),
                 // positions the old regex missed
                 ("/opt/homebrew/bin/gh run watch 1", Ci),
                 ("timeout -s KILL 600 gh run watch 1", Ci),
@@ -336,11 +357,17 @@ mod tests {
                 ("cmd sh --help", Allow),
                 ("cmd ship watch-pr --help", Allow),
                 ("cmd fl dfu", Allow),
+                // a sleep around a `gh` call that does not read CI, from real
+                // calls the old rule denied
+                ("sleep 100; date; gh api rate_limit --jq .resources.core", Allow),
                 (
-                    "gh run watch 1 # foreground-wait: the user asked to watch",
+                    "for i in 1 2 3 4 5 6; do s=$(gh pr view 962 --json state -q .state); [ \"$s\" = MERGED ] && break; sleep 5; done",
                     Allow,
                 ),
-                ("gh run watch 1 #foreground-wait:x", Allow),
+                (
+                    "for i in 1 2 3; do if git push -u origin x; then break; else sleep 15; fi; done; gh pr create --draft",
+                    Allow,
+                ),
                 (
                     "cat <<'EOF' > notes.md\ngh run watch 1\nsleep 30\nEOF",
                     Allow,

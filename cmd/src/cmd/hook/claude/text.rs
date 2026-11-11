@@ -12,8 +12,8 @@ fn trim_space(text: &str) -> &str {
     text.trim_start_matches(is_space)
 }
 
-/// Whether `text` holds an opt-in marker such as `# foreground-wait: <why>`,
-/// given as `foreground-wait:`
+/// Whether `text` holds an opt-in marker such as `# long-lived: <why>`, given
+/// as `long-lived:`
 pub fn has_marker(text: &str, marker: &str) -> bool {
     text.lines().any(|line| {
         line.match_indices('#')
@@ -77,11 +77,11 @@ mod tests {
 
     #[test]
     fn matches_like_the_grep_patterns() {
-        assert!(has_marker("x # foreground-wait: y", "foreground-wait:"));
-        assert!(has_marker("x #foreground-wait:", "foreground-wait:"));
+        assert!(has_marker("x # long-lived: y", "long-lived:"));
+        assert!(has_marker("x #long-lived:", "long-lived:"));
         assert!(has_marker("a\nb #\t long-lived: c", "long-lived:"));
-        assert!(!has_marker("x # foreground-wait y", "foreground-wait:"));
-        assert!(!has_marker("x #\nforeground-wait:", "foreground-wait:"));
+        assert!(!has_marker("x # long-lived y", "long-lived:"));
+        assert!(!has_marker("x #\nlong-lived:", "long-lived:"));
 
         assert!(mentions_homebased_wait("homebased wait --next a"));
         assert!(mentions_homebased_wait("cd x && homebased  wait"));
