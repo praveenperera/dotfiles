@@ -32,7 +32,7 @@ Every tool call the root makes re-reads the root's whole context. At 170K, a roo
 ## Keep delegates short-lived
 
 - Context is the root's job. Never put context sizes, limits or budgets in a brief, and never tell a delegate to stop or hand off because of its context. A delegate that knows its limit stops early to hand off, and every handoff re-reads the same setup. The root's watches compact delegates (see "Context watches and compaction"), and the root decides when to replace one.
-- When a delegate grows large, the root may queue a compact for it, or steer it. To queue a compact, run `homebased --json thread watch <ref> --context-above <current size> --action compact --once`, which compacts it the next time it is idle or waiting. To steer it, tell it what to do, such as "finish the current item, update your progress file, and report". Neither one tells the delegate about its context.
+- When a delegate grows large, the root may queue a compact for it, or steer it. To queue a compact, run `homebased --json thread watch <ref> --context-above <limit> --action compact --once` with a limit a few thousand tokens below its current size, which compacts it the next time it is idle or waiting. A watch fires only once the context is above its limit, so a limit equal to the current size may never fire. To steer it, tell it what to do, such as "finish the current item, update your progress file, and report". Neither one tells the delegate about its context.
 - Give each delegate one coherent phase. Do not split a phase only to make it smaller. Hand the next phase to a fresh delegate along with the state file and the previous report, and not to the old delegate with all its history. A follow-up of a few turns on the same change can stay with the same delegate.
 - The implementer owns its review loop. Its brief lets it start one fresh review, fix the findings, run delta reviews within the fix budget, and report the final verdict. The root does not pass findings back and forth between reviewer and implementer.
 - Replace a delegate that has compacted twice and still has much left to do: ask it for its report, then start a fresh one from that report. Its progress file (see the brief template) holds what it finished.
@@ -70,23 +70,34 @@ Send a status at phase boundaries, on any schedule the user sets, and when asked
 
 - Context limits:
 
-  | Thread | Default compact watch | Range |
+  | Thread | Default compact watch | Root may adjust within |
   |---|---|---|
-  | Root | 225K | adjust it from what you see, up to 400K |
-  | Delegates | 300K | lower it, or raise it up to 400K, per delegate |
+  | Root | 200K | 150–250K |
+  | Claude delegates: implementation, research, review | 250K | 200–300K; up to the model's ceiling only to let a delegate finish an item that is nearly done |
+  | Codex delegates | none | they compact themselves at about 210–270K |
+  | Agent-tool subagents, such as Explore | none, since they are not T3 threads | scope them to finish well under 150K, and under 100K on Haiku, which costs 5x above 100K |
 
-  400K is the ceiling. Claude Code's own auto-compact window is set to 400K, and it compacts a Claude thread mid-turn when the thread reaches that size. A homebased watch compacts a thread only while it is idle or waiting, so it compacts at a turn boundary before the ceiling forces a compaction mid-turn. Codex delegates manage their own context, and these limits do not apply to them.
+  Why these numbers (from six weeks of usage data in `~/code/research/agents/context-size-vs-token-cost-2026-11.md`): cache reads are almost all input tokens, so each extra 100K adds about $0.02 to every Opus call. A compaction costs about $0.50 and pays for itself within 10 to 15 calls. A fresh delegate costs about $1.27 before its first edit. Compacting at 250K is cheaper than both handing off at 150K and running to 400K. The data shows little loss of quality at these sizes.
 
-- Set these watches from the root's own thread at the start, and run the second again after starting new delegates. `--children` also covers the calling thread, but the root's 225K watch fires first. `--children` covers only the subagents that are live when the command runs, and running the same watch again reuses it instead of adding a second one:
+  Each model's ceiling is its Claude Code auto-compact window in `~/.claude/settings.json`: 325K for Opus 5.5, and 256K for Sonnet 5.5 and Haiku 5.5. Claude Code compacts a thread mid-turn when it reaches that size, so a watch at or above it never fires. Keep every watch below the ceiling of the thread's model. A homebased watch compacts a thread only while it is idle or waiting, so it compacts at a turn boundary before the ceiling forces a compaction mid-turn.
+
+  Reviews and other subagents that a delegate starts itself get no context watch, because the root does not learn their thread ids. That is deliberate. They are usually Codex, and Claude reviews rarely grow large enough to compact.
+
+- Set the root's watch on its own thread at the start:
 
   ```bash
-  homebased --json thread watch --context-above 225k --action compact
-  homebased --json thread watch --children --context-above 300k --action compact
+  homebased --json thread watch --context-above 200k --action compact
   ```
 
-  `--children` covers only T3 subagents. Threads the root started as top-level threads, such as with `t3_thread_launch` or `homebased t3 launch`, need their references passed explicitly: `homebased --json thread watch <ref>... --context-above 300k --action compact`.
+  Give each Claude delegate its own watch when you start it, using the child thread id that `delegate_task` returns, or the reference of a top-level thread you launched to coordinate:
 
-  To change one thread's limit, run `homebased thread unwatch <watch-id>` on its current context watch, then run `homebased --json thread watch <ref> --context-above <limit> --action compact`. A watch with another limit on the same thread is a second watch, not a replacement, and the lower limit still fires first. A delegate still covered by the `--children` watch keeps its 300K limit too, so to raise one delegate above 300K, end the `--children` context watch and give each live delegate its own watch. Record each change and its reason in the state file's settled decisions.
+  ```bash
+  homebased --json thread watch <child-thread-id> --context-above 250k --action compact
+  ```
+
+  Do not use `--children` for context watches. It covers the calling thread and every live subagent, Codex delegates included, with no model filter. Running it again after a new delegate also adds a 250K watch on top of any limit you have already raised. Per-thread watches keep each limit where you set it, and leave Codex delegates alone. Running the same watch again reuses it instead of adding a second one.
+
+  To change one thread's limit, run `homebased thread unwatch <watch-id>` on its current context watch, then run `homebased --json thread watch <ref> --context-above <limit> --action compact`. A watch with another limit on the same thread is a second watch, not a replacement, and the lower limit still fires first. Keep the root within 150–250K. Record each change and its reason in the state file's settled decisions, and each watch id in its operations block.
 
   Watch the same threads for stalls, again after starting new delegates:
 
