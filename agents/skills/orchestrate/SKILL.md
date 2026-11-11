@@ -33,13 +33,9 @@ Every tool call the root makes re-reads the root's whole context. At 170K, a roo
 
 - Context is the root's job. Never put context sizes, limits or budgets in a brief, and never tell a delegate to stop or hand off because of its context. A delegate that knows its limit stops early to hand off, and every handoff re-reads the same setup. The root's watches compact delegates (see "Context watches and compaction"), and the root decides when to replace one.
 - When a delegate grows large, the root may queue a compact for it, or steer it. To queue a compact, run `homebased --json thread watch <ref> --context-above <current size> --action compact --once`, which compacts it the next time it is idle or waiting. To steer it, tell it what to do, such as "finish the current item, update your progress file, and report". Neither one tells the delegate about its context.
-- Size each delegate's work by its role. The root uses these sizes only for its own planning and watches:
-  - **Implementation delegates** that edit, build and test code: up to about 375K. With 150K, an implementer finishes only one or two items before it hands off.
-  - **Reviews, code searches and other read-only delegates:** under about 150K.
-  - **The root** stays small, as described in "Context watches and compaction". Every root call re-reads its whole context, so a larger limit costs more there and buys nothing.
 - Give each delegate one coherent phase. Do not split a phase only to make it smaller. Hand the next phase to a fresh delegate along with the state file and the previous report, and not to the old delegate with all its history. A follow-up of a few turns on the same change can stay with the same delegate.
 - The implementer owns its review loop. Its brief lets it start one fresh review, fix the findings, run delta reviews within the fix budget, and report the final verdict. The root does not pass findings back and forth between reviewer and implementer.
-- Replace a delegate that has compacted twice or is past its size: ask it for its report, then start a fresh one from that report. Its progress file (see the brief template) holds what it finished.
+- Replace a delegate that has compacted twice and still has much left to do: ask it for its report, then start a fresh one from that report. Its progress file (see the brief template) holds what it finished.
 
 ## Stalled or dead delegates
 
@@ -72,14 +68,25 @@ Send a status at phase boundaries, on any schedule the user sets, and when asked
 
 ## Context watches and compaction
 
-- Set these watches from the root's own thread at the start, and run the second again after starting new delegates. The first compacts the root at 200K. The second compacts delegates at 375K, the implementer budget. `--children` also covers the calling thread, but the root's 200K watch fires first. `--children` covers only the subagents that are live when the command runs, and running the same watch again reuses it instead of adding a second one:
+- Context limits:
+
+  | Thread | Default compact watch | Range |
+  |---|---|---|
+  | Root | 225K | adjust it from what you see, up to 400K |
+  | Delegates | 300K | lower it, or raise it up to 400K, per delegate |
+
+  400K is the ceiling. Claude Code's own auto-compact window is set to 400K, and it compacts a Claude thread mid-turn when the thread reaches that size. A homebased watch compacts a thread only while it is idle or waiting, so it compacts at a turn boundary before the ceiling forces a compaction mid-turn. Codex delegates manage their own context, and these limits do not apply to them.
+
+- Set these watches from the root's own thread at the start, and run the second again after starting new delegates. `--children` also covers the calling thread, but the root's 225K watch fires first. `--children` covers only the subagents that are live when the command runs, and running the same watch again reuses it instead of adding a second one:
 
   ```bash
-  homebased --json thread watch --context-above 200k --action compact
-  homebased --json thread watch --children --context-above 375k --action compact
+  homebased --json thread watch --context-above 225k --action compact
+  homebased --json thread watch --children --context-above 300k --action compact
   ```
 
-  `--children` covers only T3 subagents. Threads the root started as top-level threads, such as with `t3_thread_launch` or `homebased t3 launch`, need their references passed explicitly: `homebased --json thread watch <ref>... --context-above 375k --action compact`.
+  `--children` covers only T3 subagents. Threads the root started as top-level threads, such as with `t3_thread_launch` or `homebased t3 launch`, need their references passed explicitly: `homebased --json thread watch <ref>... --context-above 300k --action compact`.
+
+  To change one thread's limit, run `homebased thread unwatch <watch-id>` on its current context watch, then run `homebased --json thread watch <ref> --context-above <limit> --action compact`. A watch with another limit on the same thread is a second watch, not a replacement, and the lower limit still fires first. A delegate still covered by the `--children` watch keeps its 300K limit too, so to raise one delegate above 300K, end the `--children` context watch and give each live delegate its own watch. Record each change and its reason in the state file's settled decisions.
 
   Watch the same threads for stalls, again after starting new delegates:
 
@@ -90,8 +97,8 @@ Send a status at phase boundaries, on any schedule the user sets, and when asked
 
   It sends `THREAD_STALLED` once a thread has sat idle for 20 minutes with no turn running, no homebased task or job owing it events, and no delegated task due to report to it. A delegate's stall watch ends on its own when its task finishes. A top-level thread looks the same after its final report as when it stalls, so run `homebased thread unwatch <watch-id>` when that report arrives.
 
-  The context watches compact the root above 200K and a child above 375K once it sits idle or waiting, without waking the root. The root hears about it only when the compaction cannot start. Do not add a notify-only watch (no `--action`) by default: each one wakes the root for a full turn, and that turn ends up running the same compaction by hand. Add one only for a child whose work you would rather hand to a fresh thread than compact. Record the watch ids in the state file. `homebased thread watches` lists them, and `homebased thread unwatch <watch-id>` ends one.
-- Rewrite the state file at every phase boundary. Then check the context with `homebased thread context`. Once it is past about 150K, run `homebased --json thread watch --context-above 150k --action compact --once` and end the turn. T3 compacts the thread as soon as it is idle. The compaction wakes the root only when no delegate, task or job is still due to report; otherwise the next report resumes it. Do not run `homebased thread compact` on the root's own thread: T3 refuses to compact a thread while its turn is running.
+  The context watches compact a thread once it sits idle or waiting above its limit, without waking the root. The root hears about it only when the compaction cannot start. Do not add a notify-only watch (no `--action`) by default: each one wakes the root for a full turn, and that turn ends up running the same compaction by hand. Add one only for a child whose work you would rather hand to a fresh thread than compact. Record the watch ids in the state file. `homebased thread watches` lists them, and `homebased thread unwatch <watch-id>` ends one.
+- Rewrite the state file at every phase boundary, so a compaction at any time loses nothing. A root compaction wakes the root only when no delegate, task or job is still due to report; otherwise the next report resumes it. Do not run `homebased thread compact` on the root's own thread: T3 refuses to compact a thread while its turn is running. Use a `--once` watch instead, as described in "Keep delegates short-lived".
 - `homebased --json thread context --children --live` lists the live delegates with their state, model and context size. Use it to rebuild the delegate list in the state file and to spot a delegate that is due for replacement.
 - Compact, cancel, message or replace only threads in the root's own tree: the root, the threads it started, and their descendants. Before you act on a thread, confirm that it is in that tree with `homebased --json thread context --children --live` or the owners table in the state file. Do not act on a thread only because it is waiting or large. A compaction that started cannot be undone. Do not compact a thread again soon after it compacted, because that loses detail and saves little.
 - After compaction, re-read the state file before anything else. Take ids and commands from its operations block instead of grepping the transcript or rerunning `--help`. If something you needed was missing, add it to the block.
