@@ -14,6 +14,7 @@ pub mod gcloud;
 pub mod generate;
 pub mod hook;
 pub mod install;
+pub mod instructions;
 pub mod main_cmd;
 pub mod mcp;
 pub mod modal;
@@ -135,6 +136,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             Ok(())
         }
         MainCmd::Ship { subcommand } => ship::run_with_flags(subcommand),
+        MainCmd::Instructions { subcommand } => instructions::run(subcommand),
         MainCmd::Skill { subcommand } => {
             let skill_flags = skill::Skill { subcommand };
             skill::run_with_flags(sh, skill_flags)

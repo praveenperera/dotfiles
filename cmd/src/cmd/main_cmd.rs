@@ -215,6 +215,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::ship::ShipCmd,
     },
 
+    /// Render or check CLAUDE.md and AGENTS.md from agents/instructions
+    #[command(arg_required_else_help = true)]
+    Instructions {
+        #[command(subcommand)]
+        subcommand: crate::cmd::instructions::InstructionsCmd,
+    },
+
     /// Manage reusable agent skills
     #[command(visible_alias = "sk", arg_required_else_help = true)]
     Skill {

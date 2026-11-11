@@ -33,7 +33,7 @@ Repeated symptoms with one cause produce one lesson. Do not preserve a workaroun
 
 ## Propose before changing policy
 
-Unless the user already asked to apply the findings, present a compact proposal and wait before editing global skills or instructions. Repository-local tests, lints, and scripts still require the authority of the active task.
+Unless the user already asked to apply the findings, present a compact proposal and wait before editing global skills or instructions. The global `CLAUDE.md` and `AGENTS.md` are generated: edit the fragments in `~/code/dotfiles/agents/instructions` and run `cmd instructions render`. Repository-local tests, lints, and scripts still require the authority of the active task.
 
 Use `skill-creator` for substantive skill changes. Preserve existing skill scope and remove stale guidance that the new lesson replaces.
 

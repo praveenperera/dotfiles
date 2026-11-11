@@ -8,6 +8,7 @@ use clap::{Parser, ValueEnum};
 use eyre::Result;
 use xshell::{cmd, Shell};
 
+use crate::cmd::instructions::Instructions;
 use crate::os::Os;
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -218,6 +219,9 @@ pub fn run_with_flags(sh: &Shell, flags: Bootstrap) -> Result<()> {
 }
 
 pub fn config(sh: &Shell) -> Result<()> {
+    // the linked CLAUDE.md and AGENTS.md are generated, so refuse to deploy ones
+    // that drifted from agents/instructions
+    Instructions::new(crate::dotfiles_dir()?).check()?;
     link::config(sh)?;
     codex_plugins::reconcile()
 }
