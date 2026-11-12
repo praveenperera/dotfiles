@@ -46,6 +46,8 @@
 - Model facts (`modelSettings` in `settings.json`): an Agent call without `model` inherits the session's model (`model` sets Fable as the default), and Opus 5.5 and Sonnet 5.5 both default to `high` effort. Every subagent first reads its system prompt and these instructions. Haiku 5.5 costs 5x once its prompt, which includes everything it has read, passes 100K tokens, still about 4x cheaper than Sonnet 5.5, and auto-compacts at 256K, which loses detail. Sonnet 5.5 cache reads cost the same as Opus 5.5, so in long agent loops, where re-reading context dominates cost, switching to Sonnet saves well under half.
 - Pick the runner by duration. Use the Agent tool for work that finishes in this turn, which covers most exploration, and `homebased` for long or unattended agent work. In a T3 thread, use T3's `delegate_task` for that agent work instead, so the work shows under the thread and the orchestrator's compact watches can reach it. Keep `homebased` there for commands, Fleet machines, the GPU queue, and `after` chains.
 - Set `model` on every Agent call; a hook denies calls that leave it out, and the brief then has to be sent again.
+- Never use `max` effort for Anthropic models (Fable, Opus, Sonnet, Haiku), whether subagent, delegate, reviewer, or thread; use `xhigh` at most. Only the Codex models GPT-6.1 Terra and GPT-6 Luna may run at `max`.
+- Always ask me before using Fable (any version) for a subagent, delegate, reviewer, or thread. Default to Opus 5.5.
 
 # Verification
 
