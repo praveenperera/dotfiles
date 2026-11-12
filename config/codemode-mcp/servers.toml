@@ -61,7 +61,8 @@ builtin = "secrets"
 # session's page without the agent seeing it, and asks on every call; while
 # the user is away the phone is asked for the whole sign-in at once.
 # `handoff` pushes to the phone and waits while the user drives the session
-# there, such as for a passkey. Not served to spokes
+# there, such as for a passkey. Served to spokes, whose fills are checked
+# and approved here
 [servers.browser]
 builtin = "browser"
 policy = "ask"
