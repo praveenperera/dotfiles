@@ -13,7 +13,7 @@ Use the Mac mini to coordinate work. Use `code.local` for remote development, im
 | --- | --- | --- |
 | Mac mini (`main`, via Tailscale) | Local macOS, `praveen` | Main workstation, local agents, and macOS work |
 | `ai5090.local` | `192.168.1.20`, `praveen` | Ubuntu Incus host; host administration and Homebased maintenance tasks only |
-| `code.local` | `192.168.1.18`, `praveen` | Incus container on ai5090; coding agents, compilation, AI development, image builds, training jobs, GPU workloads, datasets, and checkpoints |
+| `code.local` | `192.168.1.18`, `praveen` | Incus container on ai5090; coding agents, compilation, Android builds and emulator tests, AI development, image builds, training jobs, GPU workloads, datasets, and checkpoints |
 | `server.local` | `192.168.1.50`, `root` | Separate Proxmox host for the service containers below |
 | `media.local` | `192.168.1.11`, `root` | Plex, Jellyfin, downloads, media automation, and home dashboard |
 | `bitcoin.local` | `192.168.1.10`, `root` | Bitcoin Knots, electrs, and mempool |
@@ -37,6 +37,7 @@ These are configured roles and addresses, not proof that a machine is online. Co
 - To run a coding agent on another machine as a T3 Code thread, use `homebased t3`: `homebased t3 launch` starts the thread there and `homebased t3 project` adds the project first when the machine lacks it.
 - Run long commands, such as builds, test suites, and training, as homebased tasks, and send all GPU work through the homebased resource queue, as the `homebased` skill says. Use a named tmux session only for an interactive session or a hand-off to Praveen, and read [sessions.md](references/sessions.md) first. Run short, non-interactive checks and routine commands directly.
 - For GPU work, shared files, and image builds, also read [compute.md](references/compute.md).
+- Android builds, unit tests, and instrumented tests on an emulator can run on `code`, which has the Android SDK, JDK 17, and `/dev/kvm`; see "Android toolchain in `code`" in `~/code/homelab/ai5090/README.md`. Start an emulator only inside a Homebased task, give concurrent runs different ports, and kill it when the task ends. iOS work and physical devices stay on the Mac mini.
 - For disk layout, where to put datasets, checkpoints, and build output, moving finished data, deduplication, or cleanup on `ai5090` and `code`, read [storage.md](references/storage.md).
 - For compute administration, read `~/code/homelab/ai5090/README.md` and the relevant setup script in `ai5090/scripts/`. Do not rerun provisioning for routine work.
 - For service administration, read the relevant homelab configuration: `main.tf`, `server/etc/avahi/hosts`, `stacks/<name>/`, or `justfile`. Service stacks use `/opt/stack` in their containers.
