@@ -11,9 +11,10 @@ Every tool call the root makes re-reads the root's whole context. At 170K, a roo
 
 ## Start
 
-1. Agree the scope before any fan-out: the goal, the done condition, what is out of scope, and who owns what. Ask any questions in one batch. Do not start research sweeps or implementers until the scope is settled.
-2. Write the state file from [state-file.md](references/state-file.md) before the first delegate starts.
-3. Put the standing rules in its RULES section once. Briefs link to that section instead of restating it.
+1. Agree the scope before any fan-out: the goals, the done condition for each, what is out of scope, and who owns what. Ask any questions in one batch. Do not start research sweeps or implementers until the scope is settled.
+2. Write each goal in the state file's Goals table in the user's words. Every status reports against that table, so a goal missing from it never gets reported.
+3. Write the state file from [state-file.md](references/state-file.md) before the first delegate starts.
+4. Put the standing rules in its RULES section once. Briefs link to that section instead of restating it.
 
 ## Coordinate, don't implement
 
@@ -56,15 +57,23 @@ Every tool call the root makes re-reads the root's whole context. At 170K, a roo
 
 ## Status
 
-Use this format every time:
+The user asks for a status to learn where the run stands against the goals they set, not to follow the work. They do not track the details between updates. Lead with what the run means for their goals, and put the details after it.
 
-- **Done:** a percentage, computed with the progress formula in the state file
-- **Left:** each open item, with its owner and next step
-- **Time left:** the finish estimate for the last item, and the slack against the deadline when there is one
-- **Needs you:** each decision with its options and a recommendation, or "nothing"
-- **Issues:** blockers, failures and stalls
+Use this format every time, in this order:
 
-Send a status at phase boundaries, on any schedule the user sets, and when asked, but not for every event. Each time, replace the Latest block in the state file.
+1. **Bottom line:** one or two sentences that say whether we are getting what we set out to do. When the honest answer is "unlikely" or "no", say that first.
+2. **Goals:** one line per row of the state file's Goals table: on track, at risk or off track; what changed since the last status; and the next check that decides it.
+3. **Needs you:** each decision with its options and a recommendation, or "nothing".
+4. **Details**, for the user to dig into:
+   - **Done:** a percentage, computed with the progress formula in the state file
+   - **Left:** each open item, with its owner and next step
+   - **Time left:** the finish estimate for the last item, and the slack against the deadline when there is one
+   - **Issues:** blockers, failures and stalls
+   - Workstream notes, each one naming the goal it moves. Work that changes no goal's standing goes in the state file or the journal, not here.
+
+The first three parts have to stand alone, because the user may read nothing else. Keep them to about ten lines, and write them for someone who has not followed the run: no job ids, thread ids, SHAs, internal code names or parameter values unless the user uses them. Do not write "what this means" as a closing section. That meaning is the bottom line. A request for a "quick update" or a "TLDR" gets the first three parts and one line offering the details.
+
+Send a status at phase boundaries, on any schedule the user sets, and when asked, but not for every event. Each time, update the standing in the Goals table and replace the Latest block in the state file with the bottom line and goal lines.
 
 ## Context watches and compaction
 

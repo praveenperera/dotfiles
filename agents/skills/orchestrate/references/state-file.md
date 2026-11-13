@@ -18,9 +18,13 @@ The state file is the root's memory across compactions. Keep it at `_scratch/<ta
 
 Re-read this after any context compaction, before anything else. Times are US Central.
 
-## Goal
-- <goal and done condition, with the user's words and time>
-- <deadline, if any>
+## Goals
+<!-- One row per goal the user set, in their words. Every status reports against this table; update Standing each time -->
+| Goal (user's words, time set) | Done looks like | Standing | Next decisive check |
+|---|---|---|---|
+| <goal> | <measurable done condition> | on track / at risk / off track: <one plain-language reason> | <the check that settles it, and when> |
+
+- Deadline: <if any>
 - Out of scope: <...>
 
 ## Owners
@@ -44,7 +48,7 @@ Re-read this after any context compaction, before anything else. Times are US Ce
 
 ## Progress
 - Formula: <how % done is computed, such as items met over items planned>
-- Latest (<time>): <the last status, replaced each time>
+- Latest (<time>): <the last status's bottom line and goal lines, replaced each time>
 
 ## Next
 - [ ] <open item, with owner and next step>

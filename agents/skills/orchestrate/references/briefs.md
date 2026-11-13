@@ -7,6 +7,7 @@ A delegate knows only its brief. Use [use-agents](../../use-agents/SKILL.md) for
 ```markdown
 <objective, in one or two sentences>
 
+Goal it serves: <the row of the state file's Goals table this work moves, and how>
 Scope you own: <files, PR, branch or worktree>
 Not yours: <what other delegates own, and what you must not touch>
 Decided approach: <the design choices already made>
@@ -21,7 +22,7 @@ Review loop: when the change is verified, <start one fresh review with delegate_
 
 Shared resources: do not delete files, reorder queues, rebase or merge other PRs, or take locks that are not yours. List what you need in your report.
 
-Report only a final state:
+Report only a final state, and start it with one sentence on what the result means for the goal it serves:
 - done: changed files, commits, check results, the final review verdict with the head SHA it covered and the reviewer model and effort, risks
 - failed: what failed, the evidence, and what you tried
 - blocked: the one decision or resource you need from the root
