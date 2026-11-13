@@ -146,7 +146,8 @@ notes = "`just bump` only edits the version files and `just release github` only
 # -- PR gated
 
 [repos."avencera/codemode-mcp"]
-steps = ["commit", "push", "pr", "merge", "deploy", "clean"]
+steps = ["commit", "push", "pr", "greptile", "merge", "deploy", "clean"]
+greptile = true
 deploy = [
   "just bump <part>",
   "just release github",
@@ -161,8 +162,9 @@ greptile = true
 publish = ["just publish --dry-run", "just publish"]
 
 [repos."avencera/scriptrs"]
-steps = ["sol", "commit", "push", "pr", "clean"]
-notes = "CodeRabbit also reviews PRs here; address its comments before merging. Merge is opt-in with +merge"
+steps = ["sol", "commit", "push", "pr", "greptile", "clean"]
+greptile = true
+notes = "CodeRabbit also reviews PRs here; address its comments in the greptile step too. Merge is opt-in with +merge"
 
 [repos."avencera/cudakit"]
 steps = ["sol", "commit", "push", "pr"]
@@ -176,12 +178,14 @@ publish = [
 notes = "Greptile is not enabled here; CodeRabbit reviews PRs, so address its comments before merging. Merge is opt-in with +merge. scriptrs and speakrs depend on cudakit from crates.io, so say in the PR when a release needs their version requirement bumped"
 
 [repos."avencera/sam3rs"]
-steps = ["sol", "commit", "push", "pr", "clean"]
-notes = "Greptile is not enabled here. Merge is opt-in with +merge"
+steps = ["sol", "commit", "push", "pr", "greptile", "clean"]
+greptile = true
+notes = "Merge is opt-in with +merge"
 
 [repos."avencera/dialogrs"]
-steps = ["sol", "commit", "push", "pr", "clean"]
-notes = "Greptile is not enabled here. Merge is opt-in with +merge. The Cargo.lock follows the sibling ../speakrs and ../scriptrs checkouts, so ship it after their changes"
+steps = ["sol", "commit", "push", "pr", "greptile", "clean"]
+greptile = true
+notes = "Merge is opt-in with +merge. The Cargo.lock follows the sibling ../speakrs and ../scriptrs checkouts, so ship it after their changes"
 
 [repos."avencera/rustywind"]
 steps = ["sol", "commit", "push", "pr", "greptile", "merge", "clean"]
