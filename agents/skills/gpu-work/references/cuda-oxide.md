@@ -2,13 +2,13 @@
 
 Traps that cost correctness or speed in cuda-oxide kernels, with their fixes and the checks that catch them. Recheck entries when the pin moves.
 
-**Coverage:** elementwise, norm, conv, flash-attention, small-M `mma`, DTW and side kernels, all on an RTX 5090 (sm_120); the sm_80 PTX tier has never run on Ampere. Not yet exercised, so expect unlisted traps: atomics, grid-wide reductions, cooperative launches, TMA, `wgmma`, FP8, clusters.
+**Coverage:** elementwise, norm, 2D and 3D conv, flash-attention, small-M `mma`, DTW, relaxed block and device `u32` atomics (histograms) and side kernels, written on an RTX 5090 (sm_120). The sm_80 tier has run on A100, A10, L4 and 4090, and an sm_75 tier on a T4 (inkrs). Not yet exercised, so expect unlisted traps: grid-wide reductions, cooperative launches, TMA, `wgmma`, FP8, clusters.
 
 ## Setup
 
 The pin and crate layout are in SKILL.md "Kernels".
 
-- **Moving the pin:** rebuild at both pins, run `sass_mix.sh` over every kernel, and time any kernel whose registers moved.
+- **Moving the pin is a codegen change, even with no source change.** Rebuild at both pins, run `sass_mix.sh` over every kernel, and time any kernel whose registers moved. Explain any speed move over a few percent before accepting it, and diff outputs per layer when they drift: the fork-to-upstream move changed inkrs maps by up to 1/255 with every gate passing, and moved tla kernels by −41% to +35%, all unexplained. Tag every results file with the pin it ran at, and keep the old pin reachable (a tag) until every consumer has moved. Budget about half a day per project plus queue time.
 - The backend cache in `$CARGO_HOME/cuda-oxide/` has one slot, rebuilt whenever a project's `cuda-device` resolves to another commit, hence the project-owned `CARGO_HOME`.
 - `cargo oxide build` rebuilds a missing or stale backend, so build scripts needn't call `setup`. `setup` always rebuilds, and refuses when `CUDA_OXIDE_BACKEND` or `.cargo/cuda-oxide.toml` pins the backend. `build` rewrites the PTX every run only when the crate root is `src/lib.rs` or `src/main.rs`; otherwise check the PTX timestamp.
 - **Use the toolchain's own llc, and fail when it's missing.** Set `CUDA_OXIDE_LLC=$(rustc +T --print sysroot)/lib/rustlib/<host>/bin/llc`; otherwise cuda-oxide silently falls back to the sysroot llc, then `llc-23`…`llc` on PATH, and another llc changes codegen and speed. Don't inherit an env file's `llc-21`. Keep the pinned toolchain out of rustup cleanup; reinstall it with `rustup component add rust-src rustc-dev llvm-tools --toolchain T`.
@@ -22,6 +22,7 @@ The pin and crate layout are in SKILL.md "Kernels".
 - **Use a counted loop over views, not `Zip` over a slice and a view iterator**, which has two exits and stays rolled. `zip_exact` is fine.
 - **Don't return `Option<(struct, views...)>` from an inline helper**; the payload goes to the stack. Return a plain tuple and `unreachable_unchecked()` past one up-front check.
 - **Register arrays indexed by a rolled loop's counter go to `.local`.** Indices must be constants, so the loop must fully unroll; a body calling `expf` can stay rolled, and filling through `iter_mut().enumerate()` also lands on the stack. Put `#[unroll]` on every loop that indexes a register array, or build vectors with array constructors. `opt` runs `default<O2>`, whose full-unroll threshold is half of clang `-O3`'s, so loops nvcc unrolls can stay rolled. Only `cargo oxide build --verbose` warns ("could not be promoted to registers"), so check `ptxas -v` for a frame.
+- **LLVM can hoist loop-invariant loads, or merge a later pass's reloads into an earlier pass, until a kernel hits 255 registers and spills** (inkrs `stem1_stats`: 1088 B of spill; `depth_pool`: 440 B frame). Load with `read_volatile` where the value is cheap to reload, or hold it packed (fp16 pairs); in ptxas `-v`, 255 registers is the tell. Prefetching `mma` fragments can do the same: it roughly doubled registers in inkrs's convs and halved occupancy.
 - **Avoid 64-bit `/` and `%`** (`i64` and every runtime `usize`); they compile to a SASS `CALL`. Use 32-bit coordinates (`thread::index_1d_u32`, `element_thread32`, `#[launch_contract(coordinates = u32)]`), shifts or constant divisors. In block-per-row kernels pass the row length as a param, not `x.len() / gridDim.x`.
 - **Panic checks compile to traps.** `clamp` asserts min ≤ max and `/` checks for zero, even with bounds known safe. Use `max` then `min`, and divide by `x.max(1)`. A thread-dependent trap marks the warp divergent, so ptxas wraps every later shuffle and `mma` in WARPSYNC; in warp-cooperative kernels check once with a block-uniform condition and index unchecked after.
 - **Bounds-checked `slice[i]` in a loop can stop unrolling** and costs registers. Read through `MatrixView32`/`RowView32`, whose `get(i)` checks once.
@@ -48,7 +49,11 @@ The pin and crate layout are in SKILL.md "Kernels".
 
 ## API gaps and limits
 
-- `#[unroll]` only works inside `#[kernel]`/`#[device]` bodies; in a `macro_rules!` body or plain helper, start the loop body with `__unroll_config::<N>()` (0 = fully). An inner `__unroll_config::<0>()` loop starting at an outer loop's variable stays rolled: loop `i` over `0..N` and use `kk = c0 + i`.
+- **At `8d8254869` every `scalar_arithmetic` intrinsic is refused below sm_80** (`add_rn_f32`, `mul_rn_f32`, `fma_rn_f32`, `div_*` with explicit rounding), though PTX has had them since sm_20: a catalog mis-tag ([#1462](https://github.com/NVIDIA/cuda-rust/issues/1462), fixed by #1725, open as of 2026-11-13). In the sm_75 tier write them with `ptx_asm!(... options(register_only))` behind a tier feature in one shim module, and drop the shim once the pin includes #1725. `scalar_math` (`sqrt_rn`, `ex2_approx`, ...) was fixed in #1670 and works on sm_75 at this pin. `cvt_f16x2_f32` and `mma_m16n8k16_f32_f16` really are sm_80+: use two `cvt.rn.f16.f32` and two `mma_m16n8k8_f32_f16`.
+- `#[unroll]` only works inside `#[kernel]`/`#[device]` bodies; in a `macro_rules!` body or plain helper, start the loop body with `__unroll_config::<N>()` (0 = fully). A helper shared with a host crate that lacks `cuda_device` can't call it; use a per-crate `unroll_full!()` macro that expands to nothing on the host.
+- `cp_async_wait_group` needs a literal count; `match` over the const param.
+- Generic kernels export `_TID_` hash names; wrap const-generic kernels in macro-generated non-generic `#[kernel]`s so hosts can find them.
+- A `&mut dyn FnMut` helper compiles to an indirect call; use a macro. An inner `__unroll_config::<0>()` loop starting at an outer loop's variable stays rolled: loop `i` over `0..N` and use `kk = c0 + i`.
 - An unroll clones at most 65,536 operations, counted after inner loops expand; an outer loop around a few fully unrolled inner loops goes over, stays rolled with a warning, and moves any local array it indexes to `.local`. There is no per-loop override: split the loop or unroll less.
 - `ThreadIndex32` is not `Copy`: each output `DisjointSlice` needs its own witness from `thread::index_1d_u32(lc)`.
 - No block-indexed output space: a block that owns a row writes through `DisjointSlice::get_unchecked_mut` with a SAFETY comment. Taking one buffer as both `&[T]` and `DisjointSlice<T>` is UB, so an in-place kernel takes only the `DisjointSlice` and reads through its raw pointer.
@@ -65,8 +70,10 @@ The pin and crate layout are in SKILL.md "Kernels".
 
 ## Checks on every build
 
-- `scripts/sass_mix.sh REF.ptx NEW.ptx [ARCH] [KERNEL...]` (CPU only): calls left in each PTX, then per kernel the registers, stack, spills, SASS instruction count and trap opcodes (generic `LD`, `FSETP`+`FSEL`, `LDL`/`STL`). With no kernels, every kernel whose registers or spills changed.
-- `scripts/nsys_kernel_diff.py CTL.sqlite[,...] EXP.sqlite[,...] [N]`: per-kernel GPU time of two builds from nsys SQLite exports, both profiled through the queue with the same command, interleaved.
+- `~/.claude/skills/gpu-work/scripts/sass_mix.sh REF.ptx NEW.ptx [ARCH] [KERNEL...]` (CPU only): calls left in each PTX, then per kernel the registers, stack, spills, SASS instruction count and trap opcodes (generic `LD`, `FSETP`+`FSEL`, `LDL`/`STL`). With no kernels, every kernel whose registers or spills changed.
+- `~/.claude/skills/gpu-work/scripts/nsys_kernel_diff.py CTL.sqlite[,...] EXP.sqlite[,...] [N]`: per-kernel GPU time of two builds from nsys SQLite exports, both profiled through the queue with the same command, interleaved.
 - No `call` in the PTX; fail the build on one. Check PTX, not SASS: ptxas adds SASS `CALL`s for the IEEE f32 division slow path (`1/x`, `x/n`) even when everything is inlined. Other SASS `CALL`s are real: integer divides or divergent-shuffle fallbacks.
-- ptxas `-v`: no unexpected spills or frames (a 32-byte frame with `sinf`/`cosf` is libdevice's slow path, as with nvcc).
+- ptxas `-v`: fail the build on any frame or spill not on a committed allowlist that gives its reason (a 32-byte frame with `sinf`/`cosf` is libdevice's slow path, as with nvcc). Reading the log isn't enough: inkrs shipped a 192 B frame and an 8 B spill nobody explained.
+- Build every tier on every branch, not only after merge, and fail on tier-gated intrinsics (above) used outside the tier shim; inkrs's sm_75 tier broke three times this way.
+- Generate the compute-sanitizer coverage list from each tier's `.entry` list, so a new kernel can't skip it.
 - A refactor with byte-identical PTX is safe; diff it. When porting or changing codegen, compare SASS opcode counts per kernel, and run an nsys per-kernel diff plus an A/B in every precision mode: parity and sanitizers miss speed regressions.

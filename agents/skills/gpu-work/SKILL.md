@@ -53,7 +53,8 @@ Write every custom CUDA kernel in Rust with cuda-oxide, not CUDA C++, Triton or 
 - Kernels live in a standalone crate outside the workspace, with its own `rust-toolchain.toml`. Its build script compiles it to PTX (and cubins where they pay). The build needs no GPU, so run it, like every `cargo build`, `cargo oxide`, `build-ptx.sh`, `nvcc` or `ptxas` step, as a CPU `homebased task run` task, never in the GPU queue.
 - Commit the PTX and embed it with `include_str!` (`include_bytes!` for cubins); split per-tier crates past the crates.io limit.
 - The host loads the PTX through the driver at run time (cudarc with dynamic loading), so users need no toolkit or GPU to build.
-- CI checks the committed PTX against hashes of every input (kernel sources, cuda-oxide rev, toolchain, toolkit).
+- CI checks the committed PTX against hashes of every input (kernel sources, cuda-oxide rev, toolchain, toolkit). Hash rustfmt-normalized, comment-stripped sources so a comment edit doesn't mark the PTX stale, and have the check name the input that changed.
+- Mark committed PTX, ptxas logs and the hash manifest `binary` in `.gitattributes`, so git never merges them silently: after a merge, rebuild and diff against each parent.
 
 Read [references/cuda-oxide.md](references/cuda-oxide.md) before writing or porting a kernel. Don't edit it during a task; log new traps and unexplained slowdowns in the decision log with a `gotcha` Skill line. Compare builds with [scripts/sass_mix.sh](scripts/sass_mix.sh) and [scripts/nsys_kernel_diff.py](scripts/nsys_kernel_diff.py).
 
