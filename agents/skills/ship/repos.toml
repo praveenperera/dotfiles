@@ -97,6 +97,7 @@ notes = "Pushing cmd/** to master triggers release-cmd.yml, which bumps the vers
 
 [repos."avencera/homebased"]
 steps = ["commit", "push", "deploy", "clean"]
+greptile = true
 deploy = [
   "just bump <part>",
   "git add Cargo.toml Cargo.lock && git commit -m 'Bump version to v<version>'",
