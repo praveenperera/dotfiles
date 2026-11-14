@@ -4,8 +4,8 @@
 
 | Mount in `code` | Drive (Incus pool) | Holds | Lifecycle |
 | --- | --- | --- | --- |
-| `/build` | TEAM 4 TB (`build`, volume `build`) | Cargo `build-dir` (`/build/cargo/{workspace-path-hash}`), Bazel output root, Bazelisk cache, and other large scratch work | Regenerable; clean freely |
-| `/shared` | Lexar 2 TB (`bulk`, volume `shared`) | Staging, preprocessing output, training runs in progress, and finished data while the Lexar has room | Active; move finished trees to `/data` only when the Lexar needs room |
+| `/build` | TEAM 4 TB (`build`, volume `build`) | Cargo `build-dir` (`/build/cargo/{workspace-path-hash}`), uv cache (`/build/cache/uv`), Bazel output root, Bazelisk cache, venvs, and other large scratch work | Regenerable; clean freely |
+| `/shared` | Lexar 2 TB (`bulk`, volume `shared`) | Staging, preprocessing output, training runs in progress, the hercunet slab cache (`~/.vesuvius` links to `/shared/cache/vesuvius`), and finished data while the Lexar has room | Active; move finished trees to `/data` only when the Lexar needs room |
 | `/var/lib/docker`, `/var/lib/containerd` | Lexar (`bulk`) | Nested Docker daemon data and image layers | Regenerable through Docker |
 | `/data` | Kingston 2 TB (`agents`, volume `data`) | Released datasets, model blobs, finished checkpoints, evaluation results, backups | Keep; written once, then read |
 | `/`, `~` | Kingston (`agents`) | OS, home directory, source checkouts, toolchains, agent state | Keep small |
@@ -18,7 +18,7 @@ The host and Mac mini do not mount `/shared` or `/data`. All of these are Incus 
 
 - Write new datasets, preprocessing output, and training runs under `/shared`.
 - Put large scratch work, extracted archives, and build output under `/build`. Do not set `CARGO_TARGET_DIR` to `/tmp`; `/tmp` is tmpfs.
-- Keep large caches and downloads, such as model hubs or dataset mirrors, under `/shared` or `/build`, not in `~/.cache` or `~/code`, which are on the Kingston.
+- Keep large caches and downloads, such as model hubs or dataset mirrors, under `/shared` or `/build`, not in `~/.cache` or `~/code`, which are on the Kingston. Put a cache on the same mount as the trees that hardlink from it: uv's cache is under `/build` because most venvs are, so create new venvs under `/build` too. When a tool has no setting for its cache path, link its default directory to the new location, as `~/.vesuvius` is.
 - Read finished data from `/data` or `/shared`. Older `/shared` paths for moved trees are symlinks into `/data`, so existing scripts keep working.
 - Keep the Lexar below about 70 percent full, the TEAM below about 80 percent, and the Kingston as empty as practical. The Lexar and the TEAM are DRAM-less, and writes slow sharply once a drive's write cache fills.
 - Check fill levels from the host with `df -h / /srv/bulk /srv/build`.
