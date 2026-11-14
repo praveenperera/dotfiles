@@ -162,6 +162,14 @@ output = "text"
 url = "https://www.superlogical.com/rex/community-mcp"
 oauth = true
 
+# Christian Open Library's server; signs in with OAuth through dynamic client
+# registration on its AuthKit server, so run
+# `codemode-mcp oauth login christian_open_library` once. Served to spokes
+[servers.christian_open_library]
+url = "https://mcp.christianopenlibrary.org/mcp"
+oauth = true
+aliases = ["col", "openlibrary"]
+
 # Calendar and Reminders through EventKit, covering every account the Mac's
 # apps show. macOS asks once for each, on the Mac, the first time the daemon
 # starts the adapter. Reads run freely; every change asks on the phone, and a
