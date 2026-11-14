@@ -1,7 +1,7 @@
 //! CI state of a commit: its check rollup, its GitHub Actions runs, and Greptile's
 //! review score, as read by the `cmd ship` watchers
 
-use color_eyre::eyre::{Context, ContextCompat, Result};
+use color_eyre::eyre::{bail, Context, ContextCompat, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 
@@ -138,6 +138,9 @@ pub(crate) struct WorkflowRun {
     pub(crate) event: String,
     pub(crate) status: RunStatus,
     pub(crate) conclusion: Option<RunConclusion>,
+    /// The attempt `status` and `conclusion` describe; a rerun keeps the run's id
+    /// and counts this up
+    pub(crate) run_attempt: u32,
     pub(crate) html_url: String,
     /// PRs in this repository the run belongs to; empty for a fork's PR
     #[serde(default)]
@@ -372,12 +375,15 @@ impl Github {
         .await
     }
 
-    /// Names of the jobs in the latest attempt of run `id` that did not pass
+    /// Names of the jobs in `attempt` of run `id` that did not pass. Naming the
+    /// attempt keeps a rerun started since that attempt ended, whose jobs are still
+    /// queued, out of the list
     pub(crate) async fn fetch_failed_jobs(
         &self,
         owner: &str,
         repo: &str,
         id: u64,
+        attempt: u32,
     ) -> Result<Vec<String>> {
         let mut failed = Vec::new();
         let mut seen = 0;
@@ -386,7 +392,7 @@ impl Github {
             let response: JobsPage = self
                 .get_json(
                     &format!(
-                        "repos/{owner}/{repo}/actions/runs/{id}/jobs?filter=latest&per_page=100&page={page}"
+                        "repos/{owner}/{repo}/actions/runs/{id}/attempts/{attempt}/jobs?per_page=100&page={page}"
                     ),
                     &format!("Failed to list jobs of workflow run {id} of {owner}/{repo}"),
                 )
@@ -407,6 +413,34 @@ impl Github {
         }
 
         Ok(failed)
+    }
+
+    /// The full sha of the commit `rev` names on GitHub: a sha, a branch, or a
+    /// tag, with an annotated tag peeled to its commit
+    pub(crate) async fn fetch_commit_sha(
+        &self,
+        owner: &str,
+        repo: &str,
+        rev: &str,
+    ) -> Result<String> {
+        let context = format!("Failed to look up {rev} in {owner}/{repo}");
+        // this media type answers with the bare sha instead of the commit's diff
+        let request = self
+            .client
+            .get(self.url(&format!("repos/{owner}/{repo}/commits/{rev}")))
+            .header("Accept", "application/vnd.github.sha");
+        let response = self.send(self.authorize(request), &context).await?;
+        let body = response
+            .text()
+            .await
+            .with_context(|| format!("{context}: could not read the response"))?;
+        let sha = body.trim();
+
+        if sha.len() != 40 || !sha.chars().all(|c| c.is_ascii_hexdigit()) {
+            bail!("{context}: expected a commit sha, got `{sha}`");
+        }
+
+        Ok(sha.to_string())
     }
 
     /// The plain-text log of Actions job `id`. GitHub answers with a redirect to

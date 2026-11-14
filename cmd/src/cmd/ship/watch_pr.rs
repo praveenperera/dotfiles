@@ -647,6 +647,7 @@ mod tests {
             event: "pull_request".into(),
             status,
             conclusion,
+            run_attempt: 1,
             html_url: format!("https://github.com/o/r/actions/runs/{id}"),
             pull_requests: vec![RunPullRequest { number: 978 }],
         }

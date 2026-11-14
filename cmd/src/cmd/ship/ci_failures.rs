@@ -461,7 +461,7 @@ mod tests {
         json!({
             "id": id, "name": name, "path": format!(".github/workflows/{file}"),
             "event": "pull_request", "status": status, "conclusion": conclusion,
-            "html_url": format!("https://github.com/o/r/actions/runs/{id}"),
+            "run_attempt": 1, "html_url": format!("https://github.com/o/r/actions/runs/{id}"),
             "pull_requests": [{"number": 7}]
         })
     }
