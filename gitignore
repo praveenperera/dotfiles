@@ -7,3 +7,5 @@ _scratch
 .claude/settings.local.json
 **/.agents/skills/
 **/.claude/skills/
+
+**/.claude/settings.local.json
