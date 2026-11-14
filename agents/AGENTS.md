@@ -44,6 +44,8 @@
 - A delegate never waits in the foreground for a long command, and the root never waits on a delegate's jobs. A T3 `delegate_task` child on a Claude model submits through `homebased`, keeps a background `homebased wait --next --final-only` registered with `t3_background_wait`, and reports only its final result. A homebased worker reports `waiting` and exits. The `use-agents` skill has the details.
 - When this thread coordinates several delegates, PRs, or queued jobs over a long run, use the `orchestrate` skill.
 - For a larger task, run one fresh review of the related change set; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
+- When Codex, Sol, or Terra runs a review, do not guide it, especially for a general review. For a pre-PR review, do not tell it what to look at; just ask it to review the PR.
+- When a subagent is there for a second opinion, new ideas, or a fresh look, do not bias it with your current thinking, hypotheses, or preferred answer. Give it only the information it needs, such as the goal, constraints, and where to look.
 - Use Grok 4.5 at high effort only to read X posts; never ask it to analyze or do other work.
 - Use `$use-agents` for model routing and effort levels.
 - I have two Claude Ultra plans and one $100 Codex plan, so Opus 5.5 is the default delegate for most work, including implementation, tests, investigation, triage, verification, and front-end work. Opus defaults to `medium`; use `high` when edge cases matter, `xhigh` only for rare hard problems, and never `max`. Use Sol subagents for implementation or exploration only when I ask (`$use-sol`).
