@@ -136,6 +136,21 @@ Watch for:
 
 Discuss limitations where they arise. End on the last useful fact, the actual decision, a supported implication, or a genuine open question.
 
+### Lab-notebook provenance
+
+Technical docs drift into a lab log written for an auditor: each result carries how, when and where it was produced. Watch for:
+
+- dates, build or commit labels used as timestamps (`on an earlier v0.2 build`, `this release build`, `the build before`), `in one GPU job`, `in the same job`
+- measurement logistics: `whole command, process start to exit`, `median of 6 pairs run in alternating order`, warm-up runs, `waited for a quiet host`, load thresholds, driver strings, containers, rented machines, `the 5090's host`
+- check bookkeeping: `passes 181 of 181 checks`, `gates`, `gated back on`, `arms`, internal stage labels such as `P0`, `P1`, `P0-H`, and internal tier names when the reader never selects them
+- defensive time qualifiers: `so far`, `not yet`, `at the time`, `has run only on` repeated per claim
+
+Write for the person using the thing. Give the result in plain words (`matches villa's maps within 2/255`), keep what the reader needs to act on (a flag, an env var, a requirement, a real limitation), and put the method once in the reproduce doc or the data file instead of on every number. Keep a version, date or commit only when the reader needs it to reproduce something.
+
+> Before: The comparison was repeated on 2026-11-10, on an earlier v0.2 build, in one GPU job on the RTX 5090, which waited for a quiet host and ran every configuration once untimed before the timed rounds.
+>
+> After: I also timed the settings against each other on the RTX 5090.
+
 ### Chatbot residue and automatic praise
 
 Remove interface language from finished copy: `Certainly`, `Of course`, `Great question`, `You're absolutely right`, `I hope this helps`, `let me know`, `would you like me to`, and offers to expand or continue.
