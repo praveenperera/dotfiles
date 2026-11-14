@@ -193,6 +193,17 @@ steps = ["sol", "commit", "push", "pr", "greptile", "merge", "clean"]
 greptile = true
 notes = "CodeRabbit also reviews PRs here; address its comments in the greptile step too. Releases follow RELEASE.md by hand, so there is no publish step"
 
+[repos."praveenperera/inkrs"]
+steps = ["sol", "commit", "push", "pr", "greptile", "merge", "clean"]
+greptile = true
+# the version is bumped in the PR; the tag publishes from master after the merge
+publish = [
+  "git tag v<version>",
+  "git push origin v<version>",
+  "homebased --json task run --name \"Package run for v<version>\" --timeout 6h -- cmd ship watch-run Package v<version>",
+]
+notes = "A release follows the steps in .github/workflows/package.yml: before the merge, add a 'Release <version>' commit to the PR that sets the version in Cargo.toml, python/Cargo.toml and Cargo.lock, dates the CHANGELOG entry and adds its compare link, and updates the version python/API.md shows. Merge with `gh pr merge <n> --rebase --match-head-commit <sha>` rather than --squash, keeping each commit as earlier PRs did, then tag the merged master tip. The tag and a master push start Package runs on the same commit, so check that the watched run's ref is the tag. The pypi environment waits for Praveen's approval before PyPI, crates.io and the GitHub release; once the run passes, confirm the version on PyPI and crates.io"
+
 [repos."bitcoinppl/cove"]
 steps = ["sol", "commit", "push", "pr", "greptile", "clean"]
 greptile = true
