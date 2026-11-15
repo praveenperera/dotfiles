@@ -10,7 +10,7 @@
 | `/data` | Kingston 2 TB (`agents`, volume `data`) | Released datasets, model blobs, finished checkpoints, evaluation results, backups | Keep; written once, then read |
 | `/`, `~` | Kingston (`agents`) | OS, home directory, source checkouts, toolchains, agent state | Keep small |
 
-The host's 32 GiB swap file is on the TEAM drive (`/srv/build/swapfile`). `/build` moves from the Lexar to the TEAM drive in November 2026; until `incus config device get code build pool` on the host prints `build`, it is still on the Lexar.
+The host's 32 GiB swap file is on the TEAM drive (`/srv/build/swapfile`). `/build` moved from the Lexar to the TEAM drive on 2026-11-14.
 
 The host and Mac mini do not mount `/shared` or `/data`. All of these are Incus custom volumes, so they survive container recreation. `~/code/homelab/ai5090/README.md` (**Storage** and **Shared data**) is the source of truth for the host side.
 
