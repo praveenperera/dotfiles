@@ -61,7 +61,7 @@ Use this mode when the user asks for a panel, an adversarial or multi-model revi
 
 ## Fix
 
-The implementer that made the change fixes the findings in its existing session, so it keeps its context: the current thread when it wrote the change, or the delegate that did. When the current thread hands a fix to a delegate, use Opus 5.5 at `medium` for routine fixes and `high` for hard failures, such as a fix that failed its check or a security, persistence, migration, or concurrency defect.
+The implementer that made the change fixes the findings in its existing session, so it keeps its context: the current thread when it wrote the change, or the subagent, child thread, or worker that did. When the current thread hands a fix to another agent, use Opus 5.5 at `medium` for routine fixes and `high` for hard failures, such as a fix that failed its check or a security, persistence, migration, or concurrency defect.
 
 Give the fixer the normalized findings, the applicable invariants and risk matrix, and the scratch path. The fixer:
 

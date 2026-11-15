@@ -32,24 +32,41 @@
 - For commits, follow `$HOME/.agents/commit-message-guide.md` and use Praveen Perera when an author is needed. Never add Claude, Codex, or other AI co-authors, generated-by notes, or `Claude-Session:` trailers.
 - Preserve unrelated user or agent changes: stage by hunk and never undo unrelated edits.
 
+# Agent terms
+
+Use these terms in instructions, skills, briefs, and reports. Do not use "delegate" as a noun; name the runner instead.
+
+- **Root thread**: a T3 thread that I started.
+- **Subagent**: short agent work whose result the caller integrates in the same session. An **in-session subagent** (Claude Code's `Agent` tool, or a Codex native spawn) finishes within the turn. A **T3 subagent** is a T3 `delegate_task` child: short work, such as a lookup, review, quick edit, or check, that finishes in about an hour or less and never waits on long work.
+- **Child thread**: a top-level T3 thread that another thread, its **parent thread**, launched with `homebased t3 launch --child` to own a phase, an experiment, or a long run. A child thread can launch child threads of its own (**grandchildren**). It reports to its parent once with `homebased thread report`, and homebased then settles it.
+- **Worker**: a headless agent that homebased runs as an agent task (`HOMEBASED_TASK_ID` is set). It is not a T3 thread. It parks with `homebased task report --outcome waiting` and resumes as a continuation task.
+- **Task**: a homebased task (`homebased task run` or `task submit`) with a command, container, or agent workload. **Job**: a homebased GPU queue job (`homebased resource job submit`).
+- **Long work**: a task, job, or chain expected to run or queue for over 1 hour.
+- **Sleep**: `homebased wait --long <ids>`. The thread hands its tasks and jobs to homebased, ends its turn, and goes idle until a final event or an alert.
+- **Final event**: the event that ends a task or job: a task's terminal event, or `JOB_SUCCEEDED`, `JOB_FAILED`, or `JOB_CANCELLED`. Any other event is an **interim event**, of two kinds:
+  - **Alert**: needs action before the target can end, so it wakes a sleeping thread: `JOB_ATTENTION`, `JOB_BLOCKED`, `TASK_CHECK_DUE`, `JOB_CHECK_DUE`, and the first `JOB_GPU_IDLE` of an idle episode.
+  - **Progress event**: needs no action, so a sleeping thread does not wake for it: `TASK_REPORTED`, `TASK_WAITING`, `JOB_PREEMPTED`, and GPU-idle reminders. The final event lists them under `held_events`.
+
 # Delegation
 
-- The root owns scope, design decisions, integration, and acceptance. It reads the code it will change and its nearby context (callers, types, tests), delegate reports and diffs, command output, and the skill and guide files it follows; it delegates broader reading.
-- Spend my weekly plan usage where it buys correctness: a cheaper delegate saves nothing if the root has to redo or second-guess its work. Pick each subagent's model for what that task needs.
+- The root owns scope, design decisions, integration, and acceptance. It reads the code it will change and its nearby context (callers, types, tests), the reports and diffs of the agents it starts, command output, and the skill and guide files it follows; it delegates broader reading.
+- Spend my weekly plan usage where it buys correctness: a cheaper model saves nothing if the root has to redo or second-guess its work. Pick each subagent's model for what that task needs.
 - Run commands you wait on longer than a few minutes, such as builds, test suites, deploys, and Fleet or GPU work, as homebased tasks, not under a polling loop or a raw `Monitor` in the turn, since every line a Monitor prints wakes the thread and re-reads its whole context.
 - Always wait on CI, PR reviews, and release runs through a homebased task, however short, never with a polling loop or `gh run watch` in the turn. For a PR, submit `cmd ship watch-pr <n>` instead of T3's `watch_pull_request`, which wakes the thread for every bot comment.
-- A delegate never waits in the foreground for a long command, and the root never waits on a delegate's jobs. A T3 `delegate_task` child on a Claude model submits through `homebased`, keeps a background `homebased wait --next --final-only` registered with `t3_background_wait`, and reports only its final result. A homebased worker reports `waiting` and exits. The `use-agents` skill has the details.
-- When this thread coordinates several delegates, PRs, or queued jobs over a long run, use the `orchestrate` skill.
+- No agent waits in the foreground for a long command. T3 subagents do no long work. Long work goes to a child thread, which submits it through `homebased` and sleeps with `homebased wait --long`; a worker parks with `waiting` and exits. A thread waits only on its own tasks and jobs, never on another thread's. The `use-agents` skill has the details.
+- You may launch child threads for phases, experiments, and long work without asking me. Launch them only with `homebased t3 launch --child`, never with `t3_thread_launch`, which records no link to the parent. Other new threads still need my request.
+- When this thread coordinates several subagents, child threads, PRs, or queued jobs over a long run, use the `orchestrate` skill.
 - For a larger task, run one fresh review of the related change set; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
 - When Codex, Sol, or Terra runs a review, do not guide it, especially for a general review. For a pre-PR review, do not tell it what to look at; just ask it to review the PR.
 - When a subagent is there for a second opinion, new ideas, or a fresh look, do not bias it with your current thinking, hypotheses, or preferred answer. Give it only the information it needs, such as the goal, constraints, and where to look.
 - Use Grok 4.5 at high effort only to read X posts; never ask it to analyze or do other work.
-- As the root, delegate exploration to `Explore` subagents: sweeps across many files, other repositories, dependency source, vendored or minified code, logs, and transcripts. Make a few targeted searches or reads in the repository you are changing yourself; delegate once a lookup would pull more than a few files into your context or leaves that repository. Ask delegates to cite `path:line` for each finding. Subagents do their own reading instead of delegating again.
+- As the root, delegate exploration to `Explore` subagents: sweeps across many files, other repositories, dependency source, vendored or minified code, logs, and transcripts. Make a few targeted searches or reads in the repository you are changing yourself; delegate once a lookup would pull more than a few files into your context or leaves that repository. Ask subagents to cite `path:line` for each finding. Subagents do their own reading instead of delegating again.
 - Model facts (`modelSettings` in `settings.json`): an Agent call without `model` inherits the session's model (`model` sets Fable as the default), and Opus 5.5 and Sonnet 5.5 both default to `high` effort. Every subagent first reads its system prompt and these instructions. Haiku 5.5 costs 5x once its prompt, which includes everything it has read, passes 100K tokens, still about 4x cheaper than Sonnet 5.5, and auto-compacts at 256K, which loses detail. Sonnet 5.5 costs half of Opus 5.5 on every rate, cache reads included ($0.10 vs $0.20 per MTok), so switching to Sonnet roughly halves cost, even in long agent loops where re-reading context dominates.
-- Pick the runner by duration. Use the Agent tool for work that finishes in this turn, which covers most exploration, and `homebased` for long or unattended agent work. In a T3 thread, use T3's `delegate_task` for that agent work instead, so the work shows under the thread and the orchestrator's compact watches can reach it. Keep `homebased` there for commands, Fleet machines, the GPU queue, and `after` chains.
+- Pick the runner by duration. Use an in-session subagent (the Agent tool) for work that finishes in this turn, which covers most exploration. In a T3 thread, use a T3 subagent (`delegate_task`) for short agent work, so it shows under the thread, and a child thread for phases, experiments, and long work. Outside T3, use a worker for agent work that outlasts the turn. Keep homebased tasks for commands, Fleet machines, the GPU queue, and `after` chains.
 - Set `model` on every Agent call; a hook denies calls that leave it out, and the brief then has to be sent again.
-- Never use `max` effort for Anthropic models (Fable, Opus, Sonnet, Haiku), whether subagent, delegate, reviewer, or thread; use `xhigh` at most. Only the Codex models GPT-6.1 Terra and GPT-6 Luna may run at `max`.
-- Always ask me before using Fable (any version) for a subagent, delegate, reviewer, or thread. Default to Opus 5.5.
+- Never use `max` effort for Anthropic models (Fable, Opus, Sonnet, Haiku), whether subagent, child thread, worker, reviewer, or thread. Only the Codex models GPT-6.1 Terra and GPT-6 Luna may run at `max`.
+- Never run Opus at `xhigh` unless I ask for it; `high` is the ceiling for Opus subagents, child threads, workers, reviewers, and threads I didn't configure myself.
+- Always ask me before using Fable (any version) for a subagent, child thread, worker, reviewer, or thread. Default to Opus 5.5.
 
 # Verification
 

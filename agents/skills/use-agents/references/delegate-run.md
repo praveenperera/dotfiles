@@ -1,4 +1,4 @@
-# Delegate run reference
+# Agent run reference
 
 Every CLI transport uses the same run directory, prompt contract, and postflight capture. The transport references give the model flags and permission rules.
 
@@ -39,7 +39,7 @@ Mode: <read-only analysis|implementation>
 
 ## Owned scope
 
-<files, directories, or responsibility owned by this delegate>
+<files, directories, or responsibility you own>
 
 ## Excluded scope
 
@@ -75,7 +75,7 @@ Mode: <read-only analysis|implementation>
 - In implementation mode, edit only the owned scope.
 - Do not commit, stage, push, open or modify pull requests, deploy, post messages, or change external state.
 - Stop and report rather than expanding authority.
-- Do not wait in the foreground on a command that may run longer than a few minutes. Submit it through homebased and wait the way "Long commands inside a delegate" in the use-agents skill says for your runner.
+- Do not wait in the foreground on a command that may run longer than a few minutes. Submit it through homebased and wait the way "Long work" in the use-agents skill says for your runner.
 
 ## Final report
 
@@ -89,7 +89,7 @@ Mode: <read-only analysis|implementation>
 
 For a run expected to exceed two minutes, submit it through the `homebased` skill. The daemon records the task lifecycle and sends a `HOMEBASED_EVENT` when the run ends. Use Claude Code's runtime-managed background execution only when homebased is unavailable.
 
-Do not keep an agent active only to poll. On the next wake, reconcile the status file and process identity before trusting a notification. Treat the delegate's final message as an artifact, not the source of truth.
+Do not keep an agent active only to poll. On the next wake, reconcile the status file and process identity before trusting a notification. Treat the agent's final message as an artifact, not the source of truth.
 
 ## Record postflight state
 

@@ -15,20 +15,20 @@ Praveen has two Claude Ultra plans and one $100 Codex plan. Claude capacity is p
 ## Apply the user's mix
 
 - With no stated mix, use the default routing below
-- "Only Claude" restricts every delegate to Claude; route inside it with the provider sections below
+- "Only Claude" restricts every agent to Claude; route inside it with the provider sections below
 - "Only Grok" still limits Grok to reading X posts through the `ask-grok` skill. Grok takes no analysis, review or implementation, so ask which provider should take that work
-- "Mostly X and Y" or "prefer X" makes those the default workers; use another model only when the task needs a strength the preferred models lack, and say why
+- "Mostly X and Y" or "prefer X" makes those the default models; use another model only when the task needs a strength the preferred models lack, and say why
 - A named model and effort level always wins over these defaults
 - Keep the selection for the rest of the session until the user changes it
 - If a selected model is unavailable, report it; do not silently substitute another model or a lower effort
 
-The root thread keeps scope, design decisions, integration, and acceptance. Give each delegate a self-contained prompt with the objective, owned scope, excluded scope, decided approach, verification commands, stop conditions, and a final report of changed files, check results, and risks. Do not give two writing delegates overlapping scope. Inspect every delegate diff; a delegate report is evidence, not proof.
+The root thread keeps scope, design decisions, integration, and acceptance. The agent terms in your instructions name the runners: in-session subagent, T3 subagent, child thread, and worker. Give each agent you start a self-contained prompt with the objective, owned scope, excluded scope, decided approach, verification commands, stop conditions, and a final report of changed files, check results, and risks. Do not give two writing agents overlapping scope. Inspect every agent's diff; its report is evidence, not proof.
 
 ## Roster
 
 | Model                                          | Use for                                                                                                                                                                                                                                        | Launch                                                                                                                                     |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Claude Opus 5.5 (`claude-opus-5-5`)            | Default delegate for most work: implementation, tests, migrations, fix passes, bug investigation and root-cause analysis, codebase triage, exploration, verification, computer use, long unattended builds, heavy rewrites, and front-end work | Claude Agent tool with `model: opus`, or [claude-cli.md](references/claude-cli.md) with `claude-opus-5-5` when a specific effort is needed |
+| Claude Opus 5.5 (`claude-opus-5-5`)            | Default model for most work: implementation, tests, migrations, fix passes, bug investigation and root-cause analysis, codebase triage, exploration, verification, computer use, long unattended builds, heavy rewrites, and front-end work | Claude Agent tool with `model: opus`, or [claude-cli.md](references/claude-cli.md) with `claude-opus-5-5` when a specific effort is needed |
 | GPT-6.1 Sol (`gpt-6.1-sol`) at `xhigh`         | Code review, read-only. One fresh review of a finished change set before acceptance                                                                                                                                                            | [codex-native.md](references/codex-native.md) in Codex; [codex-cli.md](references/codex-cli.md) elsewhere                                  |
 | GPT-6 Astra (`gpt-6-astra`) at `low` or `high` | Second opinion only, read-only, and sparingly: a big architecture or design decision, or when the root is stuck after its own attempts. The root keeps the decision. `low` for a focused question, `high` for a broad or high-risk one         | [codex-native.md](references/codex-native.md) in Codex; [codex-cli.md](references/codex-cli.md) elsewhere                                  |
 | Claude Haiku 5.5 (`claude-haiku-5-5`)          | Optional. High-volume mechanical fan-out where following the prompt literally is enough and a cheap check proves it, such as renames, fixtures, inventories, and repeated transforms across many slices                                        | Claude Agent tool with `model: haiku`, or [claude-cli.md](references/claude-cli.md) with `claude-haiku-5-5`                                |
@@ -37,7 +37,7 @@ The root thread keeps scope, design decisions, integration, and acceptance. Give
 
 Do not use these unless the user names them: Claude Fable (any version) and Sol for implementation or exploration (the `use-sol` skill covers that when the user asks for it).
 
-Run Claude delegates through the Claude CLI with `homebased` by default; see [Run delegates through homebased](#run-delegates-through-homebased). The CLI also sets an explicit effort. The Claude Agent tool selects the model but inherits the session effort, so keep it for short tasks where the session effort is acceptable.
+Outside T3, run Claude agents as workers through the Claude CLI with `homebased` by default; see [Choose the runner](#choose-the-runner). The CLI also sets an explicit effort. The Claude Agent tool selects the model but inherits the session effort, so keep it for short tasks where the session effort is acceptable.
 
 ## Default routing
 
@@ -51,7 +51,7 @@ Send **reviews to Sol at `xhigh`**. For a larger task, run one fresh review of t
 
 Use **Astra sparingly**. Consult it at most once or twice in a task, and only for a decision that is expensive to reverse or when the root is stuck after its own attempts. For an ordinary close call, ask a fresh read-only Opus at `high` instead. Do not consult Astra for routine choices with a conventional default.
 
-A common split: the root decides the design (with an Astra second opinion only on a big decision), Opus implements at `medium` or `high`, Haiku handles any wide mechanical pass, the root verifies, and one fresh Sol `xhigh` review checks the result. No delegate replaces the root's diagnosis, architecture, or final acceptance.
+A common split: the root decides the design (with an Astra second opinion only on a big decision), Opus implements at `medium` or `high`, Haiku handles any wide mechanical pass, the root verifies, and one fresh Sol `xhigh` review checks the result. No agent replaces the root's diagnosis, architecture, or final acceptance.
 
 ## Route inside one provider
 
@@ -74,8 +74,8 @@ Effort controls how much the model verifies, tests edge cases, and uses its own 
 Guidance for delegation:
 
 - A detailed spec makes effort levels converge. With a precise prompt, `medium` implementation is usually enough; save higher effort for verification
-- A delegate has no user in the loop. When it must make judgment calls on its own, such as choosing between two valid readings of the data, `high` does that better than `low`
-- Give the delegate a way to check its work (tests, a reference implementation, a repro) before raising effort
+- An agent you start has no user in the loop. When it must make judgment calls on its own, such as choosing between two valid readings of the data, `high` does that better than `low`
+- Give the agent a way to check its work (tests, a reference implementation, a repro) before raising effort
 - Pattern that works well: implement at `medium`, verify in the root or with a fresh Opus at `high`, then one Sol `xhigh` review of the change set
 - If Opus 5.5 at `xhigh` hits the same problem twice, the approach is probably wrong; return the decision to the root, optionally with an Astra second opinion, instead of raising effort
 
@@ -83,43 +83,52 @@ Guidance for delegation:
 
 Use Sonnet at `medium` for implementation and `high` for investigation and review; never `xhigh` or `max`. Use Haiku at `low` for lookups, inventories, and classifications and `medium` for mechanical edits; never `max`.
 
-## Run delegates through homebased
+## Choose the runner
 
-Use the `homebased` skill to launch every delegate that is not a short task. The daemon runs the child, streams its output, and sends a `HOMEBASED_EVENT` back to this session when the task ends, so the root can end its turn instead of running a wait or poll loop. In a T3 Code thread (the `t3-code` MCP tools are present), use T3's `delegate_task` instead for that agent work and for every model from another provider, so the work shows under the thread; keep `homebased` there for command tasks, Fleet machines, and GPU work.
+Pick the runner from the agent terms in your instructions:
 
-- **Default:** `homebased` for implementation with verification, investigation, review, audits, research, and any fan-out
-- **Short tasks only:** use a native subagent (Claude Agent tool, Codex native spawn) when the scope is narrow and the root checks and integrates the result in the same turn, such as a focused lookup or a small edit, or when non-overlapping owned scopes can run at the same time. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work
-- **External agents** (Codex CLI for Sol or Astra, Claude CLI from Codex): always `homebased` or T3 `delegate_task`, whatever the task size
+- **In-session subagent** (Claude Agent tool, Codex native spawn): only when the scope is narrow and the root checks and integrates the result in the same turn, such as a focused lookup or a small edit, or when non-overlapping owned scopes can run at the same time. Do not spawn when the child would reload the same large context, the scopes overlap, the current thread already has the needed files, or a nested agent would review or edit the same work
+- **T3 subagent** (`delegate_task`, in a T3 Code thread): short work on any model, such as a lookup, review, quick edit, or check, that finishes in about an hour or less and waits on no long work. T3 shows it under the thread
+- **Child thread** (`homebased t3 launch --child`, in a T3 Code thread): a phase, an experiment, a long run, or any agent work that waits on long work. Launch it only this way, never with `t3_thread_launch`. The `homebased` skill's T3 reference has the child-thread recipe
+- **Worker** (a `homebased` agent task): outside T3, the default for implementation with verification, investigation, review, audits, research, and any fan-out; anywhere, for unattended headless agent work
+- **External agents** (Codex CLI for Sol or Astra, Claude CLI from Codex): a worker, a T3 subagent, or a child thread, whatever the task size
 
-When it is unclear whether a task is short, use `homebased`.
+When it is unclear whether a task is short, use a worker outside T3. In T3, use a child thread when it may wait on long work, and a T3 subagent otherwise.
 
 The transport references below still give the model flags, permission rules, prompt contract, and evidence capture to put in the homebased spec.
 
 ## Fan out and report once
 
-When work splits into many parallel workers, such as coverage slices, a race between identical briefs, or a batch of measurements, give the user one report instead of a stream of status updates:
+When work splits into many parallel agents, such as coverage slices, a race between identical briefs, or a batch of measurements, give the user one report instead of a stream of status updates:
 
 1. Before launching, state the done condition and the report the fan-out must return. For a race, declare the selection rule up front: first pass, rank all, or best of.
-2. Launch every worker at once. Each brief stands alone and names its slice, how to verify, and the exact commits and method when it measures. Each worker reports `PASS`, `ISSUES`, or `BLOCKED` with evidence, and lists every issue it can prove, not only the first.
-3. When the user asks one coordinator to run the fan-out, such as an Opus `high` agent that starts Haiku workers, that coordinator drains the workers and sends the single report. Grant it nested delegation in its brief.
-4. Drop a result that lacks the commits or method its brief named and respawn that worker once. A second miss is a gap, and a gap is never a pass. If a worker drops out, continue without it and note it.
-5. Report one compact table of results, one-line evidenced issues, gaps and dropouts, and the race rule when used. Do not paste raw worker output.
+2. Launch every agent at once. Each brief stands alone and names its slice, how to verify, and the exact commits and method when it measures. Each agent reports `PASS`, `ISSUES`, or `BLOCKED` with evidence, and lists every issue it can prove, not only the first.
+3. When the user asks one coordinator to run the fan-out, such as an Opus `high` agent that starts Haiku subagents, that coordinator drains them and sends the single report. Grant it nested delegation in its brief.
+4. Drop a result that lacks the commits or method its brief named and respawn that agent once. A second miss is a gap, and a gap is never a pass. If an agent drops out, continue without it and note it.
+5. Report one compact table of results, one-line evidenced issues, gaps and dropouts, and the race rule when used. Do not paste raw agent output.
 
-## Long commands inside a delegate
+## Long work
 
-A delegate must not wait in the foreground for a long build, test suite, CI watch, benchmark, or training run. Waiting that way ties up its turn, and if the delegate dies or is cancelled, everything it learned dies with it. The delegate submits the command through `homebased` and owns the wait itself. The root never waits on a delegate's jobs and never passes their events on. How the delegate waits depends on its runner:
+No agent waits in the foreground for a long build, test suite, CI watch, benchmark, or training run. Waiting that way ties up its turn, and if the agent dies or is cancelled, everything it learned dies with it. The agent submits the command through `homebased` from its own session, so the events come back to it, and owns the wait itself. A thread waits only on its own tasks and jobs: the root never waits on another thread's jobs and never passes their events on. How an agent waits depends on its runner:
 
-- **T3 `delegate_task` child on a Claude model.** The child persists between turns and can run background commands.
-  1. Submit the command from the child's own session with `homebased task run` or `resource job submit`, so its events come back to the child and not the root.
-  2. Start `homebased wait --next --final-only <ids>` as a background Bash command with `timeout: 7200000`, register it with `t3_background_wait`, and end the turn. With no event it exits after 55 minutes, inside the hour-long prompt cache, and prints the command that starts it again; run that. For work expected to take over 4 hours, add `--long`, which compacts this thread once the turn ends and waits up to 115 minutes. `--final-only` still prints interim events, such as a preempted job, but exits only when a target ends. A wait accepts only ids submitted from the same session on the same machine.
+- **Child thread.** Long work, a task, job, or chain expected to run or queue for over 1 hour, belongs here.
+  1. Submit it with `homebased task run` or `resource job submit`.
+  2. Sleep on it: run `homebased wait --long <ids>` as an ordinary Bash command, not in the background and with no `t3_background_wait`, and end the turn. It exits at once and prints one line per target: `held`, `already_ended` (handle that final event if you have not), or `followed_to <continuation>`.
+  3. The thread then wakes only on each target's final event, whose line lists the progress events held meanwhile under `held_events`, or on an alert. After an alert the hold stays: handle it and end the turn without starting another wait. The daemon compacts a sleeping thread while it is idle, so do not compact it first.
+  4. Once the work is done, run `homebased thread report --summary "<report>" [--file report.md]` as the last step of the turn. It is refused while a task, job, T3 subagent, or child thread of its own still owes the child a result. homebased sends the report to the parent and settles the child once the turn ends.
+
+  For a wait under an hour, a child thread can use the background wait that a T3 subagent uses.
+- **T3 subagent on a Claude model.** It does no long work and starts no long wait. A T3 subagent that finds its work is long reports `blocked`, so the parent can hand the work to a child thread. For a shorter command it must not wait on in the foreground:
+  1. Submit it from its own session with `homebased task run`.
+  2. Start `homebased wait --next --final-only <ids>` as a background Bash command with `timeout: 7200000`, register it with `t3_background_wait`, and end the turn. `--final-only` still prints interim events but exits only when a target ends. A wait accepts only ids submitted from the same session on the same machine.
   3. When the wait exits, handle the events, and before ending that turn start the wait again for every id whose final event has not come yet.
   4. Report only a final state: done, failed, or blocked with a reason the root must act on. Never end a turn with only "still waiting".
 
-  While a background wait is live, T3 counts the child as waiting and does not wake the parent. A turn that ends with no live wait and no final result wakes the root for nothing.
-- **T3 `delegate_task` child on a Codex model.** Codex cannot run a background command that wakes it, so every event would start a turn and wake the root. Give Codex children only work that finishes inside a turn, such as reviews, and send long commands to a Claude child.
-- **homebased agent worker** (`HOMEBASED_TASK_ID` is set). Follow the homebased worker rules: submit the command, report `waiting` with notes on what each outcome means and what to do next, and exit. Homebased starts the continuation on its own, and the root does nothing. Do not write a `RESUME.md`.
+  While a background wait is live, T3 counts the subagent as waiting and does not wake the parent. A turn that ends with no live wait and no final result wakes the parent for nothing. `homebased wait --long` cannot sleep here, because T3 reports the subagent to its parent when its turn ends; it waits up to 115 minutes instead and says that long work belongs in a child thread.
+- **T3 subagent on a Codex model.** Codex cannot run a background command that wakes it, so every event would start a turn and wake the parent. Give Codex subagents only work that finishes inside a turn, such as reviews, and send long work to a child thread.
+- **Worker** (`HOMEBASED_TASK_ID` is set). Follow the homebased worker rules: submit the command, report `waiting --on <task-or-job-id>` with notes on what each outcome means and what to do next, and exit. `--on` takes ids of GPU queue jobs submitted from this machine as well as task ids, so park on the job itself instead of a placeholder task. Homebased starts the continuation on its own, and the root does nothing. `homebased wait --long` is refused in a worker. Do not write a `RESUME.md`.
 
-Memory-heavy commands go through `homebased` too, even short ones: training, feature extraction, evals, embedding runs, corpus builds, and large downloads. A delegate never starts one from its own shell, a background Bash, `nohup`, or tmux. Command tasks share the daemon's cgroup, which carries a memory cap where the machine sets one (on `code`, see the `fleet` skill), and the kernel kills the largest task when they outgrow it. Work outside `homebased` has no cap: it can fill the machine, thrash swap until SSH stops answering, and get agents killed first. Keep each job's memory bounded, check `free -h` and running tasks before a large one, and do not stack large runs.
+Memory-heavy commands go through `homebased` too, even short ones: training, feature extraction, evals, embedding runs, corpus builds, and large downloads. No agent starts one from its own shell, a background Bash, `nohup`, or tmux. Command tasks share the daemon's cgroup, which carries a memory cap where the machine sets one (on `code`, see the `fleet` skill), and the kernel kills the largest task when they outgrow it. Work outside `homebased` has no cap: it can fill the machine, thrash swap until SSH stops answering, and get agents killed first. Keep each job's memory bounded, check `free -h` and running tasks before a large one, and do not stack large runs.
 
 Briefs point to this section instead of restating it. [orchestrate](../orchestrate/references/briefs.md) has a brief template that does this.
 

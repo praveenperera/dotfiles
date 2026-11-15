@@ -24,5 +24,5 @@ Then stop. Don't monitor, poll, or message the threads. Reply with each thread's
 and a one-line scope for each.
 
 These threads are hand-offs that the user takes over. When this thread must coordinate
-the items and integrate their results, use `orchestrate` with `delegate_task` children
+the items and integrate their results, use `orchestrate` with T3 subagents and child threads
 instead of fanout.
