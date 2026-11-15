@@ -1,13 +1,15 @@
 # Storage on ai5090 and code
 
-`ai5090` has three NVMe drives. Use all of them, and fill the Kingston last. The Kingston holds the OS and the `code` root, throttles first (its firmware slows it at about 70 C), and has a rising count of media errors, so new large or write-heavy data goes to the TEAM or the Lexar.
+`ai5090` has three NVMe drives. Use all of them: each drive gets the kind of data it suits, and none is held in reserve. All three are new (2026) and under warranty, so a drive that fails gets replaced; do not route data around a drive for fear of wear. Data that cannot be regenerated needs a backup whichever drive holds it.
+
+Heavy, constant writes, such as build output and swap, stay off the Kingston because they raise its temperature and add latency to the OS and agent state on the same drive. Finished data on `/data` is written once and then read, so it costs the Kingston neither.
 
 | Mount in `code` | Drive (Incus pool) | Holds | Lifecycle |
 | --- | --- | --- | --- |
-| `/build` | TEAM 4 TB (`build`, volume `build`) | Cargo `build-dir` (`/build/cargo/{workspace-path-hash}`), uv cache (`/build/cache/uv`), Bazel output root, Bazelisk cache, venvs, and other large scratch work | Regenerable; clean freely |
-| `/shared` | Lexar 2 TB (`bulk`, volume `shared`) | Staging, preprocessing output, training runs in progress, the hercunet slab cache (`~/.vesuvius` links to `/shared/cache/vesuvius`), and finished data while the Lexar has room | Active; move finished trees to `/data` only when the Lexar needs room |
+| `/build` | TEAM 4 TB (`build`, volume `build`) | Cargo `build-dir` (`/build/cargo/{workspace-path-hash}`), uv cache (`/build/cache/uv`), Bazel output root, Bazelisk cache, venvs, and other large scratch work | Regenerable; clean freely, except `/build/keep`. Put new data that cannot be regenerated in `/data` |
+| `/shared` | Lexar 2 TB (`bulk`, volume `shared`) | Staging, preprocessing output, training runs in progress, and the hercunet slab cache (`~/.vesuvius` links to `/shared/cache/vesuvius`) | Active; move a tree to `/data` once it is finished |
 | `/var/lib/docker`, `/var/lib/containerd` | Lexar (`bulk`) | Nested Docker daemon data and image layers | Regenerable through Docker |
-| `/data` | Kingston 2 TB (`agents`, volume `data`) | Released datasets, model blobs, finished checkpoints, evaluation results, backups | Keep; written once, then read |
+| `/data` | Kingston 2 TB (`agents`, volume `data`) | Released datasets, model blobs, finished checkpoints, evaluation results, results worth keeping from experiment runs, backups | Keep; written once, then read |
 | `/`, `~` | Kingston (`agents`) | OS, home directory, source checkouts, toolchains, agent state | Keep small |
 
 The host's 32 GiB swap file is on the TEAM drive (`/srv/build/swapfile`). `/build` moved from the Lexar to the TEAM drive on 2026-11-14.
@@ -20,12 +22,12 @@ The host and Mac mini do not mount `/shared` or `/data`. All of these are Incus 
 - Put large scratch work, extracted archives, and build output under `/build`. Do not set `CARGO_TARGET_DIR` to `/tmp`; `/tmp` is tmpfs.
 - Keep large caches and downloads, such as model hubs or dataset mirrors, under `/shared` or `/build`, not in `~/.cache` or `~/code`, which are on the Kingston. Put a cache on the same mount as the trees that hardlink from it: uv's cache is under `/build` because most venvs are, so create new venvs under `/build` too. When a tool has no setting for its cache path, link its default directory to the new location, as `~/.vesuvius` is.
 - Read finished data from `/data` or `/shared`. Older `/shared` paths for moved trees are symlinks into `/data`, so existing scripts keep working.
-- Keep the Lexar below about 70 percent full, the TEAM below about 80 percent, and the Kingston as empty as practical. The Lexar and the TEAM are DRAM-less, and writes slow sharply once a drive's write cache fills.
+- Keep the Lexar below about 70 percent full and the TEAM and the Kingston below about 80 percent. All three are DRAM-less, and writes slow sharply once a drive's write cache fills.
 - Check fill levels from the host with `df -h / /srv/bulk /srv/build`.
 
 ## Moving finished data to /data
 
-Move a finished tree to `/data` only when the Lexar needs room, once nothing writes to it, to the same relative path under `/data`, and leave a symlink:
+Move a tree to `/data` once it is finished and nothing writes to it, to the same relative path under `/data`, and leave a symlink. Results worth keeping from experiment runs under `/build` go to `/data` the same way:
 
 ```bash
 src=/shared/checkpoints/project/run-1; dst=/data/${src#/shared/}
@@ -51,4 +53,5 @@ rm -rf -- "$src" && ln -s "$dst" "$src"
 - `cln rust` removes Cargo build directories. Check `pgrep -af 'cargo|rustc'` first and skip build directories modified in the last few minutes; another agent may be building.
 - Bazel output and the repository cache under `/build/bazel` are regenerable but cost a full re-download.
 - Use `docker builder prune` and remove only superseded image tags. Never run `docker system prune --volumes`.
+- Never clean `/build/keep`. It holds single-copy Vesuvius evidence that was moved off `/data` on 2026-11-14 and stays there; `/data/vesuvius` links into it, and `~/code/private-workbench/ops/vesuvius/KEEP-INDEX.md` lists it.
 - Delete from `/shared`, `/data`, or `/build` only data that is backed up or reproducible. `/build` also holds venvs, downloads, and experiment runs that agents put there, not only build output. Aligner and preprocessing temp directories, such as `mfa-tmp`, are safe once their outputs and manifests exist.
