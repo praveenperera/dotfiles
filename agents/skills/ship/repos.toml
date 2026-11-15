@@ -227,11 +227,18 @@ notes = "origin is the fork; open the PR with `gh pr create --repo NVIDIA/cuda-r
 
 [repos."router-for-me/cliproxyapi"]
 steps = ["sol", "commit", "push", "clean"]
+# opt-in with +deploy: rebuilds the live proxy on code from HEAD and restarts it
+deploy = ["~/code/private-workbench/ops/CLIProxyAPI/upstream-sync/deploy-local"]
 notes = "origin is upstream router-for-me/CLIProxyAPI; our fork is the `fork` remote (praveenperera/CLIProxyAPI). Push master to `fork` (`git push fork master`), never to origin, and open no PR. Syncing with upstream rebases master and needs an explicit force-push go-ahead; see FORK.md. An upstream PR is a separate, explicit request"
 
 [repos."router-for-me/cli-proxy-api-management-center"]
-steps = ["sol", "commit", "push", "clean"]
-notes = "origin is upstream router-for-me/Cli-Proxy-API-Management-Center; our fork is the `fork` remote (praveenperera/Cli-Proxy-API-Management-Center), the panel for the CLIProxyAPI fork. Push master to `fork` (`git push fork master`), never to origin, and open no PR. Syncing with upstream rebases master and needs an explicit force-push go-ahead; see FORK.md. An upstream PR is a separate, explicit request"
+steps = ["sol", "commit", "push", "deploy", "clean"]
+deploy = [
+  "bun install --frozen-lockfile && bun run build",
+  "cp ~/.local/share/cliproxyapi/static/management.html ~/.local/share/cliproxyapi/static/management.html.prev",
+  "cp dist/index.html ~/.local/share/cliproxyapi/static/management.html",
+]
+notes = "origin is upstream router-for-me/Cli-Proxy-API-Management-Center; our fork is the `fork` remote (praveenperera/Cli-Proxy-API-Management-Center), the panel for the CLIProxyAPI fork. Push master to `fork` (`git push fork master`), never to origin, and open no PR. Syncing with upstream rebases master and needs an explicit force-push go-ahead; see FORK.md. An upstream PR is a separate, explicit request. Deploy runs on the host that runs the proxy, which is code unless it was moved (see ~/code/private-workbench/ops/CLIProxyAPI/local-setup/README.md); the proxy serves the file from disk, so no restart is needed. Verify the served /management.html on port 8317 contains the new build, and restore management.html.prev on failure"
 
 [repos."praveenperera/research"]
 steps = ["commit", "push", "clean"]
