@@ -517,6 +517,19 @@ fn require_update_command(on_ai5090: bool) -> Result<()> {
 /// mid-update would otherwise swallow every later update without running it
 fn clear_stale_session(on_ai5090: bool, session: &str) -> Result<()> {
     let target = format!("={session}");
+
+    // `list-panes` takes a window target, which falls back to a prefix match
+    // such as `fleet-update-all`, so check for the exact session first
+    let exists = tmux_command(on_ai5090, &["has-session", "-t", &target])
+        .stderr(Stdio::null())
+        .status()
+        .wrap_err("failed to run `tmux has-session`")?;
+
+    // no such session, so `new-session` creates a fresh one
+    if !exists.success() {
+        return Ok(());
+    }
+
     let panes = tmux_command(
         on_ai5090,
         &[
