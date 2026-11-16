@@ -1,7 +1,9 @@
-//! Prompts from the ClickHouse chat history that CLIProxyAPI records on
-//! `code`, which also holds imported Claude Code and Codex transcripts. It
-//! fills in T3 sessions no reachable machine still has, such as threads on
-//! an offline laptop or threads `cmd t3 purge` removed
+//! User messages from the ClickHouse chat history that CLIProxyAPI records on
+//! `code`, which also holds imported Claude Code and Codex transcripts. They
+//! show T3 sessions no reachable machine still has, such as threads on an
+//! offline laptop or threads `cmd t3 purge` removed. The report lists them
+//! but no estimate counts them: the proxy cannot tell a typed prompt from a
+//! message an agent, another thread, or Homebased sent
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
@@ -28,6 +30,12 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
 /// again days after it was typed
 const LOOKBACK_DAYS: u32 = 14;
 
+/// A call that shows more new user messages than this replays history, as
+/// after a compaction, fork, or resume gives the old messages new nodes, so
+/// only its last message can be newly typed. A typed prompt arrives alone,
+/// or with a few queued ones or tool results
+const REPLAY_NODES: u32 = 4;
+
 /// How far past the window agent replies are read
 const REPLY_LOOKAHEAD_HOURS: u32 = 6;
 
@@ -35,9 +43,10 @@ const REPLY_LOOKAHEAD_HOURS: u32 = 6;
 /// adds for Claude and Codex alike
 const T3_MARKER: &str = "T3 Code";
 
-/// A main agent call sends its whole tool list, tens of KB; Claude Code's side
-/// calls, such as titling a session or running a web search, send none or a
-/// single tool, and their prompts are not typed
+/// A main Claude Code call sends its whole tool list, tens of KB; Claude
+/// Code's side calls, such as titling a session or running a web search, send
+/// none or a single tool, and their prompts are not typed. The proxy records
+/// no tool list for Codex calls, so the check applies to Claude only
 const MAIN_AGENT_TOOLS_MIN_BYTES: u32 = 4096;
 
 struct Credentials {
@@ -173,27 +182,42 @@ fn preamble(window: &Window) -> String {
     )
 }
 
-/// Each user message's first sighting in its session, from a main agent call,
-/// with each content block's type and the start of its text, which is all
-/// `typed_blocks` needs; whole messages carry their injected context and run
-/// to hundreds of MB
+/// The first sighting of each user message node, which is one message at one
+/// place in a conversation, from a main agent call, with each content block's
+/// type and the start of its text, which is all `typed_blocks` needs; whole
+/// messages carry their injected context and run to hundreds of MB. Sightings
+/// from before the window come back too, so `build_prompts` can pair the
+/// copies of a session up by order and find the prompt before the window
 fn prompts_sql(window: &Window) -> String {
     format!(
         "{preamble},
   main_requests AS (
     SELECT request_id FROM chat.requests
     WHERE ts >= lookback AND ts < until AND session_id IN (SELECT session_id FROM sessions)
-      AND tools IN (SELECT hash FROM chat.blobs WHERE kind = 'tools' AND bytes >= {MAIN_AGENT_TOOLS_MIN_BYTES})
+      AND (startsWith(session_id, 'codex:')
+        OR tools IN (SELECT hash FROM chat.blobs WHERE kind = 'tools' AND bytes >= {MAIN_AGENT_TOOLS_MIN_BYTES}))
   ),
   firsts AS (
-    SELECT session_id, message, min(ts) AS at FROM chat.nodes
+    SELECT session_id, node, any(message) AS message, any(depth) AS depth, min(ts) AS at,
+      argMin(request_id, ts) AS request
+    FROM chat.nodes
     WHERE role = 'user' AND ts >= lookback AND ts < until
       AND session_id IN (SELECT session_id FROM sessions)
-    GROUP BY session_id, message
-    HAVING at >= since AND anyIf(request_id, request_id IN (SELECT request_id FROM main_requests)) != ''
+    GROUP BY session_id, node
+    HAVING anyIf(request_id, request_id IN (SELECT request_id FROM main_requests)) != ''
+  ),
+  arrivals AS (
+    SELECT session_id, request, count() AS fresh, max(depth) AS deepest
+    FROM firsts GROUP BY session_id, request
+  ),
+  sent AS (
+    SELECT f.session_id AS session_id, f.message AS message, f.at AS at
+    FROM firsts AS f
+    INNER JOIN arrivals AS a ON a.session_id = f.session_id AND a.request = f.request
+    WHERE a.fresh <= {REPLAY_NODES} OR f.depth = a.deepest
   )
 SELECT f.session_id AS session, f.message AS message, toString(f.at) AS at, b.blocks AS blocks
-FROM firsts AS f
+FROM sent AS f
 INNER JOIN (
   SELECT hash,
     any(if(JSONType(content, 'content') = 'String',
@@ -201,7 +225,7 @@ INNER JOIN (
       arrayMap(x -> (JSONExtractString(x, 'type'), substring(trimLeft(JSONExtractString(x, 'text')), 1, 64)),
         JSONExtractArrayRaw(content, 'content')))) AS blocks
   FROM chat.blobs
-  WHERE kind = 'message' AND hash IN (SELECT message FROM firsts)
+  WHERE kind = 'message' AND hash IN (SELECT message FROM sent)
   GROUP BY hash
 ) AS b ON b.hash = f.message
 WHERE NOT has(arrayMap(x -> x.1, b.blocks), 'tool_result')
@@ -308,9 +332,11 @@ fn build_prompts(
         .filter_map(|row| Some((session_id(&row.session)?, row)))
         .collect();
 
-    // the proxy's copy and an imported transcript's copy of one message both
-    // appear, so keep the earliest sighting of each message per session
-    let mut firsts: HashMap<(SessionId, String), DateTime<Utc>> = HashMap::new();
+    // each row is one occurrence of a message, so the same words typed twice
+    // stay two prompts. The proxy's copy and an imported transcript's copy of
+    // a session share a SessionId but not their nodes, so the nth occurrence
+    // of a message in each copy is the same prompt, seen first in the earlier
+    let mut occurrences: HashMap<(String, SessionId, String), Vec<DateTime<Utc>>> = HashMap::new();
     for row in rows {
         let typed = typed_blocks(
             row.blocks
@@ -330,14 +356,25 @@ fn build_prompts(
             continue;
         }
 
-        firsts
-            .entry((session, row.message))
-            .and_modify(|first| *first = (*first).min(at))
-            .or_insert(at);
+        occurrences
+            .entry((row.session, session, row.message))
+            .or_default()
+            .push(at);
+    }
+
+    let mut firsts: HashMap<(SessionId, String, usize), DateTime<Utc>> = HashMap::new();
+    for ((_, session, message), mut times) in occurrences {
+        times.sort();
+        for (nth, at) in times.into_iter().enumerate() {
+            firsts
+                .entry((session.clone(), message.clone(), nth))
+                .and_modify(|first| *first = (*first).min(at))
+                .or_insert(at);
+        }
     }
 
     let mut steps: BTreeMap<SessionId, Vec<Step>> = BTreeMap::new();
-    for ((session, _), at) in firsts {
+    for ((session, ..), at) in firsts {
         steps
             .entry(session)
             .or_default()
@@ -382,11 +419,17 @@ mod tests {
 
     use super::*;
 
+    /// A sighting at `HH:MM` on November 2, or at `DD HH:MM` in November
     fn prompt(session: &str, message: &str, at: &str, text: &str) -> PromptRow {
+        let at = match at.len() {
+            5 => format!("2026-11-02 {at}:00.000"),
+            _ => format!("2026-11-{at}:00.000"),
+        };
+
         PromptRow {
             session: session.to_owned(),
             message: message.to_owned(),
-            at: at.to_owned(),
+            at,
             blocks: vec![("text".to_owned(), text.to_owned())],
         }
     }
@@ -400,7 +443,7 @@ mod tests {
     }
 
     #[test]
-    fn only_t3_sessions_count_and_each_message_counts_once() {
+    fn only_t3_sessions_count_and_each_typed_prompt_counts_once() {
         let window = Window {
             since: Utc.with_ymd_and_hms(2026, 11, 2, 0, 0, 0).unwrap(),
             until: Utc.with_ymd_and_hms(2026, 11, 3, 0, 0, 0).unwrap(),
@@ -408,26 +451,16 @@ mod tests {
 
         let rows = vec![
             // the proxy's sighting and the later imported copy of one message
-            prompt("claude:t3", "m1", "2026-11-02 10:00:00.000", "fix the bug"),
-            prompt(
-                "claude-code:t3",
-                "m1",
-                "2026-11-02 10:30:00.000",
-                "fix the bug",
-            ),
-            prompt(
-                "claude:t3",
-                "m2",
-                "2026-11-02 10:20:00.000",
-                "now the tests",
-            ),
+            prompt("claude:t3", "m1", "10:00", "fix the bug"),
+            prompt("claude-code:t3", "m1", "10:30", "fix the bug"),
+            prompt("claude:t3", "m2", "10:20", "now the tests"),
+            // the same words typed again later, and the import's copy of them
+            prompt("claude:t3", "m1", "10:40", "fix the bug"),
+            prompt("claude-code:t3", "m1", "10:50", "fix the bug"),
+            // typed the day before, so it only orders the occurrences
+            prompt("claude:t3", "m0", "01 09:00", "start"),
             // a scripted review run with no T3 context
-            prompt(
-                "claude:script",
-                "m3",
-                "2026-11-02 11:00:00.000",
-                "Review this change",
-            ),
+            prompt("claude:script", "m3", "11:00", "Review this change"),
         ];
         let replies = vec![ReplyRow {
             session: "claude:t3".to_owned(),
@@ -459,6 +492,7 @@ mod tests {
                     Some("10:05".to_owned())
                 ),
                 ("10:20".to_owned(), Some("/home/user/code/app"), None),
+                ("10:40".to_owned(), Some("/home/user/code/app"), None),
             ]
         );
     }

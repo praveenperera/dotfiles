@@ -3,7 +3,7 @@
 
 use std::fmt;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -21,6 +21,14 @@ pub struct Window {
 impl Window {
     pub fn contains(&self, at: DateTime<Utc>) -> bool {
         self.since <= at && at < self.until
+    }
+
+    /// This window with `by` added on both sides
+    pub fn widen(&self, by: Duration) -> Self {
+        Self {
+            since: self.since - by,
+            until: self.until + by,
+        }
     }
 }
 
@@ -240,7 +248,9 @@ pub struct Step {
 }
 
 /// The prompts in the window, each with the time the agent's output last
-/// ended before the next prompt in the same conversation
+/// ended before the next prompt in the same conversation, and the prompt
+/// before the window when its reply ends inside it, which the gap from that
+/// reply to the next prompt needs
 pub fn prompts_with_replies(
     steps: &[Step],
     window: &Window,
@@ -266,7 +276,9 @@ pub fn prompts_with_replies(
         }
     }
 
-    prompts.retain(|prompt| window.contains(prompt.at));
+    prompts.retain(|prompt| {
+        window.contains(prompt.at) || prompt.reply_done.is_some_and(|at| window.contains(at))
+    });
     prompts
 }
 
@@ -342,7 +354,7 @@ mod tests {
     #[test]
     fn reply_done_is_the_last_agent_output_before_the_next_prompt() {
         let window = Window {
-            since: minute(0),
+            since: minute(5),
             until: minute(30),
         };
 
@@ -354,7 +366,8 @@ mod tests {
         let steps = [
             step(1, false),
             step(2, true),
-            step(4, false),
+            step(3, false),
+            step(4, true),
             step(6, false),
             step(10, true),
             step(12, true),
@@ -366,12 +379,13 @@ mod tests {
         let prompts = prompts_with_replies(&steps, &window, &conversation, Source::T3, None);
         let got: Vec<_> = prompts.iter().map(|p| (p.at, p.reply_done)).collect();
 
-        // output before the first prompt is ignored, and the reply after the
-        // window still counts for the window's last prompt
+        // output before the first prompt is ignored, a prompt before the
+        // window stays only when its reply ends inside it, and the reply after
+        // the window still counts for the window's last prompt
         assert_eq!(
             got,
             [
-                (minute(2), Some(minute(6))),
+                (minute(4), Some(minute(6))),
                 (minute(10), None),
                 (minute(12), Some(minute(41))),
             ]

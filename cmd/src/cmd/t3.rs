@@ -46,12 +46,12 @@ pub enum T3Cmd {
     /// Reads every Homebased Fleet machine that runs T3 or an agent CLI over
     /// ssh, each running `cmd t3 time-collect`: T3's typed messages and thread
     /// views, and Claude Code and Codex terminal sessions from their local
-    /// transcripts. It adds T3 sessions from the ClickHouse chat history on
-    /// `code` that no reachable machine still has, such as threads on an
-    /// offline machine; other sessions there are mostly scripted runs, so it
-    /// leaves them out. A machine that cannot be read
-    /// is reported as missing. Each message counts once, and overlapping time
-    /// across threads and machines counts once.
+    /// transcripts. A machine that cannot be read is reported as missing, and
+    /// so are T3 sessions that only the ClickHouse chat history on `code` has,
+    /// such as threads on an offline machine; those are not counted, since
+    /// ClickHouse cannot tell a typed prompt from a message an agent sent.
+    /// Each message counts once, and overlapping time across threads and
+    /// machines counts once.
     ///
     /// ~/.config/cmd/thread-time.toml can replace the Fleet list:
     /// `machines = [{ name = "code" }, { name = "main", ssh = "praveen@main" }]`

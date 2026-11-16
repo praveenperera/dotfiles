@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
 
-use super::model::{Collection, Conversation, Driver, Prompt, SessionId, Source, View};
+use super::model::{Collection, Conversation, Driver, Prompt, SessionId, Source, View, Window};
 
 /// Where a kept record came from
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -41,16 +41,21 @@ impl Project {
 pub struct Merged {
     pub prompts: Vec<Tagged<Prompt>>,
     pub views: Vec<Tagged<View>>,
-    /// Prompts left out because a source with more context covers their
-    /// session, by the source they came from
+    /// Prompts in the report's window left out because a source with more
+    /// context covers their session, by the source they came from
     pub covered: BTreeMap<Source, usize>,
+    /// Messages only ClickHouse has, from T3 sessions no machine reported.
+    /// No estimate counts them: ClickHouse cannot tell a typed prompt from a
+    /// message an agent, another thread, or Homebased sent into the session
+    pub unverified: Vec<Tagged<Prompt>>,
 }
 
 /// Merge collections. A session's prompts come from the most authoritative
 /// source that knows it: T3, which records who typed each message, then the
-/// session's own transcript, then ClickHouse, which is used only for sessions
-/// no reachable machine reported
-pub fn merge(collections: &[Collection]) -> Merged {
+/// session's own transcript. ClickHouse messages from sessions no machine
+/// reported prompts for are set apart as unverified. `shown` is the window the
+/// report covers, inside the wider one the collections hold for context
+pub fn merge(collections: &[Collection], shown: &Window) -> Merged {
     let drivers = drivers(collections);
     let projects = ProjectMap::new(collections);
 
@@ -59,24 +64,39 @@ pub fn merge(collections: &[Collection]) -> Merged {
     let mut seen_views = HashSet::new();
 
     for collection in collections {
+        // two prompts queued into one call share a time, so the key also
+        // counts which of the collection's prompts at that time this is; the
+        // same session read twice still matches up
+        let mut nth: HashMap<(&Conversation, DateTime<Utc>), usize> = HashMap::new();
         for prompt in &collection.prompts {
             let origin = Origin {
                 machine: origin_machine(collection, prompt.source),
                 source: prompt.source,
             };
 
-            let keep = keep_prompt(prompt, &drivers)
-                && seen_prompts.insert((prompt.conversation.clone(), prompt.at));
+            let index = nth.entry((&prompt.conversation, prompt.at)).or_default();
+            let key = (prompt.conversation.clone(), prompt.at, *index);
+            *index += 1;
+
+            let keep = keep_prompt(prompt, &drivers) && seen_prompts.insert(key);
             if !keep {
-                *merged.covered.entry(prompt.source).or_default() += 1;
+                if shown.contains(prompt.at) {
+                    *merged.covered.entry(prompt.source).or_default() += 1;
+                }
+
                 continue;
             }
 
-            merged.prompts.push(Tagged {
+            let tagged = Tagged {
                 project: projects.project(prompt.place.as_deref()),
                 item: prompt.clone(),
                 origin,
-            });
+            };
+
+            match prompt.source {
+                Source::ClickHouse => merged.unverified.push(tagged),
+                _ => merged.prompts.push(tagged),
+            }
         }
 
         for view in &collection.views {
@@ -129,10 +149,11 @@ fn keep_prompt(prompt: &Prompt, drivers: &HashMap<SessionId, Driver>) -> bool {
     };
 
     match (prompt.source, drivers.get(session)) {
-        // only ClickHouse knows this session, such as one from an offline machine
-        (Source::ClickHouse, None) => true,
-        // the machine that has the session reported its own prompts, or found
-        // that no one typed into it
+        // no machine reported prompts for this session, such as one from an
+        // offline machine, or a T3 thread `cmd t3 purge` removed while its SDK
+        // transcript stayed; ClickHouse only sends sessions T3 ran
+        (Source::ClickHouse, None | Some(Driver::Automated)) => true,
+        // the machine that has the session reported its own prompts
         (Source::ClickHouse, Some(_)) => false,
         // a terminal session imported into T3 keeps the prompts typed before
         // the import only in its transcript
@@ -267,7 +288,7 @@ mod tests {
         let code = Collection {
             schema: SCHEMA_VERSION,
             machine: "code".to_owned(),
-            projects: vec!["/home/praveen/code/seq".to_owned()],
+            projects: vec!["/home/praveen/code/app".to_owned()],
             sessions: vec![
                 KnownSession {
                     session: session("t3-run"),
@@ -276,8 +297,9 @@ mod tests {
                         created: at(5),
                     },
                 },
+                // a purged T3 thread whose SDK transcript is still here
                 KnownSession {
-                    session: session("worker"),
+                    session: session("purged"),
                     driver: Driver::Automated,
                 },
             ],
@@ -286,21 +308,21 @@ mod tests {
                     Source::T3,
                     Conversation::Thread("thread".to_owned()),
                     6,
-                    "/home/praveen/code/seq",
+                    "/home/praveen/code/app",
                 ),
                 // typed in the terminal before the session was imported into T3
                 prompt(
                     Source::ClaudeCode,
                     Conversation::Session(session("t3-run")),
                     4,
-                    "/home/praveen/code/seq",
+                    "/home/praveen/code/app",
                 ),
                 // the same session after the import, which T3 already has
                 prompt(
                     Source::ClaudeCode,
                     Conversation::Session(session("t3-run")),
                     6,
-                    "/home/praveen/code/seq",
+                    "/home/praveen/code/app",
                 ),
             ],
             ..Collection::default()
@@ -318,37 +340,56 @@ mod tests {
                 ),
                 prompt(
                     Source::ClickHouse,
-                    Conversation::Session(session("worker")),
+                    Conversation::Session(session("purged")),
                     7,
-                    "/x",
+                    "/home/praveen/code/app",
                 ),
-                // a session from a machine that was offline
+                // a session from a machine that was offline, with two prompts
+                // queued into one call
                 prompt(
                     Source::ClickHouse,
                     Conversation::Session(session("laptop")),
                     8,
-                    "/Users/praveen/.t3/worktrees/seq/fix-ci",
+                    "/Users/praveen/.t3/worktrees/app/fix-ci",
+                ),
+                prompt(
+                    Source::ClickHouse,
+                    Conversation::Session(session("laptop")),
+                    8,
+                    "/Users/praveen/.t3/worktrees/app/fix-ci",
                 ),
             ],
             ..Collection::default()
         };
 
-        let merged = merge(&[code, proxy]);
-        let kept: Vec<_> = merged
-            .prompts
-            .iter()
-            .map(|p| (p.item.source, p.item.at, p.project.label().to_owned()))
-            .collect();
+        let shown = Window {
+            since: at(0),
+            until: at(23),
+        };
+        let merged = merge(&[code, proxy], &shown);
+        let summary = |prompts: &[Tagged<Prompt>]| -> Vec<_> {
+            prompts
+                .iter()
+                .map(|p| (p.item.source, p.item.at, p.project.label().to_owned()))
+                .collect()
+        };
 
         assert_eq!(
-            kept,
+            summary(&merged.prompts),
             [
-                (Source::T3, at(6), "~/code/seq".to_owned()),
-                (Source::ClaudeCode, at(4), "~/code/seq".to_owned()),
-                (Source::ClickHouse, at(8), "~/code/seq".to_owned()),
+                (Source::T3, at(6), "~/code/app".to_owned()),
+                (Source::ClaudeCode, at(4), "~/code/app".to_owned()),
+            ]
+        );
+        assert_eq!(
+            summary(&merged.unverified),
+            [
+                (Source::ClickHouse, at(7), "~/code/app".to_owned()),
+                (Source::ClickHouse, at(8), "~/code/app".to_owned()),
+                (Source::ClickHouse, at(8), "~/code/app".to_owned()),
             ]
         );
         assert_eq!(merged.covered.get(&Source::ClaudeCode), Some(&1));
-        assert_eq!(merged.covered.get(&Source::ClickHouse), Some(&2));
+        assert_eq!(merged.covered.get(&Source::ClickHouse), Some(&1));
     }
 }

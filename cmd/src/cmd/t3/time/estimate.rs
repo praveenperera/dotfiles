@@ -29,6 +29,19 @@ pub struct Params {
     pub read_cap: Duration,
 }
 
+impl Params {
+    /// How far past the report's days activity can still change them: a
+    /// burst joins actions up to `high_break` apart and runs `burst_tail`
+    /// past each, and a reply gap or a run of visits lasts up to `read_cap`.
+    /// Reading this much more on each side makes a day's estimate the same
+    /// whatever range the report covers; the reply that starts a gap can end
+    /// any time after its prompt, so each source also keeps the prompt before
+    /// the window when its reply lands inside
+    pub fn context(&self) -> Duration {
+        self.high_break.max(self.burst_tail).max(self.read_cap)
+    }
+}
+
 mod minutes {
     use chrono::Duration;
     use serde::Serializer;

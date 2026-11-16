@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, SecondsFormat, TimeZone as _, Utc};
 use eyre::{Result, WrapErr};
-use rusqlite::{params, Connection, OpenFlags};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension as _};
 
 use super::model::{
     prompts_with_replies, Agent, Conversation, Driver, KnownSession, Prompt, SessionId, Source,
@@ -217,22 +217,43 @@ fn prompts(
         });
     }
 
+    // the last prompt before the window, whose reply can end inside it
+    let typed = TYPED_SOURCES
+        .iter()
+        .map(|source| format!("'{source}'"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut before = conn.prepare(&format!(
+        "SELECT created_at FROM orchestration_v2_projection_messages
+         WHERE thread_id = ?1 AND created_at < ?2 AND role = 'user'
+           AND json_extract(payload_json, '$.creationSource') IN ({typed})
+         ORDER BY created_at DESC LIMIT 1"
+    ))?;
+
     let mut prompts = Vec::new();
     for thread_messages in messages.chunk_by(|a, b| a.thread == b.thread) {
         let thread = &thread_messages[0].thread;
         let place = threads.get(thread).and_then(|t| t.project.as_deref());
+        let earlier = before
+            .query_row(params![thread, sql_time(window.since)], |row| {
+                row.get::<_, String>(0)
+            })
+            .optional()?
+            .and_then(|created| timestamp(&created))
+            .map(|at| Step { at, prompt: true });
+
         // a reply's own message keeps growing while it streams, so its end is
         // when the message was last updated
-        let steps: Vec<Step> = thread_messages
-            .iter()
-            .map(|message| Step {
+        let steps: Vec<Step> = earlier
+            .into_iter()
+            .chain(thread_messages.iter().map(|message| Step {
                 at: if message.typed {
                     message.created
                 } else {
                     message.updated
                 },
                 prompt: message.typed,
-            })
+            }))
             .collect();
 
         let conversation = Conversation::Thread(thread.clone());

@@ -173,7 +173,8 @@ fn read_claude(path: &Path, window: &Window) -> Option<Transcript> {
             continue;
         };
 
-        let prompt = str_field(&record, "type") == Some("user")
+        let kind = str_field(&record, "type");
+        let prompt = kind == Some("user")
             && !flag(&record, "isSidechain")
             && !flag(&record, "isMeta")
             && !flag(&record, "isCompactSummary")
@@ -181,7 +182,11 @@ fn read_claude(path: &Path, window: &Window) -> Option<Transcript> {
                 .pointer("/message/content")
                 .is_some_and(typed_content);
 
-        steps.push(Step { at, prompt });
+        // only the agent's own output ends a reply; tool results, snapshots,
+        // and system records land around a prompt as well
+        if prompt || kind == Some("assistant") {
+            steps.push(Step { at, prompt });
+        }
     }
 
     let session = SessionId {
@@ -213,6 +218,23 @@ fn automated(session: SessionId) -> Transcript {
             driver: Driver::Automated,
         },
         prompts: Vec::new(),
+    }
+}
+
+/// Whether a rollout record is the agent's own output, which ends a reply;
+/// turn context and the instructions sent with each prompt land next to the
+/// prompt and say nothing about when the agent finished
+fn codex_output(record: &Value, payload: &Value) -> bool {
+    match str_field(record, "type") {
+        Some("response_item") => !matches!(
+            str_field(payload, "role"),
+            Some("user" | "developer" | "system")
+        ),
+        Some("event_msg") => matches!(
+            str_field(payload, "type"),
+            Some("agent_message" | "task_complete")
+        ),
+        _ => false,
     }
 }
 
@@ -254,8 +276,13 @@ fn read_codex(path: &Path, window: &Window) -> Option<Transcript> {
             && str_field(payload, "role") == Some("user")
             && payload.get("content").is_some_and(typed_content);
 
-        events.push(Step { at, prompt: event });
-        items.push(Step { at, prompt: item });
+        if event || codex_output(&record, payload) {
+            events.push(Step { at, prompt: event });
+        }
+
+        if item || codex_output(&record, payload) {
+            items.push(Step { at, prompt: item });
+        }
     }
 
     let steps = match events.iter().any(|step| step.prompt) {
@@ -276,4 +303,47 @@ fn read_codex(path: &Path, window: &Window) -> Option<Transcript> {
             driver: Driver::Terminal,
         },
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::TimeZone as _;
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn a_codex_reply_ends_at_the_agents_last_output() {
+        let at = |minute: u32| Utc.with_ymd_and_hms(2026, 11, 2, 10, minute, 0).unwrap();
+        let stamp = |minute: u32| at(minute).to_rfc3339();
+        let records = [
+            json!({"type": "session_meta", "timestamp": stamp(0),
+                "payload": {"id": "s1", "cwd": "/home/user/code/app", "source": "cli"}}),
+            json!({"type": "event_msg", "timestamp": stamp(1),
+                "payload": {"type": "user_message", "message": "fix the bug"}}),
+            json!({"type": "response_item", "timestamp": stamp(3),
+                "payload": {"type": "message", "role": "assistant", "content": []}}),
+            // setup Codex writes just before the next prompt
+            json!({"type": "turn_context", "timestamp": stamp(9), "payload": {}}),
+            json!({"type": "event_msg", "timestamp": stamp(9),
+                "payload": {"type": "user_message", "message": "now the tests"}}),
+        ];
+
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let lines: Vec<String> = records.iter().map(Value::to_string).collect();
+        std::fs::write(file.path(), lines.join("\n")).unwrap();
+
+        let window = Window {
+            since: at(0),
+            until: at(30),
+        };
+        let transcript = read_codex(file.path(), &window).unwrap();
+        let got: Vec<_> = transcript
+            .prompts
+            .iter()
+            .map(|prompt| (prompt.at, prompt.reply_done))
+            .collect();
+
+        assert_eq!(got, [(at(1), Some(at(3))), (at(9), None)]);
+    }
 }
