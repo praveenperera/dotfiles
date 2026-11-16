@@ -69,6 +69,8 @@ Follow [git-commit](../git-commit/SKILL.md). Stage only this task's files or hun
 
 Push the branch with tracking. When the remote has moved, integrate with `git pull --rebase` only while every local commit is unpushed, and stop on a conflict.
 
+When the plan has a `pre-push:` block, from the repo's `pre_push` setting, make every push attempt through `cmd ship push -- <git push args>`, such as `cmd ship push -- -u origin <branch>`, never a bare `git push`. It runs the listed checks from the checkout root, pushes only when each exits 0, and otherwise exits 1 with `nothing was pushed`; that is a failed step, so fix the cause and do not push another way. A retry after a rebase goes through it again, since the rebase made new commits. The repository's own pre-push hook still runs on that push and may repeat the same check; let it, since skipping it takes `--no-verify`.
+
 ### pr
 
 Open the PR against the plan's `pr` target, as a draft when the plan says draft. For a fork, use `--repo <target> --head <owner>:<branch>`. Write the body as Markdown prose: what changed, why, the root cause for a fix, and how it was verified. When the plan has a `pr link:` line, do what it says.

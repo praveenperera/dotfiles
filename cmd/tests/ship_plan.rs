@@ -273,3 +273,151 @@ fn done_keeps_the_fields_and_order_of_a_plan_saved_by_an_older_version() {
     );
     assert_eq!(fs::read_to_string(&path).unwrap(), want);
 }
+
+#[test]
+fn cove_plan_shows_its_pre_push_check() {
+    let args = ["--repo", "bitcoinppl/cove", "--host", "none", "--"];
+    let output = plan(Path::new(env!("CARGO_MANIFEST_DIR")), &args);
+    let text = stdout(&output);
+
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(
+        text.contains(
+            "pre-push: push with `cmd ship push -- <git push args>`, which runs:\n  just pre-push\n"
+        ),
+        "{text}"
+    );
+
+    let args = [
+        "--repo",
+        "bitcoinppl/cove",
+        "--json",
+        "--host",
+        "none",
+        "--",
+    ];
+    let output = plan(Path::new(env!("CARGO_MANIFEST_DIR")), &args);
+    let json = serde_json::from_slice::<Value>(&output.stdout).unwrap();
+    assert_eq!(json["pre_push"], serde_json::json!(["just pre-push"]));
+}
+
+/// A one-commit checkout of `me/app` whose repos.toml entry checks for an `ok`
+/// file at the root, with an empty bare repository to push to
+struct PushRig {
+    checkout: tempfile::TempDir,
+    remote: tempfile::TempDir,
+}
+
+impl PushRig {
+    fn new() -> Self {
+        let checkout = tempfile::tempdir().unwrap();
+        let remote = tempfile::tempdir().unwrap();
+
+        git(remote.path(), &["init", "-q", "--bare"]);
+        git(checkout.path(), &["init", "-q", "-b", "master"]);
+        git(
+            checkout.path(),
+            &["remote", "add", "origin", "git@github.com:me/app.git"],
+        );
+
+        let table = r#"owners = ["me"]
+
+[default]
+steps = ["commit", "push", "clean"]
+
+[external]
+steps = ["sol", "commit", "push", "pr", "clean"]
+
+[repos."me/app"]
+steps = ["commit", "push", "clean"]
+pre_push = ["test -f ok"]
+"#;
+        fs::write(checkout.path().join("repos.toml"), table).unwrap();
+        fs::create_dir(checkout.path().join("sub")).unwrap();
+        fs::write(checkout.path().join("sub/file"), "x").unwrap();
+        git(checkout.path(), &["add", "sub/file"]);
+        git(
+            checkout.path(),
+            &[
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "commit",
+                "-q",
+                "-m",
+                "init",
+            ],
+        );
+
+        Self { checkout, remote }
+    }
+
+    /// `cmd ship push` from a subdirectory, pushing HEAD to the bare remote's master
+    fn push(&self) -> Output {
+        let target = self.remote.path().to_str().unwrap();
+        Command::new(env!("CARGO_BIN_EXE_cmd"))
+            .args(["ship", "push", "--config"])
+            .arg(self.checkout.path().join("repos.toml"))
+            .args(["--", "-q", target, "HEAD:refs/heads/master"])
+            .current_dir(self.checkout.path().join("sub"))
+            .output()
+            .unwrap()
+    }
+
+    /// The bare remote's master commit, if it has one
+    fn pushed(&self) -> Option<String> {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(self.remote.path())
+            .args(["rev-parse", "--verify", "-q", "refs/heads/master"])
+            .output()
+            .unwrap();
+
+        output
+            .status
+            .success()
+            .then(|| stdout(&output).trim().to_owned())
+    }
+
+    fn head(&self) -> String {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(self.checkout.path())
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .unwrap();
+
+        stdout(&output).trim().to_owned()
+    }
+}
+
+fn git(dir: &Path, args: &[&str]) {
+    let status = Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(args)
+        .status()
+        .unwrap();
+
+    assert!(status.success(), "git {args:?}");
+}
+
+#[test]
+fn a_failing_pre_push_check_stops_the_push() {
+    let rig = PushRig::new();
+
+    let output = rig.push();
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        stderr(&output),
+        "pre-push: test -f ok\nship: pre-push check `test -f ok` failed (exit 1); nothing was pushed\n"
+    );
+    assert_eq!(rig.pushed(), None);
+
+    // the check runs from the checkout root, so the subdirectory finds the file
+    fs::write(rig.checkout.path().join("ok"), "").unwrap();
+    let output = rig.push();
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert_eq!(rig.pushed(), Some(rig.head()));
+}

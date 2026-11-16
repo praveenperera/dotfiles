@@ -1,5 +1,6 @@
 //! Commands for the ship and gh-fix-ci skills: `plan` resolves /ship words
-//! into a step plan, the waits block on CI, and `ci-failures` reports failures
+//! into a step plan, `push` runs a repo's pre-push checks before pushing, the
+//! waits block on CI, and `ci-failures` reports failures
 //!
 //! The waits, `watch-pr` and `watch-run`, block until a PR's CI or a workflow run
 //! ends, stay quiet on stdout meanwhile, then print one line and exit 0 only
@@ -32,6 +33,10 @@ pub enum ShipCmd {
     #[command(visible_alias = "p")]
     Plan(plan::PlanArgs),
 
+    /// Run the repo's pre-push checks from repos.toml, then `git push` only when
+    /// every one passed
+    Push(plan::PushArgs),
+
     /// Wait for a PR's CI, and with --greptile for Greptile's review of the head
     /// commit, then print one line
     #[command(visible_alias = "wp")]
@@ -50,6 +55,7 @@ pub enum ShipCmd {
 pub fn run_with_flags(subcommand: ShipCmd) -> Result<()> {
     match subcommand {
         ShipCmd::Plan(args) => plan::run(args),
+        ShipCmd::Push(args) => plan::push(args),
         ShipCmd::WatchPr(args) => watch("watch-pr", watch_pr::run(args)),
         ShipCmd::WatchRun(args) => watch("watch-run", watch_run::run(args)),
         // a report, not a wait, so it prints its own output rather than one line

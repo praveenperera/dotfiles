@@ -10,6 +10,8 @@
 #             run deploy_otherwise instead of deploy when the work touches none of deploy_paths
 #   publish   commands for the opt-in publish step, kept separate because a published
 #             version cannot be taken back
+#   pre_push  checks that must each exit 0 right before every push; the push step runs
+#             them through `cmd ship push`, which pushes nothing when one fails
 #   greptile  true when the Greptile app reviews this repo's PRs
 #   merge     "squash" (default) or "never" when someone else merges
 #   pr_repo   PR target when it differs from origin, such as an upstream for a fork
@@ -207,6 +209,7 @@ notes = "A release follows the steps in .github/workflows/package.yml: before th
 [repos."bitcoinppl/cove"]
 steps = ["sol", "commit", "push", "pr", "greptile", "clean"]
 greptile = true
+pre_push = ["just pre-push"]
 notes = "Merge is opt-in: Praveen runs `/ship merge` when he wants it. Stacked PRs merge with `gh stack merge <n> --squash --yes`"
 
 [repos."avencera/rembuild"]

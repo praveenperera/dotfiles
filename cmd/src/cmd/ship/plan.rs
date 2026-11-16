@@ -5,6 +5,9 @@
 //! in the same repo always produce the same plan, and anything it cannot resolve
 //! is an error instead of a guess. The ship skill and plans saved by earlier runs
 //! read its printed lines, its JSON, and its exit codes, so all three are stable
+//!
+//! `cmd ship push` runs the plan's pre-push checks and pushes only when they all
+//! pass, so a failing check stops a ship before anything leaves the checkout
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt;
@@ -74,11 +77,17 @@ pub struct PlanArgs {
 }
 
 pub fn run(args: PlanArgs) -> Result<()> {
-    match args.execute() {
-        Ok(true) => Ok(()),
-        Ok(false) => std::process::exit(1),
-        // an unresolvable word or value is the caller's to fix, so it gets one
-        // line and exit 2, while a broken repos.toml keeps eyre's report and exit 1
+    exit_on(args.execute().map(|ok| if ok { 0 } else { 1 }))
+}
+
+/// Exits with `code` when it is nonzero
+///
+/// An unresolvable word or value is the caller's to fix, so it gets one line and
+/// exit 2, while a broken repos.toml keeps eyre's report and exit 1
+fn exit_on(result: Result<i32>) -> Result<()> {
+    match result {
+        Ok(0) => Ok(()),
+        Ok(code) => std::process::exit(code),
         Err(error) => match error.downcast_ref::<PlanError>() {
             Some(plan_error) => {
                 eprintln!("ship: {plan_error}");
@@ -89,15 +98,33 @@ pub fn run(args: PlanArgs) -> Result<()> {
     }
 }
 
+/// `--config`, or repos.toml in ~/code/dotfiles
+fn load_config(path: Option<&Path>) -> Result<Config> {
+    let path = match path {
+        Some(path) => path.to_path_buf(),
+        None => crate::dotfiles_dir()?.join(CONFIG_IN_DOTFILES),
+    };
+
+    Config::load(&path)
+}
+
+/// The repo a command is for: `--repo`, else the checkout's origin remote,
+/// lowercased, and whether the checkout is that repo
+fn target_repo(checkout: &Checkout, explicit: Option<&str>) -> Result<(String, bool)> {
+    let origin = checkout.remote("origin");
+    let repo = explicit
+        .map(str::to_lowercase)
+        .or_else(|| origin.clone())
+        .ok_or_else(|| PlanError::report("no GitHub origin remote here; pass --repo OWNER/NAME"))?;
+
+    let in_checkout = origin.as_deref() == Some(repo.as_str());
+    Ok((repo, in_checkout))
+}
+
 impl PlanArgs {
     /// Runs the command; `Ok(false)` means exit 1 after a failed `--check`
     fn execute(&self) -> Result<bool> {
-        let config_path = match &self.config {
-            Some(path) => path.clone(),
-            None => crate::dotfiles_dir()?.join(CONFIG_IN_DOTFILES),
-        };
-
-        let config = Config::load(&config_path)?;
+        let config = load_config(self.config.as_deref())?;
 
         if self.check {
             let problems = config.check()?;
@@ -121,19 +148,10 @@ impl PlanArgs {
             return Ok(true);
         }
 
-        let origin = checkout.remote("origin");
-        let repo = self
-            .repo
-            .as_deref()
-            .map(str::to_lowercase)
-            .or_else(|| origin.clone())
-            .ok_or_else(|| {
-                PlanError::report("no GitHub origin remote here; pass --repo OWNER/NAME")
-            })?;
+        let (repo, in_checkout) = target_repo(&checkout, self.repo.as_deref())?;
 
         // remotes and changed paths describe the current checkout, so use them only
         // when it is the repo
-        let in_checkout = origin.as_deref() == Some(repo.as_str());
         let upstream = in_checkout.then(|| checkout.remote("upstream")).flatten();
         let changed = in_checkout.then(|| checkout.changed_paths()).flatten();
 
@@ -160,6 +178,73 @@ impl PlanArgs {
 
         plan.print(saved.as_deref());
         Ok(true)
+    }
+}
+
+/// Run the repo's pre-push checks, then `git push` only when every one passed
+#[derive(Debug, Clone, Args)]
+#[command(after_help = "\
+Examples:
+  cmd ship push -- -u origin feature-x      check, then git push -u origin feature-x
+  cmd ship push --repo OWNER/NAME -- ...    use another repo's checks")]
+pub struct PushArgs {
+    /// Arguments for `git push`, after `--`
+    git_args: Vec<String>,
+
+    /// owner/name whose checks run; defaults to the origin remote of the current directory
+    #[arg(long)]
+    repo: Option<String>,
+
+    /// The repo table; defaults to agents/skills/ship/repos.toml in ~/code/dotfiles
+    #[arg(long, value_name = "PATH")]
+    config: Option<PathBuf>,
+}
+
+pub fn push(args: PushArgs) -> Result<()> {
+    exit_on(args.execute())
+}
+
+impl PushArgs {
+    /// Runs the checks and the push, returning the exit code: the push's, or 1
+    /// when a check failed and nothing was pushed
+    fn execute(&self) -> Result<i32> {
+        let config = load_config(self.config.as_deref())?;
+        let checkout = Checkout(std::env::current_dir().context("no current directory")?);
+        let (repo, in_checkout) = target_repo(&checkout, self.repo.as_deref())?;
+        let upstream = in_checkout.then(|| checkout.remote("upstream")).flatten();
+
+        // the push step's own plan, so the checks are exactly the ones `cmd ship
+        // plan` shows; deploy is not planned, so the changed paths do not matter
+        let plan = config.resolve(&repo, &["only", "push"], upstream.as_deref(), None)?;
+        let root = checkout.root()?;
+
+        for check in &plan.pre_push {
+            eprintln!("pre-push: {check}");
+            let status = Command::new("sh")
+                .args(["-c", check])
+                .current_dir(&root)
+                .status()
+                .wrap_err_with(|| format!("could not run `{check}`"))?;
+
+            if !status.success() {
+                let code = status
+                    .code()
+                    .map_or_else(|| "a signal".to_owned(), |code| format!("exit {code}"));
+                eprintln!("ship: pre-push check `{check}` failed ({code}); nothing was pushed");
+                return Ok(1);
+            }
+        }
+
+        // the repo's own pre-push hook still runs: skipping it would take
+        // --no-verify, which /ship never uses
+        let status = Command::new("git")
+            .arg("push")
+            .args(&self.git_args)
+            .current_dir(&root)
+            .status()
+            .context("could not run git push")?;
+
+        Ok(status.code().unwrap_or(1))
     }
 }
 
@@ -414,6 +499,9 @@ struct Plan {
     pr_draft: bool,
     // keyed by step, so deploy prints before publish
     commands: BTreeMap<Step, Vec<String>>,
+    /// Commands that must each exit 0 right before every push attempt; empty
+    /// unless push is planned
+    pre_push: Vec<String>,
     notes: String,
     host: Host,
     skipped: Vec<String>,
@@ -535,6 +623,13 @@ impl Plan {
             println!("bump: {}", self.bump.as_str());
         }
 
+        if !self.pre_push.is_empty() {
+            println!("pre-push: push with `cmd ship push -- <git push args>`, which runs:");
+            for check in &self.pre_push {
+                println!("  {check}");
+            }
+        }
+
         for (step, commands) in &self.commands {
             println!("{step}:");
             for command in commands {
@@ -564,6 +659,8 @@ struct Section {
     deploy_otherwise: Vec<String>,
     #[serde(default)]
     publish: Vec<String>,
+    #[serde(default)]
+    pre_push: Vec<String>,
     #[serde(default)]
     greptile: bool,
     #[serde(default)]
@@ -602,7 +699,7 @@ enum FieldKind {
 impl FieldKind {
     fn of(key: &str) -> Option<Self> {
         match key {
-            "steps" | "deploy" | "deploy_paths" | "deploy_otherwise" | "publish" => {
+            "steps" | "deploy" | "deploy_paths" | "deploy_otherwise" | "publish" | "pre_push" => {
                 Some(Self::List)
             }
             "greptile" | "pr_draft" => Some(Self::Bool),
@@ -732,6 +829,7 @@ impl Config {
             },
             pr_draft: base.pr_draft,
             commands: BTreeMap::new(),
+            pre_push: Vec::new(),
             notes: base.notes.clone(),
             host: Host::None,
             skipped: Vec::new(),
@@ -902,6 +1000,10 @@ impl Config {
                     "'{bump_word}' has no effect: no {repo} command takes a bump level"
                 )));
             }
+        }
+
+        if steps.contains(&Step::Push) {
+            plan.pre_push = base.pre_push.clone();
         }
 
         // the set is ordered by `Step`, which is the canonical order
@@ -1109,12 +1211,18 @@ impl Checkout {
         Some(paths.into_iter().collect())
     }
 
-    /// The run's scratch directory under the checkout root, named by a path-safe slug
-    fn task_dir(&self, task: &str) -> Result<TaskDir> {
+    /// The checkout's root directory
+    fn root(&self) -> Result<PathBuf> {
         let root = self
             .git(&["rev-parse", "--show-toplevel"])
             .ok_or_else(|| PlanError::report("not inside a git checkout"))?;
 
+        Ok(PathBuf::from(root.trim()))
+    }
+
+    /// The run's scratch directory under the checkout root, named by a path-safe slug
+    fn task_dir(&self, task: &str) -> Result<TaskDir> {
+        let root = self.root()?;
         let slug = task_slug(task);
         if slug.is_empty() {
             return Err(PlanError::report(format!(
@@ -1122,9 +1230,7 @@ impl Checkout {
             )));
         }
 
-        Ok(TaskDir(
-            Path::new(root.trim()).join("_scratch/ship").join(slug),
-        ))
+        Ok(TaskDir(root.join("_scratch/ship").join(slug)))
     }
 }
 
@@ -1359,6 +1465,10 @@ deploy_otherwise = ["pull config"]
 steps = ["commit", "push", "pr", "clean"]
 pr_repo = "them/upstream"
 merge = "never"
+
+[repos."me/checked"]
+steps = ["commit", "push", "pr", "clean"]
+pre_push = ["just pre-push"]
 "#;
 
     fn config() -> Config {
@@ -1539,6 +1649,30 @@ merge = "never"
         assert_eq!(touched.commands[&Step::Deploy], ["release tool"]);
         assert_eq!(untouched.commands[&Step::Deploy], ["pull config"]);
         assert!(!untouched.takes_bump);
+    }
+
+    #[test]
+    fn pre_push_checks_come_with_a_planned_push() {
+        let config = config();
+
+        let checked = config.resolve("me/checked", &[], None, None).unwrap();
+        assert_eq!(checked.steps, steps("commit push pr clean"));
+        assert_eq!(checked.pre_push, ["just pre-push"]);
+
+        // an implied push still gets its checks
+        let merge = config
+            .resolve("me/checked", &["only", "merge"], None, None)
+            .unwrap();
+        assert_eq!(merge.implied, [Step::Pr, Step::Push]);
+        assert_eq!(merge.pre_push, ["just pre-push"]);
+
+        let commit = config
+            .resolve("me/checked", &["only", "commit"], None, None)
+            .unwrap();
+        assert!(commit.pre_push.is_empty());
+
+        let unchecked = config.resolve("me/app", &[], None, None).unwrap();
+        assert!(unchecked.pre_push.is_empty());
     }
 
     #[test]
