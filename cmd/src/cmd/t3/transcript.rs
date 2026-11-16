@@ -14,7 +14,8 @@ const DISCOVERY_WINDOW: Duration = Duration::from_secs(14 * 24 * 60 * 60);
 const TITLE_MAX_CHARS: usize = 80;
 
 /// Originators of terminal sessions: stock `codex` and the tmux wrapper in `cmd codex`
-const CODEX_TUI_ORIGINATORS: &[&str] = &["codex-tui", crate::cmd::codex::app_server::CLIENT_NAME];
+pub(super) const CODEX_TUI_ORIGINATORS: &[&str] =
+    &["codex-tui", crate::cmd::codex::app_server::CLIENT_NAME];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum Provider {
@@ -184,14 +185,14 @@ pub fn same_dir(left: &Path, right: &Path) -> bool {
     }
 }
 
-fn claude_home() -> Result<PathBuf> {
+pub(super) fn claude_home() -> Result<PathBuf> {
     match std::env::var_os("CLAUDE_CONFIG_DIR") {
         Some(dir) => Ok(PathBuf::from(dir)),
         None => Ok(fsutil::home_dir()?.join(".claude")),
     }
 }
 
-fn codex_home() -> Result<PathBuf> {
+pub(super) fn codex_home() -> Result<PathBuf> {
     match std::env::var_os("CODEX_HOME") {
         Some(dir) => Ok(PathBuf::from(dir)),
         None => Ok(fsutil::home_dir()?.join(".codex")),
@@ -200,7 +201,7 @@ fn codex_home() -> Result<PathBuf> {
 
 /// JSON records, one per line. Invalid UTF-8 is replaced rather than ending the
 /// read, so a later title or model record is not lost
-fn read_lines(path: &Path) -> Result<impl Iterator<Item = Value>> {
+pub(super) fn read_lines(path: &Path) -> Result<impl Iterator<Item = Value>> {
     let file = File::open(path).wrap_err_with(|| format!("open {}", path.display()))?;
     let mut reader = BufReader::new(file);
     let mut buffer = Vec::new();
@@ -215,7 +216,7 @@ fn read_lines(path: &Path) -> Result<impl Iterator<Item = Value>> {
     .filter_map(|line| serde_json::from_str(&line).ok()))
 }
 
-fn str_field<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
+pub(super) fn str_field<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value.get(key).and_then(Value::as_str)
 }
 
@@ -518,7 +519,7 @@ fn codex_rollouts_for(cwd: &Path) -> Result<Vec<(Provider, SystemTime, PathBuf)>
     Ok(found)
 }
 
-fn sorted_dirs(dir: &Path) -> Vec<PathBuf> {
+pub(super) fn sorted_dirs(dir: &Path) -> Vec<PathBuf> {
     let Ok(entries) = fs::read_dir(dir) else {
         return Vec::new();
     };

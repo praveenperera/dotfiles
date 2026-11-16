@@ -3,6 +3,7 @@ mod cleanup;
 mod picker;
 mod purge;
 mod server;
+mod time;
 mod transcript;
 
 use std::io::IsTerminal;
@@ -38,6 +39,31 @@ pub enum T3Cmd {
     /// it, and start T3 again
     #[command(visible_alias = "pg")]
     Purge(PurgeArgs),
+
+    /// Estimate the time spent working in agent threads, as a low, middle, and
+    /// high range per US Central day and per project
+    ///
+    /// Reads every Homebased Fleet machine that runs T3 or an agent CLI over
+    /// ssh, each running `cmd t3 time-collect`: T3's typed messages and thread
+    /// views, and Claude Code and Codex terminal sessions from their local
+    /// transcripts. It adds T3 sessions from the ClickHouse chat history on
+    /// `code` that no reachable machine still has, such as threads on an
+    /// offline machine; other sessions there are mostly scripted runs, so it
+    /// leaves them out. A machine that cannot be read
+    /// is reported as missing. Each message counts once, and overlapping time
+    /// across threads and machines counts once.
+    ///
+    /// ~/.config/cmd/thread-time.toml can replace the Fleet list:
+    /// `machines = [{ name = "code" }, { name = "main", ssh = "praveen@main" }]`
+    /// (each may also set `cmd`, the path to cmd there),
+    /// `skip = ["mba"]`, and `clickhouse = "code"`
+    #[command(visible_alias = "tm")]
+    Time(time::TimeArgs),
+
+    /// Print this machine's prompts and views for a window as JSON, for
+    /// `cmd t3 time` running on another machine
+    #[command(hide = true)]
+    TimeCollect(time::CollectArgs),
 }
 
 #[derive(Debug, Clone, Args)]
@@ -69,6 +95,8 @@ pub fn run_with_flags(flags: T3) -> Result<()> {
         T3Cmd::Import(args) => import(args),
         T3Cmd::Cleanup(args) => cleanup::cleanup(args),
         T3Cmd::Purge(args) => purge::purge(args),
+        T3Cmd::Time(args) => time::run(args),
+        T3Cmd::TimeCollect(args) => time::collect(args),
     }
 }
 
