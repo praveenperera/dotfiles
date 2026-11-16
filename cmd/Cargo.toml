@@ -63,6 +63,7 @@ rust_decimal = { version = "1.42", features = ["serde-with-arbitrary-precision"]
 
 # datetime
 chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
 
 # http client
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
