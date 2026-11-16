@@ -1,6 +1,7 @@
 //! `cmd t3 time`: estimates the time spent working in agent threads across
-//! every machine, from T3's message log, local Claude Code and Codex
-//! transcripts, and the proxy's ClickHouse chat history
+//! every machine, from T3's message log and local Claude Code and Codex
+//! transcripts, and checks the proxy's ClickHouse chat history for sessions
+//! no machine reported
 
 mod clickhouse;
 mod estimate;
@@ -58,7 +59,7 @@ pub struct TimeArgs {
     #[arg(long, default_value_t = 15, value_name = "MINUTES")]
     read_cap: i64,
 
-    /// Leave out the ClickHouse chat history
+    /// Skip the ClickHouse check for sessions no machine reported
     #[arg(long)]
     no_clickhouse: bool,
 
@@ -119,10 +120,11 @@ fn collect_local(machine: String, window: &Window, clickhouse: bool) -> Collecti
 pub fn run(args: TimeArgs) -> Result<()> {
     let params = params(&args)?;
     let days = days(&args)?;
-    let window = Window {
+    let shown = Window {
         since: Days::start_of(days.first),
         until: Days::start_of(days.last + Duration::days(1)),
     };
+    let window = shown.widen(params.context());
 
     let config = Config::load()?;
     let mut machines = fleet::machines(&config)?;
@@ -167,7 +169,7 @@ pub fn run(args: TimeArgs) -> Result<()> {
         }
     }
 
-    let merged = merge::merge(&collections);
+    let merged = merge::merge(&collections, &shown);
     let selection = select(&merged, args.project.as_deref());
     let report = report::build(Inputs {
         days,
@@ -280,6 +282,11 @@ fn select<'a>(merged: &'a merge::Merged, filter: Option<&str>) -> Selection<'a> 
             .views
             .iter()
             .filter(|view| matches(&view.project))
+            .collect(),
+        unverified: merged
+            .unverified
+            .iter()
+            .filter(|prompt| matches(&prompt.project))
             .collect(),
     }
 }

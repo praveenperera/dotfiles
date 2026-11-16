@@ -97,11 +97,11 @@ pub struct ProjectRow {
     pub from: Vec<Count>,
 }
 
-/// The span and machines T3 thread-view records cover
+/// The machines and visit span T3 thread-view records cover
 #[derive(Debug, Clone, Serialize)]
 pub struct ViewCoverage {
-    pub first: DateTime<Utc>,
-    pub last: DateTime<Utc>,
+    pub first_visit: Option<DateTime<Utc>>,
+    pub last_visit: Option<DateTime<Utc>>,
     pub machines: Vec<String>,
     pub opens: usize,
     pub visits: usize,
@@ -121,11 +121,21 @@ pub struct Report {
     pub views: Option<ViewCoverage>,
     /// Prompts left out because a source with more context covers their session
     pub covered: BTreeMap<Source, usize>,
+    /// ClickHouse messages in the days from sessions no machine reported,
+    /// which no estimate counts
+    pub unverified: Unverified,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize)]
+pub struct Unverified {
+    pub sessions: usize,
+    pub messages: usize,
 }
 
 pub struct Selection<'a> {
     pub prompts: Vec<&'a Tagged<Prompt>>,
     pub views: Vec<&'a Tagged<View>>,
+    pub unverified: Vec<&'a Tagged<Prompt>>,
 }
 
 impl Selection<'_> {
@@ -176,9 +186,12 @@ pub fn build(inputs: Inputs<'_>) -> Report {
         machines,
     } = inputs;
 
+    // the selection reaches past the days for context; estimates use all of
+    // it and clip to the days, and counts take only what falls inside them
     let start = Days::start_of(days.first);
     let end = Days::start_of(days.last + Duration::days(1));
     let estimate = selection.estimate(&params, start, end);
+    let shown = selection.within(start, end);
 
     let by_day = days
         .iter()
@@ -215,11 +228,15 @@ pub fn build(inputs: Inputs<'_>) -> Report {
 
     let mut by_project: Vec<ProjectRow> = projects
         .into_iter()
-        .map(|(project, part)| ProjectRow {
-            project: project.label().to_owned(),
-            totals: Totals::new(&part.estimate(&params, start, end), part.prompts.len()),
-            from: part.counts(),
+        .map(|(project, part)| {
+            let shown = part.within(start, end);
+            ProjectRow {
+                project: project.label().to_owned(),
+                totals: Totals::new(&part.estimate(&params, start, end), shown.prompts.len()),
+                from: shown.counts(),
+            }
         })
+        .filter(|row| row.totals.high_minutes > 0 || row.totals.prompts > 0)
         .collect();
     by_project.sort_by_key(|row| std::cmp::Reverse(row.totals.high_minutes));
 
@@ -228,13 +245,22 @@ pub fn build(inputs: Inputs<'_>) -> Report {
         time_zone: "America/Chicago",
         project_filter,
         params,
-        total: Totals::new(&estimate, selection.prompts.len()),
-        from: selection.counts(),
+        total: Totals::new(&estimate, shown.prompts.len()),
+        from: shown.counts(),
         by_day,
         by_project,
         machines,
-        views: view_coverage(&selection.views),
+        views: view_coverage(&shown.views),
         covered: merged.covered.clone(),
+        unverified: Unverified {
+            sessions: shown
+                .unverified
+                .iter()
+                .map(|p| &p.item.conversation)
+                .collect::<BTreeSet<_>>()
+                .len(),
+            messages: shown.unverified.len(),
+        },
     }
 }
 
@@ -243,6 +269,32 @@ impl<'a> Selection<'a> {
         Self {
             prompts: Vec::new(),
             views: Vec::new(),
+            unverified: Vec::new(),
+        }
+    }
+
+    /// The prompts and views in `[start, end)`
+    fn within(&self, start: DateTime<Utc>, end: DateTime<Utc>) -> Self {
+        let inside = |at: DateTime<Utc>| start <= at && at < end;
+        Self {
+            prompts: self
+                .prompts
+                .iter()
+                .copied()
+                .filter(|p| inside(p.item.at))
+                .collect(),
+            views: self
+                .views
+                .iter()
+                .copied()
+                .filter(|v| inside(v.item.at))
+                .collect(),
+            unverified: self
+                .unverified
+                .iter()
+                .copied()
+                .filter(|p| inside(p.item.at))
+                .collect(),
         }
     }
 }
@@ -252,12 +304,15 @@ fn view_coverage(views: &[&Tagged<View>]) -> Option<ViewCoverage> {
         .iter()
         .filter(|view| view.item.kind == ViewKind::Visit)
         .collect();
-    let (first, last) = bounds(visits.iter().map(|view| &view.item.at))?;
+    if views.is_empty() {
+        return None;
+    }
 
+    let span = bounds(visits.iter().map(|view| &view.item.at));
     let machines: BTreeSet<String> = views.iter().map(|v| v.origin.machine.clone()).collect();
     Some(ViewCoverage {
-        first,
-        last,
+        first_visit: span.map(|(first, _)| first),
+        last_visit: span.map(|(_, last)| last),
         machines: machines.into_iter().collect(),
         opens: views.len() - visits.len(),
         visits: visits.len(),
@@ -318,6 +373,10 @@ fn outcome_text(report: &SourceReport) -> String {
     match &report.outcome {
         SourceOutcome::Read { prompts, views, .. } if *views > 0 => {
             format!("{label} {prompts} prompts, {views} views")
+        }
+        // ClickHouse cannot tell typed prompts from other messages
+        SourceOutcome::Read { prompts, .. } if report.source == Source::ClickHouse => {
+            format!("{label} {prompts} messages")
         }
         SourceOutcome::Read { prompts, .. } => format!("{label} {prompts} prompts"),
         SourceOutcome::Absent { reason } => format!("{label} {reason}"),
@@ -414,25 +473,41 @@ fn print_notes(report: &Report) {
         .collect();
     if !covered.is_empty() {
         println!(
-            "  Left out as already covered by T3 or a transcript: {} prompts",
+            "  Left out as already covered by T3 or a transcript: {} messages",
             covered.join(", ")
+        );
+    }
+
+    let unverified = report.unverified;
+    if unverified.messages > 0 {
+        println!(
+            "  Not counted: ClickHouse has {} messages in {} T3 sessions no machine reported, such \
+             as from a machine that was not read. It cannot tell a typed prompt from a message an \
+             agent, another thread, or Homebased sent",
+            unverified.messages, unverified.sessions
         );
     }
 
     match &report.views {
         Some(views) => println!(
-            "  T3 thread views on {}: {} opens, {} visits (from {} to {}). Opens and visits add to \
-             the high estimate only, since T3 also records them for a page reload or a hidden tab. \
-             T3 keeps every visit for only about a day and one per thread before that, so earlier \
-             days rest on typed prompts",
+            "  T3 thread views on {}: {} opens, {}. Opens and visits add to the high estimate \
+             only, since T3 also records them for a page reload or a hidden tab. T3 keeps every \
+             visit for only about a day and one per thread before that, so earlier days rest on \
+             typed prompts",
             views.machines.join(", "),
             views.opens,
-            views.visits,
-            central(views.first),
-            central(views.last),
+            match (views.first_visit, views.last_visit) {
+                (Some(first), Some(last)) => format!(
+                    "{} visits (from {} to {})",
+                    views.visits,
+                    central(first),
+                    central(last)
+                ),
+                _ => "no visits".to_owned(),
+            },
         ),
         None => {
-            println!("  No T3 thread visits in this range; the estimates rest on typed prompts")
+            println!("  No T3 thread views in this range; the estimates rest on typed prompts")
         }
     }
 
@@ -451,4 +526,99 @@ fn print_notes(report: &Report) {
         params.read_cap.num_minutes()
     );
     println!("  Projects overlap in time, so project rows can add up to more than the total");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::model::Conversation;
+    use super::*;
+
+    fn prompt(at: DateTime<Utc>) -> Tagged<Prompt> {
+        Tagged {
+            item: Prompt {
+                at,
+                source: Source::T3,
+                conversation: Conversation::Thread("a".to_owned()),
+                place: None,
+                reply_done: None,
+            },
+            origin: Origin {
+                machine: "code".to_owned(),
+                source: Source::T3,
+            },
+            project: Project::Known("~/code/app".to_owned()),
+        }
+    }
+
+    fn params() -> Params {
+        Params {
+            low_break: Duration::minutes(10),
+            high_break: Duration::minutes(30),
+            burst_tail: Duration::minutes(5),
+            read_cap: Duration::minutes(15),
+        }
+    }
+
+    #[test]
+    fn a_burst_across_midnight_counts_its_part_inside_the_days() {
+        let day = NaiveDate::from_ymd_opt(2026, 11, 13).unwrap();
+        let midnight = Days::start_of(day);
+        // 11:55 PM the night before, read for context, and 12:03 AM
+        let prompts = [
+            prompt(midnight - Duration::minutes(5)),
+            prompt(midnight + Duration::minutes(3)),
+        ];
+
+        let report = build(Inputs {
+            days: Days {
+                first: day,
+                last: day,
+            },
+            params: params(),
+            project_filter: None,
+            merged: &Merged::default(),
+            selection: Selection {
+                prompts: prompts.iter().collect(),
+                views: Vec::new(),
+                unverified: Vec::new(),
+            },
+            machines: Vec::new(),
+        });
+
+        // the burst runs from 11:55 PM to 12:08 AM, so 8 minutes fall on the day
+        assert_eq!(report.total.low_minutes, 8);
+        assert_eq!(report.total.prompts, 1);
+        assert_eq!(report.by_project[0].totals.prompts, 1);
+        assert_eq!(report.from[0].prompts, 1);
+    }
+
+    #[test]
+    fn a_reply_gap_across_midnight_counts_its_part_inside_the_days() {
+        let day = NaiveDate::from_ymd_opt(2026, 11, 13).unwrap();
+        let midnight = Days::start_of(day);
+        // a prompt at 5:55 PM whose reply ends at 11:58 PM, then one at 12:03 AM
+        let mut before = prompt(midnight - Duration::minutes(365));
+        before.item.reply_done = Some(midnight - Duration::minutes(2));
+        let prompts = [before, prompt(midnight + Duration::minutes(3))];
+
+        let report = build(Inputs {
+            days: Days {
+                first: day,
+                last: day,
+            },
+            params: params(),
+            project_filter: None,
+            merged: &Merged::default(),
+            selection: Selection {
+                prompts: prompts.iter().collect(),
+                views: Vec::new(),
+                unverified: Vec::new(),
+            },
+            machines: Vec::new(),
+        });
+
+        // reading from 12:00 to 12:03 and the burst from 12:03 to 12:08
+        assert_eq!(report.total.middle_minutes, 8);
+        assert_eq!(report.total.prompts, 1);
+    }
 }
