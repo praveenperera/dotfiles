@@ -7,3 +7,6 @@ alias python=python3
 alias pip=pip3
 alias sht='/home/praveen/.t3/worktrees/cloud-project-system/praveen-rust-test-coverage/utils/showtime/sht'
 alias showtime='/home/praveen/.t3/worktrees/cloud-project-system/praveen-rust-test-coverage/utils/showtime/sht'
+
+# gpu-ab looks up `--adapter <repo>` here; live adapters stay in private-workbench
+export GPU_AB_ADAPTERS="$HOME/code/private-workbench/ops/{name}/hill-climb/gpu-ab.toml"

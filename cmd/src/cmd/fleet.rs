@@ -291,7 +291,7 @@ fn update_tools(sh: &Shell, failures: &mut Vec<String>) {
         });
     }
 
-    // only the Linux GPU hosts install gpu-ab; its release has no macOS build
+    // only hosts that run GPU benches install gpu-ab, so update it only where it is present
     if has_tool(sh, "gpu-ab") {
         step(failures, "gpu-ab", || {
             run_attached("bash", &["-c", GPU_AB_UPDATE])
