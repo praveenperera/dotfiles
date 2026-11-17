@@ -1,5 +1,6 @@
 ---
 description: Interview-driven spec writing with planning workflow
+disable-model-invocation: true
 argument-hint: [vague idea or feature name]
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Finish the current work with the repository's configured sequence (commit, push, PR, Sol review, Greptile 5/5, merge, deploy, clean up), adjusted by short words such as `+sol`, `+settle` to settle the T3 thread afterward, `-deploy`, `minor`, `confirm` to wait for a go-ahead, or `?` for a status check. Use when the user invokes /ship or $ship, or when a message directly asks to ship the current work, such as "looks good, ship it" or "ship it but skip deploy". Do not use when "ship" refers to something else, such as a product launch or a question about shipping.
+description: "Finish the current work with the repository's configured sequence (commit, push, PR, reviews, merge, deploy, clean up), adjusted by short words such as `+step`, `-step`, `confirm`, or `?`. Use when the user invokes /ship or $ship, or directly asks to ship the current work, such as \"looks good, ship it\" or \"ship it but skip deploy\". Do not use when \"ship\" means something else, such as a product launch."
 argument-hint: "[? | confirm | +step | -step | only step... | high | minor | major]"
 ---
 

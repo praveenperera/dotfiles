@@ -1,5 +1,6 @@
 ---
 description: Load Cloudflare skill and get contextual guidance for your task
+disable-model-invocation: true
 ---
 
 Load the Cloudflare platform skill and help with any Cloudflare development task.

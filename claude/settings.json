@@ -1,5 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "skillListingMaxDescChars": 500,
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_SHELL": "bash",
@@ -52,6 +53,22 @@
     "defaultMode": "auto"
   },
   "model": "opus",
+  "skillOverrides": {
+    "keybindings-help": "user-invocable-only",
+    "fewer-permission-prompts": "user-invocable-only",
+    "init": "user-invocable-only",
+    "security-review": "user-invocable-only",
+    "plugin-authoring": "user-invocable-only",
+    "code-review": "user-invocable-only",
+    "simplify": "user-invocable-only",
+    "loop": "user-invocable-only",
+    "artifact-design": "name-only",
+    "artifact-diagramming": "name-only",
+    "workflow-authoring": "name-only",
+    "dataviz": "name-only",
+    "claude-api": "name-only",
+    "frontend-design:frontend-design": "name-only"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -162,7 +179,7 @@
     },
     "claude-opus-5-5": {
       "effortLevel": "high",
-      "autoCompactWindow": 325000
+      "autoCompactWindow": 375000
     },
     "claude-sonnet-5-5": {
       "effortLevel": "high",
@@ -179,6 +196,5 @@
   "voiceEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
-  },
-  "skillListingMaxDescChars": 500
+  }
 }

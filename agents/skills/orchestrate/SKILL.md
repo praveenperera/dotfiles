@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Run a long coordinating thread that drives several subagents, child threads, PRs, PR stacks, or queued jobs. Keeps the root's own context small, keeps one state file that survives compaction, briefs agents so they own their long work and review loops, and reports status in a fixed format. Use when this thread coordinates three or more agents, PRs, or queue jobs over a run that may outlast a context compaction, when a brief names this skill, or when the user invokes $orchestrate or /orchestrate. Do not use for one subagent whose result the root integrates in the same turn, or for fanout hand-offs.
+description: "Run a long coordinating thread that drives several subagents, child threads, PRs, PR stacks, or queued jobs, with a state file that survives compaction. Use when this thread coordinates three or more agents, PRs, or queue jobs over a run that may outlast a compaction, when a brief names this skill, or when the user invokes $orchestrate or /orchestrate. Do not use for one subagent whose result the root integrates in the same turn, or for fanout hand-offs."
 ---
 
 # Orchestrate

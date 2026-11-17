@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: Prepare focused git commits using Praveen Perera's commit workflow and message rules. Use when the user asks Codex to create a commit, split outstanding changes into logical commits, draft a commit message, stage changes, separate unrelated working-tree edits, or verify a commit is ready.
+description: "Prepare focused git commits with Praveen Perera's commit workflow and message rules. Use when the user asks for a commit, to split changes into logical commits, draft a commit message, stage changes, separate unrelated working-tree edits, or check that a commit is ready."
 ---
 
 # Git Commit

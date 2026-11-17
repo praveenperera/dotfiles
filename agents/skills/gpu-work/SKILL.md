@@ -1,6 +1,6 @@
 ---
 name: gpu-work
-description: Rules and workflow for GPU kernel and native-runtime work. Use for writing, porting or optimizing CUDA kernels (cuda-oxide, PTX tiers, shipping CUDA crates), speed climbs on GPU pipelines, porting a model off PyTorch or ONNX Runtime to a native runtime, replacing cuDNN or cuBLAS layers, profiling kernels with nsys or ncu, Metal backends on Apple silicon (MSL kernels, Metal 4 tensor ops, Core ML or Neural Engine offload), and tuning an LLM server (vLLM, SGLang, llama.cpp, ExLlama, MLX, TensorRT-LLM) for decode or prefill tok/s, TTFT, startup, KV cache size or speculative decoding (MTP, EAGLE, draft models), or when the user invokes $gpu-work or /gpu-work. Defaults to ambitious floor-capable designs over easy tuning, and keeps a decision log. Do not use for ML training runs or other GPU jobs that neither change kernel or runtime code nor tune a model server.
+description: "Rules and workflow for GPU kernel and native-runtime work: writing or optimizing CUDA or Metal kernels, speed climbs on GPU pipelines, porting a model off PyTorch or ONNX Runtime, replacing cuDNN or cuBLAS layers, Core ML offload, profiling with nsys or ncu, and tuning an LLM server (vLLM, SGLang, llama.cpp, MLX) for tok/s, TTFT, KV cache or speculative decoding. Use for that work or on $gpu-work or /gpu-work. Not for ML training runs or GPU jobs that change no kernel, runtime or server."
 ---
 
 # GPU work
