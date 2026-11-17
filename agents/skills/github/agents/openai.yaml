@@ -1,6 +1,0 @@
-interface:
-  display_name: "GitHub"
-  short_description: "Triage GitHub work and route safely"
-  icon_small: "./assets/github-small.svg"
-  icon_large: "./assets/github.png"
-  default_prompt: "Use $github to inspect this GitHub request read-only, summarize the evidence, and route it to the right workflow."
