@@ -4,7 +4,9 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_SHELL": "bash",
     "SECURITY_REVIEW_MODEL": "claude-sonnet-5-5",
-    "SG_AGENTIC_MODEL": "claude-sonnet-5-5"
+    "SG_AGENTIC_MODEL": "claude-sonnet-5-5",
+    "ENABLE_STOP_REVIEW": "0",
+    "ENABLE_CODE_SECURITY_REVIEW": "0"
   },
   "attribution": {
     "commit": "",
@@ -138,7 +140,7 @@
   "enabledPlugins": {
     "github@claude-plugins-official": false,
     "frontend-design@claude-plugins-official": true,
-    "security-guidance@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": false,
     "safety-net@cc-marketplace": true
   },
   "extraKnownMarketplaces": {
@@ -168,7 +170,7 @@
     }
   },
   "autoMemoryEnabled": false,
-  "autoDreamEnabled": true,
+  "autoDreamEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "switchModelsOnFlag": true,
@@ -177,5 +179,6 @@
   "voiceEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754075865483
-  }
+  },
+  "skillListingMaxDescChars": 500
 }
