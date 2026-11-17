@@ -12,6 +12,7 @@ pub mod file;
 pub mod fleet;
 pub mod gcloud;
 pub mod generate;
+pub mod git;
 pub mod hook;
 pub mod install;
 pub mod instructions;
@@ -19,6 +20,7 @@ pub mod main_cmd;
 pub mod mcp;
 pub mod modal;
 pub mod pack;
+pub mod port;
 mod project_root;
 pub mod secrets;
 pub mod ship;
@@ -106,6 +108,8 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             generate::run_with_flags(sh, generate_flags)
         }
         MainCmd::Install(args) => install::run_with_flags(sh, args),
+        MainCmd::Git { subcommand } => git::run_with_flags(sh, git::Git { subcommand }),
+        MainCmd::KillPort { port } => port::kill(port),
         MainCmd::Tmux { subcommand } => {
             let tmux_flags = tmux::Tmux { subcommand };
             tmux::run_with_flags(sh, tmux_flags)

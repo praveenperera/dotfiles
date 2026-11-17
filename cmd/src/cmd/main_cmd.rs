@@ -129,6 +129,17 @@ pub enum MainCmd {
     #[command(visible_alias = "i")]
     Install(#[command(flatten)] crate::cmd::install::Install),
 
+    /// Git helpers, such as deleting merged branches and their worktrees
+    #[command(visible_alias = "g", arg_required_else_help = true)]
+    Git {
+        #[command(subcommand)]
+        subcommand: crate::cmd::git::GitCmd,
+    },
+
+    /// Kill the processes listening on a TCP port
+    #[command(visible_alias = "kp")]
+    KillPort { port: u16 },
+
     /// Tmux operations
     #[command(visible_alias = "tm", arg_required_else_help = true)]
     Tmux {
