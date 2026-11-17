@@ -4,7 +4,7 @@ Record as you go: at the end of each phase, after a revert or a parked attempt, 
 
 ## Decision log
 
-Every project keeps one decision log at `R/<topic>/decisions.md`. If the project has no topic yet, create one following `~/code/research/CLAUDE.md` and link the log from the topic README. `_scratch/` is wiped weekly, so it can't hold the log.
+Every project keeps one decision log at `R/<topic>/decisions.md`. If the project has no topic yet, create `R/<topic>/README.md` and link the log from it. `_scratch/` is wiped weekly, so it can't hold the log.
 
 Add an entry when you choose between designs, keep, revert or park a change, kill an idea, change the plan, hit a trap that cost time, or get corrected by the user. A hill climb's `_scratch/<task>/LOG.md` stays the per-experiment notebook; copy each keep, kill or plan decision into the decision log when you make it. Newest entries go at the bottom, times in US Central:
 

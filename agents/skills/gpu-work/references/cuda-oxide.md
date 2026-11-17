@@ -45,6 +45,7 @@ The pin and crate layout are in SKILL.md "Kernels".
 - **Only cuda-oxide's launcher checks the launch contract.** Another host (cudarc, the driver API) must keep `grid x block <= 2^32` for 32-bit coordinates and pass a length after every slice pointer.
 - A `const` reference or promoted borrow is a read-only global: a device fn may return it, but only read through a `*mut` cast from it.
 - A const, table or static holding a pointer to shared memory (`SharedArray`, `Barrier`) is refused; pass shared pointers as arguments or build the value at run time. A shared pointer stored through a generic place is widened to generic.
+- **Use `DeviceAtomicU64` (Relaxed, Acquire at `.gpu` scope), not hand-written `ld`/`st.relaxed`.** A hand-rolled 128-bit load observing 64-bit stores is a data race under the PTX memory model: a load must cover exactly the bytes of the store it observes.
 - **A kernel that appends to a cache it reads in the same launch** must read the new keys from the source rows, never from the cache.
 
 ## API gaps and limits
