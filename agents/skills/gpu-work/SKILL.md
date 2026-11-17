@@ -1,6 +1,6 @@
 ---
 name: gpu-work
-description: Rules and workflow for GPU kernel and native-runtime work. Use for writing, porting or optimizing CUDA kernels (cuda-oxide, PTX tiers, shipping CUDA crates), speed climbs on GPU pipelines, porting a model off PyTorch or ONNX Runtime to a native runtime, replacing cuDNN or cuBLAS layers, profiling kernels with nsys or ncu, and Metal backends on Apple silicon (MSL kernels, Metal 4 tensor ops, Core ML or Neural Engine offload), or when the user invokes $gpu-work or /gpu-work. Defaults to ambitious floor-capable designs over easy tuning, and keeps a decision log. Do not use for ML training runs or other GPU jobs that change no kernel or runtime code.
+description: Rules and workflow for GPU kernel and native-runtime work. Use for writing, porting or optimizing CUDA kernels (cuda-oxide, PTX tiers, shipping CUDA crates), speed climbs on GPU pipelines, porting a model off PyTorch or ONNX Runtime to a native runtime, replacing cuDNN or cuBLAS layers, profiling kernels with nsys or ncu, Metal backends on Apple silicon (MSL kernels, Metal 4 tensor ops, Core ML or Neural Engine offload), and tuning an LLM server (vLLM, SGLang, llama.cpp, ExLlama, MLX, TensorRT-LLM) for decode or prefill tok/s, TTFT, startup, KV cache size or speculative decoding (MTP, EAGLE, draft models), or when the user invokes $gpu-work or /gpu-work. Defaults to ambitious floor-capable designs over easy tuning, and keeps a decision log. Do not use for ML training runs or other GPU jobs that neither change kernel or runtime code nor tune a model server.
 ---
 
 # GPU work
@@ -70,5 +70,6 @@ On Apple GPUs, read [references/apple.md](references/apple.md) instead of this s
 | D. Ship CUDA code | PTX tiers, shared CUDA crates, crates.io, Python wheels | [references/track-d-ship.md](references/track-d-ship.md) |
 | E. Many GPUs or rented boxes | Several architectures, or vast.ai and similar boxes | [references/track-e-many-gpus.md](references/track-e-many-gpus.md) |
 | F. Agent-run kernel work | Running workers, advisors or reviewers on kernel tasks | [references/track-f-agents.md](references/track-f-agents.md) |
+| G. LLM serving tuning | Hill-climbing a model server's tok/s, TTFT, startup or KV capacity, mostly through its config | [references/track-g-llm-serving.md](references/track-g-llm-serving.md) |
 
 New to directing kernel work? `R/cuda-optimization-primer/README.md` and its `director-card.md` give the vocabulary.
