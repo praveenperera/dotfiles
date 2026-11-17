@@ -31,9 +31,15 @@ fn git_lines(cwd: &Path, args: &[&str]) -> Vec<String> {
         .collect()
 }
 
+// git records worktree paths resolved, such as /private/var for macOS's /var
+fn canonical_display(path: &Path) -> String {
+    fs::canonicalize(path).unwrap().display().to_string()
+}
+
 fn cmd_git_clean(cwd: &Path) -> Output {
     Command::new(env!("CARGO_BIN_EXE_cmd"))
         .args(["git", "clean"])
+        .env("NO_COLOR", "1")
         .current_dir(cwd)
         .output()
         .unwrap()
@@ -131,12 +137,30 @@ fn removes_merged_worktrees_but_keeps_unsaved_work() {
     );
 
     assert!(!root.join("wt-clean").exists(), "{stdout}");
-    assert!(
-        stdout.contains("Kept here: checked out in this worktree"),
-        "{stdout}"
-    );
-    assert!(stdout.contains("Kept modified: worktree"), "{stdout}");
-    assert!(stdout.contains("Kept untracked: worktree"), "{stdout}");
+
+    // the kept worktrees come last, one aligned line each, in branch order
+    let summary: Vec<&str> = stdout
+        .lines()
+        .skip_while(|line| !line.starts_with("Kept "))
+        .collect();
+    let wt = |name: &str| canonical_display(&root.join(name));
+    let expected = [
+        "Kept 3 worktrees on merged branches:".to_owned(),
+        format!(
+            "  here       you are in it                {}",
+            wt("wt-here")
+        ),
+        format!(
+            "  modified   modified or untracked files  {}",
+            wt("wt-modified")
+        ),
+        format!(
+            "  untracked  modified or untracked files  {}",
+            wt("wt-untracked")
+        ),
+    ];
+    assert_eq!(summary, expected, "{stdout}");
+
     assert_eq!(
         fs::read_to_string(root.join("wt-modified/f")).unwrap(),
         "staged"

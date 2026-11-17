@@ -1,9 +1,11 @@
 //! Git helpers behind the `gm`, `gclean`, and `gupc` shell aliases
 
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
+use colored::Colorize;
 use eyre::{eyre, Result};
 use xshell::{cmd, Shell};
 
@@ -19,7 +21,8 @@ pub enum GitCmd {
     /// worktrees that have them checked out
     ///
     /// A worktree with modified or untracked files is kept along with its
-    /// branch, as are the main checkout and the worktree this runs from
+    /// branch, as are the main checkout and the worktree this runs from, and
+    /// every kept worktree is listed at the end
     #[command(visible_alias = "c")]
     Clean,
 
@@ -63,29 +66,43 @@ fn clean(sh: &Shell) -> Result<()> {
     cmd!(sh, "git worktree prune").quiet().run()?;
 
     let worktrees = Worktrees::list(sh)?;
+    let mut kept = Vec::new();
 
     for branch in gone_branches(sh)? {
-        clean_branch(sh, &worktrees, &branch)?;
+        if let Some(worktree) = clean_branch(sh, &worktrees, branch)? {
+            kept.push(worktree);
+        }
     }
 
+    print_kept(&kept);
     Ok(())
 }
 
-fn clean_branch(sh: &Shell, worktrees: &Worktrees, branch: &str) -> Result<()> {
-    match worktrees.cleanup_for(branch) {
-        Cleanup::Keep(reason) => {
-            println!("Kept {branch}: {reason}");
-            return Ok(());
+/// Deletes `branch` and its worktree, or returns the worktree it kept
+fn clean_branch(sh: &Shell, worktrees: &Worktrees, branch: String) -> Result<Option<Kept>> {
+    match worktrees.cleanup_for(&branch) {
+        Cleanup::Keep(path, reason) => {
+            return Ok(Some(Kept {
+                branch,
+                path: path.to_owned(),
+                reason,
+            }));
         }
         Cleanup::RemoveWorktree(path) => {
-            // git prints why it refused, such as modified or untracked files
-            if cmd!(sh, "git worktree remove {path}")
+            let output = cmd!(sh, "git worktree remove {path}")
                 .quiet()
-                .run()
-                .is_err()
-            {
-                println!("Kept {branch}: worktree {} was not removed", path.display());
-                return Ok(());
+                .ignore_status()
+                .output()?;
+
+            // git's refusal ends with a hint to --force, so only its reason is shown
+            if !output.status.success() {
+                let reason = KeepReason::from_git_error(&String::from_utf8_lossy(&output.stderr));
+
+                return Ok(Some(Kept {
+                    branch,
+                    path: path.to_owned(),
+                    reason,
+                }));
             }
 
             println!("Removed worktree {}", path.display());
@@ -94,7 +111,84 @@ fn clean_branch(sh: &Shell, worktrees: &Worktrees, branch: &str) -> Result<()> {
     }
 
     cmd!(sh, "git branch -D {branch}").quiet().run()?;
-    Ok(())
+    Ok(None)
+}
+
+/// Lists the kept worktrees last, so they are not lost among the deletions
+fn print_kept(kept: &[Kept]) {
+    if kept.is_empty() {
+        return;
+    }
+
+    let noun = if kept.len() == 1 {
+        "worktree"
+    } else {
+        "worktrees"
+    };
+    let header = format!("Kept {} {noun} on merged branches:", kept.len());
+    let branch_width = kept.iter().map(|kept| kept.branch.len()).max().unwrap_or(0);
+    let reasons: Vec<String> = kept.iter().map(|kept| kept.reason.to_string()).collect();
+    let reason_width = reasons.iter().map(String::len).max().unwrap_or(0);
+
+    println!("\n{}", header.yellow().bold());
+
+    for (kept, reason) in kept.iter().zip(&reasons) {
+        // pad before coloring, since the escape codes would count toward the width
+        let branch = format!("{:branch_width$}", kept.branch);
+        let reason = format!("{reason:reason_width$}");
+
+        println!(
+            "  {}  {}  {}",
+            branch.bold(),
+            reason.yellow(),
+            kept.path.display()
+        );
+    }
+}
+
+/// A worktree left in place, along with its branch
+struct Kept {
+    branch: String,
+    path: PathBuf,
+    reason: KeepReason,
+}
+
+/// Why a merged branch's worktree was left in place
+#[derive(Debug, PartialEq, Eq)]
+enum KeepReason {
+    MainCheckout,
+    Current,
+    Unsaved,
+    Locked,
+    /// Any other refusal from `git worktree remove`, in git's words
+    Refused(String),
+}
+
+impl KeepReason {
+    fn from_git_error(stderr: &str) -> Self {
+        if stderr.contains("modified or untracked files") {
+            return Self::Unsaved;
+        }
+
+        if stderr.contains("locked") {
+            return Self::Locked;
+        }
+
+        let message = stderr.lines().next().unwrap_or_default().trim();
+        Self::Refused(message.trim_start_matches("fatal: ").to_owned())
+    }
+}
+
+impl fmt::Display for KeepReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MainCheckout => f.write_str("main checkout"),
+            Self::Current => f.write_str("you are in it"),
+            Self::Unsaved => f.write_str("modified or untracked files"),
+            Self::Locked => f.write_str("locked"),
+            Self::Refused(message) => f.write_str(message),
+        }
+    }
 }
 
 /// Local branches whose upstream was deleted, usually after its PR merged
@@ -123,8 +217,8 @@ enum Cleanup<'a> {
     DeleteBranch,
     /// A linked worktree has it checked out, so that goes before the branch
     RemoveWorktree(&'a Path),
-    /// It is checked out where removing it would pull the floor out
-    Keep(&'static str),
+    /// It is checked out where it must stay
+    Keep(&'a Path, KeepReason),
 }
 
 /// The repository's worktrees and the one this command runs from
@@ -163,12 +257,12 @@ impl Worktrees {
         };
 
         if index == 0 {
-            return Cleanup::Keep("checked out in the main checkout");
+            return Cleanup::Keep(&worktree.path, KeepReason::MainCheckout);
         }
 
         // git may record a path through a symlink, such as macOS's /var
         if self.current.as_deref() == Some(canonical(&worktree.path).as_path()) {
-            return Cleanup::Keep("checked out in this worktree");
+            return Cleanup::Keep(&worktree.path, KeepReason::Current);
         }
 
         Cleanup::RemoveWorktree(&worktree.path)
