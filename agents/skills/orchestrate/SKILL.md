@@ -14,7 +14,7 @@ Every tool call the root makes re-reads the root's whole context. At 170K, a roo
 1. Agree the scope before any fan-out: the goals, the done condition for each, what is out of scope, and who owns what. Ask any questions in one batch. Do not start research sweeps or implementers until the scope is settled.
 2. Write each goal in the state file's Goals table in the user's words. Every status reports against that table, so a goal missing from it never gets reported.
 3. Write the state file from [state-file.md](references/state-file.md) before the first agent starts.
-4. Put the standing rules in its RULES section once. Briefs link to that section instead of restating it.
+4. Put the standing rules in its RULES section once. Briefs link to that section instead of restating it. An agent on another machine reads it over ssh from the root's machine (see [briefs.md](references/briefs.md)).
 
 ## Coordinate, don't implement
 

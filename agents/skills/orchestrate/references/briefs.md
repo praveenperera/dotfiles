@@ -11,7 +11,9 @@ Goal it serves: <the row of the state file's Goals table this work moves, and ho
 Scope you own: <files, PR, branch or worktree>
 Not yours: <what other agents own, and what you must not touch>
 Decided approach: <the design choices already made>
-Rules: read <absolute path to the state file>, section "Rules", and follow it. It overrides anything here that conflicts with it.
+<keep the one line for where the agent runs>
+Rules (same machine as the root): read <absolute path to the state file>, section "Rules", and follow it. It overrides anything here that conflicts with it.
+Rules (another machine): the state file is on <root's ssh host, such as main>, not on this machine. Read it with `ssh <host> cat <absolute path to the state file>`, section "Rules", and follow it; reread it the same way whenever the root says the rules changed. It overrides anything here that conflicts with it. Do not edit it.
 
 Verification: <commands and the pass condition>
 Progress: after each item, update <absolute path to the progress file> with what is done, what is left and the commit SHAs.
@@ -34,5 +36,7 @@ Report only a final state, and start it with one sentence on what the result mea
 
 - Do not mention context sizes, limits or compaction in a brief, or in a message to an agent. The root's watches handle compaction. An agent that knows its limit stops early to hand off.
 - Point to the state file instead of pasting rules into the brief, so a correction lands in one place.
+- The state file, the PR bar file and any other file a brief links to live on the root's machine. For an agent on another machine, such as `code.local`, use the "another machine" Rules line and give every other root-side file the same `ssh <host> cat <path>` form, or `scp <host>:<path> .` for a file it needs locally. Check once that the host can read the file over ssh before the first brief to that machine. Do not paste the rules into the brief or a message instead; a pasted copy goes stale at the next correction.
+- Put an agent's progress file on the machine it runs on, and record that machine and path in the state file. The root reads it over ssh when it replaces the agent.
 - Name the agent in any message that corrects it. When a correction applies to several agents, send it to each one.
 - If the brief grants nested delegation, name the model and effort it may use and how many reviews it may start.
