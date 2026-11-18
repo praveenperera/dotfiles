@@ -52,7 +52,7 @@ Do not ask for a second opinion on routine choices with a conventional default.
 
 ## Delegate through homebased
 
-Use [use-agents](../use-agents/SKILL.md) to pick the model and effort for each piece of work: Opus 5.5 for most delegated work, and one fresh GPT-6.1 Sol `xhigh` review of the finished change set before acceptance. Submit agent work and long-running commands through [homebased](../homebased/SKILL.md) so they run unattended and report back with events. Use [fleet](../fleet/SKILL.md) to choose the machine for heavy work.
+Use [use-agents](../use-agents/SKILL.md) to pick the model and effort for each piece of work: Opus 5.5 for most delegated work, and one fresh GPT-6.2 Sol `xhigh` review of the finished change set before acceptance. Submit agent work and long-running commands through [homebased](../homebased/SKILL.md) so they run unattended and report back with events. Use [fleet](../fleet/SKILL.md) to choose the machine for heavy work.
 
 Run independent work in parallel when it does not contend for the same hardware.
 

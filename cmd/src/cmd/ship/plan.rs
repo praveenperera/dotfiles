@@ -524,7 +524,7 @@ impl Plan {
         self.steps
             .iter()
             .map(|step| match step {
-                Step::Sol => format!("sol 6.1 {} review", self.sol_effort.as_str()),
+                Step::Sol => format!("sol 6.2 {} review", self.sol_effort.as_str()),
                 Step::Pr if self.pr_draft => format!("draft pr ({})", self.pr_repo),
                 Step::Pr => format!("pr ({})", self.pr_repo),
                 Step::Greptile => "greptile 5/5".to_owned(),
@@ -559,7 +559,7 @@ impl Plan {
 
         if has(Step::Sol) {
             lines.push(if t3 {
-                "sol via: delegate_task with the Codex provider and model gpt-6.1-sol from orchestrator_capabilities"
+                "sol via: delegate_task with the Codex provider and model gpt-6.2-sol from orchestrator_capabilities"
             } else {
                 "sol via: the Codex review command in review-fix-loop's providers.md#codex-review, through homebased when it will run long"
             });

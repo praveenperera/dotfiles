@@ -95,7 +95,7 @@ Never start `claude --print` before the prompt is available. Keep plan mode so t
 
 ## Codex Review
 
-Run Codex review with GPT-6.1 Sol (`model="gpt-6.1-sol"`) at `xhigh` reasoning effort, as in the `use-agents` skill. Use another effort only when the user names it.
+Run Codex review with GPT-6.2 Sol (`model="gpt-6.2-sol"`) at `xhigh` reasoning effort, as in the `use-agents` skill. Use another effort only when the user names it.
 
 Choose exactly one target mode that represents the code under review:
 
@@ -113,7 +113,7 @@ prompt_file="$scratch/prompts/final-neutral-codex-review-$target_mode-$iteration
 raw_file="$scratch/raw/final-neutral-codex-review-$target_mode-$iteration.txt"
 
 codex review \
-  --config model='"gpt-6.1-sol"' \
+  --config model='"gpt-6.2-sol"' \
   --config model_reasoning_effort='"xhigh"' \
   --base "$base_branch" \
   - < "$prompt_file" \
@@ -124,7 +124,7 @@ For a worktree-only target, use the supported uncommitted mode instead:
 
 ```bash
 codex review \
-  --config model='"gpt-6.1-sol"' \
+  --config model='"gpt-6.2-sol"' \
   --config model_reasoning_effort='"xhigh"' \
   --uncommitted \
   - < "$prompt_file" \

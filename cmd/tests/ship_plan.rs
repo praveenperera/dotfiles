@@ -36,7 +36,7 @@ fn prints_the_plan_and_how_this_host_runs_it() {
         (
             "soul high",
             "t3-claude",
-            &["plan: sol 6.1 high review → commit → push → deploy → clean\n"],
+            &["plan: sol 6.2 high review → commit → push → deploy → clean\n"],
             &[],
         ),
         // a lone `+` word after `--` is a word, not an option
@@ -50,7 +50,7 @@ fn prints_the_plan_and_how_this_host_runs_it() {
             "+settle soul",
             "none",
             &[
-                "plan: sol 6.1 xhigh review → commit → push → deploy → clean\n",
+                "plan: sol 6.2 xhigh review → commit → push → deploy → clean\n",
                 "skipped: settle (not in a T3 thread)\n",
                 "host: none\n",
                 "sol via: the Codex review command",

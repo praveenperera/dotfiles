@@ -1,6 +1,6 @@
 ---
 name: use-sol
-description: Route implementation, tests, and mechanical repository work to GPT-6.1 Sol subagents at low reasoning. Use only when the user explicitly says "use Sol", "use Sol sub-agents", "use Sol 6.1", or invokes $use-sol. Do not infer this skill from a task that merely looks suitable for delegation.
+description: Route implementation, tests, and mechanical repository work to GPT-6.2 Sol subagents at low reasoning. Use only when the user explicitly says "use Sol", "use Sol sub-agents", "use Sol 6.2", or invokes $use-sol. Do not infer this skill from a task that merely looks suitable for delegation.
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 Activate this workflow only when the user asks to use Sol for implementation or explicitly invokes this skill. A statement that Sol is the current root, a model comparison, or a request to edit this skill does not activate it. Keep it active for the rest of the session until the user cancels it.
 
-While active, send implementation work to Sol 6.1. Keep design and acceptance in the root thread. Do not silently substitute another model if Sol 6.1 is unavailable.
+While active, send implementation work to Sol 6.2. Keep design and acceptance in the root thread. Do not silently substitute another model if Sol 6.2 is unavailable.
 
 ## Route suitable work
 
@@ -36,7 +36,7 @@ Decompose a large change into bounded passes after the root agent decides the de
 
 If you are Codex, spawn with [codex-native.md](../use-agents/references/codex-native.md). If you are not Codex, use the [Codex CLI delegation reference](../use-agents/references/codex-cli.md).
 
-Select GPT-6.1 Sol (`gpt-6.1-sol`) with `low` reasoning when the tool needs an explicit model choice. If a `low` pass fails its check or needs a judgment call, rerun it at `high`; do not use `max`. If the configured worker already uses Sol 6.1 at the required effort, do not add redundant overrides. Start a fresh worker with only the task-local context unless continuity is necessary.
+Select GPT-6.2 Sol (`gpt-6.2-sol`) with `low` reasoning when the tool needs an explicit model choice. If a `low` pass fails its check or needs a judgment call, rerun it at `high`; do not use `max`. If the configured worker already uses Sol 6.2 at the required effort, do not add redundant overrides. Start a fresh worker with only the task-local context unless continuity is necessary.
 
 Give each worker a self-contained contract with:
 

@@ -1,6 +1,6 @@
 # Codex CLI delegation reference
 
-Use `codex exec` for read-only runs only: GPT-6.1 Sol (`gpt-6.1-sol`) at `xhigh` for reviews, and GPT-6 Astra (`gpt-6-astra`) for rare second opinions. Both draw on the single Codex plan, so do not send implementation or exploration here unless the user asks for Sol through the `use-sol` skill.
+Use `codex exec` for read-only runs only: GPT-6.2 Sol (`gpt-6.2-sol`) at `xhigh` for reviews, and GPT-6.2 Astra (`gpt-6.2-astra`) for rare second opinions. Both draw on the single Codex plan, so do not send implementation or exploration here unless the user asks for Sol through the `use-sol` skill.
 
 ## Preflight
 
@@ -11,7 +11,7 @@ command -v codex
 codex --version
 codex login status
 codex exec --help
-codex debug models | rg 'gpt-6.1-sol|gpt-6-astra'
+codex debug models | rg 'gpt-6.2-sol|gpt-6.2-astra'
 ```
 
 Do not modify login or global configuration automatically. If authentication or the requested model is unavailable, report the exact failure.
@@ -21,7 +21,7 @@ Do not modify login or global configuration automatically. If authentication or 
 Use the run directory, prompt contract, and postflight capture in [delegate-run.md](delegate-run.md), with the prompt in read-only mode. Set the model and effort for the role: Sol at `xhigh` for a review, or Astra at `low` for a focused question and `high` for a broad or high-risk one:
 
 ```sh
-delegate_model=gpt-6.1-sol   # or gpt-6-astra
+delegate_model=gpt-6.2-sol   # or gpt-6.2-astra
 delegate_effort=xhigh        # Astra: low or high
 codex --ask-for-approval never exec \
   --cd "$PWD" \

@@ -65,7 +65,7 @@ Use these terms in instructions, skills, briefs, and reports. Do not use "delega
 - Use Grok 4.5 at high effort only to read X posts; never ask it to analyze or do other work.
 - Use `$use-agents` for model routing and effort levels.
 - I have two Claude Ultra plans and one $100 Codex plan, so Opus 5.5 is the default model for most agent work, including implementation, tests, investigation, triage, verification, and front-end work. Opus defaults to `medium`; use `high` when edge cases matter, `xhigh` only when I ask for it, and never `max`. Use Sol subagents for implementation or exploration only when I ask (`$use-sol`).
-- Use GPT-6.1 Sol at `xhigh` for the fresh review of a larger task.
+- Use GPT-6.2 Sol at `xhigh` for the fresh review of a larger task.
 - Astra is a read-only advisor for big architecture or design decisions, or when the root is stuck, and shares the small Codex plan, so use it sparingly: `low` for a focused question, `high` for a broad or high-risk one. The root keeps the decision.
 - Fable, GPT-6 Luna, and GPT-5.6 Sol are opt-in only; the root may suggest them.
 - Default to a worker (`$homebased`) for self-contained agent work that can run unattended while the root ends this turn, such as implementation with verification, a broad review, or multi-source research. A task is small enough for an in-session subagent only when its scope is narrow and the root can check and integrate its result in this turn. When the boundary is unclear, prefer `$homebased` if the worker does not need live coordination.
