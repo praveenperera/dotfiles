@@ -44,7 +44,7 @@ Use these terms in instructions, skills, briefs, and reports. Do not use "delega
 - **Long work**: a task, job, or chain expected to run or queue for over 1 hour.
 - **Sleep**: `homebased wait --long <ids>`. The thread hands its tasks and jobs to homebased, ends its turn, and goes idle until a final event or an alert.
 - **Final event**: the event that ends a task or job: a task's terminal event, or `JOB_SUCCEEDED`, `JOB_FAILED`, or `JOB_CANCELLED`. Any other event is an **interim event**, of two kinds:
-  - **Alert**: needs action before the target can end, so it wakes a sleeping thread: `JOB_ATTENTION`, `JOB_BLOCKED`, `TASK_CHECK_DUE`, `JOB_CHECK_DUE`, and the first `JOB_GPU_IDLE` of an idle episode.
+  - **Alert**: needs action before the target can end, so it wakes a sleeping thread: `JOB_ATTENTION`, `JOB_BLOCKED`, `TASK_CHECK_DUE`, `TASK_MEMORY_REVIEW`, `JOB_CHECK_DUE`, and the first `JOB_GPU_IDLE` of an idle episode.
   - **Progress event**: needs no action, so a sleeping thread does not wake for it: `TASK_REPORTED`, `TASK_WAITING`, `JOB_PREEMPTED`, and GPU-idle reminders. The final event lists them under `held_events`.
 
 # Delegation
