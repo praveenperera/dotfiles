@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Slopstation
 
-Keep a source copy of each site in `~/code/slopstation`, then deploy it on an exact `slopstation.net` hostname with Wrangler. Keep the project configuration as the source of truth and use Cloudflare Custom Domains when the Worker is the site origin.
+Keep a source copy of each site in `~/code/slopstation/public/`, then deploy it on an exact `slopstation.net` hostname with Wrangler. Keep the project configuration as the source of truth and use Cloudflare Custom Domains when the Worker is the site origin.
 
 Check current Cloudflare documentation or the installed Wrangler help before relying on options that can change.
 
@@ -58,11 +58,13 @@ Do not assume that a valid site build contains a root `index.html`. A vinext bui
 
 ### 2. Keep the Slopstation source copy
 
-Store each site in a directory under `~/code/slopstation` named from its subdomain. For example:
+Store each site in a directory under `~/code/slopstation/public/` named from its subdomain. For example:
 
 ```text
-coldcard.slopstation.net -> ~/code/slopstation/coldcard/
+coldcard.slopstation.net -> ~/code/slopstation/public/coldcard/
 ```
+
+`~/code/slopstation/private/` holds sites served only on the tailnet. Never deploy a site from `private/` to Cloudflare. The repository is `praveenperera/slopstation` on GitHub, and it is private.
 
 For a multi-label subdomain, preserve all labels before `slopstation.net` and join them with hyphens. Use `root` for the apex site.
 
