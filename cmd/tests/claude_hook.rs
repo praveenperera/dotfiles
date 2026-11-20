@@ -34,6 +34,8 @@ fn hook_prints_one_decision_or_nothing() {
     let deny_kill =
         r#"{"tool_name": "Bash", "tool_input": {"command": "pgrep -f worker | xargs kill"}}"#;
     let explicit_kill = r#"{"tool_name": "Bash", "tool_input": {"command": "kill 4321"}}"#;
+    let deny_remote_kill =
+        r#"{"tool_name": "Bash", "tool_input": {"command": "ssh -p 2222 code pkill node"}}"#;
 
     let cases = [
         ("pre-tool-use", deny_ci, Some("Do not wait on CI")),
@@ -42,9 +44,14 @@ fn hook_prints_one_decision_or_nothing() {
         (
             "pre-tool-use",
             deny_kill,
-            Some("Do not kill processes by pattern"),
+            Some("Do not kill processes by name or pattern"),
         ),
         ("pre-tool-use", explicit_kill, None),
+        (
+            "pre-tool-use",
+            deny_remote_kill,
+            Some("Do not kill processes by name or pattern"),
+        ),
         ("pre-tool-use", "not json", None),
         ("pre-tool-use", "", None),
         ("post-tool-use", allowed, None),

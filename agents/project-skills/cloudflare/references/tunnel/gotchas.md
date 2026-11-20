@@ -60,11 +60,12 @@ cloudflared tunnel run my-tunnel
 **Cause:** Old cloudflared processes using expired credentials
 **Solution:**
 ```bash
-# Stop all cloudflared processes
-pkill cloudflared
+# Find the cloudflared pids, check each one, then stop them by pid
+ps -eo pid,args | grep '[c]loudflared'
+kill <pid> ...
 
 # Verify stopped
-ps aux | grep cloudflared
+ps -eo pid,args | grep '[c]loudflared'
 
 # Restart with new credentials
 cloudflared tunnel run my-tunnel

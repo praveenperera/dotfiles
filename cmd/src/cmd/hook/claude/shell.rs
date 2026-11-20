@@ -3,8 +3,9 @@
 //! It is not a shell parser. It splits on `;`, `&`, `|`, newlines, parentheses,
 //! and backticks, keeps quoted text in one word, drops redirections, comments,
 //! and heredoc bodies, and reads into `$(...)`, backticks, and `sh -c '...'`
-//! scripts. That is enough to tell a command that runs `gh run watch` from one
-//! that only mentions it, such as `grep`, `echo`, or `git commit -m`
+//! scripts. Callers can also read the command a `homebased task` or `ssh` call
+//! runs elsewhere. That is enough to tell a command that runs `gh run watch`
+//! from one that only mentions it, such as `grep`, `echo`, or `git commit -m`
 
 use std::path::Path;
 
@@ -70,6 +71,26 @@ impl Command<'_> {
             .join(" ");
 
         Some(Script::parse(&quoted))
+    }
+
+    /// The script `ssh` runs on the remote host: the words after the
+    /// destination, joined with spaces as ssh sends them to the remote shell,
+    /// so `ssh code pkill -f x` and `ssh code 'pkill -f x'` read the same
+    pub fn remote_command(&self) -> Option<Script> {
+        if self.program() != "ssh" {
+            return None;
+        }
+
+        // OpenSSH reads options again after the destination, as in
+        // `ssh code -p 2222 uptime`, unless a `--` before it ended them
+        let (rest, terminated) = skip_ssh_options(&self.0[1..]);
+        let rest = rest.get(1..)?;
+        let rest = match terminated {
+            true => rest,
+            false => skip_ssh_options(rest).0,
+        };
+
+        (!rest.is_empty()).then(|| Script::parse(&rest.join(" ")))
     }
 
     /// Whether the arguments start with `prefix`
@@ -179,6 +200,34 @@ fn skip_sudo(args: &[String]) -> &[String] {
     }
 
     rest
+}
+
+/// The `ssh` flags that take a value, from its synopsis in `man ssh`
+const SSH_VALUE_FLAGS: &str = "BbcDEeFIiJLlmOoPpQRSWw";
+
+/// Skips `ssh`'s options, as in `ssh -p 2222 -o X=Y code`, and says whether a
+/// `--` ended them
+fn skip_ssh_options(args: &[String]) -> (&[String], bool) {
+    let mut rest = args;
+    while let Some(arg) = rest.first() {
+        if arg == "--" {
+            return (&rest[1..], true);
+        }
+
+        let Some(flags) = arg.strip_prefix('-').filter(|flags| !flags.is_empty()) else {
+            break;
+        };
+
+        // a flag that takes a value ends its group, and the value is the rest of
+        // the word, as in `-p2222`, or the next word, as in `-vp 2222`
+        let value_at = flags.find(|flag| SSH_VALUE_FLAGS.contains(flag));
+        rest = match value_at {
+            Some(at) if at + 1 == flags.len() => rest.get(2..).unwrap_or_default(),
+            _ => &rest[1..],
+        };
+    }
+
+    (rest, false)
 }
 
 /// Skips `timeout`'s options and duration, as in `timeout -s KILL 600 gh ...`
@@ -680,6 +729,39 @@ mod tests {
             ])
         );
         assert_eq!(trailing("homebased task list"), None);
+    }
+
+    #[test]
+    fn reads_ssh_remote_commands() {
+        let remote = |source: &str| {
+            let script = Script::parse(source);
+            let command = script.iter().next().unwrap();
+            command.remote_command().map(|script| {
+                script
+                    .commands
+                    .iter()
+                    .map(|words| words.join(" "))
+                    .collect::<Vec<_>>()
+            })
+        };
+
+        let cases: &[(&str, Option<&[&str]>)] = &[
+            ("ssh code pkill -f 'a b'", Some(&["pkill -f a b"])),
+            ("ssh code 'a; b'", Some(&["a", "b"])),
+            ("ssh -p 2222 -i key -o X=Y -J jump code a", Some(&["a"])),
+            ("ssh -p2222 -vp 2222 -4 code a", Some(&["a"])),
+            ("ssh code -l me -p 2222 a -p 1", Some(&["a -p 1"])),
+            ("ssh -- code -p 2222", Some(&["-p 2222"])),
+            ("ssh code \"sh -c 'a; b'\"", Some(&["a", "b", "sh -c a; b"])),
+            ("ssh code", None),
+            ("ssh -N -L 3000:localhost:3000 code", None),
+            ("ssh-keygen -R code", None),
+        ];
+
+        for (source, want) in cases {
+            let want = want.map(|want| want.iter().map(|&word| word.to_owned()).collect());
+            assert_eq!(remote(source), want, "{source:?}");
+        }
     }
 
     #[test]
