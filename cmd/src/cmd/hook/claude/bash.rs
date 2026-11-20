@@ -1,11 +1,13 @@
 //! Checks on the Bash tool: CI waits held in the turn, background commands an
-//! agent will wait on, the timeout of a background `homebased wait`, and the
-//! reminder to register one
+//! agent will wait on, the timeout of a background `homebased wait`, the
+//! reminder to register one, and commit messages with no blank line after the
+//! subject
 
 use clap::Parser;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
+use super::commit;
 use super::shell::{Command, Script};
 use super::text::{mentions_homebased_wait, starts_line_with_homebased_wait};
 use super::{recommend, Decision, HookInput, Host};
@@ -137,6 +139,34 @@ pub fn ci_wait(input: &HookInput) -> Decision {
     Decision::Allow
 }
 
+pub const COMMIT_SUBJECT_REASON: &str = "This commit message has no blank line after its subject, so git would show the whole first paragraph as the subject. Put an empty line between the subject and the body, then commit again.";
+
+/// Agents writing a commit message in a heredoc sometimes put the body on the
+/// line right after the subject, about one Opus commit in 75 in late 2026, and
+/// git then shows the whole first paragraph as the subject. The commit guide
+/// already asks for the blank line, and fixing it after a push takes a
+/// force-push, so this stops the commit before it lands
+pub fn commit_subject(input: &HookInput) -> Decision {
+    let Some(bash) = input.tool_input::<BashInput>() else {
+        return Decision::Allow;
+    };
+
+    // most calls never commit, so skip the parse for them
+    if !bash.command.contains("commit") {
+        return Decision::Allow;
+    }
+
+    let joined = Script::parse(&bash.command)
+        .invocations()
+        .filter_map(|command| commit::message(&command))
+        .any(commit::joins_subject);
+
+    match joined {
+        true => Decision::Deny(COMMIT_SUBJECT_REASON.to_owned()),
+        false => Decision::Allow,
+    }
+}
+
 /// A command that blocks until CI or a run ends
 fn watches_ci(command: &Command) -> bool {
     match command.program() {
@@ -229,7 +259,7 @@ mod tests {
     use super::super::recommend;
     use super::super::tests::{decision, pre, Fixture};
     use super::super::{Decision, Event};
-    use super::{background_reason, ci_wait_reason, wait_timeout_reason};
+    use super::{background_reason, ci_wait_reason, wait_timeout_reason, COMMIT_SUBJECT_REASON};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum Want {
@@ -237,6 +267,7 @@ mod tests {
         Ci,
         Background,
         Both,
+        Subject,
     }
 
     fn want(want: Want) -> Decision {
@@ -247,6 +278,7 @@ mod tests {
             Want::Both => {
                 Decision::Deny(format!("{}\n\n{}", background_reason(), ci_wait_reason()))
             }
+            Want::Subject => Decision::Deny(COMMIT_SUBJECT_REASON.to_owned()),
         }
     }
 
@@ -392,6 +424,36 @@ mod tests {
                 ("printf '%s\\n' \"a; sleep 5\" && gh pr view 5", Allow),
                 // a wait on another machine does not hold this turn's shell
                 ("ssh host gh run watch 1", Allow),
+            ],
+            false,
+        );
+    }
+
+    #[test]
+    fn commit_subjects_need_a_blank_line() {
+        use Want::{Allow, Subject};
+
+        check(
+            &[
+                // the call behind lookout-hub's bdd7dac
+                (
+                    "cd /home/praveen/code/lookout-hub && git add web/videos.html tests/hub.rs && git commit -q -F - <<'EOF'\nStop the explainers page from showing \"null\"\nThe last video in a list has no next video, and the action row put\nthat missing link straight into the DOM.\nEOF\ngit log -1 --oneline && git push 2>&1 | tail -2",
+                    Subject,
+                ),
+                (
+                    "git commit -q -F - <<'EOF'\nStop the explainers page from showing \"null\"\n\nThe last video in a list has no next video.\nEOF\ngit push",
+                    Allow,
+                ),
+                ("git commit -m \"Subject\nBody\"", Subject),
+                ("git commit -m \"Subject\n\nBody\"", Allow),
+                ("git commit -m Subject -m \"Body\nmore\"", Allow),
+                ("git -C repo commit -qam 'Subject\nBody'", Subject),
+                ("git commit --amend -F - <<-EOF\n\tSubject\n\tBody\n\tEOF", Subject),
+                ("git commit -m 'Subject only'", Allow),
+                ("git commit --amend --no-edit", Allow),
+                // text that only names a commit
+                ("cat <<'EOF' > notes.md\ngit commit -m \"a\nb\"\nEOF", Allow),
+                ("python3 - <<'EOF'\nCommit the files\nthen push\nEOF", Allow),
             ],
             false,
         );

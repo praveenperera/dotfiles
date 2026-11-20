@@ -1,10 +1,12 @@
 //! A small shell tokenizer that finds the commands a Bash tool call runs
 //!
 //! It is not a shell parser. It splits on `;`, `&`, `|`, newlines, parentheses,
-//! and backticks, keeps quoted text in one word, drops redirections, comments,
-//! and heredoc bodies, and reads into `$(...)`, backticks, and `sh -c '...'`
-//! scripts. That is enough to tell a command that runs `gh run watch` from one
-//! that only mentions it, such as `grep`, `echo`, or `git commit -m`
+//! and backticks, keeps quoted text in one word, drops redirections and
+//! comments, sets heredoc bodies aside as the stdin of the command they feed,
+//! and reads into `$(...)`, backticks, and `sh -c '...'` scripts. That is enough
+//! to tell a command that runs `gh run watch` from one that only mentions it,
+//! such as `grep`, `echo`, or `git commit -m`, and to read the message a
+//! `git commit -F - <<EOF` call is given
 
 use std::path::Path;
 
@@ -21,10 +23,10 @@ const KEYWORDS: &[&str] = &[
 /// A shell command line, split into the commands it runs
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Script {
-    /// Each command's words, after `VAR=value` prefixes, keywords, and wrappers
-    /// such as `timeout 600` are stripped, including the commands inside
-    /// `$(...)`, backticks, and `sh -c` scripts
-    pub commands: Vec<Vec<String>>,
+    /// Each command, after `VAR=value` prefixes, keywords, and wrappers such as
+    /// `timeout 600` are stripped, including the commands inside `$(...)`,
+    /// backticks, and `sh -c` scripts
+    pub commands: Vec<Invocation>,
     /// The source with heredoc bodies removed
     pub text: String,
 }
@@ -36,31 +38,47 @@ impl Script {
 
     /// Whether any command satisfies `matches`
     pub fn runs(&self, matches: impl Fn(&Command) -> bool) -> bool {
-        self.commands.iter().any(|words| matches(&Command(words)))
+        self.invocations().any(|command| matches(&command))
+    }
+
+    /// Each command the script runs
+    pub fn invocations(&self) -> impl Iterator<Item = Command<'_>> {
+        self.commands.iter().map(Command)
     }
 }
 
-/// One command's words, with helpers for matching its program and arguments
-#[derive(Debug, Clone, Copy)]
-pub struct Command<'a>(&'a [String]);
+/// One command a script runs
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Invocation {
+    pub words: Vec<String>,
+    /// The body of the last heredoc on the command, which is what it reads on
+    /// stdin, with `<<-` tabs stripped but `$var` and `$(...)` left unexpanded
+    pub heredoc: Option<String>,
+}
 
-impl Command<'_> {
+/// One command, with helpers for matching its program and arguments
+#[derive(Debug, Clone, Copy)]
+pub struct Command<'a>(&'a Invocation);
+
+impl<'a> Command<'a> {
     /// The program's file name, so `~/.local/bin/cmd` reads as `cmd`
-    pub fn program(&self) -> &str {
-        self.0.first().map_or("", |word| file_name(word))
+    pub fn program(&self) -> &'a str {
+        self.0.words.first().map_or("", |word| file_name(word))
     }
 
-    pub fn args(&self) -> impl Iterator<Item = &str> {
-        self.0.iter().skip(1).map(String::as_str)
+    pub fn args(&self) -> impl Iterator<Item = &'a str> + 'a {
+        self.0.words.iter().skip(1).map(String::as_str)
     }
 
     /// Whether the arguments start with `prefix`
     pub fn starts_with(&self, prefix: &[&str]) -> bool {
-        self.0.len() > prefix.len()
-            && self.0[1..]
-                .iter()
-                .zip(prefix)
-                .all(|(arg, want)| arg == want)
+        let words = &self.0.words;
+        words.len() > prefix.len() && words[1..].iter().zip(prefix).all(|(arg, want)| arg == want)
+    }
+
+    /// The heredoc body the command reads on stdin, if one feeds it
+    pub fn heredoc(&self) -> Option<&'a str> {
+        self.0.heredoc.as_deref()
     }
 }
 
@@ -76,8 +94,8 @@ fn parse_at(source: &str, depth: usize) -> Script {
     lexer.run();
 
     let mut commands = Vec::new();
-    for words in lexer.segments {
-        resolve(&words, depth, &mut commands);
+    for invocation in lexer.segments {
+        resolve(invocation, depth, &mut commands);
     }
 
     commands.extend(lexer.nested);
@@ -88,8 +106,8 @@ fn parse_at(source: &str, depth: usize) -> Script {
 }
 
 /// Strips what comes before the real program and reads into `sh -c` scripts
-fn resolve(words: &[String], depth: usize, out: &mut Vec<Vec<String>>) {
-    let mut rest = words;
+fn resolve(invocation: Invocation, depth: usize, out: &mut Vec<Invocation>) {
+    let mut rest = invocation.words.as_slice();
     loop {
         match rest.first().map(String::as_str) {
             None => return,
@@ -110,7 +128,11 @@ fn resolve(words: &[String], depth: usize, out: &mut Vec<Vec<String>>) {
         }
     }
 
-    out.push(rest.to_vec());
+    // a wrapper such as `timeout` passes its stdin on to the program it runs
+    out.push(Invocation {
+        words: rest.to_vec(),
+        heredoc: invocation.heredoc,
+    });
 }
 
 fn is_assignment(word: &str) -> bool {
@@ -190,6 +212,8 @@ struct Heredoc {
     delimiter: String,
     /// `<<-`, which strips leading tabs from body lines and the terminator
     strip_tabs: bool,
+    /// The index in `segments` of the command it feeds
+    segment: usize,
 }
 
 struct Lexer {
@@ -199,9 +223,9 @@ struct Lexer {
     word: String,
     in_word: bool,
     words: Vec<String>,
-    segments: Vec<Vec<String>>,
+    segments: Vec<Invocation>,
     /// Commands found inside `$(...)` and backticks
-    nested: Vec<Vec<String>>,
+    nested: Vec<Invocation>,
     /// The next word is a redirection target, not an argument
     skip_word: bool,
     /// The next word is a heredoc delimiter
@@ -324,9 +348,12 @@ impl Lexer {
 
         if self.heredoc_word {
             self.heredoc_word = false;
+            // the command is pushed when its line or segment ends, so it lands
+            // at the next index
             self.heredocs.push(Heredoc {
                 delimiter: word,
                 strip_tabs: self.heredoc_tabs,
+                segment: self.segments.len(),
             });
         } else if self.skip_word {
             self.skip_word = false;
@@ -341,7 +368,10 @@ impl Lexer {
         self.heredoc_word = false;
 
         if !self.words.is_empty() {
-            self.segments.push(std::mem::take(&mut self.words));
+            self.segments.push(Invocation {
+                words: std::mem::take(&mut self.words),
+                heredoc: None,
+            });
         }
     }
 
@@ -502,9 +532,11 @@ impl Lexer {
             .extend(parse_at(&inner, self.depth + 1).commands);
     }
 
-    /// Skips the bodies of heredocs opened on the line that just ended
+    /// Skips the bodies of heredocs opened on the line that just ended, keeping
+    /// each as the stdin of the command it feeds
     fn skip_heredoc_bodies(&mut self) {
         for heredoc in std::mem::take(&mut self.heredocs) {
+            let mut body = String::new();
             while self.at < self.chars.len() {
                 let line_end = self.chars[self.at..]
                     .iter()
@@ -523,6 +555,13 @@ impl Lexer {
                 if line == heredoc.delimiter {
                     break;
                 }
+
+                body.push_str(line);
+                body.push('\n');
+            }
+
+            if let Some(invocation) = self.segments.get_mut(heredoc.segment) {
+                invocation.heredoc = Some(body);
             }
         }
     }
@@ -536,7 +575,7 @@ mod tests {
         Script::parse(source)
             .commands
             .iter()
-            .map(|words| words.join(" "))
+            .map(|invocation| invocation.words.join(" "))
             .collect()
     }
 
@@ -626,6 +665,48 @@ mod tests {
 
         let script = Script::parse("cat <<EOF\n# note: x\nEOF\nls");
         assert_eq!(script.text, "cat <<EOF\nls");
+    }
+
+    #[test]
+    fn keeps_heredoc_bodies_as_stdin() {
+        let cases: &[(&str, &[(&str, Option<&str>)])] = &[
+            (
+                "git commit -F - <<'EOF' && git push\nSubject\n\nBody\nEOF\nls",
+                &[
+                    ("git commit -F -", Some("Subject\n\nBody\n")),
+                    ("git push", None),
+                    ("ls", None),
+                ],
+            ),
+            (
+                "a <<A; b <<B\n1\nA\n2\nB",
+                &[("a", Some("1\n")), ("b", Some("2\n"))],
+            ),
+            ("cat <<-EOF\n\tx\n\t\ty\n\tEOF", &[("cat", Some("x\ny\n"))]),
+            ("timeout 5 cat <<EOF\nx\nEOF", &[("cat", Some("x\n"))]),
+            // the last heredoc is the one on stdin
+            ("cat <<A <<B\n1\nA\n2\nB", &[("cat", Some("2\n"))]),
+            ("cat <<EOF\nx", &[("cat", Some("x\n"))]),
+            ("cat <<EOF\nEOF", &[("cat", Some(""))]),
+        ];
+
+        for (source, want) in cases {
+            let got = Script::parse(source)
+                .invocations()
+                .map(|command| {
+                    let words = std::iter::once(command.program())
+                        .chain(command.args())
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    (words, command.heredoc().map(str::to_owned))
+                })
+                .collect::<Vec<_>>();
+            let want = want
+                .iter()
+                .map(|(words, body)| (words.to_string(), body.map(str::to_owned)))
+                .collect::<Vec<_>>();
+            assert_eq!(got, want, "{source:?}");
+        }
     }
 
     #[test]

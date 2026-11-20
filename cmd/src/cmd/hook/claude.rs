@@ -12,6 +12,7 @@
 
 mod agent;
 mod bash;
+mod commit;
 mod monitor;
 mod shell;
 mod text;
@@ -212,6 +213,7 @@ pub fn decide(event: Event, input: &HookInput, host: &impl Host) -> Decision {
             bash::background_wait(input),
             bash::wait_timeout(input),
             bash::ci_wait(input),
+            bash::commit_subject(input),
         ]),
         (Event::PreToolUse, "Monitor") => monitor::quiet(input),
         (Event::PreToolUse, "Agent" | "mcp__t3-code__delegate_task") => {
