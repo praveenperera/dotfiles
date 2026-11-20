@@ -1,12 +1,13 @@
 //! Checks on the Bash tool: CI waits held in the turn, background commands an
-//! agent will wait on, the timeout of a background `homebased wait`, and the
-//! reminder to register one
+//! agent will wait on, the timeout of a background `homebased wait`, the
+//! reminder to register one, and kills that pick processes by name or pattern,
+//! here or on another machine through `ssh` or a homebased task
 
 use clap::Parser;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
-use super::shell::{Command, Script};
+use super::shell::{file_name, Command, Script};
 use super::text::{mentions_homebased_wait, starts_line_with_homebased_wait};
 use super::{recommend, Decision, HookInput, Host};
 use crate::cmd::main_cmd::{Cmd, MainCmd};
@@ -193,6 +194,176 @@ const CI_API_PATHS: &[&str] = &[
     "statusCheckRollup",
 ];
 
+pub fn pattern_kill_reason() -> String {
+    format!(
+        "Do not kill processes by name or pattern. `pkill` in any form, including `-x` and `-P`, `killall`, `fuser -k`, and `kill` with pids from `pgrep`, `ps`, `xargs`, or `$(...)` pick processes by matching text, which can also match the command line of the shell running it or another session process such as `systemd --user`, so the kill can reach this agent's own shell or session; one such kill restarted the whole user session. Signalling pid 1, 0, -1, or a negative process group, or naming systemd, is never allowed. The same holds for a command run on another machine through `ssh` or a homebased task. Look up the exact pids with `{}` in one call, check each one, then run `{}` with the literal pids in the next.",
+        recommend::LIST_PIDS,
+        recommend::KILL_PID,
+    )
+}
+
+/// A `pgrep -f` loop that killed every match once killed `systemd --user` too,
+/// since the pattern also matched the shell running the loop, and restarted the
+/// whole user session. A kill must name its pids, which the agent looked up and
+/// checked in an earlier call. `pkill` is denied in every form: a name match
+/// such as `pkill -x bash` or `pkill node` and a parent match such as
+/// `pkill -P <ppid>` can reach session processes just the same
+///
+/// A command `ssh` or a homebased task runs on another machine counts too,
+/// since a pattern kill there can take down that machine's session, and so does
+/// a heredoc a shell or `ssh` reads its commands from
+///
+/// Only commands that run count, so `grep pkill`, a commit message, or a heredoc
+/// body fed to `cat` that names a kill is fine
+pub fn pattern_kill(input: &HookInput) -> Decision {
+    let Some(bash) = input.tool_input::<BashInput>() else {
+        return Decision::Allow;
+    };
+
+    if kills_by_pattern(Script::parse(&bash.command)) {
+        return Decision::Deny(pattern_kill_reason());
+    }
+
+    Decision::Allow
+}
+
+fn kills_by_pattern(script: Script) -> bool {
+    let scripts = with_delegated(script);
+    let commands = || scripts.iter().flat_map(Script::iter);
+
+    // a variable pid is fine on its own, as in `kill "$pid"`, but not when the
+    // same command line looked it up, here or on another machine, as in
+    // `for p in $(ssh code pgrep x); do ssh code kill $p; done`, since nobody
+    // checked it
+    match commands().map(|command| kill_kind(&command)).max() {
+        Some(Kill::Forbidden) => true,
+        Some(Kill::Derived) => commands().any(|command| PID_LOOKUPS.contains(&command.program())),
+        _ => false,
+    }
+}
+
+/// The script and every script it hands to another process to run: a
+/// homebased task runs the words after `--` on this machine or another Fleet
+/// machine, and `ssh` runs the words after its destination on the remote host,
+/// where a pattern kill matches its own process just the same
+fn with_delegated(script: Script) -> Vec<Script> {
+    let mut scripts = vec![script];
+
+    // each inner script is shorter than the one it came from, so this ends
+    let mut at = 0;
+    while let Some(script) = scripts.get(at) {
+        let inner = script
+            .iter()
+            .filter_map(|command| match command.program() {
+                "homebased" => command.trailing_command(),
+                "ssh" => command.remote_command(),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        scripts.extend(inner);
+        at += 1;
+    }
+
+    scripts
+}
+
+/// Programs that print pids for a pattern, a name, or a port
+const PID_LOOKUPS: &[&str] = &["pgrep", "pidof", "ps", "lsof"];
+
+/// Programs that signal processes
+const KILLERS: &[&str] = &["kill", "pkill", "killall"];
+
+/// How a command picks the processes it signals, ordered from safe to denied
+/// so a script reads as its worst command
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Kill {
+    /// Signals nothing
+    None,
+    /// Names literal pids, `$!`, or job specs such as `%1`
+    Explicit,
+    /// Names pids through a variable
+    Derived,
+    /// Matches processes by name, command line, or parent through `pkill` or
+    /// `killall`, by open file through `fuser -k`, takes pids from a
+    /// substitution or a pipe, or targets pid 1, every process, a process
+    /// group, or systemd
+    Forbidden,
+}
+
+fn kill_kind(command: &Command) -> Kill {
+    match command.program() {
+        "killall" | "pkill" => Kill::Forbidden,
+        // `fuser -km .` signals every process with a file open on the mount,
+        // this agent's shell included
+        "fuser" if command.args().any(kills_users) => Kill::Forbidden,
+        "kill" => kill_targets(command)
+            .into_iter()
+            .map(kill_target)
+            .max()
+            .unwrap_or(Kill::None),
+        // pids piped in, as in `pgrep x | xargs kill`; a false match such as
+        // `xargs grep kill` is rare enough to deny
+        "xargs" if command.args().any(|arg| KILLERS.contains(&file_name(arg))) => Kill::Forbidden,
+        _ => Kill::None,
+    }
+}
+
+/// Whether a `fuser` argument is `-k`, `--kill`, or a short flag group with it,
+/// as in `-km`; signal names such as `-KILL` are upper case
+fn kills_users(arg: &str) -> bool {
+    match arg.strip_prefix("--") {
+        Some(long) => long == "kill",
+        None => arg.starts_with('-') && arg.contains('k'),
+    }
+}
+
+/// The pid arguments of `kill`, after its signal and options
+fn kill_targets<'a>(command: &'a Command) -> Vec<&'a str> {
+    let mut args = command.args();
+    let mut targets = Vec::new();
+    let mut signal = false;
+
+    while let Some(arg) = args.next() {
+        match arg {
+            "--" => {
+                targets.extend(args.by_ref());
+                break;
+            }
+            // `kill -l 9` lists signal names and signals nothing
+            "-l" | "-L" | "--list" | "--table" => return Vec::new(),
+            "-s" | "-n" | "--signal" => {
+                args.next();
+                signal = true;
+            }
+            // the first dash word is the signal, as in `kill -9 -1`, where `-1`
+            // is every process
+            arg if arg.starts_with('-') && !signal && targets.is_empty() => signal = true,
+            arg => targets.push(arg),
+        }
+    }
+
+    targets
+}
+
+fn kill_target(target: &str) -> Kill {
+    let substituted = target.contains("$(") || target.contains('`');
+    if substituted || target.starts_with('-') || target.contains("systemd") {
+        return Kill::Forbidden;
+    }
+
+    if target == "$!" || target.starts_with('%') {
+        return Kill::Explicit;
+    }
+
+    // 0 is this process group, 1 is init
+    match target.parse::<u64>() {
+        Ok(pid) if pid > 1 => Kill::Explicit,
+        Ok(_) => Kill::Forbidden,
+        Err(_) => Kill::Derived,
+    }
+}
+
 /// T3 lists a thread under Waiting only after the background command that runs
 /// `homebased wait` is registered with `t3_background_wait`; the command alone
 /// leaves it running. Agents kept skipping that step, and a hook cannot call an
@@ -229,7 +400,7 @@ mod tests {
     use super::super::recommend;
     use super::super::tests::{decision, pre, Fixture};
     use super::super::{Decision, Event};
-    use super::{background_reason, ci_wait_reason, wait_timeout_reason};
+    use super::{background_reason, ci_wait_reason, pattern_kill_reason, wait_timeout_reason};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum Want {
@@ -237,6 +408,7 @@ mod tests {
         Ci,
         Background,
         Both,
+        Kill,
     }
 
     fn want(want: Want) -> Decision {
@@ -247,6 +419,7 @@ mod tests {
             Want::Both => {
                 Decision::Deny(format!("{}\n\n{}", background_reason(), ci_wait_reason()))
             }
+            Want::Kill => Decision::Deny(pattern_kill_reason()),
         }
     }
 
@@ -392,6 +565,230 @@ mod tests {
                 ("printf '%s\\n' \"a; sleep 5\" && gh pr view 5", Allow),
                 // a wait on another machine does not hold this turn's shell
                 ("ssh host gh run watch 1", Allow),
+            ],
+            false,
+        );
+    }
+
+    #[test]
+    fn pattern_kills_are_denied() {
+        use Want::Kill;
+
+        check(
+            &[
+                // the incident: a pgrep -f loop that also matched its own shell
+                (
+                    "for p in $(pgrep -f 'tail --pid=328742'); do kill $p; done",
+                    Kill,
+                ),
+                ("pkill -f 'tail --pid=1'", Kill),
+                ("pkill --full worker", Kill),
+                ("pkill -9f worker", Kill),
+                ("pkill -f9 worker", Kill),
+                ("pkill -u praveen -f worker", Kill),
+                ("/usr/bin/pkill -f worker", Kill),
+                ("killall node", Kill),
+                ("killall -9 python3", Kill),
+                ("kill $(pgrep worker)", Kill),
+                ("kill -9 `pidof worker`", Kill),
+                ("kill \"$(cat worker.pid)\"", Kill),
+                ("kill $(lsof -t -i:3000)", Kill),
+                ("pgrep -f worker | xargs kill", Kill),
+                ("pgrep worker | xargs -r kill -9", Kill),
+                ("ps aux | grep worker | awk '{print $2}' | xargs kill", Kill),
+                ("lsof -ti:3000 | xargs /bin/kill", Kill),
+                ("pid=$(pgrep -f worker); kill \"$pid\"", Kill),
+                (
+                    "pid=$(ps -eo pid,args | awk '/worker/{print $1}'); kill $pid",
+                    Kill,
+                ),
+                ("pgrep -f worker && pkill worker", Kill),
+                // any pkill, since a name or parent match reaches session
+                // processes too
+                ("pkill worker", Kill),
+                ("pkill node", Kill),
+                ("pkill -x bash", Kill),
+                ("pkill -P 4321", Kill),
+                ("pkill -9 -P 4321", Kill),
+                ("pkill -u praveen", Kill),
+                ("pgrep worker | xargs pkill -P", Kill),
+                ("while read p; do kill $p; done < <(pgrep worker)", Kill),
+                ("kill 1", Kill),
+                ("kill -9 1", Kill),
+                ("kill 0", Kill),
+                ("kill -9 -1", Kill),
+                ("kill -s KILL -1", Kill),
+                ("kill -- -1", Kill),
+                ("kill -TERM -- -4321", Kill),
+                ("kill -9 -$pgid", Kill),
+                ("kill 4321 1", Kill),
+                ("pkill systemd", Kill),
+                ("pkill -x systemd-logind", Kill),
+                ("kill systemd", Kill),
+                ("sudo kill -9 1", Kill),
+                ("sudo -n pkill -f worker", Kill),
+                ("bash -c 'pkill -f worker'", Kill),
+                ("timeout 5 killall worker", Kill),
+                ("cd x && killall worker", Kill),
+                ("cat <<EOF\nnotes\nEOF\npkill -f worker", Kill),
+                // a homebased task runs its command on this machine all the same
+                ("homebased task run -- pkill -f worker", Kill),
+                (
+                    "homebased --json task run --name x -- sh -lc 'pgrep -f w | xargs kill'",
+                    Kill,
+                ),
+                (
+                    "homebased task run --machine ai5090 -- killall python",
+                    Kill,
+                ),
+                // ssh runs the words after the destination on the remote host
+                ("ssh code pkill -f worker", Kill),
+                ("ssh host pkill -f worker", Kill),
+                ("ssh code 'pkill -f worker'", Kill),
+                ("ssh code pkill node", Kill),
+                ("ssh code 'pkill -P 4321'", Kill),
+                ("ssh code killall python", Kill),
+                ("ssh code 'pgrep -f w | xargs kill'", Kill),
+                ("ssh code 'for p in $(pgrep -f w); do kill $p; done'", Kill),
+                ("ssh code 'pid=$(pgrep w); kill \"$pid\"'", Kill),
+                ("ssh code kill 1", Kill),
+                ("ssh code \"sh -c 'pkill -f w'\"", Kill),
+                // option values are neither the destination nor the command
+                ("ssh -p 2222 code pkill node", Kill),
+                (
+                    "ssh -p2222 -i ~/.ssh/id -o BatchMode=yes code pkill node",
+                    Kill,
+                ),
+                ("ssh -J jump -l praveen code pkill node", Kill),
+                ("ssh -vp 2222 code killall node", Kill),
+                ("ssh -t -F cfg code 'kill -9 -1'", Kill),
+                ("ssh code -l praveen -p 2222 pkill node", Kill),
+                ("ssh -- code pkill node", Kill),
+                ("timeout 30 ssh code pkill node", Kill),
+                ("echo $(ssh code pkill node)", Kill),
+                ("bash -c \"ssh code 'pkill -f w'\"", Kill),
+                ("homebased task run -- ssh code pkill -f worker", Kill),
+                // a pid looked up over ssh is unchecked too
+                (
+                    "for p in $(ssh code pgrep -f w); do ssh code kill $p; done",
+                    Kill,
+                ),
+                ("for p in $(ssh code pgrep -f w); do kill $p; done", Kill),
+                ("pid=$(ssh code pgrep w); ssh code kill \"$pid\"", Kill),
+                // a heredoc a shell or ssh reads its commands from runs
+                ("ssh code bash -s <<'EOF'\npkill -f worker\nEOF", Kill),
+                ("ssh code <<'EOF'\npkill -f worker\nEOF", Kill),
+                ("ssh code 'bash -s' <<EOF\nkillall node\nEOF", Kill),
+                ("bash <<'EOF'\npkill -f worker\nEOF", Kill),
+                ("bash -s arg <<'EOF'\npkill -f worker\nEOF", Kill),
+                ("sudo sh <<-EOF\n\tkill -9 1\n\tEOF", Kill),
+                (
+                    "cat <<'A'\nnotes\nA\nssh code bash -s <<'B'\npgrep w | xargs kill\nB",
+                    Kill,
+                ),
+                // wrappers that run the rest of the line
+                ("nice -n 19 pkill -f worker", Kill),
+                ("nice -19 killall node", Kill),
+                ("ionice -c 3 nice pkill node", Kill),
+                ("stdbuf -o L pkill node", Kill),
+                ("setsid -f pkill node", Kill),
+                ("command pkill -f worker", Kill),
+                ("builtin kill $(pgrep worker)", Kill),
+                ("doas -u root pkill node", Kill),
+                ("sudo -R /srv kill 1", Kill),
+                ("eval \"pkill -f worker\"", Kill),
+                ("eval 'pid=$(pgrep w); kill $pid'", Kill),
+                ("fuser -k 3000/tcp", Kill),
+                ("fuser -km .", Kill),
+                ("fuser --kill -n tcp 3000", Kill),
+                ("bash <<< 'pkill -f worker'", Kill),
+                ("ssh code <<< 'pkill -f worker'", Kill),
+                ("ssh code bash -s <<< \"pkill -f worker\"", Kill),
+                ("sudo -s <<'EOF'\npkill -f worker\nEOF", Kill),
+                ("ssh code sudo -i <<'EOF'\npkill -f worker\nEOF", Kill),
+                ("sudo su - <<'EOF'\nkillall node\nEOF", Kill),
+                ("su -c 'pkill -f worker' root", Kill),
+                ("time -p pkill node", Kill),
+            ],
+            false,
+        );
+    }
+
+    #[test]
+    fn explicit_kills_and_mentions_are_allowed() {
+        use Want::Allow;
+
+        check(
+            &[
+                ("kill 4321", Allow),
+                ("kill -9 4321 4322", Allow),
+                ("kill -s TERM 4321", Allow),
+                ("kill -0 4321", Allow),
+                ("kill -- 4321", Allow),
+                ("/bin/kill 4321", Allow),
+                ("kill $!", Allow),
+                ("sleep 100 & kill $!", Allow),
+                ("kill %1", Allow),
+                ("kill \"$pid\"", Allow),
+                ("kill -TERM \"${pids[@]}\"", Allow),
+                ("kill -l", Allow),
+                ("kill -l 9", Allow),
+                ("kill 4321; sleep 1; ps -p 4321", Allow),
+                ("pgrep -f worker", Allow),
+                ("pgrep -af 'cargo|rustc'", Allow),
+                ("ps -eo pid,args | grep worker", Allow),
+                ("ps aux", Allow),
+                ("pidof worker", Allow),
+                ("lsof -ti:3000", Allow),
+                ("systemctl --user status", Allow),
+                ("tmux kill-session -t x", Allow),
+                ("docker kill web", Allow),
+                ("grep -rn pkill .", Allow),
+                ("rg 'killall|pkill -f' src", Allow),
+                ("echo 'kill $(pgrep x)'", Allow),
+                ("git commit -m \"Deny pkill -f and killall\"", Allow),
+                ("git log --grep \"kill -9 1\"", Allow),
+                (
+                    "cat <<'EOF' > notes.md\npgrep -f x | xargs kill\nkillall node\nkill 1\nEOF",
+                    Allow,
+                ),
+                (
+                    "git commit -F - <<EOF\nStop using pkill -f and kill $(pgrep x)\nEOF",
+                    Allow,
+                ),
+                ("echo ok # pkill -f worker", Allow),
+                ("homebased task submit --name x -- kill 4321", Allow),
+                ("homebased task run -- grep -rn 'pkill -f' .", Allow),
+                ("ssh code 'ps -eo pid,args'", Allow),
+                ("ssh -p 2222 code kill 4321", Allow),
+                ("ssh code 'kill -9 4321 4322'", Allow),
+                ("ssh code 'pgrep -af worker'", Allow),
+                ("ssh code 'grep -rn pkill .'", Allow),
+                ("ssh code echo 'pkill -f worker'", Allow),
+                ("ssh code 'tmux kill-session -t x'", Allow),
+                ("ssh code", Allow),
+                ("ssh -N -L 3000:localhost:3000 code", Allow),
+                ("ssh-keygen -R code", Allow),
+                ("rsync -e 'ssh -p 2222' a code:pkill.log", Allow),
+                ("git commit -m \"Deny ssh code pkill -f\"", Allow),
+                (
+                    "ssh code bash -s <<'EOF'\nps -eo pid,args\nkill 4321\nEOF",
+                    Allow,
+                ),
+                (
+                    "ssh code 'cat > notes.md' <<'EOF'\npkill -f worker\nEOF",
+                    Allow,
+                ),
+                ("bash scripts/x.sh <<'EOF'\npkill -f worker\nEOF", Allow),
+                ("bash -c 'cat' <<'EOF'\npkill -f worker\nEOF", Allow),
+                ("nice -n 19 cargo test", Allow),
+                ("command -v pkill", Allow),
+                ("eval \"$(ssh-agent -s)\"", Allow),
+                ("fuser 3000/tcp", Allow),
+                ("fuser -v -n tcp 3000", Allow),
+                ("cat <<< 'pkill -f worker'", Allow),
+                ("grep -c pkill <<< \"$notes\"", Allow),
+                ("sudo -u root tee x <<'EOF'\npkill -f worker\nEOF", Allow),
             ],
             false,
         );
