@@ -7,10 +7,13 @@
 # To enable: uncomment this block, run `codemode-mcp service restart`, then
 # `codemode-mcp op warm` and accept the prompts on the Mac
 # 1Password Environments: every call needs a phone passkey approval. Read
-# tools accept a 15 or 60 minute session grant; writes ask on every call
+# tools accept a 15 or 60 minute session grant; every other tool asks on
+# every call, so a write 1Password renames or adds (it renamed its
+# `*_variables` tools to `*_secrets` in Nov 2026) never takes a session grant
 [servers.onepassword]
 command = "/Applications/1Password.app/Contents/MacOS/1password-mcp"
 policy = "ask"
+grant = "per_call"
 # authenticate grants the scopes the other tools check, for the life of the
 # connection; it runs before the first call on each one, inside that call's
 # approval, so nothing prompts on the Mac until a call is approved
@@ -21,29 +24,30 @@ aliases = ["1password"]
 needs_owner_here = true
 
 [servers.onepassword.tools.authenticate]
+grant = "session"
 output_schema = { type = "object", required = ["account_id"], properties = { account_id = { type = "string" } } }
 
 [servers.onepassword.tools.list_environments]
+grant = "session"
 output_schema = { type = "object", required = ["environments"], properties = { environments = { type = "array", items = { type = "object", properties = { id = { type = "string" }, name = { type = "string" } } } } } }
 
 # shapes from the response structs in the 1password-mcp binary; the three
-# tools without one answer with prose, kept as text
-[servers.onepassword.tools.list_variables]
-output_schema = { type = "object", required = ["variableNames"], properties = { variableNames = { type = "array", items = { type = "string" } } } }
+# tools without one answer with prose, kept as text. list_secrets has no
+# shape yet: it replaced list_variables, whose response field was
+# variableNames, and the new one has not been checked
+[servers.onepassword.tools.list_secrets]
+grant = "session"
 [servers.onepassword.tools.list_local_env_files]
+grant = "session"
 output_schema = { type = "object", required = ["localEnvFiles"], properties = { localEnvFiles = { type = "array", items = { type = "object", required = ["id", "mountPath", "isEnabled"], properties = { id = { type = "string" }, mountPath = { type = "string" }, isEnabled = { type = "boolean" } } } } } }
 
 [servers.onepassword.tools.create_environment]
-grant = "per_call"
 output_schema = { type = "object", required = ["environmentId"], properties = { environmentId = { type = "string" } } }
 [servers.onepassword.tools.rename_environment]
-grant = "per_call"
 output = "text"
-[servers.onepassword.tools.append_variables]
-grant = "per_call"
+[servers.onepassword.tools.append_secrets]
 output = "text"
 [servers.onepassword.tools.create_local_env_file]
-grant = "per_call"
 output = "text"
 
 # `codemode-mcp op warm` runs these on the Mac so the 1Password app's own
