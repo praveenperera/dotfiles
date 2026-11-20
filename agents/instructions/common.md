@@ -56,6 +56,7 @@ Use these terms in instructions, skills, briefs, and reports. Do not use "delega
 - When this thread coordinates several subagents, child threads, PRs, or queued jobs over a long run, use the `orchestrate` skill.
 - For a larger task, run one fresh review of the related change set; add a second only when another risk area would bloat that prompt. Do not start one reviewer per package or file, and do not repeat completed checks.
 - When Codex, Sol, or Terra runs a review, do not guide it, especially for a general review. For a pre-PR review, do not tell it what to look at; just ask it to review the PR.
+- Sol and Terra reviews find real bugs but also report near-impossible edge cases; use your best judgment and do not add complexity for those.
 - When a subagent is there for a second opinion, new ideas, or a fresh look, do not bias it with your current thinking, hypotheses, or preferred answer. Give it only the information it needs, such as the goal, constraints, and where to look.
 - Use Grok 4.5 at high effort only to read X posts; never ask it to analyze or do other work.
 

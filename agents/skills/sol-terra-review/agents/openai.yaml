@@ -1,0 +1,6 @@
+interface:
+  display_name: "Sol and Terra Review"
+  short_description: "Run Sol xhigh and Terra max reviews, then triage"
+  default_prompt: "Use $sol-terra-review to review this change with Sol and Terra and triage their findings."
+policy:
+  allow_implicit_invocation: false
