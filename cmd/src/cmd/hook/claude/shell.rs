@@ -3,7 +3,7 @@
 //! It is not a shell parser. It splits on `;`, `&`, `|`, newlines, parentheses,
 //! and backticks, keeps quoted text in one word, drops redirections, comments,
 //! and heredoc bodies, and reads into `$(...)`, backticks, `eval`, `sh -c '...'`
-//! scripts, and heredocs a shell reads its commands from, as in
+//! scripts, and heredocs or here-strings a shell reads its commands from, as in
 //! `bash -s <<'EOF'`. Callers can also read the command a `homebased task` or
 //! `ssh` call runs elsewhere. That is enough to tell a command that runs `gh run watch`
 //! from one that only mentions it, such as `grep`, `echo`, or `git commit -m`
@@ -26,7 +26,8 @@ const KEYWORDS: &[&str] = &[
 pub struct Script {
     /// Each command's words, after `VAR=value` prefixes, keywords, and wrappers
     /// such as `timeout 600` are stripped, including the commands inside
-    /// `$(...)`, backticks, and `sh -c` scripts
+    /// `$(...)`, backticks, `eval`, `sh -c` scripts, and the heredoc or
+    /// here-string a shell reads its commands from
     pub commands: Vec<Vec<String>>,
     /// The heredoc body each command reads on stdin, by index into `commands`
     stdin: Vec<Option<String>>,
@@ -156,15 +157,19 @@ fn parse_at(source: &str, depth: usize, inherited: Option<&str>) -> Script {
 /// `sh -c`, `eval`, and a shell reading its commands from a heredoc
 fn resolve(words: &[String], stdin: Option<&str>, depth: usize, out: &mut Script) {
     let mut rest = words;
+    let mut starts_shell = false;
     loop {
         match rest.first().map(String::as_str) {
-            None => return,
+            None => break,
             Some(word) if KEYWORDS.contains(&word) || is_assignment(word) => rest = &rest[1..],
             // wrappers that run the rest of the line, by name or by path
             Some(word) => match file_name(word) {
                 "timeout" => rest = skip_timeout(&rest[1..]),
                 "env" => rest = skip_options(&rest[1..], ENV_VALUE_FLAGS),
-                "sudo" => rest = skip_options(&rest[1..], SUDO_VALUE_FLAGS),
+                "sudo" => {
+                    starts_shell = rest[1..].iter().any(|arg| starts_sudo_shell(arg));
+                    rest = skip_options(&rest[1..], SUDO_VALUE_FLAGS);
+                }
                 "doas" => rest = skip_options(&rest[1..], &["-a", "-C", "-u"]),
                 "nice" => rest = skip_options(&rest[1..], &["-n", "--adjustment"]),
                 "ionice" => rest = skip_options(&rest[1..], IONICE_VALUE_FLAGS),
@@ -174,10 +179,21 @@ fn resolve(words: &[String], stdin: Option<&str>, depth: usize, out: &mut Script
                 "command" if !matches!(rest.get(1).map(String::as_str), Some("-v" | "-V")) => {
                     rest = skip_options(&rest[1..], &[])
                 }
-                "nohup" | "exec" | "time" => rest = &rest[1..],
+                "time" => rest = skip_options(&rest[1..], &["-f", "--format", "-o", "--output"]),
+                "nohup" | "exec" => rest = &rest[1..],
                 _ => break,
             },
         }
+    }
+
+    // `sudo -s` or `sudo -i` with no command starts a shell that reads its
+    // commands from stdin
+    if rest.is_empty() {
+        if let Some(body) = stdin.filter(|_| starts_shell && depth < MAX_DEPTH) {
+            out.append(parse_at(body, depth + 1, None));
+        }
+
+        return;
     }
 
     if let Some((script, inherited)) = inner_script(rest, stdin) {
@@ -187,6 +203,15 @@ fn resolve(words: &[String], stdin: Option<&str>, depth: usize, out: &mut Script
     }
 
     out.push(rest.to_vec(), stdin);
+}
+
+/// Whether a `sudo` option is `-s`, `-i`, or a short flag group with one,
+/// which start a shell when no command follows
+fn starts_sudo_shell(arg: &str) -> bool {
+    match arg.strip_prefix("--") {
+        Some(long) => long == "shell" || long == "login",
+        None => arg.starts_with('-') && arg.contains(['s', 'i']),
+    }
 }
 
 fn is_assignment(word: &str) -> bool {
@@ -315,17 +340,17 @@ fn inner_script<'a>(
     words: &'a [String],
     stdin: Option<&'a str>,
 ) -> Option<(Cow<'a, str>, Option<&'a str>)> {
-    let program = file_name(words.first()?);
-    if program == "eval" {
-        return Some((Cow::Owned(words[1..].join(" ")), stdin));
-    }
-
-    if !matches!(program, "sh" | "bash" | "zsh") {
-        return None;
-    }
-
     // a shell reading its script from stdin has no stdin left for its commands
     let from_stdin = || stdin.map(|body| (Cow::Borrowed(body), None));
+
+    let program = file_name(words.first()?);
+    match program {
+        "eval" => return Some((Cow::Owned(words[1..].join(" ")), stdin)),
+        "su" => return su_script(&words[1..], stdin).or_else(from_stdin),
+        "sh" | "bash" | "zsh" => {}
+        _ => return None,
+    }
+
     let mut has_c = false;
     let mut has_s = false;
     let mut args = words[1..].iter();
@@ -351,6 +376,36 @@ fn inner_script<'a>(
         true => None,
         false => from_stdin(),
     }
+}
+
+/// The `-c` script of `su`, as in `su -c 'make' root`
+fn su_script<'a>(
+    args: &'a [String],
+    stdin: Option<&'a str>,
+) -> Option<(Cow<'a, str>, Option<&'a str>)> {
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "-c" | "--command" => {
+                return args
+                    .next()
+                    .map(|script| (Cow::Borrowed(script.as_str()), stdin))
+            }
+            "-s"
+            | "--shell"
+            | "-g"
+            | "--group"
+            | "-G"
+            | "--supp-group"
+            | "-w"
+            | "--whitelist-environment" => {
+                args.next();
+            }
+            _ => {}
+        }
+    }
+
+    None
 }
 
 /// A heredoc whose body starts after the current line
@@ -379,7 +434,11 @@ struct Lexer {
     heredoc_word: bool,
     heredocs: Vec<Heredoc>,
     heredoc_tabs: bool,
-    /// Heredoc bodies by the index of the segment that reads them
+    /// The next word is a here-string, as in `bash <<< 'make'`
+    herestring_word: bool,
+    /// The here-string on the current segment's stdin
+    herestring: Option<String>,
+    /// Heredoc and here-string bodies by the index of the segment that reads them
     bodies: Vec<(usize, String)>,
     text: String,
 }
@@ -399,6 +458,8 @@ impl Lexer {
             heredoc_word: false,
             heredocs: Vec::new(),
             heredoc_tabs: false,
+            herestring_word: false,
+            herestring: None,
             bodies: Vec::new(),
             text: String::with_capacity(source.len()),
         }
@@ -513,6 +574,9 @@ impl Lexer {
                 strip_tabs: self.heredoc_tabs,
                 segment: Some(self.segments.len()),
             });
+        } else if self.herestring_word {
+            self.herestring_word = false;
+            self.herestring = Some(word + "\n");
         } else if self.skip_word {
             self.skip_word = false;
         } else {
@@ -524,10 +588,16 @@ impl Lexer {
         self.end_word();
         self.skip_word = false;
         self.heredoc_word = false;
+        self.herestring_word = false;
 
         let at = self.segments.len();
+        let herestring = self.herestring.take();
         if !self.words.is_empty() {
             self.segments.push(std::mem::take(&mut self.words));
+            if let Some(body) = herestring {
+                self.bodies.push((at, body));
+            }
+
             return;
         }
 
@@ -557,7 +627,7 @@ impl Lexer {
         if c == '<' && self.peek(1) == Some('<') {
             if self.peek(2) == Some('<') {
                 self.take(3);
-                self.skip_word = true;
+                self.herestring_word = true;
             } else {
                 self.take(2);
                 self.heredoc_tabs = self.peek(0) == Some('-');
@@ -813,6 +883,12 @@ mod tests {
             ("bash -s x <<EOF\na\nEOF\nc", &["a", "bash -s x", "c"]),
             ("bash x.sh <<EOF\na\nEOF", &["bash x.sh"]),
             ("cat <<EOF\na\nEOF", &["cat"]),
+            ("bash <<< 'a; b' && c", &["a", "b", "bash", "c"]),
+            ("sudo -u root -i <<EOF\na\nEOF", &["a"]),
+            ("sudo -u root <<EOF\na\nEOF", &[]),
+            ("su -c 'a' root", &["a", "su -c a root"]),
+            ("su - <<EOF\na\nEOF", &["a", "su -"]),
+            ("time -p make", &["make"]),
         ];
 
         for (source, want) in cases {
