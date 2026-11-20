@@ -13,7 +13,7 @@
 - My instructions take precedence over a skill's guidelines. When a skill rule blocks progress, cite the exact `SKILL.md` file and rule instead of stopping.
 - For performance work, profile and measure the end-to-end payoff first (same output or accuracy within limits, plus a measured speedup on a fixed input set); add harness or proof machinery only for risks that check can't catch, and time-box it.
 - Before adding complexity for a speculative or vanishingly unlikely race or security edge case, explain the concrete failure mode, likelihood, and complexity cost to me and get my buy-in. Do not silently expand scope for theoretical robustness.
-- Always give times in the US Central time zone.
+- Always give times in the US Central time zone, in 12-hour format with AM/PM (4:30 PM CT), never 24-hour.
 - Never give local-only 127.0.0.1 links; use host mode so links work on LAN and Tailscale.
 - In public-facing copy, include only reader-visible content. Omit implementation notes, source labels, workflow state, reasoning, conversation context, and edit instructions.
 - Run all GPU work through the homebased queue; never run work that needs GPU time directly.
