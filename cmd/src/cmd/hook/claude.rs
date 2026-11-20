@@ -150,6 +150,8 @@ pub mod recommend {
     pub const TASK_LOG: &str = "homebased task log <id> --tail 5";
     pub const SERVICE_START: &str =
         "homebased service start --name <name> --port <port> -- <command>";
+    pub const LIST_PIDS: &str = "ps -eo pid,args";
+    pub const KILL_PID: &str = "kill <pid>";
 
     /// Bash `timeout` for a background `homebased wait`, Claude Code's 2-hour
     /// maximum. The wait picks its own limit, 55 minutes with no event in a T3
@@ -212,6 +214,7 @@ pub fn decide(event: Event, input: &HookInput, host: &impl Host) -> Decision {
             bash::background_wait(input),
             bash::wait_timeout(input),
             bash::ci_wait(input),
+            bash::pattern_kill(input),
         ]),
         (Event::PreToolUse, "Monitor") => monitor::quiet(input),
         (Event::PreToolUse, "Agent" | "mcp__t3-code__delegate_task") => {
@@ -490,11 +493,24 @@ mod tests {
             );
         }
 
+        for command in [
+            recommend::LIST_PIDS.to_owned(),
+            recommend::KILL_PID.replace("<pid>", "4321"),
+        ] {
+            let stdin = pre("Bash", json!({"command": command}));
+            assert_eq!(
+                decision(Event::PreToolUse, &stdin, &host),
+                Decision::Allow,
+                "{command}"
+            );
+        }
+
         // every recommendation the reasons name is one of these constants
         let reasons = [
             bash::ci_wait_reason(),
             bash::background_reason(),
             bash::wait_timeout_reason(),
+            bash::pattern_kill_reason(),
             monitor::wait_reason(),
             monitor::homebased_wait_reason(),
             super::no_pr_watch_reason(),
@@ -507,11 +523,13 @@ mod tests {
             recommend::WAIT_MANY,
             recommend::TASK_LOG,
             recommend::SERVICE_START,
+            recommend::LIST_PIDS,
+            recommend::KILL_PID,
         ];
 
         for reason in reasons {
             for quoted in reason.split('`').skip(1).step_by(2) {
-                if quoted.starts_with("homebased") {
+                if quoted.starts_with("homebased") || quoted.starts_with("ps ") {
                     let base = quoted.trim_end_matches(" [--greptile]");
                     assert!(known.contains(&base), "{quoted:?} in {reason:?}");
                 }

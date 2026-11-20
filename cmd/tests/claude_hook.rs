@@ -31,11 +31,20 @@ fn hook_prints_one_decision_or_nothing() {
     let deny_ci = r#"{"tool_name": "Bash", "tool_input": {"command": "gh run watch 1"}}"#;
     let deny_model = r#"{"tool_name": "Agent", "tool_input": {"prompt": "x"}}"#;
     let allowed = r#"{"tool_name": "Bash", "tool_input": {"command": "cargo test"}}"#;
+    let deny_kill =
+        r#"{"tool_name": "Bash", "tool_input": {"command": "pgrep -f worker | xargs kill"}}"#;
+    let explicit_kill = r#"{"tool_name": "Bash", "tool_input": {"command": "kill 4321"}}"#;
 
     let cases = [
         ("pre-tool-use", deny_ci, Some("Do not wait on CI")),
         ("pre-tool-use", deny_model, Some("Name the model")),
         ("pre-tool-use", allowed, None),
+        (
+            "pre-tool-use",
+            deny_kill,
+            Some("Do not kill processes by pattern"),
+        ),
+        ("pre-tool-use", explicit_kill, None),
         ("pre-tool-use", "not json", None),
         ("pre-tool-use", "", None),
         ("post-tool-use", allowed, None),

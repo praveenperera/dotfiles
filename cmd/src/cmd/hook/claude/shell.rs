@@ -36,7 +36,12 @@ impl Script {
 
     /// Whether any command satisfies `matches`
     pub fn runs(&self, matches: impl Fn(&Command) -> bool) -> bool {
-        self.commands.iter().any(|words| matches(&Command(words)))
+        self.iter().any(|command| matches(&command))
+    }
+
+    /// Every command the script runs
+    pub fn iter(&self) -> impl Iterator<Item = Command<'_>> {
+        self.commands.iter().map(|words| Command(words))
     }
 }
 
@@ -54,6 +59,19 @@ impl Command<'_> {
         self.0.iter().skip(1).map(String::as_str)
     }
 
+    /// The words after the first `--`, read as the command a program such as
+    /// `homebased task run -- sh -c '...'` runs without a shell
+    pub fn trailing_command(&self) -> Option<Script> {
+        let at = self.0.iter().position(|word| word == "--")?;
+        let quoted = self.0[at + 1..]
+            .iter()
+            .map(|word| format!("'{}'", word.replace('\'', r"'\''")))
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        Some(Script::parse(&quoted))
+    }
+
     /// Whether the arguments start with `prefix`
     pub fn starts_with(&self, prefix: &[&str]) -> bool {
         self.0.len() > prefix.len()
@@ -64,7 +82,8 @@ impl Command<'_> {
     }
 }
 
-fn file_name(word: &str) -> &str {
+/// The file name of a program word, so `/bin/kill` reads as `kill`
+pub fn file_name(word: &str) -> &str {
     Path::new(word)
         .file_name()
         .and_then(|name| name.to_str())
@@ -98,6 +117,7 @@ fn resolve(words: &[String], depth: usize, out: &mut Vec<Vec<String>>) {
             Some(word) => match file_name(word) {
                 "timeout" => rest = skip_timeout(&rest[1..]),
                 "env" => rest = skip_env(&rest[1..]),
+                "sudo" => rest = skip_sudo(&rest[1..]),
                 "nohup" | "exec" | "time" => rest = &rest[1..],
                 _ => break,
             },
@@ -131,6 +151,25 @@ fn skip_env(args: &[String]) -> &[String] {
     while let Some(arg) = rest.first() {
         match arg.as_str() {
             "-u" | "--unset" | "-C" | "--chdir" | "-S" | "--split-string" => {
+                rest = rest.get(2..).unwrap_or_default()
+            }
+            "--" => return &rest[1..],
+            arg if arg.starts_with('-') || is_assignment(arg) => rest = &rest[1..],
+            _ => break,
+        }
+    }
+
+    rest
+}
+
+/// Skips `sudo`'s options and `VAR=value` arguments, as in `sudo -n -u root kill 1`
+fn skip_sudo(args: &[String]) -> &[String] {
+    let mut rest = args;
+    while let Some(arg) = rest.first() {
+        match arg.as_str() {
+            "-u" | "--user" | "-g" | "--group" | "-p" | "--prompt" | "-C" | "--close-from"
+            | "-D" | "--chdir" | "-h" | "--host" | "-r" | "--role" | "-t" | "--type" | "-T"
+            | "--command-timeout" | "-U" | "--other-user" => {
                 rest = rest.get(2..).unwrap_or_default()
             }
             "--" => return &rest[1..],
@@ -551,6 +590,8 @@ mod tests {
             ("timeout 600 gh run watch 1", &["gh run watch 1"]),
             ("timeout -s KILL -k 5 600 gh run watch", &["gh run watch"]),
             ("timeout --foreground 5m make", &["make"]),
+            ("sudo -n -u root kill 1", &["kill 1"]),
+            ("sudo -S -p '' FOO=1 kill 1", &["kill 1"]),
             ("if x; then y; else z; fi", &["x", "y", "z"]),
             (
                 "while true; do gh pr checks; done",
@@ -606,6 +647,39 @@ mod tests {
         for (source, want) in cases {
             assert_eq!(commands(source), *want, "{source:?}");
         }
+    }
+
+    #[test]
+    fn reads_trailing_commands() {
+        let trailing = |source: &str| {
+            let script = Script::parse(source);
+            let command = script.iter().next().unwrap();
+            command.trailing_command().map(|script| {
+                script
+                    .commands
+                    .iter()
+                    .map(|words| words.join(" "))
+                    .collect::<Vec<_>>()
+            })
+        };
+
+        assert_eq!(
+            trailing("homebased task run --name x -- pkill -f 'a b'"),
+            Some(vec!["pkill -f a b".to_owned()])
+        );
+        assert_eq!(
+            trailing("homebased task run -- echo \"it's\""),
+            Some(vec!["echo it's".to_owned()])
+        );
+        assert_eq!(
+            trailing("homebased task run -- sh -c 'echo a; kill 1'"),
+            Some(vec![
+                "echo a".to_owned(),
+                "kill 1".to_owned(),
+                "sh -c echo a; kill 1".to_owned(),
+            ])
+        );
+        assert_eq!(trailing("homebased task list"), None);
     }
 
     #[test]
