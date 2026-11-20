@@ -527,9 +527,10 @@ mod tests {
             recommend::KILL_PID,
         ];
 
+        let named = ["homebased", "ps ", "kill "];
         for reason in reasons {
             for quoted in reason.split('`').skip(1).step_by(2) {
-                if quoted.starts_with("homebased") || quoted.starts_with("ps ") {
+                if named.iter().any(|prefix| quoted.starts_with(prefix)) {
                     let base = quoted.trim_end_matches(" [--greptile]");
                     assert!(known.contains(&base), "{quoted:?} in {reason:?}");
                 }
