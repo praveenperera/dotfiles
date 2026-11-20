@@ -29,10 +29,6 @@
 - Do not leave deprecated code in place by default. Remove it, or ask whether the change must preserve the old path.
 - For unfamiliar crates or external libraries, inspect documentation or source instead of guessing. For Rust, check `target/doc/`, run `cargo doc -p <crate-name>`, or inspect `~/.cargo/registry/src`; `btx` works for any repository.
 
-# Shell commands
-
-- Never pass `-f` or `--force` to `rm`, including inside `trap`, `sudo` or `env`; use `rm -r` on paths that exist. Codex flags every forced `rm` as dangerous, and in T3 that stops a Full access thread for a manual approval.
-
 # Git
 
 - New repos should always use `master` as the default branch name, never `main`.

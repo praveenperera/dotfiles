@@ -26,11 +26,6 @@
 - Do not leave deprecated code in place by default. Remove it, or ask whether the change must preserve the old path.
 - For unfamiliar crates or external libraries, inspect documentation or source instead of guessing. For Rust, check `target/doc/`, run `cargo doc -p <crate-name>`, or inspect `~/.cargo/registry/src`; `btx` works for any repository.
 
-# Shell commands
-
-- Write multi-line files and scripts with the Write tool and change files with Edit, then run them with a short Bash command. Do not feed a heredoc (`cat > file <<'EOF'`, `python3 - <<'EOF'`) or a long `bash -c '…'` script through Bash. Claude Code cannot always parse those, and in T3 its dangerous-removal check then stops the thread for a manual approval.
-- Pass `rm` literal paths. In bypass mode Claude Code refuses an `rm` whose target comes from `$(…)`, a variable or a glob, so spell out each path.
-
 # Git
 
 - New repos should always use `master` as the default branch name, never `main`.
