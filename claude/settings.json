@@ -4,6 +4,7 @@
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_SHELL": "bash",
+    "CLAUDE_CODE_EVEN_MORE_DANGEROUSLY_SKIP_PERMISSIONS": "1",
     "SECURITY_REVIEW_MODEL": "claude-sonnet-5-5",
     "SG_AGENTIC_MODEL": "claude-sonnet-5-5",
     "ENABLE_STOP_REVIEW": "0",
