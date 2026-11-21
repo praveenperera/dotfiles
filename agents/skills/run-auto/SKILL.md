@@ -60,7 +60,7 @@ The root keeps the goal, the plan, acceptance, and integration. Treat every work
 
 ## Keep a decision log
 
-Use [show-me-your-work](../show-me-your-work/SKILL.md) from the start. Log every chosen path, accepted or rejected attempt, second opinion, review verdict, pivot, and blocker. Keep the progress checklist in `_scratch/<task-slug>/TASKS.md` alongside it, because context compaction drops detail and these files are how the run remembers where it is. When the run coordinates several subagents, child threads, PRs, or queued jobs, also use [orchestrate](../orchestrate/SKILL.md) and its state-file layout for that checklist.
+Use [show-me-your-work](../show-me-your-work/SKILL.md) from the start. Log every chosen path, accepted or rejected attempt, second opinion, review verdict, pivot, and blocker. Keep the progress checklist in `_scratch/<short-task>/TASKS.md` alongside it, because context compaction drops detail and these files are how the run remembers where it is. Name the directory for the task in two or three kebab-case words, so a new run never overwrites another run's files. When the run coordinates several subagents, child threads, PRs, or queued jobs, also use [orchestrate](../orchestrate/SKILL.md) and its state-file layout for that checklist.
 
 ## Improve a measurable result
 

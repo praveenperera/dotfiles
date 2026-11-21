@@ -1,6 +1,12 @@
 # State file
 
-The state file is the root's memory across compactions. Keep it at `_scratch/<task>/TASKS.md`, under about 150 lines, and rewrite it in place. Move history to `_scratch/<task>/JOURNAL.md`, which the root appends to and never needs to read back.
+The state file is the root's memory across compactions. Keep it under about 150 lines and rewrite it in place. Move history to `JOURNAL.md` in the same directory, which the root appends to and never needs to read back.
+
+## Run directory
+
+Give each run its own directory, `_scratch/<short-task>/`, named for the task in two or three kebab-case words, such as `_scratch/auth-migration/`, so a new run never overwrites another run's files. If that directory already belongs to another run, pick a different name. The run's files go in it: `TASKS.md` (the state file), `JOURNAL.md`, the PR bar file and per-agent files on the root's machine. Record the directory's absolute path at the top of the state file and in every brief, so the root finds it again after a compaction and agents never guess it.
+
+These files are temporary. `_scratch/` is wiped weekly, so a run directory there needs no cleanup. If a run had to put its files somewhere else, delete them when the run ends. Either way, copy anything worth keeping, such as findings and decisions, to `~/code/research` before the run ends.
 
 ## Rules
 
@@ -17,6 +23,8 @@ The state file is the root's memory across compactions. Keep it at `_scratch/<ta
 # <task>: root state
 
 Re-read this after any context compaction, before anything else. Times are US Central.
+
+Run directory: <absolute path, such as /home/me/code/app/_scratch/auth-migration>
 
 ## Goals
 <!-- One row per goal the user set, in their words. Every status reports against this table; update Standing each time -->
