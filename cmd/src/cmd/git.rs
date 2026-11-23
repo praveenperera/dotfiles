@@ -9,6 +9,8 @@ use colored::Colorize;
 use eyre::{eyre, Result};
 use xshell::{cmd, Shell};
 
+mod commit_paths;
+
 #[derive(Debug, Clone, Parser)]
 pub struct Git {
     #[command(subcommand)]
@@ -29,12 +31,27 @@ pub enum GitCmd {
     /// Switch to the default branch: master, main, or trunk, whichever exists
     #[command(visible_alias = "m")]
     Main,
+
+    /// Commit only the given files or folders, then sync with upstream and push,
+    /// without touching anyone else's uncommitted work in the same checkout
+    ///
+    /// For checkouts that many agent threads write into at once. Untracked files
+    /// that upstream adds identically move to _scratch/commit-paths-moved/, and
+    /// differing ones abort before anything is committed. Local commits are
+    /// rebased onto upstream in a temporary worktree (a generated INDEX.md
+    /// conflict is fixed by rerunning .github/scripts/index.py --write), then the
+    /// checkout moves with `git reset --keep`, which refuses rather than
+    /// overwrite local changes. On the default branch every unpushed commit is
+    /// pushed; on another branch only when this run's commit is the only one
+    #[command(visible_alias = "cp")]
+    CommitPaths(commit_paths::CommitPaths),
 }
 
 pub fn run_with_flags(sh: &Shell, flags: Git) -> Result<()> {
     match flags.subcommand {
         GitCmd::Clean => clean(sh),
         GitCmd::Main => switch_to_default(sh),
+        GitCmd::CommitPaths(args) => commit_paths::run(sh, args),
     }
 }
 
