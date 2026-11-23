@@ -5,19 +5,21 @@
 #
 #   metal_validate.sh [-o LOG] -- CMD [ARGS...]
 #
-# Checks the command's output and the unified log for the run's window. The match patterns
-# are a first cut that has not been confirmed against real validation output; when a run
-# shows a validation error these miss, add its wording here
+# Checks the command's output and the unified log for the run's window. Shader validation
+# reports nowhere, not in the output and not in the unified log, unless
+# MTL_SHADER_VALIDATION_REPORT_TO_STDERR=1 is set: an out-of-bounds store then printed
+# "Invalid Metal usage: Invalid store ..." on an M4 Pro (macOS 27.2), and without it the same
+# store passed. When a run shows a validation error these patterns miss, add its wording here
 set -uo pipefail
 log=$(mktemp -t metal-validate)
 if [[ ${1:-} == -o ]]; then log=$2; shift 2; fi
 [[ ${1:-} == -- ]] && shift
 (($#)) || { echo "usage: metal_validate.sh [-o LOG] -- CMD [ARGS...]" >&2; exit 2; }
 
-pattern='failed assertion|Invalid (device|threadgroup|constant|texture) (load|store|read|write)|shader validation|validation (error|failed)|GPU Address Fault|MTLCommandBufferError'
+pattern='Invalid Metal usage|failed assertion|Invalid (device|threadgroup|constant|texture) (load|store|read|write)|shader validation|validation (error|failed)|GPU Address Fault|MTLCommandBufferError'
 start=$(date '+%Y-%m-%d %H:%M:%S')
 
-MTL_DEBUG_LAYER=1 MTL_SHADER_VALIDATION=1 "$@" >"$log" 2>&1
+MTL_DEBUG_LAYER=1 MTL_SHADER_VALIDATION=1 MTL_SHADER_VALIDATION_REPORT_TO_STDERR=1 "$@" >"$log" 2>&1
 status=$?
 
 # shader validation may report through os_log rather than stderr, so read both
