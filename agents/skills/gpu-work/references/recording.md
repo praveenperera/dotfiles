@@ -40,4 +40,4 @@ Add an entry when you choose between designs, keep, revert or park a change, kil
 
 Before adding, grep for the key terms (`rg -i '<term>' ~/code/research ~/.claude/skills/gpu-work`) and extend an existing bullet rather than writing a near-duplicate. If a new result contradicts a lesson, edit the old bullet to say what's now true and when it changed. If a later change moves numbers you quoted, update every note that quotes them.
 
-No raw logs, profiler output or task lists in the research repo; summarize them in Markdown. Commit notes with `~/code/private-workbench/scripts/research-commit <paths> -m "<subject>"` from the checkout you wrote them in, right after writing. It pushes too, and the pre-commit hook regenerates `INDEX.md` and checks the layout. Never copy files between checkouts.
+No raw logs, profiler output or task lists in the research repo; summarize them in Markdown. Commit notes with `cmd git commit-paths <paths> -m "<subject>"` from the checkout you wrote them in, right after writing. It pushes too, and the pre-commit hook regenerates `INDEX.md` and checks the layout. Never copy files between checkouts.
