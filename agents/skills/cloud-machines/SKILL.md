@@ -41,11 +41,13 @@ Compare effective cost, not list price. Each provider rounds billing differently
 1. **Measure the work.** Time one typical unit on `code` or on one machine. Write down: number of jobs, work per job, peak disk and memory per job, data uploaded, and the deadline.
 2. **List the candidates.** Use only classes in the deployed Worker config, and stay within its caps: machines per run, hours per run, the class's `max_hours`, dollars per run, and dollars per hour across runs.
 3. **Check the account limits and stock.** The tables in providers.md show each provider's account limit and the stock last seen. A class with no stock fails its create, and that failure bills nothing on phoenixNAP or Latitude.sh, but the pool stops after three failed creates in a row.
-4. **Cost each candidate.** For each machine, billed time = boot + work + `--idle-limit`, rounded up to the provider's billing increment, with its minimum. Add egress. On hourly providers, choose the machine count so each machine's work fills its paid hours, and remember that the idle limit can push a machine into one more hour.
+4. **Cost each candidate.** For each machine, billed time = boot + work + `--idle-limit`, rounded up to the provider's billing increment, with its minimum. Add egress (below). On hourly providers, choose the machine count so each machine's work fills its paid hours, and remember that the idle limit can push a machine into one more hour.
 5. **Pick** the cheapest candidate that meets the deadline within the limits. If two are within about 20%, take the per-second provider: a retry or a failed machine costs less there.
 6. **Size the caps** from the estimate (see the flags below), then ask for approval.
 
-AWS spot is not available yet; providers.md says what it needs.
+**Bandwidth decides AWS spot against the rest.** Estimate GB uploaded per DO `c-16`-hour of work (total GB out ÷ total `c-16`-hours). Under about 1 GB, AWS spot is cheapest; over about 3 GB, use flat-bandwidth hosts (phoenixNAP, Latitude.sh, DigitalOcean's included transfer); in between, compare the totals. Inbound is free everywhere, AWS's first 100 GB a month of egress is free account-wide, and S3 reads in us-east-1 (the Vesuvius open-data bucket) are free in-region.
+
+AWS spot is not available yet through cloudlease: the machines Worker has no AWS adapter (rembuild's now lives in `cloudlease-provider`), so show it only as an estimate. Include spot interruption in that estimate: an interrupted machine in its first hour is not charged, and a later loss costs the hours it ran plus the rerun delay. providers.md has the interruption rates, the worked example, and what it needs.
 
 ## Run
 
