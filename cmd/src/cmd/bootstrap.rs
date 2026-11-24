@@ -1,6 +1,7 @@
 mod codex_plugins;
 mod install;
 mod link;
+mod listen_queue;
 mod release;
 
 use askama::Template;
@@ -222,6 +223,11 @@ pub fn config(sh: &Shell) -> Result<()> {
     // the linked CLAUDE.md and AGENTS.md are generated, so refuse to deploy ones
     // that drifted from agents/instructions
     Instructions::new(crate::dotfiles_dir()?).check()?;
+
+    if let Os::MacOS = Os::current() {
+        listen_queue::ensure(sh)?;
+    }
+
     link::config(sh)?;
     codex_plugins::reconcile()
 }
