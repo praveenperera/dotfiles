@@ -304,6 +304,10 @@ export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig${PKG_CONFIG_PATH:+:$
 if [[ -z "$TMUX" ]]; then
   export TERM=xterm-256color
 fi
+
+# /tmp is tmpfs on these machines, so keep Claude Code's temp files on disk
+export CLAUDE_CODE_TMPDIR="$HOME/.cache/claude-tmp"
+[[ -d $CLAUDE_CODE_TMPDIR ]] || mkdir -p -m 0700 "$CLAUDE_CODE_TMPDIR"
 {% endif %}
 
 
