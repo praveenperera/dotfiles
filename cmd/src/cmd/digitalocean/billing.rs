@@ -24,7 +24,7 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 /// Arguments for the DigitalOcean billing report
 #[derive(Debug, Clone, Args)]
 pub struct BillingArgs {
-    /// DigitalOcean API token with the `billing:read` scope
+    /// DigitalOcean API token with the `billing:read` scope; defaults to the `doctl auth login` token
     #[arg(
         long = "api-token",
         visible_alias = "token",
@@ -209,23 +209,149 @@ pub(super) async fn summary() -> Result<ProviderBillingSummary> {
 }
 
 async fn load_report(args: BillingArgs) -> Result<BillingReport> {
-    let token = resolve_token(args.api_token)?;
+    load_report_with(args, env::var(LEGACY_TOKEN_ENV_VAR).ok(), doctl_auth_token).await
+}
+
+async fn load_report_with(
+    args: BillingArgs,
+    legacy_token: Option<String>,
+    doctl_token: impl Fn() -> Option<String>,
+) -> Result<BillingReport> {
     let filters = LabelFilter::new(args.products)?;
-    let client = BillingClient::new(&args.api_base_url, token)?;
-    let (preview, items) = client.get_current_invoice().await?;
+    let (source, token) = resolve_token(args.api_token, legacy_token, &doctl_token)?;
+    let (preview, items) = match fetch_invoice(&args.api_base_url, token).await {
+        Err(err) if source.is_configured() && is_token_rejection(&err) => {
+            retry_with_doctl(&args.api_base_url, source, err, &doctl_token).await?
+        }
+        result => result?,
+    };
 
     BillingReport::new(preview, items, &filters, args.verbose)
 }
 
-fn resolve_token(value: Option<String>) -> Result<ApiToken> {
-    let value = value
-        .or_else(|| env::var(LEGACY_TOKEN_ENV_VAR).ok())
+async fn fetch_invoice(
+    api_base_url: &str,
+    token: ApiToken,
+) -> Result<(InvoicePreview, Vec<WireInvoiceItem>)> {
+    BillingClient::new(api_base_url, token)?
+        .get_current_invoice()
+        .await
+}
+
+// a configured token can go stale while the doctl login stays fresh, so a rejected
+// token falls back to doctl instead of failing the whole report
+async fn retry_with_doctl(
+    api_base_url: &str,
+    source: TokenSource,
+    rejection: eyre::Report,
+    doctl_token: impl Fn() -> Option<String>,
+) -> Result<(InvoicePreview, Vec<WireInvoiceItem>)> {
+    let Some(token) = doctl_token().and_then(non_empty_token) else {
+        return Err(rejection);
+    };
+
+    eprintln!(
+        "warning: DigitalOcean rejected the token from {}, using the doctl login instead: {rejection}",
+        source.label()
+    );
+    fetch_invoice(api_base_url, ApiToken::new(token)?).await
+}
+
+fn is_token_rejection(err: &eyre::Report) -> bool {
+    err.downcast_ref::<TokenRejected>().is_some()
+}
+
+/// Where the DigitalOcean API token came from
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TokenSource {
+    /// `--api-token` or `DIGITALOCEAN_BILLING_TOKEN`, which clap merges
+    Explicit,
+    Legacy,
+    Doctl,
+}
+
+impl TokenSource {
+    fn is_configured(self) -> bool {
+        self != Self::Doctl
+    }
+
+    fn label(self) -> String {
+        match self {
+            Self::Explicit => format!("--api-token or {BILLING_TOKEN_ENV_VAR}"),
+            Self::Legacy => LEGACY_TOKEN_ENV_VAR.to_string(),
+            Self::Doctl => "`doctl auth token`".to_string(),
+        }
+    }
+}
+
+// configured tokens win so a dedicated billing token still overrides the doctl login,
+// and doctl only runs when nothing is configured
+fn resolve_token(
+    explicit_token: Option<String>,
+    legacy_token: Option<String>,
+    doctl_token: impl Fn() -> Option<String>,
+) -> Result<(TokenSource, ApiToken)> {
+    let (source, value) = explicit_token
+        .and_then(non_empty_token)
+        .map(|token| (TokenSource::Explicit, token))
+        .or_else(|| legacy_token.and_then(non_empty_token).map(|token| (TokenSource::Legacy, token)))
+        .or_else(|| doctl_token().and_then(non_empty_token).map(|token| (TokenSource::Doctl, token)))
         .ok_or_else(|| {
-            eyre!("set {BILLING_TOKEN_ENV_VAR} or {LEGACY_TOKEN_ENV_VAR}, or pass --api-token")
+            eyre!(
+                "set {BILLING_TOKEN_ENV_VAR} or {LEGACY_TOKEN_ENV_VAR}, pass --api-token, or run `doctl auth login`"
+            )
         })?;
 
-    ApiToken::new(value)
+    Ok((source, ApiToken::new(value)?))
 }
+
+// `doctl auth login` stores a short-lived OAuth token that doctl renews itself, so
+// asking doctl for it avoids keeping a long-lived personal access token around
+fn doctl_auth_token() -> Option<String> {
+    let output = std::process::Command::new("doctl")
+        .args(["auth", "token"])
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    String::from_utf8(output.stdout).ok()
+}
+
+fn non_empty_token(token: String) -> Option<String> {
+    let token = token.trim().to_string();
+    if token.is_empty() {
+        None
+    } else {
+        Some(token)
+    }
+}
+
+/// DigitalOcean refused the token itself (401 or 403), as opposed to failing the request
+#[derive(Debug)]
+struct TokenRejected {
+    status: StatusCode,
+    context: String,
+    message: String,
+}
+
+impl std::fmt::Display for TokenRejected {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            status,
+            context,
+            message,
+        } = self;
+        write!(
+            formatter,
+            "DigitalOcean {context} failed ({status}): {message}"
+        )
+    }
+}
+
+impl std::error::Error for TokenRejected {}
 
 impl ApiToken {
     fn new(value: String) -> Result<Self> {
@@ -379,6 +505,14 @@ fn api_error(status: StatusCode, body: &[u8], context: &str) -> eyre::Report {
         .and_then(|error| error.message)
         .filter(|message| !message.trim().is_empty())
         .unwrap_or_else(|| "the provider returned no error message".to_string());
+
+    if matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+        return eyre::Report::new(TokenRejected {
+            status,
+            context: context.to_string(),
+            message,
+        });
+    }
 
     eyre!("DigitalOcean {context} failed ({status}): {message}")
 }
@@ -655,8 +789,8 @@ mod tests {
     };
 
     use super::{
-        render_json_report, render_report, ApiToken, BillingArgs, BillingClient, BillingReport,
-        BILLING_TOKEN_ENV_VAR,
+        load_report_with, render_json_report, render_report, resolve_token, ApiToken, BillingArgs,
+        BillingClient, BillingOutput, BillingReport, TokenSource, BILLING_TOKEN_ENV_VAR,
     };
     use crate::cmd::billing::LabelFilter;
 
@@ -825,6 +959,104 @@ mod tests {
         .unwrap()];
 
         assert!(BillingReport::new(preview, items, &LabelFilter::default(), false).is_err());
+    }
+
+    #[test]
+    fn configured_tokens_win_over_doctl() {
+        let no_doctl = || -> Option<String> { panic!("doctl must not run when a token is set") };
+        let doctl = || Some("doctl-token\n".to_string());
+
+        let (explicit, _) =
+            resolve_token(Some("billing".into()), Some("legacy".into()), no_doctl).unwrap();
+        let (blank_explicit, _) =
+            resolve_token(Some("  ".into()), Some("legacy".into()), no_doctl).unwrap();
+        let (only_doctl, token) = resolve_token(None, None, doctl).unwrap();
+        let none = resolve_token(None, None, || Some(String::new()));
+
+        assert_eq!(explicit, TokenSource::Explicit);
+        assert_eq!(blank_explicit, TokenSource::Legacy);
+        assert_eq!(only_doctl, TokenSource::Doctl);
+        assert_eq!(token.expose(), "doctl-token");
+        assert!(none.is_err());
+    }
+
+    #[tokio::test]
+    async fn rejected_configured_token_falls_back_to_doctl() {
+        let server = MockServer::start().await;
+        Mock::given(header("authorization", "Bearer stale"))
+            .respond_with(
+                ResponseTemplate::new(401)
+                    .set_body_json(json!({"message": "Unable to authenticate you"})),
+            )
+            .mount(&server)
+            .await;
+        mount_single_page_invoice(&server, "Bearer fresh").await;
+
+        let report = load_report_with(billing_args(&server, "stale"), None, || {
+            Some("fresh".to_string())
+        })
+        .await
+        .unwrap();
+
+        let products: Vec<_> = report
+            .products
+            .iter()
+            .map(|product| product.name.as_str())
+            .collect();
+        assert_eq!(products, ["Droplets"]);
+    }
+
+    #[tokio::test]
+    async fn non_auth_failures_do_not_fall_back_to_doctl() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .respond_with(ResponseTemplate::new(500).set_body_json(json!({"message": "down"})))
+            .mount(&server)
+            .await;
+        let doctl_calls = std::cell::Cell::new(0);
+
+        let error = load_report_with(billing_args(&server, "configured"), None, || {
+            doctl_calls.set(doctl_calls.get() + 1);
+            Some("fresh".to_string())
+        })
+        .await
+        .unwrap_err()
+        .to_string();
+
+        assert!(error.contains("500"));
+        assert_eq!(doctl_calls.get(), 0);
+    }
+
+    async fn mount_single_page_invoice(server: &MockServer, authorization: &str) {
+        Mock::given(path("/v2/customers/my/invoices"))
+            .and(header("authorization", authorization))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "invoice_preview": {
+                    "invoice_period": "2026-08",
+                    "updated_at": "2026-08-10T12:00:00Z"
+                }
+            })))
+            .mount(server)
+            .await;
+        Mock::given(path("/v2/customers/my/invoices/preview"))
+            .and(header("authorization", authorization))
+            .respond_with(ResponseTemplate::new(200).set_body_json(page(
+                vec![item("Droplets", "builder", "1.25")],
+                1,
+                false,
+            )))
+            .mount(server)
+            .await;
+    }
+
+    fn billing_args(server: &MockServer, token: &str) -> BillingArgs {
+        BillingArgs {
+            api_token: Some(token.to_string()),
+            products: Vec::new(),
+            verbose: false,
+            output: BillingOutput::Human,
+            api_base_url: server.uri(),
+        }
     }
 
     #[test]

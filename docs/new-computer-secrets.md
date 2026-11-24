@@ -44,12 +44,13 @@ Keep these entries as Zsh exports:
 export CLOUDFLARE_ACCOUNT_ID="..."
 export CMD_CLOUDFLARE_BILLING_API_TOKEN="..."
 export CMD_CLOUDFLARE_REDIRECT_API_TOKEN="..."
-export DIGITALOCEAN_BILLING_TOKEN="..."
 export AWS_LOCAL_AUTOMATION_ACCESS_KEY_ID="..."
 export AWS_LOCAL_AUTOMATION_SECRET_ACCESS_KEY="..."
 ```
 
-`cmd billing` uses the Cloudflare billing token, DigitalOcean token, and AWS credentials. `cmd cloudflare redirect` uses `CMD_CLOUDFLARE_REDIRECT_API_TOKEN`.
+`cmd billing` uses the Cloudflare billing token and AWS credentials. `cmd cloudflare redirect` uses `CMD_CLOUDFLARE_REDIRECT_API_TOKEN`.
+
+DigitalOcean billing has no entry in this file. It runs `doctl auth token`, which reads the OAuth login that `doctl auth login` saves and renews on its own. On a machine without a browser, run `doctl auth login --no-browser --callback-port 53682`, approve the printed link on another device, then open the `http://127.0.0.1:53682/callback?...` address it redirects to on this machine with `curl`. Setting `DIGITALOCEAN_BILLING_TOKEN` or `DIGITALOCEAN_TOKEN` overrides the doctl login. If DigitalOcean rejects that token, `cmd billing` prints a warning and uses the doctl login instead, so remove an expired token to silence the warning.
 
 Modal billing has no entry in this file. It runs the `modal` CLI, which reads its own credentials from `~/.modal.toml`. Set that file up with `modal token new`. `MODAL_PROFILE` selects the workspace when the file holds more than one.
 
@@ -62,7 +63,7 @@ Do not put tokens on the command line because shell history can retain them. Do 
 ## If the old computer is not available
 
 - **Cloudflare:** In the Cloudflare dashboard, copy the account ID and create a new API token with **Account Billing Read** permission. Save them as `CLOUDFLARE_ACCOUNT_ID` and `CMD_CLOUDFLARE_BILLING_API_TOKEN`.
-- **DigitalOcean:** In the DigitalOcean control panel, create a token with the `billing:read` scope. Save it as `DIGITALOCEAN_BILLING_TOKEN`. The command also accepts the older `DIGITALOCEAN_TOKEN`, but the dedicated billing token matches the current setup.
+- **DigitalOcean:** Run `doctl auth login`. A personal access token with the `billing:read` scope saved as `DIGITALOCEAN_BILLING_TOKEN` still works, but it takes precedence over the doctl login. Once it expires, each run warns and falls back to the doctl login until you replace or remove it.
 - **AWS local automation:** Create or recover the access key for the same IAM identity. Save the key ID and secret access key in the two `AWS_LOCAL_AUTOMATION_*` variables. Restore the helper and `~/.aws/config` from a trusted backup.
 - **AWS `infraops-admin`:** Recreate the AWS CLI login session in `~/.aws/config`, then run `aws login --profile infraops-admin`. This profile does not use `~/.aws/credentials` in the current setup.
 - **Cloudflare redirects:** Create a token with the access that the redirect commands need. Save it as `CMD_CLOUDFLARE_REDIRECT_API_TOKEN`.
@@ -158,7 +159,6 @@ for name in \
   CLOUDFLARE_ACCOUNT_ID \
   CMD_CLOUDFLARE_BILLING_API_TOKEN \
   CMD_CLOUDFLARE_REDIRECT_API_TOKEN \
-  DIGITALOCEAN_BILLING_TOKEN \
   AWS_LOCAL_AUTOMATION_ACCESS_KEY_ID \
   AWS_LOCAL_AUTOMATION_SECRET_ACCESS_KEY
 do
