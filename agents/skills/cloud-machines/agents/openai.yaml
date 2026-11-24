@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cloud machines"
+  short_description: "Run CPU batch work on temporary cloud machines"
+  default_prompt: "Use $cloud-machines to decide whether a batch run needs temporary cloud machines, pick the provider and class, and run it on a homebased pool."
