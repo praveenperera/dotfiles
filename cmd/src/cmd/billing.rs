@@ -192,7 +192,7 @@ impl BillingProvider {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct ProviderBillingSummary {
     period: Option<BillingPeriod>,
     /// Metered cost, before any credits the provider applies

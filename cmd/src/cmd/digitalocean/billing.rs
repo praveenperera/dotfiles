@@ -1,12 +1,14 @@
 use std::collections::BTreeMap;
 use std::env;
 use std::fmt::Write as _;
+use std::future::Future;
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::Args;
 use eyre::{eyre, ContextCompat, Result, WrapErr};
 use reqwest::{StatusCode, Url};
+use rust_decimal::Decimal;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::cmd::billing::{
@@ -109,6 +111,15 @@ struct InvoicePreview {
     updated_at: Option<DateTime<Utc>>,
 }
 
+/// Month-to-date figures from `/v2/customers/my/balance`, which DigitalOcean refreshes
+/// sooner than the itemized invoice preview
+#[derive(Debug, Deserialize)]
+struct BalanceResponse {
+    month_to_date_usage: String,
+    account_balance: String,
+    generated_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Deserialize)]
 struct InvoiceItemsResponse {
     #[serde(default)]
@@ -194,18 +205,60 @@ pub(super) async fn run(args: BillingArgs) -> Result<()> {
     write_stdout(&rendered)
 }
 
+// the overview reads the balance endpoint because the invoice preview lags behind it,
+// so its total would disagree with `doctl balance get` and the dashboard
 pub(super) async fn summary() -> Result<ProviderBillingSummary> {
-    let report = load_report(BillingArgs {
-        api_token: env::var(BILLING_TOKEN_ENV_VAR).ok(),
-        products: Vec::new(),
-        verbose: false,
-        output: BillingOutput::Human,
-        api_base_url: API_BASE_URL.to_string(),
-    })
-    .await?;
-    let total_cost = report.total_cost()?;
+    load_summary_with(
+        API_BASE_URL,
+        env::var(BILLING_TOKEN_ENV_VAR).ok(),
+        env::var(LEGACY_TOKEN_ENV_VAR).ok(),
+        doctl_auth_token,
+    )
+    .await
+}
 
-    Ok(ProviderBillingSummary::new(Some(report.period), total_cost))
+async fn load_summary_with(
+    api_base_url: &str,
+    explicit_token: Option<String>,
+    legacy_token: Option<String>,
+    doctl_token: impl Fn() -> Option<String>,
+) -> Result<ProviderBillingSummary> {
+    let balance = fetch_with_token(
+        api_base_url,
+        explicit_token,
+        legacy_token,
+        doctl_token,
+        |client| async move { client.get_balance().await },
+    )
+    .await?;
+
+    balance_summary(balance)
+}
+
+fn balance_summary(balance: BalanceResponse) -> Result<ProviderBillingSummary> {
+    let period = BillingPeriod::current_month(balance.generated_at.date_naive())?;
+    let usage = Money::new(
+        &balance.month_to_date_usage,
+        "USD",
+        "DigitalOcean month-to-date usage",
+    )?;
+    if usage.is_zero() {
+        return Ok(ProviderBillingSummary::new(Some(period), None));
+    }
+
+    let account_balance = Money::new(
+        &balance.account_balance,
+        "USD",
+        "DigitalOcean account balance",
+    )?;
+
+    // a negative account balance is a credit DigitalOcean applies to this month's
+    // invoice, while a positive one is an unpaid earlier invoice and not this month's cost
+    let credit = account_balance.amount().min(Decimal::ZERO);
+    let billed = (usage.amount() + credit).max(Decimal::ZERO);
+    let billed = Money::from_decimal(billed, "USD", "DigitalOcean billed usage")?;
+
+    Ok(ProviderBillingSummary::new(Some(period), Some(usage)).with_net_cost(billed))
 }
 
 async fn load_report(args: BillingArgs) -> Result<BillingReport> {
@@ -218,34 +271,36 @@ async fn load_report_with(
     doctl_token: impl Fn() -> Option<String>,
 ) -> Result<BillingReport> {
     let filters = LabelFilter::new(args.products)?;
-    let (source, token) = resolve_token(args.api_token, legacy_token, &doctl_token)?;
-    let (preview, items) = match fetch_invoice(&args.api_base_url, token).await {
-        Err(err) if source.is_configured() && is_token_rejection(&err) => {
-            retry_with_doctl(&args.api_base_url, source, err, &doctl_token).await?
-        }
-        result => result?,
-    };
+    let (preview, items) = fetch_with_token(
+        &args.api_base_url,
+        args.api_token,
+        legacy_token,
+        doctl_token,
+        |client| async move { client.get_current_invoice().await },
+    )
+    .await?;
 
     BillingReport::new(preview, items, &filters, args.verbose)
 }
 
-async fn fetch_invoice(
-    api_base_url: &str,
-    token: ApiToken,
-) -> Result<(InvoicePreview, Vec<WireInvoiceItem>)> {
-    BillingClient::new(api_base_url, token)?
-        .get_current_invoice()
-        .await
-}
-
 // a configured token can go stale while the doctl login stays fresh, so a rejected
 // token falls back to doctl instead of failing the whole report
-async fn retry_with_doctl(
+async fn fetch_with_token<T, Fut>(
     api_base_url: &str,
-    source: TokenSource,
-    rejection: eyre::Report,
+    explicit_token: Option<String>,
+    legacy_token: Option<String>,
     doctl_token: impl Fn() -> Option<String>,
-) -> Result<(InvoicePreview, Vec<WireInvoiceItem>)> {
+    fetch: impl Fn(BillingClient) -> Fut,
+) -> Result<T>
+where
+    Fut: Future<Output = Result<T>>,
+{
+    let (source, token) = resolve_token(explicit_token, legacy_token, &doctl_token)?;
+    let rejection = match fetch(BillingClient::new(api_base_url, token)?).await {
+        Err(err) if source.is_configured() && is_token_rejection(&err) => err,
+        result => return result,
+    };
+
     let Some(token) = doctl_token().and_then(non_empty_token) else {
         return Err(rejection);
     };
@@ -254,7 +309,7 @@ async fn retry_with_doctl(
         "warning: DigitalOcean rejected the token from {}, using the doctl login instead: {rejection}",
         source.label()
     );
-    fetch_invoice(api_base_url, ApiToken::new(token)?).await
+    fetch(BillingClient::new(api_base_url, ApiToken::new(token)?)?).await
 }
 
 fn is_token_rejection(err: &eyre::Report) -> bool {
@@ -448,6 +503,11 @@ impl BillingClient {
         }
 
         Ok((preview, items))
+    }
+
+    async fn get_balance(&self) -> Result<BalanceResponse> {
+        self.get_json("v2/customers/my/balance", "get balance")
+            .await
     }
 
     async fn get_invoice_items_page(&self, page: usize) -> Result<InvoiceItemsResponse> {
@@ -788,11 +848,14 @@ mod tests {
         Mock, MockServer, ResponseTemplate,
     };
 
+    use chrono::NaiveDate;
+
     use super::{
-        load_report_with, render_json_report, render_report, resolve_token, ApiToken, BillingArgs,
-        BillingClient, BillingOutput, BillingReport, TokenSource, BILLING_TOKEN_ENV_VAR,
+        balance_summary, load_report_with, load_summary_with, render_json_report, render_report,
+        resolve_token, ApiToken, BalanceResponse, BillingArgs, BillingClient, BillingOutput,
+        BillingReport, TokenSource, BILLING_TOKEN_ENV_VAR,
     };
-    use crate::cmd::billing::LabelFilter;
+    use crate::cmd::billing::{BillingPeriod, LabelFilter, Money, ProviderBillingSummary};
 
     #[tokio::test]
     async fn fetches_all_invoice_preview_pages_with_a_billing_token() {
@@ -1025,6 +1088,69 @@ mod tests {
 
         assert!(error.contains("500"));
         assert_eq!(doctl_calls.get(), 0);
+    }
+
+    #[tokio::test]
+    async fn summary_reads_the_balance_and_applies_account_credit() {
+        let server = MockServer::start().await;
+        Mock::given(header("authorization", "Bearer stale"))
+            .respond_with(
+                ResponseTemplate::new(401)
+                    .set_body_json(json!({"message": "Unable to authenticate you"})),
+            )
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/v2/customers/my/balance"))
+            .and(header("authorization", "Bearer fresh"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "month_to_date_balance": "20.61",
+                "account_balance": "-5.00",
+                "month_to_date_usage": "25.61",
+                "generated_at": "2026-11-24T06:48:00Z"
+            })))
+            .mount(&server)
+            .await;
+
+        let summary = load_summary_with(&server.uri(), Some("stale".to_string()), None, || {
+            Some("fresh".to_string())
+        })
+        .await
+        .unwrap();
+
+        let expected = ProviderBillingSummary::new(
+            Some(BillingPeriod {
+                start: NaiveDate::from_ymd_opt(2026, 11, 1).unwrap(),
+                usage_through: NaiveDate::from_ymd_opt(2026, 11, 24).unwrap(),
+            }),
+            Some(usd("25.61")),
+        )
+        .with_net_cost(usd("20.61"));
+        assert_eq!(summary, expected);
+    }
+
+    #[test]
+    fn unpaid_earlier_balance_does_not_count_as_this_months_cost() {
+        let summary = balance_summary(BalanceResponse {
+            month_to_date_usage: "3.00".to_string(),
+            account_balance: "12.00".to_string(),
+            generated_at: "2026-11-10T00:00:00Z".parse().unwrap(),
+        })
+        .unwrap();
+
+        let expected = ProviderBillingSummary::new(
+            Some(BillingPeriod {
+                start: NaiveDate::from_ymd_opt(2026, 11, 1).unwrap(),
+                usage_through: NaiveDate::from_ymd_opt(2026, 11, 10).unwrap(),
+            }),
+            Some(usd("3.00")),
+        )
+        .with_net_cost(usd("3.00"));
+        assert_eq!(summary, expected);
+    }
+
+    fn usd(amount: &str) -> Money {
+        Money::new(amount, "USD", "test").unwrap()
     }
 
     async fn mount_single_page_invoice(server: &MockServer, authorization: &str) {
