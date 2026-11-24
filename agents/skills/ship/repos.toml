@@ -42,6 +42,15 @@ deploy = [
 notes = "Deploy publishes the web Worker to preview.avencera.com only; production (`wrangler deploy --env production`, avencera.com) is a separate, explicit request. Verify the changed pages on https://preview.avencera.com. Skip deploy when the work touches nothing under web/"
 
 
+[repos."praveenperera/bizpodsearch"]
+steps = ["sol", "commit", "push", "deploy", "clean"]
+deploy = [
+  "pnpm --filter @bizpodsearch/api exec wrangler deploy --env production",
+  "just deploy-web",
+  "pnpm --filter @bizpodsearch/admin build && pnpm --filter @bizpodsearch/admin run deploy",
+]
+notes = "Deploy runs the Cloudflare Workers: API (apps/api), web (apps/web, bizpodsearch.com) and admin (apps/admin). Run only the commands for Workers whose app, or a package under packages/ it uses, the work touched, API first since web and admin reach it over a service binding; skip deploy when the work touches nothing under apps/ or packages/. A new D1 migration or secret needs the steps in apps/api/README.md before the API deploy. Verify the changed routes or pages on https://bizpodsearch.com; public responses cache for 60 seconds, so add a cache-busting query when checking right after a deploy"
+
 [repos."praveenperera/homelab"]
 steps = ["commit", "push", "deploy", "clean"]
 deploy = ["just deploy <item>"]
