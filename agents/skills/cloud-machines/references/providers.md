@@ -17,14 +17,14 @@ run cost           = machines x billed per machine x price
 - **Total work** is in DO `c-16`-hours, the unit of the speed model in the batch-compute-providers README. Measure it from one timed unit of the real job when you can.
 - **Speed** is the work one machine does per hour relative to a `c-16`. Every bare-metal speed below is an estimate from benchmarks.
 - **Boot** is from the create call until the machine joins the pool. It is paid where billing starts at create.
-- **Idle tail** is the time after a machine's last job until it is gone. On a per-second provider it is `--idle-limit`, or zero when you release the pool as soon as the last job ends. On an hourly provider it is the rest of the last started hour, whatever you do.
+- **Idle tail** is the time after a machine's last job until it is gone: `--idle-limit`, plus about a second for the delete. Count it before rounding. On an hourly provider, a machine whose work ends within `--idle-limit` of an hour boundary pays one more hour, so keep the idle limit short there too. Releasing the pool the moment the last job ends removes the tail only for the machines that finished last.
 - **Machine count on an hourly provider.** A machine with 25 minutes of work pays a full hour. Choose the fewest machines that meet the deadline, about total machine-hours divided by the whole hours each machine may run, and submit all jobs at once so each machine takes the next job without a gap. Spread over many machines, hourly rounding takes most of the saving: in the worked example, 16 phoenixNAP machines cost 1.8 times as much as 3.
 
 ## Providers
 
 | | DigitalOcean | phoenixNAP Bare Metal Cloud | Latitude.sh |
 | --- | --- | --- | --- |
-| In the Worker | Yes, deployed | Yes, deployed (test classes) | Wired on cloudlease master (8bac9ac), class not enabled |
+| In the Worker | Yes, deployed (Phase 2E pilot) | Classes on master; a Phase 4c test deploy enabled them with test caps, unconfirmed as the current deploy [7] | Wired on cloudlease master (8bac9ac), class not enabled |
 | Billing | Per second, minimum 60 s or $0.01 [1] | Every started hour in full, minimum 1 hour, until deprovision [2] | Hourly; rounding and minimum unconfirmed. cloudlease bills whole started hours until a paid test shows otherwise [3] |
 | Boot billed | Yes: from create; cloudlease counts spend from `created_at` [1] | Billing starts "at deploy"; create or power-on is unconfirmed [2] | Unconfirmed |
 | Boot to joined | 2m12s to 2m17s, measured on `s-1vcpu-1gb` in `nyc3` [4] | Docs: 1 to 15 minutes by OS, plus a reboot for cloud-init. Not measured [2] | Docs: under 10 s for `ubuntu_24_04_x64_lts` where it deploys instantly, about 10 minutes otherwise. Not measured [3] |
@@ -83,10 +83,10 @@ The run cleans 16 scrolls, one job each: 27.0 `c-16`-hours of work in all, about
 | Option | Machines | Billed per machine | Cost | Wall time | Can run today |
 | --- | --- | --- | --- | --- | --- |
 | `code` | 1 | $0 | $0 | About 22 h, or 11 h without GPU jobs [6] | Yes |
-| DigitalOcean `c-16`, `--idle-limit 3m` | 16 | 2.5 min boot + 1.69 h work + 3 min idle = 1.78 h | 28.5 h x $0.50 = **$14.24** | About 3 h | Needs a `do-c16` class and higher caps |
+| DigitalOcean `c-16`, `--idle-limit 3m` | 16 | 2.5 min boot + 1.69 h work + 3 min idle = 1.78 h | 28.5 h x $0.50 = **$14.24** | About 3 h | Needs a `do-c16` class and higher caps; `c-16` stock unchecked |
 | Same, default `--idle-limit` (10m) | 16 | 1.90 h | 30.3 h x $0.50 = $15.17 | About 3 h | As above |
 | phoenixNAP `s3.c3.medium`, one job each | 16 | 0.42 h work + boot, rounded to 1 h | 16 h x $0.47 = $7.52 | About 1 h | No: quota 1, no stock |
-| phoenixNAP `s3.c3.medium`, `--max 3 --slots 2` | 3 | 2.25 h work + up to 0.35 h boot, rounded to 3 h | 9 h x $0.47 = **$4.23** | About 2.6 h | No: quota 1, no stock |
+| phoenixNAP `s3.c3.medium`, `--max 3 --slots 2`, `--idle-limit 3m` | 3 | 2.25 h work + up to 0.35 h boot + 3 min idle, rounded to 3 h | 9 h x $0.47 = **$4.23**; worst case one more hour each, $5.64 | About 2.6 h | No: quota 1, no stock |
 | Latitude.sh `m4.metal.medium` | 2 (team limit) | 4.82 h work, rounded to 5 h | 10 h x $1.25 = $12.50 | About 5 h | Needs the class enabled and caps |
 
 Egress costs nothing in any row: each provider includes far more than 120 GB. The phoenixNAP IP block adds a few cents.
@@ -94,7 +94,7 @@ Egress costs nothing in any row: each provider includes far more than 120 GB. Th
 What this run should pick:
 
 - If it can wait a day, use `code`.
-- If it must finish in about 3 hours today, use DigitalOcean `c-16` with 16 machines, about $14.24. Ask for `--spend-cap 18` and the Worker changes above. It is the only option with enough machines in stock and under the account limit.
+- If it must finish in about 3 hours today, use DigitalOcean `c-16` with 16 machines, about $14.24. Ask for `--spend-cap 18` and the Worker changes above. It is the only option not blocked by a known account limit or stock-out; its own stock was not checked.
 - Once phoenixNAP raises the quota to 3 or more and `s3.c3.medium` is in stock, use 3 of them with 2 slots each, about $4.23. Do not use 16: every machine pays a full hour for 25 minutes of work.
 
 The per-machine work is an average. Scrolls range from 15 to 47 GB, so the largest job sets the wall time and its `--kill-after`.
@@ -115,6 +115,7 @@ Update this list, and the tables above, when a measurement lands.
 | All: download speed from Hugging Face | The first timed scroll on each provider |
 | AWS: spot quota in us-east-1 | Praveen, from Service Quotas |
 | Which Worker version is deployed and its caps | The runbook's deploy log and the cloudlease README |
+| How a pool machine can fetch a private repository for `--git` | Nobody has tested it; ask before the first pool on a private repository |
 
 ## Sources
 
@@ -124,6 +125,6 @@ Update this list, and the tables above, when a measurement lands.
 4. `~/code/private-workbench/ops/cloudlease/machines-deploy.md`, "Pool notes learned in the pilot" (Phase 2E)
 5. homebased `docs/temporary-machines.md`, `--boot-timeout`, on branch `temporary-machines`
 6. `~/code/research/dev-infra/batch-compute-providers/README.md`, "Comparison", "Reference run", "Our own machines", and "Risks"
-7. Phase 4c progress notes, stock check at 3:55 PM CT on 2026-11-24
+7. Phase 4c progress notes (`phase4c-progress.md` in the cloudlease run directory): stock check at 3:55 PM CT on 2026-11-24, and the test deploy with phoenixNAP enabled
 8. cloudlease README, Phase 4b result, "Locations"; homebased `docs/temporary-machines.md`, "Lifecycle"
 9. cloudlease README, Phase 3 result
