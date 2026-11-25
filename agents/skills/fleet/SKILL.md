@@ -43,6 +43,16 @@ These are configured roles and addresses, not proof that a machine is online. Co
 - For compute administration, read `~/code/homelab/ai5090/README.md` and the relevant setup script in `ai5090/scripts/`. Do not rerun provisioning for routine work.
 - For service administration, read the relevant homelab configuration: `main.tf`, `server/etc/avahi/hosts`, `stacks/<name>/`, or `justfile`. Service stacks use `/opt/stack` in their containers.
 
+## Extra compute beyond the Fleet
+
+When a task needs more compute than these machines can give in time, rent it through these tools rather than ad hoc scripts. Every rental is billable: ask Praveen before creating one.
+
+- CPU batch work (many independent jobs): homebased pools of temporary machines leased through cloudlease, on DigitalOcean, phoenixNAP, Latitude.sh or AWS Spot. Each machine joins the Fleet and runs ordinary homebased jobs, and cloudlease enforces a hard deadline, an orphan sweep and spend caps. Read the `cloud-machines` skill to pick the provider and class.
+- Container image builds: `rb` (rembuild), which leases its builders through cloudlease; see the `rb` skill.
+- GPU work: the homebased GPU queue on `code` first. Rented GPUs need Praveen's explicit go-ahead.
+  - On untrusted rented hosts such as Vast.ai, use CloudDeck (`~/code/cloudeck` on the Mac mini), a Cloudflare Worker work queue whose workers get only a one-time, queue-scoped token. Never put such a host in the Fleet. CloudDeck has been idle since August 2026: its deploy is older than master and production lacks the managed-pool secrets, so plan a refresh before relying on it.
+  - Serverless GPU containers on Modal or Beam go through ExecDeck (`~/code/execdeck` on the Mac mini).
+
 ## Storage reuse
 
 - Reuse the project's established checkout pattern and keep one writer per checkout. For long-lived agent slots such as `cove-wk1` through `cove-wk4`, use independent clones with private build and scratch directories. Use worktrees only where the project already prefers them.
