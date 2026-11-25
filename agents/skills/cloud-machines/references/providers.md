@@ -132,10 +132,7 @@ Update this list, and the tables above, when a measurement lands.
 | All: download speed from Hugging Face | The first timed scroll on each provider |
 | AWS: its own billing lines for Phase 4f; the $0.035 is computed from instance times [11] | Cost Explorer, usually within a day |
 | AWS: boot on `c7a.4xlarge`, the fall-through type (about 19 s on `c8a.4xlarge` [11]) | The first `c7a` machine |
-| AWS: a real Spot interruption; Phase 4f tested only a terminate from outside the Worker [11] | AWS FIS, or the first real interruption |
 | AWS: chance that a machine is interrupted during a run of about an hour (the README estimates a few percent) | The first spot runs |
-| Whether the Worker was redeployed after Phase 4f (`ff36628e`) | The runbook's deploy log and the cloudlease README |
-| Private repositories through git bundles (homebased PR #29) on a live machine; tested only against the fake cloudlease | The first pool on a private repository after that release |
 
 ## Sources
 
