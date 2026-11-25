@@ -47,7 +47,7 @@ Compare effective cost, not list price. Each provider rounds billing differently
 
 **Bandwidth decides AWS spot against the rest.** Estimate GB uploaded per DO `c-16`-hour of work (total GB out ÷ total `c-16`-hours). Under about 1 GB, AWS spot is cheapest; over about 3 GB, use flat-bandwidth hosts (phoenixNAP, Latitude.sh, DigitalOcean's included transfer); in between, compare the totals. Inbound is free everywhere, AWS's first 100 GB a month of egress is free account-wide, and S3 reads in us-east-1 (the Vesuvius open-data bucket) are free in-region.
 
-AWS spot is not available yet through cloudlease: the machines Worker has no AWS adapter (rembuild's now lives in `cloudlease-provider`), so show it only as an estimate. Include spot interruption in that estimate: an interrupted machine in its first hour is not charged, and a later loss costs the hours it ran plus the rerun delay. providers.md has the interruption rates, the worked example, and what it needs.
+AWS spot runs through the Worker's `aws-c8a-4xl` class, live-tested in Phase 4f, but only under test caps of one machine and 48 cents an hour, and the us-east-1 Spot quota of 256 vCPUs fits 16 machines of 16 vCPUs with no headroom. Include spot interruption in any estimate: an interrupted machine in its first hour is not charged, and a later loss costs the hours it ran plus the rerun delay. An interrupted machine's job ends `JOB_FAILED` with `machine_released` and is not retried, so resubmit it. providers.md has the measurements, the interruption rates, the worked example, and what a real run needs.
 
 ## Run
 
@@ -70,7 +70,7 @@ homebased --json pool show afv
 | `--slots` | Jobs per machine (default 1). Fit them to the machine's cores, memory, and disk |
 | `--idle-limit` | How long a machine without work waits before it releases itself (default 10m). Idle time is paid, so use 2m to 3m when every job is submitted at create. On an hourly provider a long idle limit can carry a machine into one more paid hour; a short one cannot save the rest of the hour that has started |
 | `--stall-after` | Longer than the longest silence of a healthy job (default 30m). A job that writes no output for this long loses its machine about 3 minutes later. Make jobs print progress |
-| `--boot-timeout` | Leave it unset. The default is one minute before the class's boot grace ends (7m on DigitalOcean, 19m on phoenixNAP). Never set it below the provider's real boot time (providers.md). A value past the grace changes nothing, because cloudlease deletes a machine that has not joined when the grace ends |
+| `--boot-timeout` | Unset on DigitalOcean, where the default is 7m. On a class with a longer boot grace, set it a minute under the grace, `19m` on phoenixNAP and `14m` on Latitude.sh: until the pool's first lease shows the grace, homebased assumes DigitalOcean's 8 minutes, so it would admit the first jobs on too short a boot estimate. Never set it below the provider's real boot time (providers.md). A value past the grace changes nothing, because cloudlease deletes a machine that has not joined when the grace ends |
 | `--min-free-disk` | The peak disk of one job, in GiB, within what the class has free after boot (default 1) |
 | `--env-file` | `NAME=value` secrets, such as an upload token, in a 0600 file on the coordinator. Never put a secret on a job's command line or in the repository |
 
