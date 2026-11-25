@@ -21,7 +21,9 @@ fn git(cwd: &Path, args: &[&str]) -> String {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    String::from_utf8_lossy(&output.stdout).trim_end().to_owned()
+    String::from_utf8_lossy(&output.stdout)
+        .trim_end()
+        .to_owned()
 }
 
 fn write(path: &Path, contents: &str) {
