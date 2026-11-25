@@ -135,7 +135,7 @@ Update this list, and the tables above, when a measurement lands.
 | AWS: a real Spot interruption; Phase 4f tested only a terminate from outside the Worker [11] | AWS FIS, or the first real interruption |
 | AWS: chance that a machine is interrupted during a run of about an hour (the README estimates a few percent) | The first spot runs |
 | Whether the Worker was redeployed after Phase 4f (`ff36628e`) | The runbook's deploy log and the cloudlease README |
-| How a pool machine can fetch a private repository for `--git` | Nobody has tested it; ask before the first pool on a private repository |
+| Private repositories through git bundles (homebased PR #29) on a live machine; tested only against the fake cloudlease | The first pool on a private repository after that release |
 
 ## Sources
 
