@@ -1,0 +1,6 @@
+interface:
+  display_name: "Sol Review"
+  short_description: "Run a Sol xhigh review, then triage"
+  default_prompt: "Use $sol-review to review this change with Sol and triage its findings."
+policy:
+  allow_implicit_invocation: false
