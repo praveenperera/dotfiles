@@ -5,7 +5,7 @@ use std::io::{IsTerminal as _, Write as _};
 use std::process::{Command, Stdio};
 use xshell::{cmd, Shell};
 
-use crate::{cmd::update, dotfiles_dir, util::has_tool};
+use crate::{cmd::update, dotfiles_dir, fsutil, util::has_tool};
 
 const HOST: &str = "praveen@ai5090";
 /// Checks out the Homebased skill at the installed Homebased release
@@ -39,6 +39,10 @@ const QUEUED_MACHINES: &[&str] = &["mba", "main"];
 /// Homebased coalesce key, so the updates a sleeping machine missed run once
 const UPDATE_COALESCE_KEY: &str = "fleet-update";
 
+/// Deploys the homelab files the Fleet runs, such as the T3 path proxy, from
+/// the pushed homelab commit; relative to the home directory
+const HOMELAB_SYNC: &str = "code/homelab/scripts/fleet-sync";
+
 #[derive(Debug, Clone, Parser)]
 pub struct Fleet {
     #[command(subcommand)]
@@ -62,6 +66,12 @@ pub enum FleetCmd {
     /// Each Homebased update also checks out the Homebased skill at the
     /// matching release tag, and codemode-mcp and gpu-ab install their latest
     /// release binaries
+    ///
+    /// It also deploys the homelab files each machine runs, as pushed to
+    /// homelab's origin/master, through ~/code/homelab/scripts/fleet-sync:
+    /// ai5090's fleet-update, install-user-tools, and dotfiles-up, and the T3
+    /// path proxy on ai5090, code, the Mac mini, and the mba, each only when
+    /// it changed
     ///
     /// The Mac mini (main) and the mba get their update as a queued Homebased
     /// task that runs `fleet update --local` there. The mini runs it at once;
@@ -89,7 +99,8 @@ pub enum FleetCmd {
 
         /// Update only this machine: pull ~/code/dotfiles, then update cmd and
         /// any installed cln, aps, Homebased and its skill, codemode-mcp, and
-        /// gpu-ab; a failed step does not stop the rest
+        /// gpu-ab, and on a Mac its homelab files; a failed step does not stop
+        /// the rest
         #[arg(long, conflicts_with = "all")]
         local: bool,
     },
@@ -202,6 +213,13 @@ fn run_update(sh: &Shell, mode: UpdateMode) -> Result<()> {
     // the remote run and this machine's tools are independent, so a failed
     // remote run is reported at the end instead of skipping the rest
     let mut failures = Vec::new();
+
+    // first, so the run below uses the pushed fleet-update and installer;
+    // ai5090 has no homelab checkout to sync from
+    if !local {
+        sync_homelab(&mut failures, "ai5090", "homelab files on ai5090 and code");
+    }
+
     step(&mut failures, "ai5090 and code", || {
         ai5090_shell(local, &format!("rm -f {}", mode.status_path()))
             .status()
@@ -298,6 +316,10 @@ fn update_tools(sh: &Shell, failures: &mut Vec<String>) {
         });
     }
 
+    if cfg!(target_os = "macos") {
+        sync_homelab(failures, "mac", "homelab files");
+    }
+
     // last, because a just-tagged release has no assets until its build
     // finishes; this also refreshes the btx and prc links to the new binary
     step(failures, "cmd", || {
@@ -318,6 +340,33 @@ fn update_tools(sh: &Shell, failures: &mut Vec<String>) {
             }
             other => other,
         }
+    });
+}
+
+/// Deploy the pushed homelab files for `target` through this machine's homelab checkout
+///
+/// A machine without the checkout skips it with a note, since the files can
+/// only come from a checkout
+fn sync_homelab(failures: &mut Vec<String>, target: &str, name: &str) {
+    let sync = match fsutil::home_dir() {
+        Ok(home) => home.join(HOMELAB_SYNC),
+        Err(error) => {
+            eprintln!("{name} update failed: {error:#}");
+            failures.push(name.to_owned());
+            return;
+        }
+    };
+
+    if !sync.is_file() {
+        eprintln!("no {} here, so {name} were not synced", sync.display());
+        return;
+    }
+
+    step(failures, name, || {
+        let sync = sync
+            .to_str()
+            .ok_or_else(|| eyre!("non-UTF-8 path {}", sync.display()))?;
+        run_attached(sync, &[target])
     });
 }
 
