@@ -39,9 +39,11 @@ const QUEUED_MACHINES: &[&str] = &["mba", "main"];
 /// Homebased coalesce key, so the updates a sleeping machine missed run once
 const UPDATE_COALESCE_KEY: &str = "fleet-update";
 
+/// The homelab checkout, relative to the home directory
+const HOMELAB_CHECKOUT: &str = "code/homelab";
 /// Deploys the homelab files the Fleet runs, such as the T3 path proxy, from
-/// the pushed homelab commit; relative to the home directory
-const HOMELAB_SYNC: &str = "code/homelab/scripts/fleet-sync";
+/// the pushed homelab commit; relative to the checkout
+const HOMELAB_SYNC: &str = "scripts/fleet-sync";
 
 #[derive(Debug, Clone, Parser)]
 pub struct Fleet {
@@ -68,7 +70,8 @@ pub enum FleetCmd {
     /// release binaries
     ///
     /// It also deploys the homelab files each machine runs, as pushed to
-    /// homelab's origin/master, through ~/code/homelab/scripts/fleet-sync:
+    /// homelab's origin/master, through ~/code/homelab/scripts/fleet-sync
+    /// after pulling that checkout:
     /// ai5090's fleet-update, install-user-tools, and dotfiles-up, and the T3
     /// path proxy on ai5090, code, the Mac mini, and the mba, each only when
     /// it changed
@@ -348,8 +351,8 @@ fn update_tools(sh: &Shell, failures: &mut Vec<String>) {
 /// A machine without the checkout skips it with a note, since the files can
 /// only come from a checkout
 fn sync_homelab(failures: &mut Vec<String>, target: &str, name: &str) {
-    let sync = match fsutil::home_dir() {
-        Ok(home) => home.join(HOMELAB_SYNC),
+    let checkout = match fsutil::home_dir() {
+        Ok(home) => home.join(HOMELAB_CHECKOUT),
         Err(error) => {
             eprintln!("{name} update failed: {error:#}");
             failures.push(name.to_owned());
@@ -357,16 +360,33 @@ fn sync_homelab(failures: &mut Vec<String>, target: &str, name: &str) {
         }
     };
 
-    if !sync.is_file() {
-        eprintln!("no {} here, so {name} were not synced", sync.display());
+    if !checkout.join(".git").exists() {
+        eprintln!(
+            "no homelab checkout at {}, so {name} were not synced",
+            checkout.display()
+        );
         return;
     }
 
     step(failures, name, || {
-        let sync = sync
+        let checkout = checkout
             .to_str()
-            .ok_or_else(|| eyre!("non-UTF-8 path {}", sync.display()))?;
-        run_attached(sync, &[target])
+            .ok_or_else(|| eyre!("non-UTF-8 path {}", checkout.display()))?;
+
+        // nothing else keeps a Mac's checkout current, and an old one may not
+        // have the sync script yet; a pull blocked by local work still syncs,
+        // since the script deploys the pushed commit rather than the checkout
+        let pulled = Command::new("git")
+            .args(["-C", checkout, "pull", "--ff-only", "--quiet"])
+            .env("GIT_TERMINAL_PROMPT", "0")
+            .status()
+            .is_ok_and(|status| status.success());
+        if !pulled {
+            eprintln!("warning: could not pull {checkout}, so its current sync script runs");
+        }
+
+        let sync = format!("{checkout}/{HOMELAB_SYNC}");
+        run_attached(&sync, &[target])
     });
 }
 
