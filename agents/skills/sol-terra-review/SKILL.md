@@ -1,6 +1,6 @@
 ---
 name: sol-terra-review
-description: Review one change with GPT-6.2 Sol at xhigh and GPT-6.1 Terra at max in parallel, then triage their findings against the code and fix only reachable failures. Use only when the user invokes $sol-terra-review or /sol-terra-review.
+description: Review one change with GPT-6.2 Sol at xhigh and GPT-6.1 Terra at max in parallel (high and xhigh from the fourth round), then triage their findings against the code and fix only reachable failures. Use only when the user invokes $sol-terra-review or /sol-terra-review.
 disable-model-invocation: true
 ---
 
@@ -13,13 +13,22 @@ Save each reviewer's raw output and the final report under `_scratch/sol-terra-r
 ## Run both reviews
 
 1. Pick the target: the current PR head, or the branch diff against its base when there is no PR. Record the head commit; a review of an older commit does not count.
-2. Start both reviewers at once, each in a fresh read-only session:
-   - Sol: `gpt-6.2-sol` at `xhigh`
-   - Terra: `gpt-6.1-terra` at `max`
+2. Start both reviewers at once, each in a fresh read-only session, at the effort that the round calls for (see [Effort by round](#effort-by-round)):
+   - Sol: `gpt-6.2-sol`
+   - Terra: `gpt-6.1-terra`
 3. In a T3 thread, run one `delegate_task` for each on the Codex provider. Elsewhere, use `codex exec` as [codex-cli.md](../use-agents/references/codex-cli.md) describes, with the model and effort above.
 4. Do not guide them. Ask each one only to review the PR, or the branch against its base, and to report each finding with a severity and `path:line`. Give no hints, hypotheses, focus areas, or earlier findings.
 
 If either model is unavailable or out of usage, say so and stop. Do not substitute another model.
+
+## Effort by round
+
+The first review is round 1, and each delta review adds one. Later rounds review a smaller diff of fixes, so they do not need the top effort.
+
+| Round | Sol | Terra |
+| --- | --- | --- |
+| 1 to 3 | `xhigh` | `max` |
+| 4 and later | `high` | `xhigh` |
 
 ## Triage every finding
 
@@ -31,7 +40,7 @@ Check each finding against the code before you act on it. Merge duplicates. A fi
 
 ## After fixes
 
-Run the repository's formatter, linter, and tests. Then run one fresh Sol `xhigh` delta review of the new head that covers the fixes and the behavior they touch, and triage its findings the same way. Run Terra again only when a fix changed the design, such as ownership, the state model, a public interface, or a data format. Then run any review gates that the repository requires on the new head.
+Run the repository's formatter, linter, and tests. Then run one fresh Sol delta review of the new head that covers the fixes and the behavior they touch, and triage its findings the same way. Run Terra again only when a fix changed the design, such as ownership, the state model, a public interface, or a data format. Then run any review gates that the repository requires on the new head.
 
 Stop when the delta review is clean or only known limits and low-severity notes remain. If one concern survives two fixes, stop and report it as a design problem.
 
@@ -42,7 +51,7 @@ Running this skill authorizes local fixes and verification. Commit, push, or cha
 Lead with anything that needs the user's decision. Then give:
 
 - the head commit reviewed, and the final head
-- each reviewer with its model, effort, and finding count, and where they agreed
+- each reviewer with its model, effort, and finding count for each round, and where they agreed
 - **Fixed**: each finding with its test
 - **Known limits**: each finding and why it is rare
 - **Dropped**: each finding and the reason
