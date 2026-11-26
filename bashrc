@@ -10,3 +10,7 @@ alias showtime='/home/praveen/.t3/worktrees/cloud-project-system/praveen-rust-te
 
 # gpu-ab looks up `--adapter <repo>` here; live adapters stay in private-workbench
 export GPU_AB_ADAPTERS="$HOME/code/private-workbench/ops/{name}/hill-climb/gpu-ab.toml"
+
+
+# Added by Antigravity CLI installer
+export PATH="/Users/praveen/.local/bin:$PATH"
