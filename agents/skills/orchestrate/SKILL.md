@@ -75,8 +75,8 @@ Use this format every time, in this order:
 
 The first three parts have to stand alone, because the user may read nothing else. Keep them to about ten lines, and write them for someone who has not followed the run: no job ids, thread ids, SHAs, internal code names or parameter values unless the user uses them. Do not write "what this means" as a closing section. That meaning is the bottom line. A request for a "quick update" or a "TLDR" gets the first three parts and one line offering the details.
 
-The same high-level bar applies to milestone reports and companion report pages/dashboards (e.g., SlopStation briefings):
-- **Lead with the decision-level outcome and what it means for our strategy** in plain English (e.g., who won, who gets cut, what needs a redo, and what changes next) — never open with raw per-arm metric dumps, throughput numbers, commit hashes, or job IDs.
+The same high-level bar applies to **every** update, milestone ping, and companion report page (not just formal status checks):
+- **Always open with what the update means high level for us** in plain English — what decision just changed or locked in, what we now do differently (keep, cut, speed up, avoid spending money on), and how it affects our odds of winning or timeline. Put supporting numbers *after* that takeaway, never as a bare scorecard without translating why it matters.
 - **Keep report pages strictly high-level and current-state, never a running log or artifact dump.** Overwrite the current verdict as results land rather than appending chronological logs, and never put per-item drill-downs (like individual question PNG galleries or trace tables) in the main flow; keep them out of the page or collapsed behind an opt-in `<details>` toggle unless explicitly requested there.
 
 Send a status at phase boundaries, on any schedule the user sets, and when asked, but not for every event. Each time, update the standing in the Goals table and replace the Latest block in the state file with the bottom line and goal lines.
