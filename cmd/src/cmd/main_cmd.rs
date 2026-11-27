@@ -200,6 +200,13 @@ pub enum MainCmd {
         subcommand: crate::cmd::file::FileCmd,
     },
 
+    /// Antigravity (agy) operations, such as importing its conversations into the chat history
+    #[command(arg_required_else_help = true)]
+    Agy {
+        #[command(subcommand)]
+        subcommand: crate::cmd::agy::AgyCmd,
+    },
+
     /// ai5090 fleet operations
     #[command(visible_alias = "fl", arg_required_else_help = true)]
     Fleet {

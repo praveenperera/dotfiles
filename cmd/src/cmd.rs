@@ -1,4 +1,5 @@
 pub mod agent_target;
+pub mod agy;
 pub mod aws;
 pub mod better_context;
 pub mod billing;
@@ -127,6 +128,7 @@ pub fn run(sh: &Shell, args: &[OsString]) -> Result<()> {
             let file_flags = file::File { subcommand };
             file::run_with_flags(sh, file_flags)
         }
+        MainCmd::Agy { subcommand } => agy::run(subcommand),
         MainCmd::Fleet { subcommand } => {
             let fleet_flags = fleet::Fleet { subcommand };
             fleet::run_with_flags(sh, fleet_flags)
