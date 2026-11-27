@@ -34,11 +34,15 @@ const TARGETS: &[Target] = &[
         fragment: "codex.md",
         output: "agents/AGENTS.md",
     },
+    Target {
+        fragment: "gemini.md",
+        output: "agents/GEMINI.md",
+    },
 ];
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum InstructionsCmd {
-    /// Write claude/CLAUDE.md and agents/AGENTS.md from the fragments
+    /// Write claude/CLAUDE.md, agents/AGENTS.md and agents/GEMINI.md from the fragments
     Render(RootArgs),
 
     /// Fail when a generated file differs from a fresh render
@@ -116,7 +120,7 @@ impl Instructions {
         if !drifted.is_empty() {
             bail!(
                 "{} out of date with {FRAGMENTS_DIR} in {}; edit the fragments, then run `cmd instructions render`",
-                drifted.join(" and "),
+                drifted.join(", "),
                 self.0.display(),
             );
         }

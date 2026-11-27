@@ -13,8 +13,9 @@ use xshell::{cmd, Shell};
 use crate::{fsutil, util::has_tool, CMD_TOOLS};
 
 use super::{
-    ManagedDirEntry, Os, OsxDefaults, SyncSymlinkOutcome, Zshrc, CONFIG_FILE_OR_DIR,
-    CUSTOM_CONFIG_DIR_ENTRIES, CUSTOM_CONFIG_OR_DIR, DOTFILES, MAC_ONLY_CUSTOM_CONFIG_OR_DIR,
+    ManagedDirEntry, Os, OsxDefaults, SyncSymlinkOutcome, Zshrc, ANTIGRAVITY_RULES,
+    CONFIG_FILE_OR_DIR, CUSTOM_CONFIG_DIR_ENTRIES, CUSTOM_CONFIG_OR_DIR, DOTFILES,
+    MAC_ONLY_CUSTOM_CONFIG_OR_DIR, T3_ANTIGRAVITY_PROVIDERS_DIR,
 };
 
 const DOTFILES_GIT_TOOLS_EXTENSION: &str = "dotfiles.dotfiles-git-tools-0.0.1";
@@ -157,10 +158,61 @@ fn setup_config_and_dotfiles(sh: &Shell) -> Result<()> {
         }
     }
 
+    for config_dir in antigravity_config_dirs(&home)? {
+        write_antigravity_skills_manifest(&home, &config_dir)?;
+    }
+
     if has_tool(sh, "tmux") {
         install_tpm(sh, &home)?;
     }
 
+    Ok(())
+}
+
+/// Antigravity's global config dirs: the standalone CLI's `~/.gemini/config`
+/// and the `config` dir of every T3 provider instance that exists right now, so
+/// a provider T3 creates later gets its links on the next `cmd config`
+fn antigravity_config_dirs(home: &Path) -> Result<Vec<PathBuf>> {
+    let mut dirs = vec![home.join(".gemini/config")];
+
+    let entries = match fs::read_dir(home.join(T3_ANTIGRAVITY_PROVIDERS_DIR)) {
+        Ok(entries) => entries,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(dirs),
+        Err(err) => return Err(err.into()),
+    };
+
+    let mut providers = Vec::new();
+    for entry in entries {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            providers.push(entry.path().join("config"));
+        }
+    }
+
+    providers.sort();
+    dirs.extend(providers);
+    Ok(dirs)
+}
+
+/// Points Antigravity at `~/.agents/skills` with an absolute path, because it
+/// skips manifest entries written as `~/...` even though its docs allow them,
+/// and home differs between the Mac and Linux machines
+fn write_antigravity_skills_manifest(home: &Path, config_dir: &Path) -> Result<()> {
+    let skills = home.join(".agents/skills");
+    let skills = skills
+        .to_str()
+        .ok_or_else(|| eyre!("invalid path: {}", skills.display()))?;
+
+    let manifest = serde_json::json!({ "entries": [{ "path": skills }] });
+    let target = config_dir.join("skills.json");
+
+    // drop a symlink left by an earlier setup so the write cannot land in its source
+    if fs::symlink_metadata(&target).is_ok_and(|metadata| metadata.is_symlink()) {
+        fsutil::remove_existing_path(&target)?;
+    }
+
+    fsutil::ensure_parent_dir(&target)?;
+    fs::write(&target, format!("{manifest:#}\n"))?;
     Ok(())
 }
 
@@ -193,6 +245,15 @@ fn build_link_specs(home: &Path, dotfiles_dir: &Path) -> Result<Vec<LinkSpec>> {
         source: dotfiles_dir.join(src),
         target: home.join(dest),
     }));
+
+    specs.extend(
+        antigravity_config_dirs(home)?
+            .into_iter()
+            .map(|config_dir| LinkSpec {
+                source: dotfiles_dir.join(ANTIGRAVITY_RULES),
+                target: config_dir.join("GEMINI.md"),
+            }),
+    );
 
     let zed_debug_target = match Os::current() {
         Os::MacOS => home.join("Library/Application Support/Zed/debug.json"),
@@ -521,7 +582,7 @@ mod tests {
 
     use super::{
         build_link_specs, create_hardlinks_in_bin_dir, parse_vscode_extensions,
-        prune_managed_dir_entry, ManagedDirEntry, Os,
+        prune_managed_dir_entry, write_antigravity_skills_manifest, ManagedDirEntry, Os,
     };
 
     #[test]
@@ -609,6 +670,64 @@ mod tests {
         assert!(specs.iter().any(|spec| {
             spec.source == skills_dir && spec.target == home.join(".agents/skills")
         }));
+    }
+
+    #[test]
+    fn links_gemini_rules_into_cli_and_every_t3_antigravity_provider() {
+        let dir = tempdir().unwrap();
+        let home = dir.path().join("home");
+        let dotfiles_dir = dir.path().join("dotfiles");
+        let providers = home.join(".t3/userdata/providers/antigravity");
+
+        fs::create_dir_all(providers.join("instance-a")).unwrap();
+        fs::create_dir_all(providers.join("instance-b")).unwrap();
+        // a stray file next to the instance dirs is not a provider
+        fs::write(providers.join("notes.txt"), "").unwrap();
+        fs::create_dir_all(dotfiles_dir.join("agents/skills")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("zed/snippets")).unwrap();
+        fs::create_dir_all(dotfiles_dir.join("zed/themes")).unwrap();
+
+        let specs = build_link_specs(&home, &dotfiles_dir).unwrap();
+        let rules = dotfiles_dir.join("agents/GEMINI.md");
+        let mut rule_targets = specs
+            .iter()
+            .filter(|spec| spec.source == rules)
+            .map(|spec| spec.target.clone())
+            .collect::<Vec<_>>();
+        rule_targets.sort();
+
+        let mut expected = vec![
+            home.join(".gemini/config/GEMINI.md"),
+            providers.join("instance-a/config/GEMINI.md"),
+            providers.join("instance-b/config/GEMINI.md"),
+        ];
+        expected.sort();
+        assert_eq!(rule_targets, expected);
+    }
+
+    #[test]
+    fn skills_manifest_uses_an_absolute_path_and_replaces_a_symlink() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempdir().unwrap();
+        let home = dir.path().join("home");
+        let config_dir = home.join(".gemini/config");
+        let old_source = dir.path().join("old-skills.json");
+
+        fs::create_dir_all(&config_dir).unwrap();
+        fs::write(&old_source, "old").unwrap();
+        symlink(&old_source, config_dir.join("skills.json")).unwrap();
+
+        write_antigravity_skills_manifest(&home, &config_dir).unwrap();
+
+        let manifest = config_dir.join("skills.json");
+        assert!(!manifest.is_symlink());
+        assert_eq!(fs::read_to_string(&old_source).unwrap(), "old");
+
+        let manifest: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(manifest).unwrap()).unwrap();
+        let skills = home.join(".agents/skills");
+        assert_eq!(manifest["entries"][0]["path"], skills.to_str().unwrap());
     }
 
     #[test]

@@ -197,6 +197,13 @@ const CUSTOM_CONFIG_DIR_ENTRIES: &[ManagedDirEntry] = &[
     },
 ];
 
+/// Generated Gemini Neon rules, linked as `GEMINI.md` into every Antigravity config dir
+const ANTIGRAVITY_RULES: &str = "agents/GEMINI.md";
+
+/// T3 starts Antigravity with `--gemini-dir <this dir>/<instance hash>`, which
+/// replaces `~/.gemini` for that provider, so each instance needs its own links
+const T3_ANTIGRAVITY_PROVIDERS_DIR: &str = ".t3/userdata/providers/antigravity";
+
 const MAC_ONLY_CUSTOM_CONFIG_OR_DIR: &[(&str, &str)] =
     &[("gpg-agent.conf", ".gnupg/gpg-agent.conf")];
 

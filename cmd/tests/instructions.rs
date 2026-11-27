@@ -4,8 +4,8 @@ use std::process::{Command, Output};
 
 use tempfile::{tempdir, TempDir};
 
-const FRAGMENTS: &[&str] = &["common.md", "claude.md", "codex.md"];
-const GENERATED: &[&str] = &["claude/CLAUDE.md", "agents/AGENTS.md"];
+const FRAGMENTS: &[&str] = &["common.md", "claude.md", "codex.md", "gemini.md"];
+const GENERATED: &[&str] = &["claude/CLAUDE.md", "agents/AGENTS.md", "agents/GEMINI.md"];
 
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..")
@@ -94,6 +94,7 @@ fn fragment_edit_fails_check_until_rerendered() {
     let message = stderr(&check);
     assert!(message.contains("claude/CLAUDE.md"), "{message}");
     assert!(message.contains("agents/AGENTS.md"), "{message}");
+    assert!(message.contains("agents/GEMINI.md"), "{message}");
     assert!(message.contains("cmd instructions render"), "{message}");
 
     let render = instructions(root, "render");
@@ -104,10 +105,13 @@ fn fragment_edit_fails_check_until_rerendered() {
 
     let claude = read(root, "claude/CLAUDE.md");
     let agents = read(root, "agents/AGENTS.md");
+    let gemini = read(root, "agents/GEMINI.md");
     assert!(claude.contains("# Testing\n\n- Shared rule from the test.\n"));
     assert!(agents.contains("# Testing\n\n- Shared rule from the test.\n"));
+    assert!(gemini.contains("# Testing\n\n- Shared rule from the test.\n"));
     assert!(agents.contains("# Codex Only\n\n- Codex rule from the test.\n"));
     assert!(!claude.contains("Codex rule from the test"));
+    assert!(!gemini.contains("Codex rule from the test"));
 }
 
 #[test]
