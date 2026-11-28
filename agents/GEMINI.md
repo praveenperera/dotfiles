@@ -111,7 +111,6 @@ Use these terms in instructions, skills, briefs, and reports. Do not use "delega
 
 - `homebased t3` can add projects and start new threads on different Fleet machines; the `fleet` skill describes them.
 - MCP servers available through `codemode-mcp`: `linear`, `gmail`, `zoho_infraops`, `calendar`, `reminders`, `xcode`, `secrets`, `onepassword`, `logins`, `superalert`, `superlogical`, `deepwiki`, `context7`, `cloudflare_docs`, `openai_docs`
-- Running `claude` or `codex` CLIs unattended via CLIProxyAPI (matching T3's `providerInstances` in `~/.t3/userdata/settings.json`; never call CLIProxyAPI directly over HTTP from custom scripts — only through the official `claude` / `codex` CLIs or T3): load `CLIPROXY_BASE_URL` (`https://cliproxy.camel-scylla.ts.net`) and `CLIPROXY_API_KEY` from `~/.secrets.zsh`. For `claude`, set `ANTHROPIC_BASE_URL="$CLIPROXY_BASE_URL"`, `ANTHROPIC_AUTH_TOKEN="$CLIPROXY_API_KEY"`, and `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL=claude-{opus,sonnet,haiku}-5-5` (or prefix `avencera/` / `gmail/` to pin one pool). For `codex`, set `CLIPROXY_API_KEY` and pass `-c model_provider=cliproxy -c 'model_providers.cliproxy={name="CLIProxyAPI",base_url="https://cliproxy.camel-scylla.ts.net/v1",env_key="CLIPROXY_API_KEY",wire_api="responses",supports_websockets=true}'`.
 
 # Skills
 
